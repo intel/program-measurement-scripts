@@ -33,23 +33,6 @@ ACTIVATE_DYNAMIC_GROUPING=1
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 
-# For set_frequency.sh
-declare -A paths
-declare -A paths
-paths+=([borodine]="")		# Dunno
-paths+=([britten]="1")
-paths+=([bruckner]="")		# Dunno
-paths+=([buxtehude]="2")
-paths+=([campion]="")		# Dunno
-paths+=([carissimi]="")		# Dunno
-paths+=([clerambault]="")	# Dunno
-paths+=([chopin]="1")
-paths+=([dandrieu]="1")
-paths+=([dubois]="")			# Dunno
-paths+=([massenet]="1")
-paths+=([mauduit]="")		# Dunno
-paths+=([sviridov]="2")	
-
 # Modules
 module load compilers/intel/12.1.3
 module load tools/likwid/2.3.0

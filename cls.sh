@@ -154,6 +154,15 @@ do
 		mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load" &> /dev/null
 		if [[ "$memory_load" != "0" ]]
 		then
+			echo "Setting all cores on high frequency..."
+			./set_frequency.sh 'max' '*'
+			res=$?
+			if [[ "$res" != "0" ]]
+			then
+				echo "Cancelling CLS."
+				exit -1
+			fi
+
 			$MEMLOADER_PINNER "$MEMLOADER_FOLDER" "$memory_load" "$MEMLOAD_CORES_LIST"
 			res=$?
 			if [[ "$res" != "0" ]]
@@ -169,7 +178,7 @@ do
 		for frequency in $frequencies
 		do
 			mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
-			./set_frequency.sh $frequency
+			./set_frequency.sh $frequency ${XP_CORE}
 			res=$?
 			if [[ "$res" != "0" ]]
 			then
