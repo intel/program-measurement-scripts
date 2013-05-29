@@ -29,7 +29,7 @@ ACTIVATE_COUNTERS=1
 ACTIVATE_SANDY_BRIDGE_UNCORE=1
 
 # For cls.sh
-ACTIVATE_DYNAMIC_GROUPING=1
+ACTIVATE_DYNAMIC_GROUPING=0
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 
