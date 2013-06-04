@@ -17,7 +17,7 @@ LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
 
-CLS_RES_FOLDER="cls_res_massenet"
+CLS_RES_FOLDER="cls_res_${HOSTNAME}_prefetch_test"
 
 # For w_adjust.sh use
 CODELET_LENGTH=100
@@ -29,7 +29,7 @@ ACTIVATE_COUNTERS=1
 ACTIVATE_SANDY_BRIDGE_UNCORE=1
 
 # For cls.sh
-ACTIVATE_DYNAMIC_GROUPING=1
+ACTIVATE_DYNAMIC_GROUPING=0
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 
@@ -44,6 +44,7 @@ BINARIES_FOLDER="binaries"
 # For generate_variants.sh
 declare -A transforms
 transforms+=([time_reference]="time_reference")
+transforms+=([time_reference_pref]="time_reference_pref")
 transforms+=([time_reference_divonstack]="time_reference_div_on_stack")
 
 transforms+=([dt1]="splitntime_dt1")
@@ -52,6 +53,7 @@ transforms+=([dt2_rat]="splitntime_dt2_rat")
 transforms+=([dt3_rat]="splitntime_dt3_rat")
 
 transforms+=([as]="splitntime_mem_AS")
+transforms+=([as_pref]="splitntime_mem_AS_pref")
 transforms+=([as_rat1b]="splitntime_mem_AS_rat1b")
 transforms+=([as_ratmb]="splitntime_mem_AS_ratmb")
 

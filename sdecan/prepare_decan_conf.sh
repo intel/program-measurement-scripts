@@ -27,6 +27,19 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "time_reference_pref"* ]]
+then
+	transformation="none"
+	option1=""
+	option2=""
+	timers="basic"
+	counters=""
+
+	elementary="add_prefetch"
+
+	treated=1
+fi
+
 if [[ "$macro" == "time_reference_div_on_stack"* ]]
 then
 	transformation="none"
@@ -116,6 +129,19 @@ then
 	option2="delete"
 	timers="basic"
 	counters=""
+	treated=1
+fi
+
+if [[ "$macro" == "splitntime_mem_AS_pref"* ]]
+then
+	transformation="stream"
+	option1="mem"
+	option2="delete"
+	timers="basic"
+	counters=""
+
+	elementary="add_prefetch"
+
 	treated=1
 fi
 
