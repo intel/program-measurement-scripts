@@ -79,8 +79,8 @@ then
 	transformation="stream"
 	option1="mem"
 	option2="delete"
-	grouping="dtstream"
-	group_option="dt_sub_1"
+	grouping="delete"
+	group_option="delete"
 
 	timers="basic"
 	counters=""

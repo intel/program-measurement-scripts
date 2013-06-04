@@ -59,11 +59,11 @@ do
 		if [[ "$tmp_loop_id" == "$loop_id" ]]
 		then
 			dynamic_group=$( echo "$generated_binary" | sed -e "s/.*_\(G.*\)_.*/\1/g" )
-			output_name="dtratgroup_${dynamic_group}_${build}"
+			output_name="delgroup_${dynamic_group}_${build}"
 			echo "Keeping '$generated_binary' for '$output_name'"
 
 			mv "$generated_binary" "${binary_name}_$output_name"
-			keep_list="$keep_list dtratgroup_${dynamic_group}"
+			keep_list="$keep_list delgroup_${dynamic_group}"
 		else
 			rm "$generated_binary"
 		fi
@@ -74,7 +74,7 @@ do
 		exit -1
 	fi
 
-	cp ${binary_name}_dtratgroup_* "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+	cp ${binary_name}_delgroup_* "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 
 	rm -f $PWD/$DECAN_REPORT
 
