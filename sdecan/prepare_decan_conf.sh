@@ -322,7 +322,7 @@ echo "----------------------------------"	>> $decan_path/decan.conf
 echo "elementary=$elementary"			>> $decan_path/decan.conf
 echo "divider_value= $divider_value"		>> $decan_path/decan.conf
 echo "divided_value= $divided_value"		>> $decan_path/decan.conf
-
+echo "prefetch_ratio= 100"			>> $decan_path/decan.conf
 
 echo "DECAN conf was prepared successfully!"
 
