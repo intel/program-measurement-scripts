@@ -17,7 +17,7 @@ LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
 
-CLS_RES_FOLDER="cls_res_${HOSTNAME}_prefetch_test"
+CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
 CODELET_LENGTH=100
