@@ -34,6 +34,9 @@ fi
 "$MAQAO" module=stan uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" fct=$function_name lvl=1 > "$bin_folder/$codelet_name.stan"
 ./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
 
+head -n 1 $function_name.csv > "$bin_folder/${codelet_name}.stan_full.csv"
+awk -F ';' '{if($5 == '$loop_id'){print;}}' $function_name.csv >> "$bin_folder/${codelet_name}.stan_full.csv"
+
 for variant in $variants
 do
 	variant_path="$bin_folder/${codelet_name}_${variant}_cpi"
