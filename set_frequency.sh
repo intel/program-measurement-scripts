@@ -64,13 +64,13 @@ case "$HOSTNAME" in
 	echo "Setting frequency to '$target_frequency'"
 	echo "userspace" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_governor > /dev/null
 
-	echo "$target_frequency" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_min_freq &> /dev/null
-	echo "$target_frequency" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_max_freq > /dev/null
-	echo "$target_frequency" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_min_freq > /dev/null # A second time in case min freq was > max freq
+	echo "${min_freq[$HOSTNAME]}" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_min_freq &> /dev/null
+	echo "${max_freq[$HOSTNAME]}" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_max_freq > /dev/null
+	echo "${min_freq[$HOSTNAME]}" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_min_freq > /dev/null # A second time in case min freq was > max freq
 
 	echo "$target_frequency" | tee /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_setspeed > /dev/null
 
-	actual_frequency=$( cat /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_setspeed | head -n 1 )
+	actual_frequency=$( cat /sys/devices/system/cpu/cpu$target_core/cpufreq/scaling_cur_freq | head -n 1 )
 	if [[ "$target_frequency" != "$actual_frequency" ]]
 	then
 		echo "ERROR! Frequency change failed!"
