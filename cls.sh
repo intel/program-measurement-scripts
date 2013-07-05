@@ -135,8 +135,8 @@ do
 		tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
 		echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
 
-		tmp_id=$( echo "$most_important_loop_info" | cut -f1 -d';' )
-		tmp_loop_iterations=$( echo "$most_important_loop_info" | cut -f2 -d';' )
+		tmp_id=$( echo "$most_important_loop" | cut -f1 -d';' )
+		tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d';' )
 		echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
 
 		echo "Cancelling CLS."
