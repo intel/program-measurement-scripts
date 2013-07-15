@@ -5,7 +5,7 @@ proj = project.new ("my_first_MAQAO_analysis");
 --
 -- parse the argument sent through the command line
 --
-local args = utils:get_args(arg);
+local args = Utils:get_args(arg);
 binary_name = args.binary_name;
 funct_name = args.funct_name;
 lid = args.lid;
