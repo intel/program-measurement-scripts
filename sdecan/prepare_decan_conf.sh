@@ -35,7 +35,7 @@ then
 	timers="basic"
 	counters=""
 
-	elementary="add_prefetch"
+	elementary="add_rip_prefetch"
 
 	treated=1
 fi
@@ -140,7 +140,7 @@ then
 	timers="basic"
 	counters=""
 
-	elementary="add_prefetch"
+	elementary="add_rip_prefetch"
 
 	treated=1
 fi
