@@ -80,7 +80,13 @@ then
 	echo
 	echo "Creating dynamic groups..."
 	res_generate=$( ./generate_dynamic_groups.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" )
+	res=$?
 	echo "$res_generate"
+	if [[ "$res" != "0" ]]
+	then
+		echo "Cancelling CLS."
+		exit -1
+	fi
 	add_variants=$( echo "$res_generate" | tail -n 1 | cut -f2 -d':' )
 	variants="$variants $add_variants"
 fi

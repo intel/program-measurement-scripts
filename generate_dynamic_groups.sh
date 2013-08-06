@@ -28,6 +28,12 @@ echo
 nb_groups=$( ${MAQAO} module=grouping bin=$binary_path fct=${function_name} with_sse=1 loop=$loop_id --cm | wc -l )
 echo "Number of static groups: '$nb_groups'"
 
+if [[ "$nb_groups" < "2" ]]
+then
+	echo "No grouping to generate for '$nb_groups' group."
+	exit -1
+fi
+
 echo "Generating combinatorics..."
 combinatorics=$( $COMBINATORICS_SH $nb_groups ) 
 #echo "Combinatorics: '$combinatorics'"
