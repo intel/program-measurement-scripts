@@ -11,9 +11,9 @@ fi
 codelet_binary="$1"
 loop_id="$2"
 
-groups=$( ~/nfs/CLS/maqao/maqao module=grouping format=pcr bin="$codelet_binary" loop="$loop_id" )
+groups=$( "$MAQAO" module=grouping format=pcr bin="$codelet_binary" loop="$loop_id" | sed 's/ /_/g' )
 
-#echo "Groups = '$groups'"
+#echo "Groups = '$groups'" 1>&2
 
 if [[ "$groups" == "" ]]
 then
