@@ -1,10 +1,25 @@
-#!/bin/bash
+#!/bin/bash -l
 
-groups=$( ~/nfs/CLS/maqao/maqao module=grouping bin=/tmp/svdcmp_14_dp_avx loop=2 format=pcr )
+source ./const.sh
+
+if [[ "$nb_args" != "2" ]]
+then
+	echo "ERROR! Invalid arguments (need: codelet binary, loop id)."
+	exit -1
+fi
+
+codelet_binary="$1"
+loop_id="$2"
+
+groups=$( ~/nfs/CLS/maqao/maqao module=grouping format=pcr bin="$codelet_binary" loop="$loop_id" )
 
 #echo "Groups = '$groups'"
 
-echo "Starting"
+if [[ "$groups" == "" ]]
+then
+	echo "Problem with group analysis! (bin='$codelet_binary', loop='$loop_id')"
+	exit -1
+fi
 
 id_group=1
 for group in $groups
@@ -65,5 +80,3 @@ do
 
 	let "id_group = $id_group + 1"
 done
-
-echo "Happy!"
