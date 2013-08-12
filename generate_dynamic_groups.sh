@@ -25,7 +25,7 @@ echo "Generating DECAN dynamic group variants..."
 echo
 
 #echo "Finding the number of groups..."
-nb_groups=$( ${MAQAO} module=grouping bin=$binary_path fct=${function_name} with_sse=1 loop=$loop_id --cm | wc -l )
+nb_groups=$( ${MAQAO} module=grouping bin=$binary_path loop=$loop_id format=pcr | wc -l )
 echo "Number of static groups: '$nb_groups'"
 
 if [[ "$nb_groups" < "2" ]]
