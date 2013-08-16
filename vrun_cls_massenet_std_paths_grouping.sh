@@ -76,7 +76,7 @@ linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/
 linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/NRs/numerical_recipes/batch4/tridag_1/tridag_1_dp/tridag_1_dp_avx"
 ##linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/NRs/numerical_recipes/batch4/tridag_1/tridag_1_dp/tridag_1_dp_sse"
 linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/NRs/numerical_recipes/batch4/tridag_2/tridag_2_dp/tridag_2_dp_avx"
-linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/NRs/numerical_recipes/batch4/tridag_2/tridag_2_dp/tridag_2_dp_sse"
+##linear_codelets="$linear_codelets /home/users/vpalomares/nfs/codelets/NR_format/NRs/numerical_recipes/batch4/tridag_2/tridag_2_dp/tridag_2_dp_sse"
 
 
 for codelet in $linear_codelets

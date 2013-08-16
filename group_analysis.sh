@@ -47,25 +47,25 @@ do
 	do
 		let "insn_address_field = 2 + $insn_id"
 		insn_address=$( echo "$group" | cut -f$insn_address_field -d';' )
-		titles="[G$id_group][I$insn_id] Address;$titles"
+		titles="[G$id_group] [I$insn_id] Address;$titles"
 		values="$insn_address;$values"
 
 		let "insn_mnemcode_field = 2 + $nb_insns + $insn_id"
 		insn_mnemcode=$( echo "$group" | cut -f$insn_mnemcode_field -d';' )
-		titles="[G$id_group][I$insn_id] Mnem code;$titles"
+		titles="[G$id_group] [I$insn_id] Mnem code;$titles"
 		values="$insn_mnemcode;$values"
 
 		let "insn_offset_field = 2 + 2 * $nb_insns + $insn_id"
 		insn_offset=$( echo "$group" | cut -f$insn_offset_field -d';' )
-		titles="[G$id_group][I$insn_id] Offset;$titles"
+		titles="[G$id_group] [I$insn_id] Offset;$titles"
 		values="$insn_offset;$values"
 
 		let "insn_field = 2 + 3 * $nb_insns + $insn_id"
 		insn=$( echo "$group" | cut -f$insn_field -d';' )
-		titles="[G$id_group][I$insn_id] ASM;$titles"
+		titles="[G$id_group] [I$insn_id] ASM;$titles"
 		values="$insn;$values"
 
-		echo -e "\t\t$insn_id [$insn_address] : $insn" 1>&2
+		echo -e "\t\t$insn_id [$insn_address] : $insn"
 	done
 
 	let "stride_status_field = 2 + 4 * $nb_insns + 3"
