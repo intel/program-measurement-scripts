@@ -32,15 +32,16 @@ then
 	echo "ERROR! No loop could be identified!"
 	exit -1
 fi
-rm -f $PWD/$DECAN_REPORT
+#rm -f $PWD/$DECAN_REPORT
 
 
-#loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
+loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
 
 
+#echo "$decan_variants" &>blabla
 #for loop_id in $loop_ids
 #do
-#	echo "Found loop '$loop_id'"
+#	echo "Found loop '$loop_id'" &> blabli
 #done
 
 
