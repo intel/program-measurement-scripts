@@ -87,6 +87,22 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "splitntime_dt1_rat_dos"* ]]
+then
+	transformation="stream"
+	option1="dt"
+	option2="dt_sub_1"
+	timers="basic"
+	counters=""
+
+        elementary="divonstack"
+	divider_value="3.14"
+	divided_value="7.89"
+
+	treated=1
+fi
+
+
 if [[ "$macro" == "special_grouping"* ]]
 then
 	transformation="stream"

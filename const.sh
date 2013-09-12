@@ -29,7 +29,7 @@ ACTIVATE_COUNTERS=1
 ACTIVATE_SANDY_BRIDGE_UNCORE=1
 
 # For cls.sh
-ACTIVATE_DYNAMIC_GROUPING=1
+ACTIVATE_DYNAMIC_GROUPING=0
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 
@@ -45,10 +45,11 @@ BINARIES_FOLDER="binaries"
 declare -A transforms
 transforms+=([time_reference]="time_reference")
 transforms+=([time_reference_pref]="time_reference_pref")
-transforms+=([time_reference_divonstack]="time_reference_div_on_stack")
+transforms+=([time_reference_dos]="time_reference_div_on_stack")
 
 transforms+=([dt1]="splitntime_dt1")
 transforms+=([dt1_rat]="splitntime_dt1_rat")
+transforms+=([dt1_rat_dos]="splitntime_dt1_rat_dos")
 transforms+=([dt2_rat]="splitntime_dt2_rat")
 transforms+=([dt3_rat]="splitntime_dt3_rat")
 
@@ -60,7 +61,7 @@ transforms+=([as_ratmb]="splitntime_mem_AS_ratmb")
 transforms+=([fpi]="splitntime_fp")
 transforms+=([fpi_rat1b]="splitntime_fp_rat1b")
 transforms+=([fpi_ratmb]="splitntime_fp_ratmb")
-transforms+=([fpi_divonstack]="splitntime_fp_div_on_stack")
+transforms+=([fpi_dos]="splitntime_fp_div_on_stack")
 
 transforms+=([noas-nofpi]="splitntime_noas-nofpi")
 transforms+=([noas-nofpi_rat1b]="splitntime_noas-nofpi_rat1b")
