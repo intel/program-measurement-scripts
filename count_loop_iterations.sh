@@ -32,7 +32,7 @@ then
 	echo "ERROR! No loop could be identified!"
 	exit -1
 fi
-#rm -f $PWD/$DECAN_REPORT
+rm -f $PWD/$DECAN_REPORT
 
 
 loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
@@ -50,7 +50,7 @@ do
 	#"./$decan_variant"
 	"./$decan_variant" &> "$decan_variant.dprof"
 	count_values[$decan_variant]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
-#	cat "$decan_variant.dprof"
+#	cat "$decan_variant.dprof" 1>&2
 	rm -f "$decan_variant" "$decan_variant.dprof"
 done
 

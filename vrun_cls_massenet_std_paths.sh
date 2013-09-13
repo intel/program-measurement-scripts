@@ -3,10 +3,11 @@
 
 variants="time_reference as time_reference_pref as_pref dt1_rat fpi noas-nofpi_ratmb"
 variants="dt1_rat time_reference_dos dt1_rat_dos fpi_dos"
+variants="time_reference as"
 linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
 #linear_sizes="1000"
 quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 1400 1500 1600 1800 2000 2500 3000"
-quadratic_sizes="208"
+#quadratic_sizes="208"
 memory_loads="0"
 frequencies="1200000 2700000"
 #frequencies="2700000"

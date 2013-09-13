@@ -49,7 +49,7 @@ then
 	counters=""
 
 	elementary="divonstack"
-	divider_value="3.14"
+	divider_value="1.00"
 	divided_value="7.89"
 
 	treated=1
@@ -96,7 +96,7 @@ then
 	counters=""
 
         elementary="divonstack"
-	divider_value="3.14"
+	divider_value="1.00"
 	divided_value="7.89"
 
 	treated=1
@@ -222,7 +222,7 @@ then
 	counters=""
 
 	elementary="divonstack"
-	divider_value="3.14"
+	divider_value="1.00"
 	divided_value="7.89"
 
 	treated=1
