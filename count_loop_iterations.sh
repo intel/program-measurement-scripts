@@ -2,7 +2,6 @@
 
 source ./const.sh
 
-
 if [[ "$nb_args" != "2" ]]
 then
 	echo "ERROR! Invalid arguments (need the binary's path and the function's name)."

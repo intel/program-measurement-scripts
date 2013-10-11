@@ -11,6 +11,8 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DECAN_FOLDER"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/intel/composer_xe_2011_sp1.9.293/compiler/lib/intel64/"
+export PATH="$PATH:/opt/intel/bin"
 
 LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
 
@@ -26,7 +28,7 @@ MIN_REPETITIONS=250
 # For run_codelet.sh (1/2)
 META_REPETITIONS=5
 ACTIVATE_COUNTERS=1
-ACTIVATE_SANDY_BRIDGE_UNCORE=1
+ACTIVATE_SANDY_BRIDGE_UNCORE=0
 
 # For cls.sh
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -40,6 +42,9 @@ module load tools/numactl/2.0.7
 
 # For generate_original.sh
 BINARIES_FOLDER="binaries"
+export LANG=fr_FR.utf8
+export LC_ALL=fr_FR.utf8
+
 
 # For generate_variants.sh
 declare -A transforms

@@ -18,7 +18,8 @@ mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
 echo "Generating codelet '$binary_folder/$codelet_name'..."
 
 cd "$binary_folder"
-make clean all &> /dev/null
+make clean all
+# &> /dev/null
 res=$?
 
 if [[ "$res" != "0" ]]
