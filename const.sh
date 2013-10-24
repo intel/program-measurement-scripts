@@ -49,32 +49,32 @@ export LC_ALL=fr_FR.utf8
 
 # For generate_variants.sh
 declare -A transforms
-transforms+=([time_reference]="time_reference")
-transforms+=([time_reference_pref]="time_reference_pref")
-transforms+=([time_reference_dos]="time_reference_div_on_stack")
+transforms+=([REF]="time_reference")
+transforms+=([REF_PREF]="time_reference_pref")
+transforms+=([REF_DOS]="time_reference_div_on_stack")
 
-transforms+=([dt1]="splitntime_dt1")
-transforms+=([dt1_rat]="splitntime_dt1_rat")
-transforms+=([dt1_rat_dos]="splitntime_dt1_rat_dos")
-transforms+=([dt2_rat]="splitntime_dt2_rat")
-transforms+=([dt3_rat]="splitntime_dt3_rat")
+transforms+=([DL1]="splitntime_dt1")
+transforms+=([DL1_rat]="splitntime_dt1_rat")
+transforms+=([DL1_rat_dos]="splitntime_dt1_rat_dos")
+transforms+=([DL2_rat]="splitntime_dt2_rat")
+transforms+=([DL3_rat]="splitntime_dt3_rat")
 
-transforms+=([as]="splitntime_mem_AS")
-transforms+=([as_pref]="splitntime_mem_AS_pref")
-transforms+=([as_rat1b]="splitntime_mem_AS_rat1b")
-transforms+=([as_ratmb]="splitntime_mem_AS_ratmb")
+transforms+=([LS]="splitntime_mem_AS")
+transforms+=([LS_PREF]="splitntime_mem_AS_pref")
+transforms+=([LS_RAT1B]="splitntime_mem_AS_rat1b")
+transforms+=([LS_RATMB]="splitntime_mem_AS_ratmb")
 
-transforms+=([fpi]="splitntime_fp")
-transforms+=([fpi_rat1b]="splitntime_fp_rat1b")
-transforms+=([fpi_ratmb]="splitntime_fp_ratmb")
-transforms+=([fpi_dos]="splitntime_fp_div_on_stack")
+transforms+=([FP]="splitntime_fp")
+transforms+=([FP_RAT1B]="splitntime_fp_rat1b")
+transforms+=([FP_RATMB]="splitntime_fp_ratmb")
+transforms+=([FP_DOS]="splitntime_fp_div_on_stack")
 
-transforms+=([noas-nofpi]="splitntime_noas-nofpi")
-transforms+=([noas-nofpi_rat1b]="splitntime_noas-nofpi_rat1b")
-transforms+=([noas-nofpi_ratmb]="splitntime_noas-nofpi_ratmb")
+transforms+=([NOLS-NOFP]="splitntime_noas-nofpi")
+transforms+=([NOLS-NOFP_RAT1B]="splitntime_noas-nofpi_rat1b")
+transforms+=([NOLS-NOFP_RATMB]="splitntime_noas-nofpi_ratmb")
 
-transforms+=([ref_nodiv]="reference_nodivision")
-transforms+=([ref_nored]="reference_noreduction")
+transforms+=([REF_NODIV]="reference_nodivision")
+transforms+=([REF_NORED]="reference_noreduction")
 
 # For run_codelet.sh (2/2)
 declare -A XP_CORES
