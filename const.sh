@@ -11,10 +11,11 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DECAN_FOLDER"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/intel/composer_xe_2011_sp1.9.293/compiler/lib/intel64/"
-export PATH="$PATH:/opt/intel/bin"
+export LD_LIBRARY_PATH="/nfs/site/home/vpalomar/local_disk/ecr_env:$LD_LIBRARY_PATH"
+export PATH="/opt/intel/Compiler/12.1/bin/:$PATH"
 
-LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
+#LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
+LIKWID_PERFCTR="/opt/likwid/bin/likwid-perfctr"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
@@ -29,7 +30,7 @@ MIN_REPETITIONS=250
 META_REPETITIONS=5
 ACTIVATE_COUNTERS=1
 ACTIVATE_ADVANCED_COUNTERS=1
-ACTIVATE_SANDY_BRIDGE_UNCORE=0
+ACTIVATE_SANDY_BRIDGE_UNCORE=1
 
 # For cls.sh
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -37,14 +38,14 @@ COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 
 # Modules
-module load compilers/intel/12.1.3
-module load tools/likwid/2.3.0
-module load tools/numactl/2.0.7
+#module load compilers/intel/12.1.3
+#module load tools/likwid/2.3.0
+#module load tools/numactl/2.0.7
 
 # For generate_original.sh
 BINARIES_FOLDER="binaries"
-export LANG=fr_FR.utf8
-export LC_ALL=fr_FR.utf8
+export LANG=en_US.utf8
+export LC_ALL=en_US.utf8
 
 
 # For generate_variants.sh
@@ -84,6 +85,7 @@ XP_CORES+=([chopin]="3")
 XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
+XP_CORES+=([fxe12-cwong2901]="17")
 
 MEMLOADER_FOLDER="$CLS_FOLDER/memloader"
 MEMLOADER_PINNER="$MEMLOADER_FOLDER/Mempinner.sh"

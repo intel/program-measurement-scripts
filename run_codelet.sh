@@ -40,6 +40,8 @@ normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 echo -e "CPI \t'$normalized_mean'"
 echo "$codelet_name;$data_size;$memory_load;$frequency;$variant;$normalized_mean" > "$res_path/cpi.csv"
 
+echo "Ld library path: '$LD_LIBRARY_PATH'"
+
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
 	echo "Running counters..."
@@ -71,7 +73,7 @@ then
 		   then
 			   counters="CAS_COUNT_RD CAS_COUNT_WR"
 
-			   res=$( $LIKWID_PERFCTR -M 1 -C $XP_CORE -g CAS_COUNT_RD:MBOX0C0,CAS_COUNT_WR:MBOX1C0,CAS_COUNT_RD:MBOX0C1,CAS_COUNT_WR:MBOX1C1,CAS_COUNT_RD:MBOX0C2,CAS_COUNT_WR:MBOX1C2,CAS_COUNT_RD:MBOX0C3,CAS_COUNT_WR:MBOX1C3 ./${codelet_name}_${variant}_hwc )
+			   res=$( $LIKWID_PERFCTR -C $XP_CORE -g CAS_COUNT_RD:MBOX0C0,CAS_COUNT_WR:MBOX1C0,CAS_COUNT_RD:MBOX0C1,CAS_COUNT_WR:MBOX1C1,CAS_COUNT_RD:MBOX0C2,CAS_COUNT_WR:MBOX1C2,CAS_COUNT_RD:MBOX0C3,CAS_COUNT_WR:MBOX1C3 ./${codelet_name}_${variant}_hwc )
 
 			   #LLC_VICTIMS_M_STATE
 
