@@ -158,6 +158,7 @@ do
 	for memory_load in $memory_loads
 	do
 		mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load" &> /dev/null
+		killall -9 memloader --quiet &> /dev/null
 		if [[ "$memory_load" != "0" ]]
 		then
 			echo "Starting a memloader for '$memory_load' MB/s ($MEMLOAD_ARGS_LIST)"
@@ -201,7 +202,7 @@ do
 
 		if [[ "$memory_load" != "0" ]]
 		then
-			kill -2 $memload_pid	
+			killall -9 memloader --quiet &> /dev/null	
 		else
 			echo "No memory load (=> nothing to kill)."
 		fi

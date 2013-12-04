@@ -12,7 +12,7 @@ DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DECAN_FOLDER"
 export LD_LIBRARY_PATH="/localdisk/vincent_libraries:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:$PATH"
+export PATH="/opt/intel/Compiler/12.1/bin/:$PATH:/opt/intel/bin"
 
 #LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
 LIKWID_PERFCTR="/opt/likwid/bin/likwid-perfctr"
