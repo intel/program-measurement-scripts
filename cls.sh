@@ -171,6 +171,8 @@ do
 			then
 				echo "Cancelling CLS."
 				exit -1
+			else
+				disown $memload_pid
 			fi
 		else
 			echo "No memory load."
