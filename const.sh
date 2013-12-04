@@ -28,7 +28,7 @@ MIN_REPETITIONS=250
 
 # For run_codelet.sh (1/2)
 META_REPETITIONS=5
-ACTIVATE_COUNTERS=1
+ACTIVATE_COUNTERS=0
 ACTIVATE_SANDY_BRIDGE_UNCORE=1
 ACTIVATE_ADVANCED_COUNTERS=1
 
@@ -86,20 +86,14 @@ XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
 XP_CORES+=([fxe12-cwong2901]="17")
+XP_CORES+=([fxtcarilab027]="11")
 
-MEMLOADER_FOLDER="$CLS_FOLDER/memloader"
-MEMLOADER_PINNER="$MEMLOADER_FOLDER/Mempinner.sh"
-MEMLOADER_KILLER="$MEMLOADER_FOLDER/Memkiller.sh"
-declare -A MEMLOAD_CORES
-MEMLOAD_CORES+=([britten]="0 1 2")
-MEMLOAD_CORES+=([buxtehude]="1 3 5")
-MEMLOAD_CORES+=([chopin]="0 1 2")
-MEMLOAD_CORES+=([dandrieu]="0 1 2")
-MEMLOAD_CORES+=([massenet]="0 1 2 3 4 5 6")
-MEMLOAD_CORES+=([sviridov]="0")
+MEMLOADER="$CLS_FOLDER/memloader"
+declare -A MEMLOAD_ARGS
+MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
 XP_CORE=${XP_CORES[$HOSTNAME]}
-MEMLOAD_CORES_LIST=${MEMLOAD_CORES[$HOSTNAME]}
+MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
 # For gather_results.sh
 CPIS_FOLDER="cpis"

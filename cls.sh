@@ -160,23 +160,17 @@ do
 		mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load" &> /dev/null
 		if [[ "$memory_load" != "0" ]]
 		then
-			#echo "Setting all cores on high frequency..."
-			#./set_frequency.sh 'max' '*'
-			#res=$?
-			#if [[ "$res" != "0" ]]
-			#then
-			#	echo "Cancelling CLS."
-			#	exit -1
-			#fi
-
-			$MEMLOADER_PINNER "$MEMLOADER_FOLDER" "$memory_load" "$MEMLOAD_CORES_LIST"
+			echo "Starting a memloader for '$memory_load' MB/s ($MEMLOAD_ARGS_LIST)"
+			$MEMLOADER --target_bw=$memory_load $MEMLOAD_ARGS_LIST > "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/memloader.log" &
+			memload_pid=$!
+			sleep 5
+			kill -0 $memload_pid &> /dev/null
 			res=$?
 			if [[ "$res" != "0" ]]
 			then
 				echo "Cancelling CLS."
 				exit -1
 			fi
-			sleep 5
 		else
 			echo "No memory load."
 		fi
@@ -207,15 +201,7 @@ do
 
 		if [[ "$memory_load" != "0" ]]
 		then
-			res_txt=$( $MEMLOADER_KILLER "$MEMLOADER_FOLDER" )
-			res=$?
-			if [[ "$res" != "0" ]]
-			then
-				echo "Cancelling CLS."
-				exit -1
-			fi
-			echo "$res_txt"
-			echo "$res_txt" | grep "MB/s" > "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load"/achieved_bw
+			kill -2 $memload_pid	
 		else
 			echo "No memory load (=> nothing to kill)."
 		fi
