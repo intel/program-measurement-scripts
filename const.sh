@@ -25,7 +25,7 @@ MIN_REPETITIONS=250
 
 # For run_codelet.sh (1/2)
 META_REPETITIONS=5
-ACTIVATE_COUNTERS=0
+ACTIVATE_COUNTERS=1
 ACTIVATE_ADVANCED_COUNTERS=0
 
 # For cls.sh
@@ -50,9 +50,9 @@ transforms+=([REF]="time_reference")
 transforms+=([REF_PREF]="time_reference_pref")
 transforms+=([REF_DOS]="time_reference_div_on_stack")
 
-transforms+=([DL1]="splitntime_dt1")
+transforms+=([DL1]="splitntime_dt1_rat")
 transforms+=([DL1_rat]="splitntime_dt1_rat")
-transforms+=([DL1_rat_dos]="splitntime_dt1_rat_dos")
+transforms+=([DL1_dos]="splitntime_dt1_rat_dos")
 transforms+=([DL2_rat]="splitntime_dt2_rat")
 transforms+=([DL3_rat]="splitntime_dt3_rat")
 
