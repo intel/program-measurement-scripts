@@ -12,10 +12,7 @@ DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DECAN_FOLDER"
 export LD_LIBRARY_PATH="/localdisk/vincent_libraries:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:$PATH"
-
-#LIKWID_PERFCTR="$CLS_FOLDER/likwid/likwid-perfctr"
-LIKWID_PERFCTR="/opt/likwid/bin/likwid-perfctr"
+export PATH="/opt/intel/Compiler/12.1/bin/:$PATH:/opt/intel/bin"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
@@ -29,8 +26,7 @@ MIN_REPETITIONS=250
 # For run_codelet.sh (1/2)
 META_REPETITIONS=5
 ACTIVATE_COUNTERS=1
-ACTIVATE_SANDY_BRIDGE_UNCORE=1
-ACTIVATE_ADVANCED_COUNTERS=1
+ACTIVATE_ADVANCED_COUNTERS=0
 
 # For cls.sh
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -54,9 +50,9 @@ transforms+=([REF]="time_reference")
 transforms+=([REF_PREF]="time_reference_pref")
 transforms+=([REF_DOS]="time_reference_div_on_stack")
 
-transforms+=([DL1]="splitntime_dt1")
+transforms+=([DL1]="splitntime_dt1_rat")
 transforms+=([DL1_rat]="splitntime_dt1_rat")
-transforms+=([DL1_rat_dos]="splitntime_dt1_rat_dos")
+transforms+=([DL1_dos]="splitntime_dt1_rat_dos")
 transforms+=([DL2_rat]="splitntime_dt2_rat")
 transforms+=([DL3_rat]="splitntime_dt3_rat")
 
@@ -85,22 +81,15 @@ XP_CORES+=([chopin]="3")
 XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
-#XP_CORES+=([fxe12-cwong2901]="17")
 XP_CORES+=([fxe12-cwong2901]="11")
+XP_CORES+=([fxtcarilab027]="11")
 
-MEMLOADER_FOLDER="$CLS_FOLDER/memloader"
-MEMLOADER_PINNER="$MEMLOADER_FOLDER/Mempinner.sh"
-MEMLOADER_KILLER="$MEMLOADER_FOLDER/Memkiller.sh"
-declare -A MEMLOAD_CORES
-MEMLOAD_CORES+=([britten]="0 1 2")
-MEMLOAD_CORES+=([buxtehude]="1 3 5")
-MEMLOAD_CORES+=([chopin]="0 1 2")
-MEMLOAD_CORES+=([dandrieu]="0 1 2")
-MEMLOAD_CORES+=([massenet]="0 1 2 3 4 5 6")
-MEMLOAD_CORES+=([sviridov]="0")
+MEMLOADER="$CLS_FOLDER/memloader"
+declare -A MEMLOAD_ARGS
+MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
 XP_CORE=${XP_CORES[$HOSTNAME]}
-MEMLOAD_CORES_LIST=${MEMLOAD_CORES[$HOSTNAME]}
+MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
 # For gather_results.sh
 CPIS_FOLDER="cpis"
