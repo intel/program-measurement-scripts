@@ -85,7 +85,8 @@ XP_CORES+=([chopin]="3")
 XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
-XP_CORES+=([fxe12-cwong2901]="17")
+#XP_CORES+=([fxe12-cwong2901]="17")
+XP_CORES+=([fxe12-cwong2901]="11")
 
 MEMLOADER_FOLDER="$CLS_FOLDER/memloader"
 MEMLOADER_PINNER="$MEMLOADER_FOLDER/Mempinner.sh"
