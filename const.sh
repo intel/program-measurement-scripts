@@ -89,6 +89,7 @@ XP_CORES+=([fxtcarilab027]="11")
 
 MEMLOADER="$CLS_FOLDER/memloader"
 declare -A MEMLOAD_ARGS
+MEMLOAD_ARGS+=([fxe12-cwong2901]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
 XP_CORE=${XP_CORES[$HOSTNAME]}
