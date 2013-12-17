@@ -3,13 +3,14 @@
 
 #variants="REF LS FP DL1 NOLS-NOFP"
 variants="REF LS DL1 NOLS-NOFP REF_DOS FP_DOS"
-#variants="REF"
+variants="REF"
 linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
-#linear_sizes="1000000 10000000"
+linear_sizes="1000000"
 quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 1400 1500 1600 1800 2000 2500 3000"
 memory_loads="0 99999"
+memory_loads="0"
 frequencies="1200000 2500000"
-#frequencies="2500000"
+frequencies="2500000"
 
 linear_codelets=""
 quadratic_codelets=""
@@ -35,7 +36,7 @@ quadratic_codelets=""
 #quadratic_codelets="$quadratic_codelets /localdisk/vincent/intel_codelets/saeed_codelets/dongarra_up/nr_format/s231/s231_sp/s231_1_sp_sse"
 
 
-#linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch1/balanc_3/balanc_3_dp/balanc_3_dp_avx"
+linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch1/balanc_3/balanc_3_dp/balanc_3_dp_avx"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch1/balanc_3/balanc_3_dp/balanc_3_dp_sse"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch1/svdcmp_13/svdcmp_13_dp/svdcmp_13_dp_avx"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch1/svdcmp_13/svdcmp_13_dp/svdcmp_13_dp_sse"
@@ -68,9 +69,9 @@ quadratic_codelets=""
 #quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/mprove_8/mprove_8_mp/mprove_8_mp_sse"
 #quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/mprove_8/mprove_8_mp/mprove_8_mp_sse_dec"
 ##quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/rstrct_29/rstrct_29_dp/rstrct_29_dp_avx"
-quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/rstrct_29/rstrct_29_dp/rstrct_29_dp_sse"
+#quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/rstrct_29/rstrct_29_dp/rstrct_29_dp_sse"
 ##quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/svbksb_3/svbksb_3_sp/svbksb_3_sp_avx"
-quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/svbksb_3/svbksb_3_sp/svbksb_3_sp_sse"
+#quadratic_codelets="$quadratic_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch3/svbksb_3/svbksb_3_sp/svbksb_3_sp_sse"
 
 
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/batch4/elmhes_10/elmhes_10_dp/elmhes_10_dp_avx"
