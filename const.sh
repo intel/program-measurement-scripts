@@ -1,5 +1,7 @@
 #!/bin/bash -l
 
+#export HOSTNAME="fxe12-cwong2901_nopref"
+
 nb_args="$#"
 
 CLS_FOLDER="$PWD"
@@ -46,12 +48,12 @@ export LC_ALL=en_US.utf8
 
 # For generate_variants.sh
 declare -A transforms
-transforms+=([REF]="time_reference")
+transforms+=([REF]="time_reference_div_on_stack")
 transforms+=([REF_PREF]="time_reference_pref")
-transforms+=([REF_DOS]="time_reference_div_on_stack")
+transforms+=([REF_SAN]="time_reference")
 
-transforms+=([DL1]="splitntime_dt1_rat")
-transforms+=([DL1_rat]="splitntime_dt1_rat")
+transforms+=([DL1]="splitntime_dt1_rat_dos")
+transforms+=([DL1_SAN]="splitntime_dt1_rat")
 transforms+=([DL1_dos]="splitntime_dt1_rat_dos")
 transforms+=([DL2_rat]="splitntime_dt2_rat")
 transforms+=([DL3_rat]="splitntime_dt3_rat")
@@ -61,10 +63,10 @@ transforms+=([LS_PREF]="splitntime_mem_AS_pref")
 transforms+=([LS_RAT1B]="splitntime_mem_AS_rat1b")
 transforms+=([LS_RATMB]="splitntime_mem_AS_ratmb")
 
-transforms+=([FP]="splitntime_fp")
+transforms+=([FP]="splitntime_fp_div_on_stack")
 transforms+=([FP_RAT1B]="splitntime_fp_rat1b")
 transforms+=([FP_RATMB]="splitntime_fp_ratmb")
-transforms+=([FP_DOS]="splitntime_fp_div_on_stack")
+transforms+=([FP_SAN]="splitntime_fp")
 
 transforms+=([NOLS-NOFP]="splitntime_noas-nofpi")
 transforms+=([NOLS-NOFP_RAT1B]="splitntime_noas-nofpi_rat1b")
@@ -82,6 +84,7 @@ XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
 XP_CORES+=([fxe12-cwong2901]="11")
+XP_CORES+=([fxe12-cwong2901_nopref]="11")
 XP_CORES+=([fxtcarilab027]="11")
 
 MEMLOADER="$CLS_FOLDER/memloader"
