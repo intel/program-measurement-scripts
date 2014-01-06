@@ -274,7 +274,7 @@ fi
 
 if [[ "$macro" == "reference_noreduction"* ]]
 then
-	transformation="atomic"
+	transformation="none"
 	option1=""
 	option2="no_red"
 	timers="basic"
@@ -284,7 +284,7 @@ fi
 
 if [[ "$macro" == "reference_decoupled"* ]]
 then
-	transformation="atomic"
+	transformation="none"
 	option1=""
 	option2="add_xor_to_load"
 	timers="basic"
