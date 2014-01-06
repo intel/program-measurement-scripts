@@ -70,7 +70,7 @@ transforms+=([FP_SAN]="splitntime_fp")
 
 transforms+=([NOLS-NOFP]="splitntime_noas-nofpi")
 transforms+=([NOLS-NOFP_RAT1B]="splitntime_noas-nofpi_rat1b")
-transforms+=([NOLS-NOFP_RATMB]="splitntime_noas-nofpi_ratmb")
+transforms+=([FES]="splitntime_noas-nofpi_ratmb")
 
 transforms+=([REF_NODIV]="reference_nodivision")
 transforms+=([REF_NORED]="reference_noreduction")
