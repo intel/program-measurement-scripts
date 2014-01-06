@@ -352,4 +352,5 @@ echo "prefetch_ratio= 100"			>> $decan_path/decan.conf
 
 echo "DECAN conf was prepared successfully!"
 
+
 exit 0
