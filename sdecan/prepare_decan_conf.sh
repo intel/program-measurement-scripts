@@ -276,7 +276,7 @@ if [[ "$macro" == "reference_noreduction"* ]]
 then
 	transformation="atomic"
 	option1=""
-	option2="no_reduction"
+	option2="no_red"
 	timers="basic"
 	counters=""
 	treated=1
