@@ -74,6 +74,7 @@ transforms+=([FES]="splitntime_noas-nofpi_ratmb")
 
 transforms+=([REF_NODIV]="reference_nodivision")
 transforms+=([REF_NORED]="reference_noreduction")
+transforms+=([DEC]="reference_decoupled")
 
 # For run_codelet.sh (2/2)
 declare -A XP_CORES

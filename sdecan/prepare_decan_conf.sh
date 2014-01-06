@@ -282,6 +282,16 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "reference_decoupled"* ]]
+then
+	transformation="atomic"
+	option1=""
+	option2="add_xor_to_load"
+	timers="basic"
+	counters=""
+	treated=1
+fi
+
 
 if [[ "$macro" == *"_hwc" ]]
 then
