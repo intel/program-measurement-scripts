@@ -264,11 +264,12 @@ fi
 # ----------- Special transformations
 if [[ "$macro" == "reference_nodivision"* ]]
 then
-	transformation="atomic"
+	transformation="none"
 	option1=""
-	option2="no_division"
+	option2=""
 	timers="basic"
 	counters=""
+	elementary="no_division"
 	treated=1
 fi
 
@@ -276,9 +277,10 @@ if [[ "$macro" == "reference_noreduction"* ]]
 then
 	transformation="none"
 	option1=""
-	option2="no_red"
+	option2=""
 	timers="basic"
 	counters=""
+	elementary="no_red"
 	treated=1
 fi
 
@@ -286,9 +288,10 @@ if [[ "$macro" == "reference_decoupled"* ]]
 then
 	transformation="none"
 	option1=""
-	option2="add_xor_to_load"
+	option2=""
 	timers="basic"
 	counters=""
+	elementary="add_xor_to_load"
 	treated=1
 fi
 
