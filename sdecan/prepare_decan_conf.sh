@@ -345,7 +345,7 @@ echo "group_option= $group_option"		>> $decan_path/decan.conf
 echo "dynamic_groups= $groups"			>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
-echo "blacklist= " 				>> $decan_path/decan.conf
+echo "blacklist= "	 			>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
 echo "elementary=$elementary"			>> $decan_path/decan.conf

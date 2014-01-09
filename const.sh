@@ -13,7 +13,7 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:$PATH:/opt/intel/bin"
+export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:$PATH:/opt/intel/bin/"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
