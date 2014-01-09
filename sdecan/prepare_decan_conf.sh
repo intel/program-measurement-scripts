@@ -280,7 +280,7 @@ then
 	option2=""
 	timers="basic"
 	counters=""
-	elementary="no_red"
+	elementary="no_red divonstack"
 	treated=1
 fi
 
@@ -291,7 +291,7 @@ then
 	option2=""
 	timers="basic"
 	counters=""
-	elementary="add_xor_to_load"
+	elementary="add_xor_to_load divonstack"
 	treated=1
 fi
 
@@ -345,7 +345,7 @@ echo "group_option= $group_option"		>> $decan_path/decan.conf
 echo "dynamic_groups= $groups"			>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
-echo "blacklist= "	 			>> $decan_path/decan.conf
+echo "blacklist= "				>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
 echo "elementary=$elementary"			>> $decan_path/decan.conf
