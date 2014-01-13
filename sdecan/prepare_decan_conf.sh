@@ -295,6 +295,17 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "reference_addnopped"* ]]
+then
+	transformation="none"
+	option1=""
+	option2=""
+	timers="basic"
+	counters=""
+	elementary="add_nop divonstack"
+	treated=1
+fi
+
 
 if [[ "$macro" == *"_hwc" ]]
 then
