@@ -16,7 +16,7 @@ echo "Macro: $macro"
 echo "Groups: '$groups'"
 
 
-# ----------- Basic transformations
+#----------- Basic transformations
 if [[ "$macro" == "time_reference"* ]]
 then
 	transformation="none"
@@ -66,7 +66,7 @@ then
 fi
 
 
-# ----------- DT transformations
+#----------- DT transformations
 if [[ "$macro" == "splitntime_dt1"* ]]
 then
 	transformation="stream"
@@ -137,7 +137,7 @@ then
 fi
 
 
-# ----------- Mem transformations
+#----------- Mem transformations
 if [[ "$macro" == "splitntime_mem_AS"* ]]
 then
 	transformation="stream"
@@ -182,7 +182,7 @@ then
 fi
 
 
-# ----------- FP transformations
+#----------- FP transformations
 if [[ "$macro" == "splitntime_fp"* ]]
 then
 	transformation="stream"
@@ -228,8 +228,22 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "splitntime_fp_div_on_stack_ratmb"* ]]
+then
+	transformation="stream"
+	option1="fp"
+	option2="n-byte-nop"
+	timers="basic"
+	counters=""
 
-# ----------- Control transformations
+	elementary="divonstack"
+	divider_value="1.00"
+	divided_value="7.89"
+
+	treated=1
+fi
+
+#----------- Control transformations
 if [[ "$macro" == "splitntime_noas-nofpi"* ]]
 then
 	transformation="stream"
@@ -261,7 +275,7 @@ then
 fi
 
 
-# ----------- Special transformations
+#----------- Special transformations
 if [[ "$macro" == "reference_nodivision"* ]]
 then
 	transformation="atomic"
