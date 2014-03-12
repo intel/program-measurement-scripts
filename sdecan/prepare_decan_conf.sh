@@ -278,21 +278,45 @@ fi
 #----------- Special transformations
 if [[ "$macro" == "reference_nodivision"* ]]
 then
-	transformation="atomic"
+	transformation="none"
 	option1=""
-	option2="no_division"
+	option2=""
 	timers="basic"
 	counters=""
+	elementary="no_division"
 	treated=1
 fi
 
 if [[ "$macro" == "reference_noreduction"* ]]
 then
-	transformation="atomic"
+	transformation="none"
 	option1=""
-	option2="no_reduction"
+	option2=""
 	timers="basic"
 	counters=""
+	elementary="no_red divonstack"
+	treated=1
+fi
+
+if [[ "$macro" == "reference_decoupled"* ]]
+then
+	transformation="none"
+	option1=""
+	option2=""
+	timers="basic"
+	counters=""
+	elementary="add_xor_to_load divonstack"
+	treated=1
+fi
+
+if [[ "$macro" == "reference_addnopped"* ]]
+then
+	transformation="none"
+	option1=""
+	option2=""
+	timers="basic"
+	counters=""
+	elementary="add_nop divonstack"
 	treated=1
 fi
 
@@ -346,7 +370,7 @@ echo "group_option= $group_option"		>> $decan_path/decan.conf
 echo "dynamic_groups= $groups"			>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
-echo "blacklist= " 				>> $decan_path/decan.conf
+echo "blacklist= "				>> $decan_path/decan.conf
 
 echo "----------------------------------"	>> $decan_path/decan.conf
 echo "elementary=$elementary"			>> $decan_path/decan.conf
@@ -355,5 +379,6 @@ echo "divided_value= $divided_value"		>> $decan_path/decan.conf
 echo "prefetch_ratio= 100"			>> $decan_path/decan.conf
 
 echo "DECAN conf was prepared successfully!"
+
 
 exit 0

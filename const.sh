@@ -12,9 +12,8 @@ DECAN_CONFIGURATION="$DECAN_FOLDER/decan.conf"
 DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$DECAN_FOLDER"
-export LD_LIBRARY_PATH="/localdisk/vincent_libraries:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:$PATH:/opt/intel/bin"
+export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
+export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:$PATH:/opt/intel/bin/"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
@@ -74,6 +73,8 @@ transforms+=([FES]="splitntime_noas-nofpi_ratmb")
 
 transforms+=([REF_NODIV]="reference_nodivision")
 transforms+=([REF_NORED]="reference_noreduction")
+transforms+=([DEC]="reference_decoupled")
+transforms+=([DEC_SAN]="reference_addnopped")
 
 # For run_codelet.sh (2/2)
 declare -A XP_CORES
