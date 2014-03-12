@@ -146,9 +146,9 @@ then
 				cat "$res_folder"/binaries/*_$variant.asm >> $res_file
 				echo "" >> $res_file
 				echo "" >> $res_file
-				cat "$res_folder"/binaries/*_$variant.stan.csv >> $res_file
-				echo "" >> $res_file
-				echo "" >> $res_file
+#				cat "$res_folder"/binaries/*_$variant.stan.csv >> $res_file
+#				echo "" >> $res_file
+#				echo "" >> $res_file
 
 				#./draw_counters.sh "$res_file" "Overview" "" "CPI CPU_CLK_UNHALTED_REF INSTR_RETIRED_ANY"
 				#./draw_counters.sh "$res_file" "Memory" "" "L1D_REPLACEMENT L1D_WB_RQST_ALL L1D_WB_RQST_MISS SQ_MISC_FILL_DROPPED L2_LINES_IN_ALL L2_TRANS_L2_WB L3_LAT_CACHE_MISS"

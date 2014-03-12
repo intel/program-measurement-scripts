@@ -73,6 +73,6 @@ t=$( echo -e	"
 		$plot
 		" ) 
 
-echo -e "$t" | gnuplot
+echo -e "$t" | gnuplot &> /dev/null
 
 exit $?

@@ -31,8 +31,9 @@ then
 	exit -1
 fi
 
-"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" fct=$function_name lvl=1e > "$bin_folder/$codelet_name.stan"
-./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
+"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" fct=$function_name of=csv -ext
+# > "$bin_folder/$codelet_name.stan"
+#./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
 
 head -n 1 $function_name.csv | sed 's/;$//' > "$bin_folder/${codelet_name}.stan_full.csv"
 awk -F ';' '{if($5 == '$loop_id'){print;}}' $function_name.csv | sed 's/;$//' >> "$bin_folder/${codelet_name}.stan_full.csv"
@@ -64,8 +65,9 @@ do
 	sed -i "s/\t/     \t/g" "$bin_folder/${codelet_name}_${variant}.asm"
 	lid=$( "$MAQAO" "${MAQAO_FOLDER}/loop_id_extractor_from_address.lua" binary_name="$variant_path" loop_address="$inner_loop_address" )
 
-	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" fct=$function_name lvl=1e > "$bin_folder/${codelet_name}_${variant}.stan"
-	./convert_stan.sh "$bin_folder/${codelet_name}_${variant}.stan" $lid > "$bin_folder/${codelet_name}_${variant}.stan.csv"
+	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" fct=$function_name of=csv -ext
+	# > "$bin_folder/${codelet_name}_${variant}.stan"
+	#./convert_stan.sh "$bin_folder/${codelet_name}_${variant}.stan" $lid > "$bin_folder/${codelet_name}_${variant}.stan.csv"
 
 	head -n 1 $function_name.csv | sed 's/;$//' > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 	awk -F ';' '{if($5 == '$lid'){print;}}' $function_name.csv | sed 's/;$//' >> "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
