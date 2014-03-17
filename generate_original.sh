@@ -39,6 +39,11 @@ fi
 
 cp "$codelet_name" "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 
+if [[ -e "codelet.o" ]]
+then
+	cp "codelet.o" "$binary_folder/$CLS_RES_FOLDER/"	
+fi
+
 make clean &> /dev/null
 
 echo "Codelet generation was successful."
