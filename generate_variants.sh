@@ -44,7 +44,8 @@ do
 				echo "Configuration error. Aborting."
 				exit -1
 			fi
-			$DECAN "$DECAN_CONFIGURATION" &> /dev/null
+			$DECAN "$DECAN_CONFIGURATION" &> decan_output
+#/dev/null
 
 			generated_binaries=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 			if [[ "$generated_binaries" == "" ]]
