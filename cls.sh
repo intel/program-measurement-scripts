@@ -35,7 +35,7 @@ echo -e "Function name \t'$function_name'"
 
 echo "------------------------------------------------------------"
 echo "Removing older results (if any)..."
-#rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
+rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
 echo "Recreating results folder..."
 mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
@@ -108,7 +108,7 @@ then
 	~/recipe.sh 1
 fi
 
-exit 0
+#exit 0
 
 echo "------------------------------------------------------------"
 echo "Starting experiments..."
