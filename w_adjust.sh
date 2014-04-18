@@ -4,7 +4,7 @@ source ./const.sh
 
 if [[ "$nb_args" != "5" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, desired length)."
 	exit -1
 fi
 
@@ -36,6 +36,7 @@ do
 	if [[ "$val_res" != "0" ]]
 	then
 		echo "Error while running the codelet. Aborting."
+		echo "Res: '$res'"
 		exit -1
 	fi
 

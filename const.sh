@@ -25,9 +25,9 @@ CODELET_LENGTH=100
 MIN_REPETITIONS=250
 
 # For run_codelet.sh (1/2)
-META_REPETITIONS=11
+META_REPETITIONS=5
 ACTIVATE_COUNTERS=1
-ACTIVATE_ADVANCED_COUNTERS=0
+ACTIVATE_ADVANCED_COUNTERS=1
 
 # For cls.sh
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -44,6 +44,14 @@ BINARIES_FOLDER="binaries"
 export LANG=en_US.utf8
 export LC_ALL=en_US.utf8
 
+# For counter measurements + CQA parameter (?)
+some_res=$( echo "$HOSTNAME" | grep "atom" )
+if [[ "$some_res" == "" ]]
+then
+	UARCH="SANDY_BRIDGE"
+else
+	UARCH="SILVERMONT"
+fi
 
 # For generate_variants.sh
 declare -A transforms
@@ -84,6 +92,10 @@ XP_CORES+=([chopin]="3")
 XP_CORES+=([dandrieu]="3")
 XP_CORES+=([massenet]="23")
 XP_CORES+=([sviridov]="1")
+XP_CORES+=([fxatom001]="1")
+XP_CORES+=([fxatom002]="1")
+XP_CORES+=([fxatom003]="1")
+XP_CORES+=([fxatom004]="1")
 XP_CORES+=([fxe12-cwong2901]="11")
 XP_CORES+=([fxe12-cwong2901_nopref]="11")
 XP_CORES+=([fxtcarilab027]="11")
