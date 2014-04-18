@@ -77,8 +77,12 @@ transforms+=([FP_SAN]="splitntime_fp")
 
 transforms+=([NOLS-NOFP]="splitntime_noas-nofpi")
 transforms+=([NOLS-NOFP_RAT1B]="splitntime_noas-nofpi_rat1b")
-transforms+=([FES]="splitntime_noas-nofpi_ratmb")
-
+if [[ "$UARCH" == "SILVERMONT" ]]
+then
+	transforms+=([FES]="splitntime_noas-nofpi_rat1b")
+else
+	transforms+=([FES]="splitntime_noas-nofpi_ratmb")
+fi
 transforms+=([REF_NODIV]="reference_nodivision")
 transforms+=([REF_NORED]="reference_noreduction")
 transforms+=([DEC]="reference_decoupled")
