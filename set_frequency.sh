@@ -29,6 +29,9 @@ case "${paths[$HOSTNAME]}" in
 #       actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
         #echo "Actual frequency: '$actual_frequency'"
 
+	#Potential fix for Silvermont CPI issues?
+	sleep 1
+
         if [[ "$target_frequency" != "$actual_frequency" ]]
         then
                 echo "ERROR! Frequency change failed!"
