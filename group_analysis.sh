@@ -11,7 +11,7 @@ fi
 codelet_binary="$1"
 loop_id="$2"
 
-groups=$( "$MAQAO" module=grouping format=pcr bin="$codelet_binary" loop="$loop_id" | sed 's/\t/ /g' | sed 's/ /#/g' )
+groups=$( "$MAQAO" module=grouping uarch=SANDY_BRIDGE format=pcr bin="$codelet_binary" loop="$loop_id" | sed 's/\t/ /g' | sed 's/ /#/g' )
 
 #echo "Groups = '$groups'" 1>&2
 
@@ -116,5 +116,5 @@ do
 	let "id_group = $id_group + 1"
 done
 
-echo "$titles"
-echo "$values"
+echo "$titles" | sed 's/;$//g'
+echo "$values" | sed 's/;$//g'
