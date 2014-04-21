@@ -108,8 +108,6 @@ do
 	then
 		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
 	fi
-
-	exit -1
 done
 
 for codelet in $quadratic_codelets
