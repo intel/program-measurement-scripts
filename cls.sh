@@ -29,16 +29,17 @@ echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )_
+function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 echo -e "Codelet name \t'$codelet_name'"
 echo -e "Binary name \t'$binary_name'"
 echo -e "Function name \t'$function_name'"
 
 echo "------------------------------------------------------------"
-echo "Removing older results (if any)..."
-rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
-echo "Recreating results folder..."
-mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
-echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
+#echo "Removing older results (if any)..."
+#rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
+#echo "Recreating results folder..."
+#mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
+#echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
@@ -108,7 +109,7 @@ then
 	~/recipe.sh 1
 fi
 
-#exit 0
+exit 0
 
 echo "------------------------------------------------------------"
 echo "Starting experiments..."
