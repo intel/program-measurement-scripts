@@ -2,12 +2,14 @@
 
 
 variants="REF_SAN REF LS FP DL1 FES"
+variants="LS"
 linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
 linear_sizes="1000 10000 1000000"
 quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 1400 1500 1600 1800 2000 2500 3000"
 memory_loads="0 99999"
 memory_loads="0"
 frequencies="1200000 2400000"
+frequencies="2400000"
 
 linear_codelets=""
 quadratic_codelets=""
@@ -52,7 +54,7 @@ linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/nu
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_13/svdcmp_13_dx"
 ###linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_13/svdcmp_13_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_14/svdcmp_14_dx"
-###linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_14/svdcmp_14_de"
+linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_14/svdcmp_14_de"
 ####################################################linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_1/toeplz_1_dx"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_1/toeplz_1_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_2/toeplz_2_dx"
