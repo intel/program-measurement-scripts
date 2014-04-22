@@ -1,6 +1,9 @@
 #!/bin/bash -l
 
-#export HOSTNAME="fxe12-cwong2901_nopref"
+if [[ "$HOSTNAME" == "fxe32lin04.fx.intel.com" ]]
+then
+	export HOSTNAME="fxe32lin04"
+fi
 
 nb_args="$#"
 
@@ -13,7 +16,7 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:$PATH:/opt/intel/bin/"
+export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
@@ -102,6 +105,7 @@ XP_CORES+=([fxatom003]="1")
 XP_CORES+=([fxatom004]="1")
 XP_CORES+=([fxe12-cwong2901]="11")
 XP_CORES+=([fxe12-cwong2901_nopref]="11")
+XP_CORES+=([fxe32lin04]="11")
 XP_CORES+=([fxtcarilab027]="11")
 
 MEMLOADER="$CLS_FOLDER/memloader"
