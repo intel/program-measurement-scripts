@@ -41,6 +41,11 @@ ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/$codelet_name" "$loop_id" )
 new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ';' )
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
+vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/$codelet_name" "$loop_id" )
+new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ';' )
+echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
+
+
 for variant in $variants
 do
 	variant_path="$bin_folder/${codelet_name}_${variant}_cpi"
@@ -73,9 +78,13 @@ do
 	ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
 	new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
+
+	vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
+	new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
+	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 done
 
-rm -f $function_name.csv
+rm -f $function_name.csv loops.csv
 
 echo "Done with assemblies extraction."
 
