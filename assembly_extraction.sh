@@ -20,7 +20,7 @@ echo "Extracting the original assembly..."
 echo "-------------------------"	> "$bin_folder/$codelet_name.asm"
 echo "$codelet_name"			>> "$bin_folder/$codelet_name.asm"
 echo "-------------------------" 	>> "$bin_folder/$codelet_name.asm"
-"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" funct_name="$function_name" lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
+"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" funct_name="$function_name"_ lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
 sed -i "s/\t/     \t/g" "$bin_folder/$codelet_name.asm"
 #echo "Getting jump address to the most inner loop (address of the first instruction of the extracted loop)"
 jump_address=$( head -n 4 "$bin_folder/$codelet_name.asm" | tail -n 1 | cut -f1 -d: )
@@ -31,12 +31,11 @@ then
 	exit -1
 fi
 
-"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" fct=$function_name of=csv -ext
+"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" loop=$loop_id of=csv -ext
 # > "$bin_folder/$codelet_name.stan"
 #./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
 
-head -n 1 $function_name.csv | sed 's/;$//' > "$bin_folder/${codelet_name}.stan_full.csv"
-awk -F ';' '{if($5 == '$loop_id'){print;}}' $function_name.csv | sed 's/;$//' >> "$bin_folder/${codelet_name}.stan_full.csv"
+mv loops.csv "$bin_folder/${codelet_name}.stan_full.csv"
 group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
 new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ';' )
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
@@ -68,12 +67,9 @@ do
 	sed -i "s/\t/     \t/g" "$bin_folder/${codelet_name}_${variant}.asm"
 	lid=$( "$MAQAO" "${MAQAO_FOLDER}/loop_id_extractor_from_address.lua" binary_name="$variant_path" loop_address="$inner_loop_address" )
 
-	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" fct=$function_name of=csv -ext
-	# > "$bin_folder/${codelet_name}_${variant}.stan"
-	#./convert_stan.sh "$bin_folder/${codelet_name}_${variant}.stan" $lid > "$bin_folder/${codelet_name}_${variant}.stan.csv"
+	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" loop=$lid of=csv -ext
 
-	head -n 1 $function_name.csv | sed 's/;$//' > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
-	awk -F ';' '{if($5 == '$lid'){print;}}' $function_name.csv | sed 's/;$//' >> "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
+	mv loops.csv "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 	new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 
