@@ -67,7 +67,7 @@ then
 			fi
 		fi
 		#echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
-		emon -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report
+		emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 	done
 
 
@@ -78,24 +78,26 @@ then
 
 	for counter in $counters
 	do
-		if [[ "$HOSTNAME" == "fxe12-cwong2901" && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
-		#if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
+		if [[ "$HOSTNAME" == "fxe32lin04" && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
-			echo "Special treatment for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,7 -d';' | sed 's/ //g' )
+			echo "Special treatment (recent emon) for uncore '$counter'"
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f7-10 -d';' | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
 				val1=$( echo "$value" | cut -f1 -d';' )
 				val2=$( echo "$value" | cut -f2 -d';' )
-				let "val = $val1 + $val2"
+				val3=$( echo "$value" | cut -f3 -d';' )
+				val4=$( echo "$value" | cut -f4 -d';' )
+				let "val = $val1 + $val2 + $val3 + $val4"
 				echo "$counter||$val" >> $res_path/likwid_report
 			done
 		else
-			if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
+			if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
 			then
-				echo "Special treatment for in-CPU energy '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+				echo "Special treatment for uncore '$counter'"
+				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,7 -d';' | sed 's/ //g' )
+				#echo "debug values: '$values'"
 				for value in $values
 				do
 					val1=$( echo "$value" | cut -f1 -d';' )
@@ -104,14 +106,27 @@ then
 					echo "$counter||$val" >> $res_path/likwid_report
 				done
 			else
-				echo "Regular treatment for '$counter'"
-				let "target_field = $XP_CORE + 3"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f$target_field -d';' | sed 's/ //g' )
-				#echo "debug values: '$values'"
-				for value in $values
-				do
-					echo "$counter||$value" >> $res_path/likwid_report
-				done
+				if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
+				then
+					echo "Special treatment for in-CPU energy '$counter'"
+					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+					for value in $values
+					do
+						val1=$( echo "$value" | cut -f1 -d';' )
+						val2=$( echo "$value" | cut -f2 -d';' )
+						let "val = $val1 + $val2"
+						echo "$counter||$val" >> $res_path/likwid_report
+					done
+				else
+					echo "Regular treatment for '$counter'"
+					let "target_field = $XP_CORE + 3"
+					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f$target_field -d';' | sed 's/ //g' )
+					#echo "debug values: '$values'"
+					for value in $values
+					do
+						echo "$counter||$value" >> $res_path/likwid_report
+					done
+				fi
 			fi
 		fi
 	done
