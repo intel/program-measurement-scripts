@@ -32,9 +32,6 @@ then
 fi
 
 "$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" loop=$loop_id of=csv -ext
-# > "$bin_folder/$codelet_name.stan"
-#./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
-
 mv loops.csv "$bin_folder/${codelet_name}.stan_full.csv"
 group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
 new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ';' )
