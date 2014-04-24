@@ -20,7 +20,7 @@ echo "Extracting the original assembly..."
 echo "-------------------------"	> "$bin_folder/$codelet_name.asm"
 echo "$codelet_name"			>> "$bin_folder/$codelet_name.asm"
 echo "-------------------------" 	>> "$bin_folder/$codelet_name.asm"
-"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" funct_name="$function_name" lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
+"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" funct_name="${function_name}" lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
 sed -i "s/\t/     \t/g" "$bin_folder/$codelet_name.asm"
 #echo "Getting jump address to the most inner loop (address of the first instruction of the extracted loop)"
 jump_address=$( head -n 4 "$bin_folder/$codelet_name.asm" | tail -n 1 | cut -f1 -d: )
@@ -34,7 +34,6 @@ fi
 "$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" fct=$function_name of=csv -ext
 # > "$bin_folder/$codelet_name.stan"
 #./convert_stan.sh "$bin_folder/$codelet_name.stan" $loop_id > "$bin_folder/$codelet_name.stan.csv"
-
 head -n 1 $function_name.csv | sed 's/;$//' > "$bin_folder/${codelet_name}.stan_full.csv"
 awk -F ';' '{if($5 == '$loop_id'){print;}}' $function_name.csv | sed 's/;$//' >> "$bin_folder/${codelet_name}.stan_full.csv"
 group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
