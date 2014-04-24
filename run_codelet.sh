@@ -78,7 +78,7 @@ then
 
 	for counter in $counters
 	do
-		if [[ "$HOSTNAME" == "fxe32lin04" && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
+		if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
 			echo "Special treatment (recent emon) for uncore '$counter'"
 			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f7-10 -d';' | sed 's/ //g' )
