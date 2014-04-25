@@ -32,7 +32,8 @@ then
 fi
 
 "$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" loop=$loop_id of=csv -ext
-mv loops.csv "$bin_folder/${codelet_name}.stan_full.csv"
+cat loops.csv | sed 's/;$//g' > "$bin_folder/${codelet_name}.stan_full.csv"
+rm loops.csv
 group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
 new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ';' )
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
@@ -71,7 +72,8 @@ do
 
 	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" loop=$lid of=csv -ext
 
-	mv loops.csv "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
+	cat loops.csv | sed 's/;$//g' > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
+	rm loops.csv
 	new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 

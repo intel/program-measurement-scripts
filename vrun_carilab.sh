@@ -37,9 +37,9 @@ quadratic_codelets=""
 #quadratic_codelets="$quadratic_codelets /localdisk/vincent/intel_codelets/saeed_codelets/dongarra_up/nr_format/s231/s231_s/s231_1_se_icc"
 
 
-linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_de"
+#linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_dx"
-#linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_sVS_de"
+linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_sVS_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_sVS_dx"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/elmhes_10/elmhes_10_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/elmhes_10/elmhes_10_dx"
