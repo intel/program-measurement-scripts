@@ -2,17 +2,16 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "5" ]]
+if [[ "$nb_args" != "4" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's name, variants, codelet's folder, function's name, loop id)."
+	echo "ERROR! Invalid arguments (need: codelet's name, variants, codelet's folder, loop id)."
 	exit -1
 fi
 
 codelet_name="$1"
 variants="$2"
 bin_folder=$( readlink -f "$3" )
-function_name="$4"
-loop_id="$5"
+loop_id="$4"
 
 echo "Extracting assemblies from '$bin_folder'..."
 
@@ -20,7 +19,7 @@ echo "Extracting the original assembly..."
 echo "-------------------------"	> "$bin_folder/$codelet_name.asm"
 echo "$codelet_name"			>> "$bin_folder/$codelet_name.asm"
 echo "-------------------------" 	>> "$bin_folder/$codelet_name.asm"
-"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" funct_name="$function_name"_ lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
+"$MAQAO" "${MAQAO_FOLDER}/assembly_extractor.lua" binary_name="$bin_folder/$codelet_name" lid="$loop_id" >> "$bin_folder/$codelet_name.asm"
 sed -i "s/\t/     \t/g" "$bin_folder/$codelet_name.asm"
 #echo "Getting jump address to the most inner loop (address of the first instruction of the extracted loop)"
 jump_address=$( head -n 4 "$bin_folder/$codelet_name.asm" | tail -n 1 | cut -f1 -d: )
@@ -86,7 +85,7 @@ do
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 done
 
-rm -f $function_name.csv loops.csv
+rm -f loops.csv
 
 echo "Done with assemblies extraction."
 

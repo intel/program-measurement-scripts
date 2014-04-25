@@ -94,7 +94,7 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Extracting assemblies..."
-./assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" "$function_name" "$loop_id"
+./assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" "$loop_id"
 res=$?
 if [[ "$res" != "0" ]]
 then

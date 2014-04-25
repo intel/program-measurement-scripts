@@ -45,7 +45,7 @@ for current_function in bin:functions () do
 
 	--print("Deduced name: "..name)
 
-	if (funct_name == name) then
+--	if (funct_name == name) then
 --		print ("Found function '"..funct_name.."' ("..current_function:tostring()..")")
 		for l in current_function:loops () do
 			loop_id=l:get_id ()
@@ -59,7 +59,7 @@ for current_function in bin:functions () do
 				end
 			end
 		end 
-	end
+--	end
 end
 --print ("End of analysis for binary "..binary_name)
 
