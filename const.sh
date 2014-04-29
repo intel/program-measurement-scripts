@@ -3,6 +3,11 @@
 if [[ "$HOSTNAME" == "fxe32lin04.fx.intel.com" ]]
 then
 	export HOSTNAME="fxe32lin04"
+else
+	if echo "$HOSTNAME" | grep "fxatom"
+	then
+		export HOSTNAME="fxsilvermont"
+	fi
 fi
 
 nb_args="$#"
