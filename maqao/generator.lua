@@ -84,6 +84,10 @@ function get_nb_components (instr)
 	if (disp ~= nil)
 	then
 		res = count (disp ["uops_groups"])
+		if (is_avx_div (instr))
+		then
+			res = res + 2
+		end
 	end
 
 	return res
@@ -196,7 +200,7 @@ function get_component_inputs (instr, pos)
 	comp_type = get_component_type (instr, pos)
 	operands = instr : get_operands ()
 
-	if ((instr : get_name () == "XORPS" or instr : get_name () == "XORPD" or instr : get_name () == "VXORPD" or instr : get_name () == "VXORPS") and get_compute_operands (operands, "read") == get_compute_operands (operands, "write"))
+	if ((instr : get_name () == "XORPS" or instr : get_name () == "XORPD" or instr : get_name () == "VXORPD" or instr : get_name () == "VXORPS") and comp_type == "nop")
 	then
 		res = ""
 	elseif (comp_type == "load" or instr:get_name () == "LEA")
@@ -274,6 +278,15 @@ function get_component_latency (instr, pos)
 	elseif (comp_type == "compute")
 	then
 		res = instr : get_dispatch () ["latency"]["max"]
+		if (is_avx_div (instr))
+		then
+			if ((get_fe_uops (instr) == 3 and pos == 1) or (get_fe_uops (instr) == 4 and pos == 2))
+			then
+				res = math.ceil (res / 2)
+			else
+				res = math.floor (res / 2)
+			end
+		end
 	elseif (comp_type == "store_addr")
 	then
 		res = "1"
@@ -384,6 +397,17 @@ function is_macrofused (instr)
 	return res
 end
 
+function is_avx_div (instr)
+	local res = false
+
+	if (instr : get_name () == "VDIVPS" or instr : get_name () == "VDIVPD" or instr : get_name () == "VSQRTPS" or instr : get_name () == "VSQRTPD")
+	then
+		res = true
+	end
+
+	return res
+end
+
 function was_macrofused (instr)
 	local res = false, prev_instr
 
@@ -432,7 +456,7 @@ function get_component_port_use (instr, pos)
 end
 
 function get_component_special (instr, pos)
-	local res = "", disp, comp_type
+	local res = "", disp, comp_type, nb
 
 	comp_type = get_component_type (instr, pos)
 
@@ -446,7 +470,17 @@ function get_component_special (instr, pos)
 	then
 		if (get_component_latency (instr, pos) > 7)
 		then
-			res = "divider:" .. (get_component_latency (instr, pos) - 1)
+			nb = get_component_latency (instr, pos) - 1
+			if (is_avx_div (instr))
+			then
+				if ((get_fe_uops (instr) == 3 and pos == 1) or (get_fe_uops (instr) == 4 and pos == 2))
+				then
+					nb = nb + 1
+				else
+					nb = nb - 1
+				end
+			end
+			res = "divider:" .. nb
 		end
 	elseif (comp_type == "store_addr")
 	then
@@ -496,6 +530,16 @@ for current_function in bin:functions () do
 							--uops_for_this_component = get_component_nb_uops (instr, i)
 							--for j = 1, uops_for_this_component, 1
 							--do
+						
+							if (is_avx_div (instr) and i == nb_components)
+							then
+								io.write (pad ("compute" .. ";", 1))
+								io.write (pad ("" .. ";", 1))
+								io.write (pad ("" .. ";", 1))
+								io.write (pad ("1" .. ";", 1))
+								io.write (pad (" , , , , , x, , " .. ";", 3))
+								io.write (pad ("" .. ";", 1))								
+							else
 								type = get_component_type (instr, i)
 								if (is_macrofused (instr)) then type = "branch" end
 								io.write (pad (type .. ";", 1))
@@ -514,7 +558,7 @@ for current_function in bin:functions () do
 
 								special = get_component_special (instr, i)
 								io.write (pad (special .. ";", 1))
-							--end
+							end
 						end
 						io.write ("\n")
 					end
