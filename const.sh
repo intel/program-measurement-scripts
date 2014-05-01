@@ -33,7 +33,7 @@ CODELET_LENGTH=100
 MIN_REPETITIONS=250
 
 # For run_codelet.sh (1/2)
-META_REPETITIONS=5
+META_REPETITIONS=1
 ACTIVATE_COUNTERS=1
 ACTIVATE_ADVANCED_COUNTERS=0
 
@@ -108,6 +108,7 @@ XP_CORES+=([fxatom001]="1")
 XP_CORES+=([fxatom002]="1")
 XP_CORES+=([fxatom003]="1")
 XP_CORES+=([fxatom004]="1")
+XP_CORES+=([fxsilvermont]="1")
 XP_CORES+=([fxe12-cwong2901]="11")
 XP_CORES+=([fxe12-cwong2901_nopref]="11")
 XP_CORES+=([fxe32lin04]="11")
