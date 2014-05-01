@@ -128,6 +128,19 @@ function get_component_type (instr, pos)
 	return res
 end
 
+function get_edited_register_name (name)
+	local res = ""
+
+	res = name
+
+	if (string.match (name, 'R%d+D$') ~= nil)
+	then
+		res = string.sub (res, 1, -2)
+	end
+
+	return res
+end
+
 function get_memory_operands (operands)
 	local res = "", operand, id, id2, id3, value, values, reg_name
 
@@ -144,7 +157,7 @@ function get_memory_operands (operands)
 					value = values [id2]
 					if (value ["type"] == MDSAPI.REGISTER)
 					then
-						reg_name = value ["value"]
+						reg_name = get_edited_register_name (value ["value"])
 						if (res == "") then res = reg_name else res = res .. "," .. reg_name end
 					end
 				end
@@ -184,7 +197,7 @@ function get_compute_operands (operands, rw)
 			then
 				if (operand ["type"] == MDSAPI.REGISTER and operand [rw])
 				then
-					reg_name = operand ["value"]
+					reg_name = get_edited_register_name (operand ["value"])
 					if (res == "") then res = reg_name else res = res .. "," .. reg_name end
 				end
 			end
