@@ -53,7 +53,7 @@ export LANG=en_US.utf8
 export LC_ALL=en_US.utf8
 
 # For counter measurements + CQA parameter (?)
-some_res=$( echo "$HOSTNAME" | grep "atom" )
+some_res=$( echo "$HOSTNAME" | grep "silvermont" )
 if [[ "$some_res" == "" ]]
 then
 	UARCH="SANDY_BRIDGE"
