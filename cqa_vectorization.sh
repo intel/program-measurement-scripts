@@ -10,14 +10,14 @@ mega_content=""
 #for mode in MEM_VEC COMPUTE_VEC FULLY_VEC VECTOR_ISET FP FP_ARITH
 for mode in MEM_VEC FULLY_VEC VECTOR_ISET FP FP_ARITH
 do
-#	for option in none force_sse
-	for option in force_sse
+	for option in none force_sse
+#	for option in force_sse
 	do
 		if [[ "$option" != "none" ]]
 		then
-			option_arg="imo=$option"
+			option_arg="imo=$option,int_novec"
 		else
-			option_arg=""
+			option_arg="imo=int_novec"
 		fi
 
 		#echo "Mode: $mode, option arg: $option_arg"
