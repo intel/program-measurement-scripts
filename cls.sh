@@ -23,6 +23,7 @@ echo -e "Variants \t'$variants'"
 echo -e "Data sizes \t'$data_sizes'"
 echo -e "Memory loads \t'$memory_loads'"
 echo -e "Frequencies \t'$frequencies'"
+echo -e "Meta repets\t'$META_REPETITIONS'"
 
 echo "------------------------------------------------------------"
 echo "Reading codelet.conf"
@@ -40,6 +41,7 @@ rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
 echo "Recreating results folder..."
 mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
+echo "$META_REPETITIONS" > "$codelet_folder/$CLS_RES_FOLDER/meta_repetitions"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
