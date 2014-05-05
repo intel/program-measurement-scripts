@@ -46,7 +46,7 @@ new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}.stan_full.
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
 
-"$MAQAO" "${MAQAO_FOLDER}/loop_id_in_object.lua" binary_name="$bin_folder/$codelet_name" loop_id="$loop_id" object_name="$bin_folder/../codelet.o" > "$bin_folder/../binary_loop_in_obj"
+"$MAQAO" "${MAQAO_FOLDER}/loop_id_in_object.lua" binary_name="$bin_folder/$codelet_name" loop_id="$loop_id" object_name="$bin_folder/../codelet.o" > "$bin_folder/../loop_id_in_obj"
 
 
 for variant in $variants
