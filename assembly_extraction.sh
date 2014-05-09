@@ -13,6 +13,12 @@ variants="$2"
 bin_folder=$( readlink -f "$3" )
 loop_id="$4"
 
+local_uarch="SANDY_BRIDGE"
+if [[ "$UARCH" == "HASWELL" ]]
+then
+	local_uarch="$UARCH"
+fi
+
 echo "Extracting assemblies from '$bin_folder'..."
 
 echo "Extracting the original assembly..."
@@ -30,7 +36,7 @@ then
 	exit -1
 fi
 
-"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$bin_folder/$codelet_name" loop=$loop_id of=csv -ext
+"$MAQAO" module=cqa uarch="$local_uarch" bin="$bin_folder/$codelet_name" loop=$loop_id of=csv -ext
 cat loops.csv | sed 's/;$//g' > "$bin_folder/${codelet_name}.stan_full.csv"
 rm loops.csv
 group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
@@ -72,7 +78,7 @@ do
 	sed -i "s/\t/     \t/g" "$bin_folder/${codelet_name}_${variant}.asm"
 	lid=$( "$MAQAO" "${MAQAO_FOLDER}/loop_id_extractor_from_address.lua" binary_name="$variant_path" loop_address="$inner_loop_address" )
 
-	"$MAQAO" module=cqa uarch=SANDY_BRIDGE bin="$variant_path" loop=$lid of=csv -ext
+	"$MAQAO" module=cqa uarch="$local_uarch" bin="$variant_path" loop=$lid of=csv -ext
 
 	cat loops.csv | sed 's/;$//g' > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 	rm loops.csv

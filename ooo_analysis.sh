@@ -8,9 +8,15 @@ loop_id="$2"
 
 loop_file="$bin_file".snb.ooo
 
+local_uarch="sandy_bridge"
+if [[ "$UARCH" == "HASWELL" ]]
+then
+	local_uarch="haswell"
+fi
+
 #echo "Trying to generate OoO input file from '$bin_file', loop id = '$loop_id'" 1>&2
 
-"$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="sandy_bridge" > "$loop_file"
+"$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
 
 echo "OoO_snb_normal;OoO_snb_normal_stalls;OoO_snb_large_resources_gain;OoO_snb_large_resources_stalls;OoO_snb_halved_resources_penalty;OoO_snb_halved_resources_stalls;OoO_long_latency_penalty;OoO_long_latency_stalls"
 

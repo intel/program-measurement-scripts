@@ -7,6 +7,11 @@ else
 	if echo "$HOSTNAME" | grep "fxatom"
 	then
 		export HOSTNAME="fxsilvermont"
+	else
+		if echo "$HOSTNAME" | grep "fxilab10"
+		then
+			export HOSTNAME="fxhaswell-desktop"
+		fi
 	fi
 fi
 
@@ -56,7 +61,13 @@ export LC_ALL=en_US.utf8
 some_res=$( echo "$HOSTNAME" | grep "silvermont" )
 if [[ "$some_res" == "" ]]
 then
-	UARCH="SANDY_BRIDGE"
+	some_res=$( echo "$HOSTNAME" | grep "haswell" )
+	if [[ "$some_res" == "" ]]
+	then
+		UARCH="SANDY_BRIDGE"
+	else
+		UARCH="HASWELL"
+	fi
 else
 	UARCH="SILVERMONT"
 fi
