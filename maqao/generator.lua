@@ -483,7 +483,8 @@ function get_component_special (instr, pos)
 	then
 		if (get_component_latency (instr, pos) > 7)
 		then
-			nb = get_component_latency (instr, pos) - 1
+			--nb = get_component_latency (instr, pos) - 1
+			nb = get_component_latency (instr, pos)
 			if (is_avx_div (instr))
 			then
 				if ((get_fe_uops (instr) == 3 and pos == 1) or (get_fe_uops (instr) == 4 and pos == 2))
@@ -491,6 +492,15 @@ function get_component_special (instr, pos)
 					nb = nb + 1
 				else
 					nb = nb - 1
+				end
+			end
+			if (uarch_c == Consts.x86_64.UARCH_HASWELL)
+			then
+				if (nb <= 15)
+				then
+					nb = 7
+				else
+					nb = 14
 				end
 			end
 			res = "divider:" .. nb

@@ -123,6 +123,7 @@ XP_CORES+=([fxsilvermont]="1")
 XP_CORES+=([fxe12-cwong2901]="11")
 XP_CORES+=([fxe12-cwong2901_nopref]="11")
 XP_CORES+=([fxe32lin04]="11")
+XP_CORES+=([fxhaswell-desktop]="3")
 XP_CORES+=([fxtcarilab027]="11")
 
 MEMLOADER="$CLS_FOLDER/memloader"
