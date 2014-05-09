@@ -52,11 +52,16 @@ then
 	do
 		if [[ "$ACTIVATE_ADVANCED_COUNTERS" == "0" ]]
 		then
-			if [[ "$UARCH" == "SANDY_BRIDGE" || "$UARCH" == "HASWELL" ]]
+			if [[ "$UARCH" == "SANDY_BRIDGE" ]]
 			then
 				emon_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD,UNC_M_CAS_COUNT.RD,UNC_M_CAS_COUNT.WR,L1D.REPLACEMENT,L2_L1D_WB_RQSTS.ALL,L2_L1D_WB_RQSTS.MISS,L2_LINES_IN.ALL,L2_TRANS.L2_WB,SQ_MISC.FILL_DROPPED,RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL,UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_DISPATCHED.THREAD:u0x3F:c1:i0:e0,UOPS_DISPATCHED.THREAD:u0x3F:c2:i0:e0,UOPS_DISPATCHED.THREAD:u0x3F:c4:i0:e0,UOPS_RETIRED.ALL,DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
 			else
-				emon_counters="OFFCORE_RESPONSE:request=DEMAND_DATA_RD:response=ANY_RESPONSE,CYCLES_DIV_BUSY.ALL,OFFCORE_RESPONSE:request=COREWB:response=ANY_RESPONSE,UOPS_RETIRED.ALL,OFFCORE_RESPONSE:request=DEMAND_RFO:response=ANY_RESPONSE,NO_ALLOC_CYCLES.ROB_FULL,OFFCORE_RESPONSE:request=COREWB:response=L2_HIT,NO_ALLOC_CYCLES.RAT_STALL,NO_ALLOC_CYCLES.NOT_DELIVERED,NO_ALLOC_CYCLES.ALL,RS_FULL_STALL.MEC,RS_FULL_STALL.ALL,INST_RETIRED.ANY_P,CPU_CLK_UNHALTED.CORE,CPU_CLK_UNHALTED.REF_TSC,LONGEST_LAT_CACHE.MISS,REHABQ.STA_FULL,REHABQ.ANY_LD,REHABQ.ANY_ST,MEM_UOPS_RETIRED.L1_MISS_LOADS,MEM_UOPS_RETIRED.L2_HIT_LOADS,MEM_UOPS_RETIRED.L2_MISS_LOADS,PAGE_WALKS.D_SIDE_WALKS,OFFCORE_RESPONSE:request=PF_L1_DATA_RD:response=ANY_RESPONSE,PAGE_WALKS.D_SIDE_CYCLES,OFFCORE_RESPONSE:request=COREWB:response=L2_MISS.NO_SNOOP_NEEDED,MS_DECODED.MS_ENTRY"
+				if [[ "$UARCH" == "HASWELL" ]]
+				then
+					emon_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD,UNC_IMC_DRAM_DATA_READS,UNC_IMC_DRAM_DATA_WRITES,L1D.REPLACEMENT,L2_DEMAND_RQSTS.WB_HIT,L2_TRANS.L1D_WB,L2_DEMAND_RQSTS.WB_MISS,L2_LINES_IN.ALL,L2_TRANS.L2_WB,SQ_MISC.FILL_DROPPED,RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL,UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_RETIRED.ALL,DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
+				else
+					emon_counters="OFFCORE_RESPONSE:request=DEMAND_DATA_RD:response=ANY_RESPONSE,CYCLES_DIV_BUSY.ALL,OFFCORE_RESPONSE:request=COREWB:response=ANY_RESPONSE,UOPS_RETIRED.ALL,OFFCORE_RESPONSE:request=DEMAND_RFO:response=ANY_RESPONSE,NO_ALLOC_CYCLES.ROB_FULL,OFFCORE_RESPONSE:request=COREWB:response=L2_HIT,NO_ALLOC_CYCLES.RAT_STALL,NO_ALLOC_CYCLES.NOT_DELIVERED,NO_ALLOC_CYCLES.ALL,RS_FULL_STALL.MEC,RS_FULL_STALL.ALL,INST_RETIRED.ANY_P,CPU_CLK_UNHALTED.CORE,CPU_CLK_UNHALTED.REF_TSC,LONGEST_LAT_CACHE.MISS,REHABQ.STA_FULL,REHABQ.ANY_LD,REHABQ.ANY_ST,MEM_UOPS_RETIRED.L1_MISS_LOADS,MEM_UOPS_RETIRED.L2_HIT_LOADS,MEM_UOPS_RETIRED.L2_MISS_LOADS,PAGE_WALKS.D_SIDE_WALKS,OFFCORE_RESPONSE:request=PF_L1_DATA_RD:response=ANY_RESPONSE,PAGE_WALKS.D_SIDE_CYCLES,OFFCORE_RESPONSE:request=COREWB:response=L2_MISS.NO_SNOOP_NEEDED,MS_DECODED.MS_ENTRY"
+				fi
 			fi
 		else
 			if [[ "$UARCH" == "SANDY_BRIDGE" || "$UARCH" == "HASWELL" ]]
@@ -78,38 +83,32 @@ then
 
 	for counter in $counters
 	do
-		if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
+		if [[ "$counter" == "UNC_IMC_DRAM_DATA_READS" || "$counter" == "UNC_IMC_DRAM_DATA_WRITES" ]]
 		then
-			echo "Special treatment (recent emon) for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f7-10 -d';' | sed 's/ //g' )
-			#echo "debug values: '$values'"
-			for value in $values
-			do
-				val1=$( echo "$value" | cut -f1 -d';' )
-				val2=$( echo "$value" | cut -f2 -d';' )
-				val3=$( echo "$value" | cut -f3 -d';' )
-				val4=$( echo "$value" | cut -f4 -d';' )
-				let "val = $val1 + $val2 + $val3 + $val4"
-				echo "$counter||$val" >> $res_path/likwid_report
-			done
+			echo "Special treatment (client uncore counter) for uncore '$counter'"
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3 -d';' | sed 's/ //g' )
+			echo "$counter||$values" >> $res_path/likwid_report
 		else
-			if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
+			if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 			then
-				echo "Special treatment for uncore '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,7 -d';' | sed 's/ //g' )
+				echo "Special treatment (recent emon) for uncore '$counter'"
+				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f7-10 -d';' | sed 's/ //g' )
 				#echo "debug values: '$values'"
 				for value in $values
 				do
 					val1=$( echo "$value" | cut -f1 -d';' )
 					val2=$( echo "$value" | cut -f2 -d';' )
-					let "val = $val1 + $val2"
+					val3=$( echo "$value" | cut -f3 -d';' )
+					val4=$( echo "$value" | cut -f4 -d';' )
+					let "val = $val1 + $val2 + $val3 + $val4"
 					echo "$counter||$val" >> $res_path/likwid_report
 				done
 			else
-				if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
+				if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
 				then
-					echo "Special treatment for in-CPU energy '$counter'"
-					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+					echo "Special treatment for uncore '$counter'"
+					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,7 -d';' | sed 's/ //g' )
+					#echo "debug values: '$values'"
 					for value in $values
 					do
 						val1=$( echo "$value" | cut -f1 -d';' )
@@ -118,14 +117,27 @@ then
 						echo "$counter||$val" >> $res_path/likwid_report
 					done
 				else
-					echo "Regular treatment for '$counter'"
-					let "target_field = $XP_CORE + 3"
-					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f$target_field -d';' | sed 's/ //g' )
-					#echo "debug values: '$values'"
-					for value in $values
-					do
-						echo "$counter||$value" >> $res_path/likwid_report
-					done
+					if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
+					then
+						echo "Special treatment for in-CPU energy '$counter'"
+						values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+						for value in $values
+						do
+							val1=$( echo "$value" | cut -f1 -d';' )
+							val2=$( echo "$value" | cut -f2 -d';' )
+							let "val = $val1 + $val2"
+							echo "$counter||$val" >> $res_path/likwid_report
+						done
+					else
+						echo "Regular treatment for '$counter'"
+						let "target_field = $XP_CORE + 3"
+						values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f$target_field -d';' | sed 's/ //g' )
+						#echo "debug values: '$values'"
+						for value in $values
+						do
+							echo "$counter||$value" >> $res_path/likwid_report
+						done
+					fi
 				fi
 			fi
 		fi
