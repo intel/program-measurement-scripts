@@ -20,7 +20,7 @@ fi
 
 "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
 
-echo "OoO_${uarch_suffix}_normal;OoO_${uarch_suffix}_normal_stalls;OoO_${uarch_suffix}_large_resources_gain;OoO_${uarch_suffix}_large_resources_stalls;OoO_${uarch_suffix}_halved_resources_penalty;OoO_${uarch_suffix}_halved_resources_stalls;OoO_long_latency_penalty;OoO_long_latency_stalls"
+echo "OoO_${uarch_suffix}_normal;OoO_${uarch_suffix}_normal_stalls;OoO_${uarch_suffix}_large_resources_gain;OoO_${uarch_suffix}_large_resources_stalls;OoO_${uarch_suffix}_halved_resources_penalty;OoO_${uarch_suffix}_halved_resources_stalls;OoO_${uarch_suffix}_long_latency_penalty;OoO_${uarch_suffix}_long_latency_stalls"
 
 name=$( basename "$loop_file" | sed 's/_cpi.snb.ooo//g' | sed 's/_cpi.hsw.ooo//g' )
 
