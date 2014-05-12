@@ -6,7 +6,6 @@ bin="./OoO"
 bin_file="$1"
 loop_id="$2"
 
-loop_file="$bin_file".snb.ooo
 
 local_uarch="sandy_bridge"
 uarch_suffix="snb"
@@ -15,6 +14,8 @@ then
 	local_uarch="haswell"
 	uarch_suffix="hsw"
 fi
+
+loop_file="$bin_file".$uarch_suffix.ooo
 
 #echo "Trying to generate OoO input file from '$bin_file', loop id = '$loop_id'" 1>&2
 
