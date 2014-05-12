@@ -65,11 +65,14 @@ then
 	if [[ "$some_res" == "" ]]
 	then
 		UARCH="SANDY_BRIDGE"
+		PRETTY_UARCH="Sandy Bridge"
 	else
 		UARCH="HASWELL"
+		PRETTY_UARCH="Haswell"
 	fi
 else
 	UARCH="SILVERMONT"
+	PRETTY_UARCH="Silvermont"
 fi
 
 # For generate_variants.sh

@@ -42,6 +42,7 @@ echo "Recreating results folder..."
 mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
 echo "$META_REPETITIONS" > "$codelet_folder/$CLS_RES_FOLDER/meta_repetitions"
+echo "$PRETTY_UARCH" > "$codelet_folder/$CLS_RES_FOLDER/uarch"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
