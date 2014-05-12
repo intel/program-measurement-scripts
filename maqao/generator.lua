@@ -86,7 +86,12 @@ function get_nb_components (instr)
 		res = count (disp ["uops_groups"])
 		if (is_avx_div (instr))
 		then
-			res = res + 2
+			if (instr : is_load ())
+			then
+				res = res + 2
+			else
+				res = res + 1
+			end
 		end
 	end
 
