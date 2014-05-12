@@ -480,7 +480,7 @@ function get_component_special (instr, pos)
 
 	if (comp_type == "load")
 	then
-		if (instr : uses_YMM ())
+		if (instr : uses_YMM () and (string.find (instr : get_name (), "PS") ~= nil or string.find (instr : get_name (), "PD") ~= nil))
 		then
 			res = "avx_mem:2"
 		end
