@@ -1,14 +1,14 @@
 #!/bin/bash -l
 
 variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
-variants="REF LS FP"
+variants="REF LS FP DL1 FES"
 linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
-linear_sizes="1000"
+#linear_sizes="1000"
 quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 1400 1500 1600 1800 2000 2500 3000"
 memory_loads="0 99999"
 memory_loads="0"
 frequencies="800000 3400000"
-frequencies="3400000"
+#frequencies="3400000"
 
 linear_codelets=""
 quadratic_codelets=""

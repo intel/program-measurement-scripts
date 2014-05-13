@@ -501,7 +501,7 @@ function get_component_special (instr, pos)
 			end
 			if (uarch_c == Consts.x86_64.UARCH_HASWELL)
 			then
-				if (nb <= 15)
+				if (nb <= 13)
 				then
 					nb = 7
 				else
