@@ -11,7 +11,7 @@ frequencies="1200000 2400000"
 linear_codelets=""
 quadratic_codelets=""
 
-linear_codelets="/localdisk/vincent/ecr_codelets/nr-codelets/bws/multistream_experiments/*"
+linear_codelets="/localdisk/vincent/ecr_codelets/nr-codelets/bws/multistream_experiments/*-mov*"
 
 for codelet in $linear_codelets
 do
