@@ -136,6 +136,18 @@ then
 	treated=1
 fi
 
+if [[ "$macro" == "splitntime_dt4"* ]]
+then
+	transformation="stream"
+	option1="dt"
+	option2="dt_sub_0"
+	timers="basic"
+	counters=""
+
+	elementary="no_store"
+
+	treated=1
+fi
 
 #----------- Mem transformations
 if [[ "$macro" == "splitntime_mem_AS"* ]]

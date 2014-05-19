@@ -96,6 +96,7 @@ transforms+=([FP]="splitntime_fp_div_on_stack")
 transforms+=([FP_RAT1B]="splitntime_fp_rat1b")
 transforms+=([FP_FES]="splitntime_fp_div_on_stack_ratmb")
 transforms+=([FP_SAN]="splitntime_fp")
+transforms+=([FP_DL]="splitntime_dt4")
 
 transforms+=([NOLS-NOFP]="splitntime_noas-nofpi")
 transforms+=([NOLS-NOFP_RAT1B]="splitntime_noas-nofpi_rat1b")

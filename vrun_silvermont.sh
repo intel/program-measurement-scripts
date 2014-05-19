@@ -80,8 +80,8 @@ linear_codelets="$linear_codelets /home/vpalomar/local_disk/ecr_codelets/nr-code
 linear_codelets="$linear_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/svdcmp_6/svdcmp_6_de"
 linear_codelets="$linear_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/svdcmp_6/svdcmp_6_dx"
 
-linear_codelets="$linear_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_LDA/hqr_15/hqr_15_se"
-linear_codelets="$linear_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_LDA/hqr_15/hqr_15_sx"
+quadratic_codelets="$quadratic_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_LDA/hqr_15/hqr_15_se"
+quadratic_codelets="$quadratic_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_LDA/hqr_15/hqr_15_sx"
 
 quadratic_codelets="$quadratic_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_de"
 quadratic_codelets="$quadratic_codelets /home/vpalomar/local_disk/ecr_codelets/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_dx"
