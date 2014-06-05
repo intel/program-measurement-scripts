@@ -73,6 +73,11 @@ quadratic_codelets=""
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/tridag_2/tridag_2_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_1/tridag_2/tridag_2_dx"
 
+#linear_codelets="$linear_codelets /localdisk/vincent/intel_codelets/1D_loop-Stride_1/s1244/s1244_se"
+#linear_codelets="$linear_codelets /localdisk/vincent/intel_codelets/1D_loop-Stride_1/s1244/s1244_sVS_se"
+#linear_codelets="$linear_codelets /localdisk/vincent/intel_codelets/1D_loop-Stride_1/s319/s319_se"
+#linear_codelets="$linear_codelets /localdisk/vincent/intel_codelets/1D_loop-Stride_1/s319/s319_sVS_se"
+
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/elmhes_11/elmhes_11_de"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/elmhes_11/elmhes_11_dx"
 #linear_codelets="$linear_codelets /localdisk/vincent/ecr_codelets/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/svdcmp_11/svdcmp_11_de"
