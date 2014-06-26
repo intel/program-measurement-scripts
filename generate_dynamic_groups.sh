@@ -44,7 +44,7 @@ cd "$binary_folder"
 first_iteration_keep_list=""
 for build in $different_builds
 do
-	$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "special_grouping_$build" "$combinatorics" &> /dev/null
+	$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "special_grouping_$build" "$UARCH" "$combinatorics" &> /dev/null
 	$DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 	generated_binaries=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
