@@ -39,7 +39,7 @@ MAQAO="$MAQAO_FOLDER/maqao"
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
-CODELET_LENGTH=100
+CODELET_LENGTH=50
 MIN_REPETITIONS=100
 
 # For run_codelet.sh (1/2)

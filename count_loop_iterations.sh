@@ -21,14 +21,14 @@ declare -A count_values
 
 
 cd $binary_folder
-$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" &>/dev/null
+$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 if [[ "$decan_variants" == "" ]]
 then
-	echo "ERROR! No loop could be identified!"
+	echo "ERROR! No loop could be identified!" 1>&2
 	exit -1
 fi
 rm -f $PWD/$DECAN_REPORT

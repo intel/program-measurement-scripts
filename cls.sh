@@ -18,6 +18,7 @@ frequencies="$5"
 
 echo "------------------------------------------------------------"
 echo "CLS"
+echo -e "Hostname \t'$HOSTNAME' [$UARCH]"
 echo -e "Codelet \t'$codelet_folder'"
 echo -e "Variants \t'$variants'"
 echo -e "Data sizes \t'$data_sizes'"
@@ -30,7 +31,7 @@ echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )_
-function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+#function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 echo -e "Codelet name \t'$codelet_name'"
 echo -e "Binary name \t'$binary_name'"
 echo -e "Function name \t'$function_name'"
