@@ -37,7 +37,7 @@ do
 		if [[ "$variant_transform" != "" ]]
 		then
 			echo "Generating '$variant' ($build)..."
-			$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "$variant_transform" &> /dev/null
+			$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "$variant_transform" "$UARCH" &> /dev/null
 			res=$?
 			if [[ "$res" != "0" ]]
 			then

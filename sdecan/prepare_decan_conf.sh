@@ -4,7 +4,8 @@ decan_path=$1
 binary_path=$2
 function_name=$3
 macro=$4
-groups="$5"
+uarch=$5
+groups="$6"
 
 treated=0
 
@@ -13,8 +14,15 @@ echo "Decan path: $decan_path"
 echo "Binary path: $binary_path"
 echo "Function name: $function_name"
 echo "Macro: $macro"
+echo "Uarch: $uarch"
 echo "Groups: '$groups'"
 
+
+uarch_name=""
+if [[ "$uarch" == "HASWELL" ]]
+then
+	uarch_name="haswell"
+fi
 
 #----------- Basic transformations
 if [[ "$macro" == "time_reference"* ]]
@@ -353,6 +361,7 @@ echo "---1------------------------------"	>  $decan_path/decan.conf
 echo "binary= $binary_path"			>> $decan_path/decan.conf
 echo "functions= $function_name"		>> $decan_path/decan.conf
 echo "loop_id= $loop_id"			>> $decan_path/decan.conf
+echo "target_arch= $uarch_name"			>> $decan_path/decan.conf
 
 echo "---2------------------------------"	>> $decan_path/decan.conf
 echo "transformation= $transformation"		>> $decan_path/decan.conf
