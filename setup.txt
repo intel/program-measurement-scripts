@@ -1,0 +1,58 @@
+#Check HT is off
+
+bash
+
+sudo apt-get install bc cpufrequtils time
+# For CLS
+sudo chmod 6755 $( which cpufreq-set )
+# For MAQAO DECAN
+sudo chmod 777 /sys/devices/system/cpu/cpu*/cpufreq/*
+
+cd
+mkdir /localdisk/vincent && chmod 700 /localdisk/vincent
+cd local_disk
+#git clone fxeo-cwong2901:~/git/cls
+git clone gitolite@fxeo-cwong2901:cls
+#git clone fxeo-cwong2901:~/git/result-files
+git clone gitolite@fxeo-cwong2901:result-files
+mkdir ecr_codelets
+cd ecr_codelets
+#git clone fxeo-cwong2901:~/git/ecr_codelets/nr-codelets
+git clone gitolite@fxeo-cwong2901:nr-codelets
+cd ..
+#git clone fxeo-cwong2901:~/git/intel_codelets
+git clone gitolite@fxeo-cwong2901:intel_codelets
+
+sudo mkdir /opt/intel/sep
+cp ~/sep_3.16_linux_347835_private.tar.bz2 .
+sudo cp sep_3.16_linux_347835_private.tar.bz2 /opt/intel/sep/
+cd /opt/intel/sep
+sudo tar xvjf sep_3.16_linux_347835_private.tar.bz2
+cd sepdk
+sudo ./build-driver -ni
+sudo chmod 777 /dev/pax &> /dev/null
+#sudo ./insmod-sep3 -g netdev
+sudo ./insmod-sep3 -g kap
+
+#[add configuration line for SQ_MISC_FILL_DROPPED in /opt/intel/sep/config/sampling3/snbep_db.txt:
+#0xF4	0x08	SQ_MISC.FILL_DROPPED	Blabla	0,1,2,3 0,1,2,3,4,5,6,7 100003	0	0	0	0	0	0x53	0	0	0	0	null	0	
+#]
+#[add configuration line for L1_WB (NICE_ND) in /opt/intel/sep/config/sampling3/silvermont_matrix_db.txt:
+#Null	L2_HIT	0x000004	"0,1"	that hit L2
+#]
+#can also simply append the private counters "sep" file
+
+
+#[copy the tars for icc / ifort]
+cd ~/local_disk/
+tar xvfz l_ccompxe_2011.9.293.tgz
+cd l_ccompxe_2011.9.293/
+sudo ./install.sh
+#T346-955N3J5X
+cd ..
+tar xvfz l_fcompxe_2011.9.293.tgz
+cd l_fcompxe_2011.9.293/
+sudo ./install.sh
+#T346-955N3J5X
+cd ..
+
