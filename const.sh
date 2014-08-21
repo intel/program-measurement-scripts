@@ -31,7 +31,8 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
-export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/"
+#source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
+export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
