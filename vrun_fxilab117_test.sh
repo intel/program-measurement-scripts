@@ -9,6 +9,7 @@ quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 140
 memory_loads="0"
 frequencies="800000 3500000"
 frequencies="3500000"
+frequencies="2500000"
 
 linear_codelets=""
 quadratic_codelets=""
