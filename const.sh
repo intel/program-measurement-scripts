@@ -11,10 +11,15 @@ else
 		if echo "$HOSTNAME" | grep "fxilab10"
 		then
 			export HOSTNAME="fxhaswell-desktop"
-			else
+		else
 			if echo "$HOSTNAME" | grep "fxilab11"
 			then
 				export HOSTNAME="fxhaswell"
+			else
+				if [[ "$HOSTNAME" == "fxilab150" || "$HOSTNAME" == "fxilab151" || "$HOSTNAME" == "fxilab152" ]]
+				then
+					export HOSTNAME="fxhaswell-l4"
+				fi
 			fi
 		fi
 	fi
@@ -32,7 +37,13 @@ DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
-export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
+#export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
+#export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
+if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
+	source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh
+else
+	source /nfs/fx/proj/openmp/compilers/intel/15.0/Linux/intel64/load0.sh
+fi
 
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
@@ -40,7 +51,8 @@ MAQAO="$MAQAO_FOLDER/maqao"
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
-CODELET_LENGTH=50
+#CODELET_LENGTH=50
+CODELET_LENGTH=200
 MIN_REPETITIONS=100
 
 # For run_codelet.sh (1/2)
@@ -79,6 +91,12 @@ then
 else
 	UARCH="SILVERMONT"
 	PRETTY_UARCH="Silvermont"
+fi
+
+if [[ "$HOSTNAME" == "fxilab148" ]]
+then
+	UARCH="IVY_BRIDGE"
+	PRETTY_UARCH="Ivy Bridge"
 fi
 
 # For generate_variants.sh
@@ -136,6 +154,32 @@ XP_CORES+=([fxe32lin04]="11")
 XP_CORES+=([fxhaswell-desktop]="3")
 XP_CORES+=([fxhaswell]="3")
 XP_CORES+=([fxtcarilab027]="11")
+XP_CORES+=([fxhaswell-l4]="3")
+XP_CORES+=([fxilab147]="5")
+XP_CORES+=([fxilab148]="19")
+
+declare -A XP_CORES
+XP_NODES+=([britten]="0")
+XP_NODES+=([buxtehude]="1")
+XP_NODES+=([chopin]="0")
+XP_NODES+=([dandrieu]="0")
+XP_NODES+=([massenet]="1")
+XP_NODES+=([sviridov]="0")
+XP_NODES+=([fxatom001]="0")
+XP_NODES+=([fxatom002]="0")
+XP_NODES+=([fxatom003]="0")
+XP_NODES+=([fxatom004]="0")
+XP_NODES+=([fxsilvermont]="0")
+XP_NODES+=([fxe12-cwong2901]="1")
+XP_NODES+=([fxe12-cwong2901_nopref]="1")
+XP_NODES+=([fxe32lin04]="1")
+XP_NODES+=([fxhaswell-desktop]="0")
+XP_NODES+=([fxhaswell]="0")
+XP_NODES+=([fxtcarilab027]="1")
+XP_NODES+=([fxhaswell-l4]="0")
+XP_NODES+=([fxilab147]="0")
+XP_NODES+=([fxilab148]="1")
+
 
 MEMLOADER="$CLS_FOLDER/memloader"
 declare -A MEMLOAD_ARGS
@@ -143,6 +187,7 @@ MEMLOAD_ARGS+=([fxe12-cwong2901]="--core=6 --core=7 --core=8 --core=9 --core=10 
 MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
 XP_CORE=${XP_CORES[$HOSTNAME]}
+XP_NODE=${XP_NODES[$HOSTNAME]}
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
 # For gather_results.sh
