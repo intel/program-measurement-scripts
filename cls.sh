@@ -1,13 +1,13 @@
 #!/bin/bash -l
 
 source ./const.sh
+source /opt/intel/sep/sep_vars.sh
 
 if [[ "$nb_args" != "5" ]]
 then
 	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies)."
 	exit -1
 fi
-
 
 codelet_folder=$( readlink -f "$1" )
 variants="$2"
@@ -61,7 +61,7 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Identifying the main loop..."
-loop_info=$( ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
+loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
 res=$?
 if [[ "$res" != "0" ]]
 then
@@ -132,7 +132,7 @@ do
 	./w_adjust.sh "$codelet_folder" "$codelet_name" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
 
 	echo "Re-counting loop iterations..."
-	loop_info=$( ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
+	loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
 	res=$?
 	if [[ "$res" != "0" ]]
 	then
@@ -141,7 +141,7 @@ do
 	fi
 
 	wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id;" )
-	most_important_loop=$( echo "$loop_info" | head -n 1 )
+	most_important_loop=$( echo "$loop_info" | head -n 1 | grep ";")
 
 	if [[ "$wanted_loop_info" != "$most_important_loop" ]]
 	then
