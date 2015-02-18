@@ -158,7 +158,8 @@ XP_CORES+=([fxhaswell-l4]="3")
 XP_CORES+=([fxilab147]="5")
 XP_CORES+=([fxilab148]="19")
 
-declare -A XP_CORES
+#declare -A XP_CORES
+declare -A XP_NODES
 XP_NODES+=([britten]="0")
 XP_NODES+=([buxtehude]="1")
 XP_NODES+=([chopin]="0")

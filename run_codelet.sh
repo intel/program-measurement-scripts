@@ -23,6 +23,8 @@ echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency 
 cd $codelet_folder
 res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
 
+TASKSET=$( which taskset )
+NUMACTL=$( which numactl )
 
 rm -f time.out
 echo "Computing CPI..."
@@ -30,7 +32,8 @@ res=""
 for i in $( seq $META_REPETITIONS )
 do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
-	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
+#	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
+	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
 rm -f time.out
@@ -46,8 +49,6 @@ echo "$codelet_name;$data_size;$memory_load;$frequency;$variant;$normalized_mean
 
 echo "Ld library path: '$LD_LIBRARY_PATH'"
 
-TASKSET=$( which taskset )
-NUMACTL=$( which numactl )
 
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
