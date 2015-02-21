@@ -2,16 +2,50 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "1" ]]
+if [[ "$nb_args" != "5" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies)."
 	exit -1
 fi
 
 codelet_folder=$( readlink -f "$1" )
+variants="$2"
+data_sizes="$3"
+memory_loads="$4"
+frequencies="$5"
+
+
 res_folder="$codelet_folder/$CLS_RES_FOLDER"
 
+
 echo "Gathering results for '$codelet_folder'"
+
+if [[ "$ACTIVATE_COUNTERS" != "0" ]]
+    then
+    echo "Proceeding to formatting counter experiments."
+    for data_size in $data_sizes
+      do
+      for memory_load in $memory_loads
+	do
+	for frequency in $frequencies
+	  do
+	  for variant in $variants
+	    do
+	    datasize_path="${res_folder}/data_$data_size"
+	    res_path="${datasize_path}/memload_$memory_load/freq_$frequency/variant_$variant"
+#	    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+	    emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
+	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}")
+	    ${FORMAT_COUNTERS_SH} "$codelet_name" $data_size $memory_load $frequency "$variant" "${loop_iterations}" "${emon_counters}" ${res_path}
+	  done
+	  
+	done
+      done
+    done
+fi
+
+
+
 
 for freq in "$res_folder"/data_*/memload_*/freq_*
 do

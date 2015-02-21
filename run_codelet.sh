@@ -17,6 +17,7 @@ variant="$6"
 iterations="$7"
 
 
+START_RUN_CODELETS_SH=$(date '+%s')
 echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations'."
 
 
@@ -90,19 +91,26 @@ then
 				fi
 			fi
 		fi
+		echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
 #		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
 		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 		emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 	done
 
-
-	echo "Counter experiments done, proceeding to formatting."
-pwd
-	${FORMAT_COUNTERS_SH} "$codelet_name" $data_size $memory_load $frequency "$variant" "${iterations}" "${emon_counters}" ${res_path}
-
 else
 	echo "Skipping counters (not activated)."
 fi
+
+# if [[ "$ACTIVATE_COUNTERS" != "0" ]]
+# then
+# 	echo "Counter experiments done, proceeding to formatting."
+# 	${FORMAT_COUNTERS_SH} "$codelet_name" $data_size $memory_load $frequency "$variant" "${iterations}" "${emon_counters}" ${res_path}
+# fi
+
+END_RUN_CODELETS_SH=$(date '+%s')
+ELAPSED_RUN_CODELETS_SH=$((${END_RUN_CODELETS_SH} - ${START_RUN_CODELETS_SH}))
+echo "run_codelets.sh finished in ${ELAPSED_RUN_CODELETS_SH} seconds."
+
 
 
 exit 0

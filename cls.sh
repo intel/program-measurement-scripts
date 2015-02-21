@@ -15,6 +15,7 @@ data_sizes="$3"
 memory_loads="$4"
 frequencies="$5"
 
+START_CLS_SH=$(date '+%s')
 
 echo "------------------------------------------------------------"
 echo "CLS"
@@ -163,6 +164,7 @@ do
 
 	loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
 	echo -e "Iterations \t'$loop_iterations'"
+	echo ${loop_iterations} >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
 
 	for memory_load in $memory_loads
 	do
@@ -200,7 +202,8 @@ do
 
 			for variant in $variants
 			do
-				mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant" &> /dev/null
+			        res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+				mkdir ${res_path} &> /dev/null
 				./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations"
 				res=$?
 				if [[ "$res" != "0" ]]
@@ -209,7 +212,10 @@ do
 					exit -1
 				fi
 			done
+
 		done
+
+
 
 		if [[ "$memory_load" != "0" ]]
 		then
@@ -219,26 +225,41 @@ do
 		fi
 	done
 
-	echo "Generating results..."
-	./gather_results.sh "$codelet_folder"
-	res=$?
-	if [[ "$res" != "0" ]]
-	then
-		echo "Cancelling CLS."
-		exit -1
-	fi
+
+
+#	echo "Generating results..."
+
+
+# 	./gather_results.sh "$codelet_folder" "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
+# 	res=$?
+# 	if [[ "$res" != "0" ]]
+# 	then
+# 		echo "Cancelling CLS."
+# 		exit -1
+# 	fi
 done
 
 
 echo "------------------------------------------------------------"
-echo "Generating results..."
-./gather_results.sh "$codelet_folder"
+echo "Generating results using following inputs..."
+echo -e "Codelet \t'$codelet_folder'"
+echo -e "Variants \t'$variants'"
+echo -e "Data sizes \t'$data_sizes'"
+echo -e "Memory loads \t'$memory_loads'"
+echo -e "Frequencies \t'$frequencies'"
+
+./gather_results.sh "$codelet_folder" "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
 res=$?
 if [[ "$res" != "0" ]]
 then
 	echo "Cancelling CLS."
 	exit -1
 fi
+
+END_CLS_SH=$(date '+%s')
+ELAPSED_CLS_SH=$((${END_CLS_SH} - ${START_CLS_SH}))
+echo "cls.sh finished in ${ELAPSED_CLS_SH} seconds."
+
 
 echo "------------------------------------------------------------"
 echo "Cleaning up..."

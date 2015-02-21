@@ -58,7 +58,9 @@ MIN_REPETITIONS=100
 # For run_codelet.sh (1/2)
 META_REPETITIONS=11
 ACTIVATE_COUNTERS=1
+#ACTIVATE_COUNTERS=0
 ACTIVATE_ADVANCED_COUNTERS=0
+FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 
 # For cls.sh
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -191,7 +193,12 @@ XP_CORE=${XP_CORES[$HOSTNAME]}
 XP_NODE=${XP_NODES[$HOSTNAME]}
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
+
 # For gather_results.sh
 CPIS_FOLDER="cpis"
 COUNTERS_FOLDER="counters"
+# Counter list data file name 
+EMON_COUNTER_NAMES_FILE="emon_counters.txt"
+# Loop iteration count file name
+LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
