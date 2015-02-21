@@ -16,11 +16,12 @@ loop_id="$3"
 variants="$4"
 
 different_builds="cpi"
-if [[ "$ACTIVATE_COUNTERS" != "0" ]]
-then
+# Always generate *_hwc
+#if [[ "$ACTIVATE_COUNTERS" != "0" ]]
+#then
 	echo "Activating DECAN region generation!"
 	different_builds="$different_builds hwc"
-fi
+#fi
 
 echo "Generating DECAN variants..."
 echo
