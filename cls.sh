@@ -15,6 +15,13 @@ data_sizes="$3"
 memory_loads="$4"
 frequencies="$5"
 
+set_prefetcher_bits() {
+    bits="$1"
+    hex_prefetcher_bits=$(printf "0x%x" ${bits})
+    echo "Writing ${hex_prefetcher_bits} to MSR 0x1a4 to change prefetcher settings."
+    emon --write-msr 0x1a4=${hex_prefetcher_bits}
+}
+
 START_CLS_SH=$(date '+%s')
 
 echo "------------------------------------------------------------"
@@ -122,6 +129,20 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Starting experiments..."
+
+#Saving old prefetcher settings
+old_prefetcher_bits=($(emon --read-msr 0x1a4 | grep MSR | cut -f2 -d=|uniq ))
+
+if [[ "${#old_prefetcher_bits[@]}" -gt "1" ]]
+then
+# Different settings among processor - not supported.
+	echo "Processors with different original prefetcher settings.  Cancelling CLS."
+	exit -1
+fi
+
+# Change prefetcher settings
+set_prefetcher_bits ${PREFETCHER_DISABLE_BITS}
+
 
 for data_size in $data_sizes
 do
@@ -238,6 +259,11 @@ do
 # 		exit -1
 # 	fi
 done
+
+# Restore prefetcher settings.
+echo "Writing ${old_prefetcher_bits} to MSR 0x1a4 to restore prefetcher settings."
+#emon --write-msr 0x1a4=${old_prefetcher_bits}
+set_prefetcher_bits ${old_prefetcher_bits}
 
 
 echo "------------------------------------------------------------"

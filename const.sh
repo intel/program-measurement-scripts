@@ -66,6 +66,12 @@ FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 ACTIVATE_DYNAMIC_GROUPING=0
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
+# see https://software.intel.com/en-us/articles/disclosure-of-hw-prefetcher-control-on-some-intel-processors
+DISABLE_L2_HW_PREFETCHER=1
+DISABLE_ADJ_CACHE_LINE_PREFETCHER=1
+DISABLE_DCU_PREFETCHER=1
+DISABLE_DCU_IP_PREFETCHER=1
+PREFETCHER_DISABLE_BITS=$(((${DISABLE_DCU_IP_PREFETCHER}<<3)|(${DISABLE_DCU_PREFETCHER}<<2)|(${DISABLE_ADJ_CACHE_LINE_PREFETCHER}<<1)|(${DISABLE_L2_HW_PREFETCHER})))
 
 # Modules
 #module load compilers/intel/12.1.3
