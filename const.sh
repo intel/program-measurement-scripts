@@ -199,6 +199,17 @@ XP_CORE=${XP_CORES[$HOSTNAME]}
 XP_NODE=${XP_NODES[$HOSTNAME]}
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
+# By default run with emon
+ENABLE_SEP=0
+
+# Set the path for the probe library
+NR_FOLDER="~/localdisk/NR/nr-codelets"
+PROBE_FOLDER="$NR_FOLDER/codeletProbe"
+if [[ "$ENABLE_SEP" == "1" ]]; then
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PROBE_FOLDER/for_sep"
+else
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PROBE_FOLDER/for_emon"
+fi
 
 # For gather_results.sh
 CPIS_FOLDER="cpis"
