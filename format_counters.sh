@@ -19,6 +19,10 @@ emon_counters=$7
 res_path=$8
 
 
+if [[ "$ENABLE_SEP" == "1" ]]; then
+	./parse_sep_output.sh $res_path
+fi
+
 counters=$( echo "$emon_counters" | tr "," " " | tr "." "_" | tr " " "\n" | sort --uniq | tr "\n" " " )
 sed 's/\./_/g' -i $res_path/emon_report
 

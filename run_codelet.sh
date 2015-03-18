@@ -155,9 +155,31 @@ then
       echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
 #		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
 		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-      emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+      if [[ "ENABLE_SEP" == "1" ]];then
+	  emon_counters_to_run=$(./split_counters.sh $emon_counters)
+	  emon_counters_core=$(echo $emon_counters_to_run | tr '#' '\n' | head -n 1)
+	  emon_counters_uncore=$(echo $emon_counters_to_run | tr '#' '\n' | tail -n 1)
+	  
+	  echo $emon_counters_core >  "$res_path/core_events_list"
+	  echo $emon_counters_uncore >  "$res_path/uncore_events_list"
+	  
+	  for events in $(echo $emon_counters_core  | tr ';' ' ')
+	    do
+	    events_code=$(echo $events | cut -d':' -f1)
+	    events=$(echo $events | cut -d':' -f2)
+	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	  done
+	  
+	  for events in $(echo $emon_counters_uncore  | tr ';' ' ')
+	    do	
+	    events_code=$(echo $events | cut -d':' -f1)
+	    events=$(echo $events | cut -d':' -f2)
+	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	  done
+      else
+	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+      fi
     done
-    
 else
     echo "Skipping counters (not activated)."
 fi
