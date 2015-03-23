@@ -149,9 +149,15 @@ sed 's/\./_/g' -i $res_path/emon_report
 	cp $res_path/cpi.csv $res_path/counters.csv
 	for counter in $counters
 	do
-		#echo "Processing counter '$counter'"
-		#echo "Debug: $( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' )"
-		grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | awk '{average += ($1 /'$iterations'); } END {print average / NR;}' > $res_path/likwid_counter_$counter
+		##echo "Processing counter '$counter'"
+		##echo "Debug: $( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' )"
+		#grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | awk '{average += ($1 /'$iterations'); } END {print average / NR;}' > $res_path/likwid_counter_$counter
+
+        let "mean_line = ($META_REPETITIONS / 2) + 1"
+        res=$( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | sort -n )
+        median=$( echo $res | tr ' ' '\n' | awk "NR==$mean_line" )
+        echo $median | awk '{print $1 / '$iterations';}' > $res_path/likwid_counter_$counter
+
 		paste -d';' $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
 		mv $res_path/tmp $res_path/counters.csv
 	done
