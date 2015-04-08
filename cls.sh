@@ -283,8 +283,13 @@ then
 fi
 
 END_CLS_SH=$(date '+%s')
+
+# At the end, rename the result folder by appending timestamp
+mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}" 
+
 ELAPSED_CLS_SH=$((${END_CLS_SH} - ${START_CLS_SH}))
-echo "cls.sh finished in ${ELAPSED_CLS_SH} seconds."
+
+echo "cls.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_CLS_SH})."
 
 
 echo "------------------------------------------------------------"

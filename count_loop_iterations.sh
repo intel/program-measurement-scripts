@@ -25,6 +25,7 @@ $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncoun
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
+
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 if [[ "$decan_variants" == "" ]]
 then
@@ -43,7 +44,6 @@ loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
 #	echo "Found loop '$loop_id'" &> blabli
 #done
 
-
 for decan_variant in $decan_variants
 do
 	#"./$decan_variant"
@@ -55,7 +55,6 @@ do
 done
 
 cd $CLS_FOLDER
-
 
 final_res=""
 for decan_variant in $decan_variants

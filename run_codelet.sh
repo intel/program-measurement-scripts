@@ -28,13 +28,43 @@ TASKSET=$( which taskset )
 NUMACTL=$( which numactl )
 
 rm -f time.out
+
+append_counters()
+{
+    activate="$1"
+    item_type="$2"
+    more_items="$3"
+
+    if [[ "${activate}" != "0" ]]
+	then
+	if [ -z ${more_items} ]
+	    then
+	    echo "ERROR! ACTIVATED empty ${item_type} counters"
+	    exit -1
+	else
+	    emon_counters+=",${more_items}"
+	fi
+    fi      
+}
+
 echo "Computing CPI..."
 res=""
+
+if [[ "${variant}" == "ORG" ]]
+    then
+# Run the original program
+    run_prog="./${codelet_name}"
+else
+# Run the DECAN generated program
+    run_prog="./${codelet_name}_${variant}_hwc"
+fi
+
 for i in $( seq $META_REPETITIONS )
 do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
 #	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
-	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
+#	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
+	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
 rm -f time.out
@@ -60,6 +90,18 @@ then
       do
       basic_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD"
       tlb_counters="DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
+      topdown_unc_counters="OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD:c6"
+      topdown_mem_counters="CYCLE_ACTIVITY.STALLS_LDM_PENDING,CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT_PS,MEM_LOAD_UOPS_RETIRED.LLC_MISS_PS"
+      topdown_exe_counters="CYCLE_ACTIVITY.CYCLES_NO_EXECUTE,RS_EVENTS.EMPTY_CYCLES,UOPS_EXECUTED.THREAD,UOPS_EXECUTED.CYCLES_GE_1_UOP_EXEC,UOPS_EXECUTED.CYCLES_GE_2_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_3_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_4_UOPS_EXEC,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
+      topdown_ms_seq_counters="IDQ.MS_UOPS"
+      topdown_fp_arith_counters="FP_COMP_OPS_EXE.X87,FP_COMP_OPS_EXE.SSE_SCALAR_SINGLE,FP_COMP_OPS_EXE.SSE_SCALAR_DOUBLE,FP_COMP_OPS_EXE.SSE_PACKED_SINGLE,FP_COMP_OPS_EXE.SSE_PACKED_DOUBLE,SIMD_FP_256.PACKED_SINGLE,SIMD_FP_256.PACKED_DOUBLE"
+      
+      topdown_port_counters="UOPS_DISPATCHED_PORT.PORT_0,UOPS_DISPATCHED_PORT.PORT_1,UOPS_DISPATCHED_PORT.PORT_2,UOPS_DISPATCHED_PORT.PORT_3,UOPS_DISPATCHED_PORT.PORT_4,UOPS_DISPATCHED_PORT.PORT_5"
+      topdown_port_util_counters="${topdown_port_counters},ARITH.FPU_DIV_ACTIVE"
+#      topdown_fe_lat_counters="ICACHE.IFETCH_STALL,ITLB_MISSES.STLB_HIT,ITLB_MISSES.WALK_DURATION,RS_EVENTS.EMPTY_END,BR_MISP_RETIRED.ALL_BRANCHES_PS,MACHINE_CLEARS.COUNT,BACLEARS.ANY,DSB2MITE_SWITCHES.PENALTY_CYCLES,ILD_STALL.LCP"
+      topdown_fe_lat_counters="IDQ.MS_UOPS:e1"
+
+      topdown_counters="${topdown_ms_seq_counters},${topdown_exe_counters},${topdown_mem_counters},${topdown_unc_counters},${topdown_port_util_counters}"
 
       case "$UARCH" in
 	  "SANDY_BRIDGE")
@@ -82,7 +124,7 @@ then
 
 	  "IVY_BRIDGE")
 	  mem_traffic_counters="UNC_M_CAS_COUNT.RD,UNC_M_CAS_COUNT.WR,L1D.REPLACEMENT,L2_L1D_WB_RQSTS.ALL,L2_L1D_WB_RQSTS.MISS,L2_LINES_IN.ALL,L2_TRANS.L2_WB,SQ_MISC.FILL_DROPPED"
-	  resource_counters="RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.LB,RESOURCE_STALLS.SB,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL,RESOURCE_STALLS2.PHT_FULL,RESOURCE_STALLS2.OOO_RSRC,RESOURCE_STALLS.MEM_RS,RESOURCE_STALLS.OOO_RSRC,RESOURCE_STALLS.LB_SB"
+	  resource_counters="RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.LB,RESOURCE_STALLS.SB,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL,RESOURCE_STALLS2.PHT_FULL,RESOURCE_STALLS2.OOO_RSRC,RESOURCE_STALLS.MEM_RS,RESOURCE_STALLS.OOO_RSRC,RESOURCE_STALLS.LB_SB,RESOURCE_STALLS.FPCW,RESOURCE_STALLS.MXCSR,RESOURCE_STALLS.LOAD_MATRIX"
 	  other_counters="L2_RQSTS.PF_MISS,UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_RETIRED.ALL,OFFCORE_RESPONSE.STREAMING_STORES.ANY_RESPONSE_0"
 	  ;;
 	  
@@ -98,39 +140,59 @@ then
       esac
 
       emon_counters="${basic_counters}"
-      if [[ "$ACTIVATE_MEM_TRAFFIC_COUNTERS" != "0" ]]
-	  then
-	  if [ -z ${mem_traffic_counters} ]
-	      then
-	      echo "ERROR! ACTIVATED empty traffic counters"
-	      exit -1
-	  else
-	      emon_counters+=",${mem_traffic_counters}"
-	  fi
-      fi      
-
-      if [[ "$ACTIVATE_RESOURCE_COUNTERS" != "0" ]]
-	  then
-	  if [ -z ${resource_counters} ]
-	      then
-	      echo "ERROR! ACTIVATED empty resource counters"
-	      exit -1
-	  else
-	      emon_counters+=",${resource_counters}"
-	  fi
-      fi      
+      append_counters $ACTIVATE_MEM_TRAFFIC_COUNTERS "traffic" ${mem_traffic_counters}
+      append_counters $ACTIVATE_RESOURCE_COUNTERS "resource" ${resource_counters}
+      append_counters $ACTIVATE_TLB_COUNTERS "TLB" ${tlb_counters}
+      append_counters $ACTIVATE_TOPDOWN_COUNTERS "TopDown" ${topdown_counters}
+      append_counters $ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS "TopDownFp" ${topdown_fp_arith_counters}
+      append_counters $ACTIVATE_TOPDOWN_FE_LAT_COUNTERS "TopDownFeLat" ${topdown_fe_lat_counters}
 
 
-      if [[ "$ACTIVATE_TLB_COUNTERS" != "0" ]]
-	  then
-	  if [ -z ${tlb_counters} ]
-	      then
-	      echo "ERROR! ACTIVATED empty TLB counters"
-	      exit -1
-	  else
-	      emon_counters+=",${tlb_counters}"
-	  fi
-      fi      
+#       if [[ "$ACTIVATE_MEM_TRAFFIC_COUNTERS" != "0" ]]
+# 	  then
+# 	  if [ -z ${mem_traffic_counters} ]
+# 	      then
+# 	      echo "ERROR! ACTIVATED empty traffic counters"
+# 	      exit -1
+# 	  else
+# 	      emon_counters+=",${mem_traffic_counters}"
+# 	  fi
+#       fi      
+
+#       if [[ "$ACTIVATE_RESOURCE_COUNTERS" != "0" ]]
+# 	  then
+# 	  if [ -z ${resource_counters} ]
+# 	      then
+# 	      echo "ERROR! ACTIVATED empty resource counters"
+# 	      exit -1
+# 	  else
+# 	      emon_counters+=",${resource_counters}"
+# 	  fi
+#       fi      
+
+
+#       if [[ "$ACTIVATE_TLB_COUNTERS" != "0" ]]
+# 	  then
+# 	  if [ -z ${tlb_counters} ]
+# 	      then
+# 	      echo "ERROR! ACTIVATED empty TLB counters"
+# 	      exit -1
+# 	  else
+# 	      emon_counters+=",${tlb_counters}"
+# 	  fi
+#       fi      
+
+#       if [[ "$ACTIVATE_TOPDOWN_COUNTERS" != "0" ]]
+# 	  then
+# 	  if [ -z ${topdown_counters} ]
+# 	      then
+# 	      echo "ERROR! ACTIVATED empty TOPDOWN counters"
+# 	      exit -1
+# 	  else
+# 	      emon_counters+=",${topdown_counters}"
+# 	  fi
+#       fi      
+
       emon_counters+=",${other_counters}"
       
       
@@ -167,17 +229,20 @@ then
 	    do
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
-	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+#	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ${run_prog} &> "$res_path/emon_execution_log"
 	  done
 	  
 	  for events in $(echo $emon_counters_uncore  | tr ';' ' ')
 	    do	
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
-	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+#	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ${run_prog} &> "$res_path/emon_execution_log"
 	  done
       else
-	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+#	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
       fi
     done
 else
@@ -192,7 +257,7 @@ fi
 
 END_RUN_CODELETS_SH=$(date '+%s')
 ELAPSED_RUN_CODELETS_SH=$((${END_RUN_CODELETS_SH} - ${START_RUN_CODELETS_SH}))
-echo "run_codelets.sh finished in ${ELAPSED_RUN_CODELETS_SH} seconds."
+echo "run_codelets.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_RUN_CODELETS_SH}) seconds."
 
 
 

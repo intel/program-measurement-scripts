@@ -18,7 +18,8 @@ mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
 echo "Generating codelet '$binary_folder/$codelet_name'..."
 
 cd "$binary_folder"
-if [[ "$ENABLE_SEP" == "1" ]];
+if [[ "$ENABLE_SEP" == "1" ]]
+then
 	make clean ENABLE_SEP=sep all
 else
 	make clean all
