@@ -63,10 +63,10 @@ ACTIVATE_ADVANCED_COUNTERS=0
 
 ACTIVATE_MEM_TRAFFIC_COUNTERS=1
 ACTIVATE_RESOURCE_COUNTERS=1
-ACTIVATE_TLB_COUNTERS=0
-ACTIVATE_TOPDOWN_COUNTERS=0
-ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS=0
-ACTIVATE_TOPDOWN_FE_LAT_COUNTERS=0
+ACTIVATE_TLB_COUNTERS=1
+ACTIVATE_TOPDOWN_COUNTERS=1
+ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS=1
+ACTIVATE_TOPDOWN_FE_LAT_COUNTERS=1
 FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 
 # For cls.sh
@@ -204,12 +204,35 @@ declare -A MEMLOAD_ARGS
 MEMLOAD_ARGS+=([fxe12-cwong2901]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
-XP_CORE=${XP_CORES[$HOSTNAME]}
-XP_NODE=${XP_NODES[$HOSTNAME]}
+
+
+% expected output from numactl -H
+NUMACTL=$( which numactl )
+% node 0 cpus: 0 1 2 3 4 5 6 7 8 9
+XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>max {max=$2}; END{print max}')
+if [[ "$HOSTNAME" == "fxilab147" ]]
+then
+    % NODE 1 is bad, hardcoded to select first node
+    XP_NODE=0
+end
+%XP_NODE=${XP_NODES[$HOSTNAME]}
+% All cores at the XP_NODE node
+XP_ALL_CORES=$(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2)
+XP_NUM_CORES=${#XP_ALL_CORES[@]}
+#XP_CORE=${XP_CORES[$HOSTNAME]}
+# last core of the node
+XP_CORE=${XP_ALL_CORES[${XP_NUM_CORES}-1]}
+# Also record the rest of cores for multiple core runs
+XP_REST_CORES=${XP_ALL_CORES[@]:0:(${XP_NUM_CORES}-1)}
+
+
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
 # By default run with emon
 ENABLE_SEP=0
+
+# By default single core runs
+MC_RUN=0
 
 # Set the path for the probe library
 NR_FOLDER="~/localdisk/NR/nr-codelets"

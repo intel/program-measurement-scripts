@@ -90,6 +90,8 @@ then
       do
       basic_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD"
       tlb_counters="DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
+
+      % following are top down counters only for IVB.  When the list of other arch is available, we should move the assignment into IVB case statements.
       topdown_unc_counters="OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD:c6"
       topdown_mem_counters="CYCLE_ACTIVITY.STALLS_LDM_PENDING,CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT_PS,MEM_LOAD_UOPS_RETIRED.LLC_MISS_PS"
       topdown_exe_counters="CYCLE_ACTIVITY.CYCLES_NO_EXECUTE,RS_EVENTS.EMPTY_CYCLES,UOPS_EXECUTED.THREAD,UOPS_EXECUTED.CYCLES_GE_1_UOP_EXEC,UOPS_EXECUTED.CYCLES_GE_2_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_3_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_4_UOPS_EXEC,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
@@ -242,6 +244,23 @@ then
 	  done
       else
 #	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+#	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+	  if [[ "$MC_RUN" != "0" ]]
+	      then 
+	      for cc in ${XP_REST_CORES}
+	      do
+		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	      done
+# 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 13 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 14 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 15 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 16 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 17 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 18 ${run_prog} &
+	  fi
 	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
       fi
     done

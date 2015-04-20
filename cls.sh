@@ -86,6 +86,7 @@ echo "$loop_id" > "$codelet_folder/$CLS_RES_FOLDER/loop_id"
 echo "------------------------------------------------------------"
 echo "Creating DECAN variants..."
 ./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
+
 res=$?
 if [[ "$res" != "0" ]]
 then

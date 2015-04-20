@@ -57,7 +57,13 @@ echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
 for variant in $variants
 do
-	variant_path="$bin_folder/${codelet_name}_${variant}_cpi"
+  if [[ "${variant}" == "ORG" ]]
+      then
+      variant_path="$bin_folder/${codelet_name}_REF_cpi"
+  else
+      variant_path="$bin_folder/${codelet_name}_${variant}_cpi"
+  fi
+
 	echo "Extracting assembly from DECANized executable '$variant_path'"
 	inner_loop_address=$( objdump -d "$variant_path" | grep "$jump_address:" | egrep -o -e 'jmpq\ \ \ [a-f0-9]+' | tr -s " " | cut -f2 -d' ' )
 
@@ -84,12 +90,12 @@ do
 	rm loops.csv
 	new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
-
-	ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
+#	ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
+	ooo_analysis=$( ./ooo_analysis.sh "${variant_path}" "$lid" )
 	new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
-
-	vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
+#	vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
+	vect_analysis=$( ./cqa_vectorization.sh "${variant_path}" "$lid" )
 	new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ';' )
 	echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 done

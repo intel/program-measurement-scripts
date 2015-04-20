@@ -31,6 +31,12 @@ mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
 cd "$binary_folder"
 for variant in $variants
 do
+  if [[ "${variant}" == "ORG" ]]
+      then
+# Just to be safe to generate REF for ORG runs
+      variant="REF"
+  fi
+
 	for build in $different_builds
 	do
 		variant_transform=${transforms[$variant]}_${build}
