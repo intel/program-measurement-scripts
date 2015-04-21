@@ -64,6 +64,7 @@ do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
 #	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
 #	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
+  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
@@ -91,7 +92,7 @@ then
       basic_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD"
       tlb_counters="DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
 
-      % following are top down counters only for IVB.  When the list of other arch is available, we should move the assignment into IVB case statements.
+      # following are top down counters only for IVB.  When the list of other arch is available, we should move the assignment into IVB case statements.
       topdown_unc_counters="OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD:c6"
       topdown_mem_counters="CYCLE_ACTIVITY.STALLS_LDM_PENDING,CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT_PS,MEM_LOAD_UOPS_RETIRED.LLC_MISS_PS"
       topdown_exe_counters="CYCLE_ACTIVITY.CYCLES_NO_EXECUTE,RS_EVENTS.EMPTY_CYCLES,UOPS_EXECUTED.THREAD,UOPS_EXECUTED.CYCLES_GE_1_UOP_EXEC,UOPS_EXECUTED.CYCLES_GE_2_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_3_UOPS_EXEC,UOPS_EXECUTED.CYCLES_GE_4_UOPS_EXEC,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
@@ -132,7 +133,7 @@ then
 	  
 	  
 	  *)
-	  % the basic counter is slightly different 'INST_RETIRED.ANY_P', redefine it
+	  # the basic counter is slightly different 'INST_RETIRED.ANY_P', redefine it
 	  basic_counters="INST_RETIRED.ANY_P,CPU_CLK_UNHALTED.CORE,CPU_CLK_UNHALTED.REF_TSC"
 	  mem_traffic_counters="LONGEST_LAT_CACHE.MISS,OFFCORE_RESPONSE:request=COREWB:response=L2_MISS.NO_SNOOP_NEEDED,OFFCORE_RESPONSE:request=COREWB:response=L2_HIT,MEM_UOPS_RETIRED.L1_MISS_LOADS,OFFCORE_RESPONSE:request=PF_L1_DATA_RD:response=ANY_RESPONSE,OFFCORE_RESPONSE:request=DEMAND_RFO:response=ANY_RESPONSE,OFFCORE_RESPONSE:request=DEMAND_DATA_RD:response=ANY_RESPONSE,OFFCORE_RESPONSE:request=COREWB:response=ANY_RESPONSE"
 	  tlb_counters=""
