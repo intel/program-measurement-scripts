@@ -251,3 +251,6 @@ EMON_COUNTER_NAMES_FILE="emon_counters.txt"
 # Loop iteration count file name
 LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
+
+#For format2cape.sh
+STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
