@@ -63,7 +63,14 @@ do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
 #	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
 #	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
-  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+#  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+	if [[ "$MC_RUN" != "0" ]]
+	then 
+		for cc in ${XP_REST_CORES}
+	  	do
+			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	  	done
+	fi
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
@@ -248,11 +255,11 @@ then
 #	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 #	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
 	  if [[ "$MC_RUN" != "0" ]]
-	      then 
-	      for cc in ${XP_REST_CORES}
-	      do
-		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
-	      done
+	  then 
+	  	for cc in ${XP_REST_CORES}
+	  	do
+			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	  	done
 # 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
