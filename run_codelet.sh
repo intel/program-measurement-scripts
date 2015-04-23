@@ -16,7 +16,6 @@ frequency=$5
 variant="$6"
 iterations="$7"
 
-
 START_RUN_CODELETS_SH=$(date '+%s')
 echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations'."
 
@@ -64,7 +63,7 @@ do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
 #	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
 #	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
-#  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
@@ -110,13 +109,15 @@ then
 	  "SANDY_BRIDGE")
 	  mem_traffic_counters="UNC_M_CAS_COUNT.RD,UNC_M_CAS_COUNT.WR,L1D.REPLACEMENT,L2_L1D_WB_RQSTS.ALL,L2_L1D_WB_RQSTS.MISS,L2_LINES_IN.ALL,L2_TRANS.L2_WB,SQ_MISC.FILL_DROPPED"
 	  resource_counters="RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL"
-	  other_counters="L2_RQSTS.PF_MISS,UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_RETIRED.ALL,OFFCORE_RESPONSE.STREAMING_STORES.ANY_RESPONSE_0"
+ 	  energy_counters="FREERUN_PKG_ENERGY_STATUS,FREERUN_CORE_ENERGY_STATUS"
+	  other_counters="${energy_counters},L2_RQSTS.PF_MISS,UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_RETIRED.ALL,OFFCORE_RESPONSE.STREAMING_STORES.ANY_RESPONSE_0"
 	  ;;
 
 	  "HASWELL")
 	  mem_traffic_counters="UNC_IMC_DRAM_DATA_READS,UNC_IMC_DRAM_DATA_WRITES,L1D.REPLACEMENT,L2_DEMAND_RQSTS.WB_HIT,L2_TRANS.L1D_WB,L2_DEMAND_RQSTS.WB_MISS,L2_LINES_IN.ALL,L2_TRANS.L2_WB,SQ_MISC.FILL_DROPPED,L2_RQSTS.MISS"
 
 	  resource_counters="RESOURCE_STALLS.ANY,RESOURCE_STALLS.RS,RESOURCE_STALLS.ROB,RESOURCE_STALLS2.ALL_PRF_CONTROL"
+	  tlb_counters="DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT"
 	  energy_counters="UNC_PP0_ENERGY_STATUS,UNC_PKG_ENERGY_STATUS"
 	  other_counters="${energy_counters},UOPS_RETIRED.RETIRE_SLOTS,IDQ_UOPS_NOT_DELIVERED.CORE,UOPS_ISSUED.ANY,INT_MISC.RECOVERY_CYCLES,UOPS_RETIRED.ALL"
 	  if [[ "$HOSTNAME" == "fxhaswell-l4" ]]
