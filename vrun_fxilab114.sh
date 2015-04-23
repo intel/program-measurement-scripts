@@ -82,7 +82,7 @@ linear_codelets="$linear_codelets ${nrsprefix}/1D_loop-Stride_1/tridag_2/tridag_
 
 
 linear_sizes="1000"
-frequencies="3500000"
+frequencies="800000"
 linear_codelets="${nrsprefix}/1D_loop-Stride_1/balanc_3/balanc_3_de"
 
 for codelet in $linear_codelets

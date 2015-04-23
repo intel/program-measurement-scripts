@@ -219,7 +219,7 @@ fi
 # expected output from numactl -H
 NUMACTL=$( which numactl )
 # node 0 cpus: 0 1 2 3 4 5 6 7 8 9
-XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>max {max=$2}; END{print max}')
+XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
 if [[ "$HOSTNAME" == "fxilab147" ]]
 then
     # NODE 1 is bad, hardcoded to select first node
