@@ -164,7 +164,11 @@ do
 	for variant in $variants
 	do
 		echo "Adjusting codelet parametres for the $variant variant ..."
-		env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+		if [[ "${variant}" == "ORG" ]]; then
+			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+		else
+			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+		fi
 		tail -n 1 "$codelet_folder/repetitions_history" >> "$codelet_folder/repetitions_history_${variant}"
 		sed -i '$ d' "$codelet_folder/repetitions_history" 
 	
