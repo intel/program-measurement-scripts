@@ -3,6 +3,7 @@
 source $(dirname $0)/const.sh
 
 START_VRUN_SH=$(date '+%s')
+echo "[${START_VRUN_SH}] $0 started at $(date --date=@${START_VRUN_SH})" >> ${LOG_FILE}
 
 #variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
 variants="REF LS FP DL1 FES"
@@ -32,8 +33,9 @@ quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 140
 #quadratic_sizes="208 304 528  1500 3000"
 #memory_loads="0 99999"
 memory_loads="0"
-frequencies="1200000 2800000"
-frequencies="2800000"
+#frequencies="1200000 2800000"
+#frequencies="2800000"
+frequencies="1200000"
 
 linear_codelets=""
 quadratic_codelets=""
@@ -41,121 +43,138 @@ quadratic_codelets=""
 
 prefix="/nfs/fx/home/cwong29/working/NR-scripts"
 ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
+nr_prefix="${prefix}/nr-codelets/numerical_recipes"
+   
+
+lin_s1_prefix="${nr_prefix}/1D_loop-Stride_1"
+lin_slda_prefix="${nr_prefix}/1D_loop-Stride_LDA"
+lin_sclda_prefix="${nr_prefix}/1D_loop-Stride_CLDA"
+quad_s1_prefix="${nr_prefix}/2D_loop-Stride_1"
+quad_slda_prefix="${nr_prefix}/2D_loop-Stride_LDA"
+quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
+
+
+
 
 #linear_codelets="${ubmkprefix}/*"
-#linear_codelets="$linear_codelets ${ubmkprefix}/balanc_3_1_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/balanc_3_1_ubmk_stonly_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_ls_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_st_only_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_st_1sonly_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_ld_1sonly_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_ld_bigstride_1sonly_se"
+
+#linear_codelets+=" ${ubmkprefix}/balanc_3_1_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/balanc_3_1_ubmk_stonly_de"
+#linear_codelets+=" ${ubmkprefix}/s319_ls_se"
+#linear_codelets+=" ${ubmkprefix}/s319_st_only_se"
+#linear_codelets+=" ${ubmkprefix}/s319_st_1sonly_se"
+#linear_codelets+=" ${ubmkprefix}/s319_ld_1sonly_se"
+#linear_codelets+=" ${ubmkprefix}/s319_ld_bigstride_1sonly_se"
 
 
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_st_bigstride_1sonly_se"
+#linear_codelets+=" ${ubmkprefix}/s319_st_bigstride_1sonly_se"
 
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_ldst_1sonly_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_ldst_no_pxor_1sonly_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/s319_se"
-#linear_codelets="$linear_codelets ${ubmkprefix}/mprove_9_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/s319_ldst_1sonly_se"
+#linear_codelets+=" ${ubmkprefix}/s319_ldst_no_pxor_1sonly_se"
+#linear_codelets+=" ${ubmkprefix}/s319_se"
+#linear_codelets+=" ${ubmkprefix}/mprove_9_ubmk_de"
 
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_de"
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/mprove_9/mprove_9_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/elmhes_10/elmhes_10_de"
-##linear_codelets="$linear_codelets ${prefix}/intel_codelets/1D_loop-Stride_1/s319/s319_se"
-#linear_codelets="$linear_codelets ${prefix}/intel_codelets/1D_loop-Stride_1/s1244/s1244_se"
+#linear_codelets+=" ${prefix}/intel_codelets/1D_loop-Stride_1/s319/s319_se"
+#linear_codelets+=" ${prefix}/intel_codelets/1D_loop-Stride_1/s1244/s1244_se"
 
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/hqr_13/hqr_13_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/tridag_2/tridag_2_de"
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/realft_4/realft_4_de"
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/four1_2/four1_2_me"
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_1/toeplz_1_de"
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_2/toeplz_2_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_4/toeplz_4_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/toeplz_1/toeplz_1_sU1_sVS_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/balanc_3/balanc_3_sU1_sVS_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/tridag_2r_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/tridag_2r_1a_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/tridag_2r_1a_1_de"
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/svdcmp_6/svdcmp_6_de"
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/svdcmp_11/svdcmp_11_de"
-###linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_CLDA/elmhes_11/elmhes_11_de"
+#linear_codelets+=" ${ubmkprefix}/tridag_2r_de"
+#linear_codelets+=" ${ubmkprefix}/tridag_2r_1a_de"
+#linear_codelets+=" ${ubmkprefix}/tridag_2r_1a_1_de"
+#linear_codelets+=" ${ubmkprefix}/ptr_ld_branch"
 
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_13/svdcmp_13_de"
-#linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/svdcmp_14/svdcmp_14_de"
-##linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_1/tridag_1/tridag_1_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/svdcmp_14_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/svdcmp_14_break_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/svdcmp_14_rename_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/svdcmp_14_loopinv_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/svdcmp_14_rename1_ubmk_de"
-#linear_codelets="$linear_codelets ${ubmkprefix}/branch_de"
-
-#linear_codelets="$linear_codelets ${ubmkprefix}/ptr_ld_branch"
-
-linear_codelets="$linear_codelets ${prefix}/nr-codelets/numerical_recipes/1D_loop-Stride_LDA/hqr_15/hqr_15_se"
+#linear_codelets+=" ${ubmkprefix}/svdcmp_14_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/svdcmp_14_break_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/svdcmp_14_rename_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/svdcmp_14_loopinv_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/svdcmp_14_rename1_ubmk_de"
+#linear_codelets+=" ${ubmkprefix}/branch_de"
+#quadratic_codelets+=" ${ubmkprefix}/rstrct_29_simplified_de"
 
 
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_sU1_sVS_de"
+#linear_codelets+=" ${lin_s1_prefix}/elmhes_10/elmhes_10_de"
+#linear_codelets+=" ${lin_s1_prefix}/four1_2/four1_2_me"
+# bugged
+#linear_codelets+=" ${lin_s1_prefix}/hqr_13/hqr_13_de"
+#linear_codelets+=" ${lin_s1_prefix}/mprove_9/mprove_9_de"
+
+#linear_codelets+=" ${lin_s1_prefix}/realft_4/realft_4_de"
+#linear_codelets+=" ${lin_s1_prefix}/svdcmp_13/svdcmp_13_de"
+#linear_codelets+=" ${lin_s1_prefix}/svdcmp_14/svdcmp_14_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_1/toeplz_1_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_1/toeplz_1_sU1_sVS_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_2/toeplz_2_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_3/toeplz_3_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_4/toeplz_4_de"
+#linear_codelets+=" ${lin_s1_prefix}/tridag_1/tridag_1_de"
+#linear_codelets+=" ${lin_s1_prefix}/tridag_2/tridag_2_de"
 
 
-
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_sU1_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_sU1_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/svbksb_3/svbksb_3_sU1_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/svbksb_3/svbksb_3_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/lop_13/lop_13_sU1_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/lop_13/lop_13_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_sU1_sVS_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_sVS_de"
-
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_sU1_sVS_dx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_sVS_dx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/svbksb_3/svbksb_3_sU1_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/svbksb_3/svbksb_3_sVS_sx"
-
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/lop_13/lop_13_sU1_sVS_dx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/lop_13/lop_13_sVS_dx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_sU1_sVS_dx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_sVS_dx"
-
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/hqr_12/hqr_12_sU1_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/hqr_12/hqr_12_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/jacobi_5/jacobi_5_sU1_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/jacobi_5/jacobi_5_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sU1_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sVS_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/hqr_12/hqr_12_sU1_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/hqr_12/hqr_12_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/jacobi_5/jacobi_5_sU1_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/jacobi_5/jacobi_5_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sU1_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sVS_sx"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_de"
-
-# selected 2D loops
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/matadd_16/matadd_16_de"
-###quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/mprove_8/mprove_8_me"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/svbksb_3/svbksb_3_se"
-
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/lop_13/lop_13_de"
-quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/relax2_26/relax2_26_de"
-###quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_de"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_1/hqr_12sq/hqr_12sq_se"
-
-###quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/hqr_12/hqr_12_se"
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/jacobi_5/jacobi_5_se"
-quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_se"
+#linear_codelets+=" ${lin_sclda_prefix}/elmhes_11/elmhes_11_de"
+#linear_codelets+=" ${lin_sclda_prefix}/svdcmp_6/svdcmp_6_de"
+#linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_de"
 
 
 
+#linear_codelets+=" ${lin_slda_prefix}/hqr_15/hqr_15_se"
 
 
-#quadratic_codelets="$quadratic_codelets ${prefix}/nr-codelets/numerical_recipes/2D_loop-Stride_LDA/rstrct_29/rstrct_29_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/hqr_12sq/hqr_12sq_se"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_sU1_sVS_dx"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_sVS_dx"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_sU1_sVS_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_sU1_sVS_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_sVS_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/mprove_8/mprove_8_me"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_se"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sU1_sVS_se"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sVS_se"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sU1_sVS_sx"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sVS_sx"
+
+
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_sU1_sVS_dx"
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_sVS_dx"
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_sU1_sVS_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_sVS_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/relax2_26/relax2_26_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sU1_sVS_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sVS_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sU1_sVS_dx"
+#quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sVS_dx"
+
+
+#quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_sU1_sVS_sx"
+#quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_sVS_sx"
+#quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_sU1_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_sU1_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_sU1_sVS_sx"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_sVS_sx"
+
+
+# Should never run jacobi again (duplicated code)
+#quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sU1_sVS_sx"
+#quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sVS_sx"
+#quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sU1_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sVS_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_se"
 
 
 
-#quadratic_codelets="$quadratic_codelets ${ubmkprefix}/rstrct_29_simplified_de"
+
+
+
+
+
+
 
 
 for codelet in $linear_codelets
@@ -184,4 +203,4 @@ do
 done
 END_VRUN_SH=$(date '+%s')
 ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
-echo "$0 finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) ."
+echo "[${START_VRUN_SH}] $0 finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})." >> ${LOG_FILE}

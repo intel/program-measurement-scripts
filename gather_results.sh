@@ -194,5 +194,7 @@ else
 	echo "Skipping counters (not activated)."
 fi
 
+echo "Converting gathered data to Cape format..."
+${FORMAT_2_CAPE_SH} ${res_folder} ${HOSTNAME}
 
 exit 0

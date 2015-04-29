@@ -6,9 +6,10 @@ MAX_ROWS=30
 
 nb_args=$#
 
-if [[ $nb_args -lt 2 ]]
+if [[ $nb_args -lt 1 ]]
 then
-	echo "ERROR! Invalid arguments (need: CLS res's folder, machine name)."
+#	echo "ERROR! Invalid arguments (need: CLS res's folder, machine name)."
+	echo "ERROR! Invalid arguments (need: CLS res's folder)."
 	exit -1
 fi
 
@@ -18,7 +19,8 @@ source pcr_metrics.sh
 # Get codelet's res folder
 cls_res_folder=$( readlink -f "$1" )
 codelet_folder=$( echo $cls_res_folder | sed 's:/cls_res_.*::' )
-machine_name="$2"
+machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_[0-9]+)/\2/p' )
+#machine_name="$2"
 
 DATE=$( date +'%F_%T' )
 
@@ -28,7 +30,7 @@ application_name=$(grep "application name" $codelet_meta | cut -d'=' -f2)
 batch_name=$(grep "batch name" $codelet_meta | cut -d'=' -f2)
 code_name=$(grep "code name" $codelet_meta | cut -d'=' -f2)
 codelet_name=$(grep "codelet name" $codelet_meta | cut -d'=' -f2)
-cape_file=${cls_res_folder}/counters/${codelet_name}_metrics.cape
+cape_file=${cls_res_folder}/counters/${codelet_name}_metrics.cape.csv
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )_
 
 # Set general metrics

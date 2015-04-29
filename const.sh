@@ -209,7 +209,7 @@ MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --
 # expected output from numactl -H
 NUMACTL=$( which numactl )
 # node 0 cpus: 0 1 2 3 4 5 6 7 8 9
-XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>max {max=$2}; END{print max}')
+XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
 if [[ "$HOSTNAME" == "fxilab147" ]]
 then
     # NODE 1 is bad, hardcoded to select first node
@@ -253,4 +253,8 @@ LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
 
 #For format2cape.sh
+FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
+
+# For all
+LOG_FILE=${CLS_FOLDER}/logs/log.txt
