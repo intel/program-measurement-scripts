@@ -3,7 +3,10 @@
 source $(dirname $0)/const.sh
 
 START_VRUN_SH=$(date '+%s')
-echo "[${START_VRUN_SH}] $0 started at $(date --date=@${START_VRUN_SH})" >> ${LOG_FILE}
+${LOGGER_SH} ${START_VRUN_SH} "$0 started at $(date --date=@${START_VRUN_SH})"
+
+read -p "Enter a brief desc for this run: " rundesc
+${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
 
 #variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
 variants="REF LS FP DL1 FES"
@@ -203,4 +206,5 @@ do
 done
 END_VRUN_SH=$(date '+%s')
 ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
-echo "[${START_VRUN_SH}] $0 finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})." >> ${LOG_FILE}
+
+${LOGGER_SH} ${START_VRUN_SH} "$0 finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})" 

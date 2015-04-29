@@ -266,5 +266,7 @@ FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 
 # For all
-LOG_FILE=${CLS_FOLDER}/logs/log.txt
+LOGGER_SH="${CLS_FOLDER}/logger.sh"
+LOG_FOLDER=${CLS_FOLDER}/logs
+LOG_FILE=${LOG_FOLDER}/log.txt
 
