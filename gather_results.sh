@@ -35,7 +35,8 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 	    res_path="${datasize_path}/memload_$memory_load/freq_$frequency/variant_$variant"
 #	    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
 	    emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
-	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}")
+	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d';' -f2 )
+		codelet_name=$(cat "${res_folder}/codelet_name")
 	    ${FORMAT_COUNTERS_SH} "$codelet_name" $data_size $memory_load $frequency "$variant" "${loop_iterations}" "${emon_counters}" ${res_path}
 	  done
 	  
@@ -174,7 +175,7 @@ then
 				do
 					echo "" >> $res_file
 					echo "Data Size;$data_size;" >> $res_file
-					cat "$res_folder/iterations_for_$data_size" >> $res_file
+					cat "$res_folder/iterations_for_${data_size}" | grep "$variant" | cut -d':' -f2 >> $res_file
 				done
 				echo "" >> $res_file
 				cat "$res_folder"/binaries/*_$variant.asm >> $res_file

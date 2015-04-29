@@ -198,13 +198,23 @@ XP_NODES+=([fxhaswell-l4]="0")
 XP_NODES+=([fxilab147]="0")
 XP_NODES+=([fxilab148]="1")
 
-
 MEMLOADER="$CLS_FOLDER/memloader"
 declare -A MEMLOAD_ARGS
 MEMLOAD_ARGS+=([fxe12-cwong2901]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 
 
+# Set the highest frequency the CPU can run (no Turbo-boost)
+if [[ "$HOSTANAME" == "fxilab147" ]] ; then
+	XP_HIGH_FREQ="2500000"
+else
+	XP_HIGH_FREQS=( $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies) )
+	if [ "$(cat /proc/cpuinfo | grep 'ida')" == "" ]; then
+   		XP_HIGH_FREQ=${XP_HIGH_FREQS[0]}
+	else
+   		XP_HIGH_FREQ=${XP_HIGH_FREQS[1]}
+	fi
+fi
 
 # expected output from numactl -H
 NUMACTL=$( which numactl )
@@ -217,14 +227,13 @@ then
 fi
 #XP_NODE=${XP_NODES[$HOSTNAME]}
 # All cores at the XP_NODE node
-XP_ALL_CORES=($(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2))
+XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
 #XP_CORE=${XP_CORES[$HOSTNAME]}
 # last core of the node
 XP_CORE=${XP_ALL_CORES[${XP_NUM_CORES}-1]}
 # Also record the rest of cores for multiple core runs
 XP_REST_CORES=${XP_ALL_CORES[@]:0:(${XP_NUM_CORES}-1)}
-
 
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
@@ -258,3 +267,4 @@ STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 
 # For all
 LOG_FILE=${CLS_FOLDER}/logs/log.txt
+

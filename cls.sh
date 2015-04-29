@@ -76,7 +76,7 @@ then
 	echo "Cancelling CLS."
 	exit -1
 fi
-loop_info=$( echo -e "$loop_info" | head -n 1 )
+loop_info=$( echo -e "$loop_info" | grep ';' | head -n 1 )
 loop_id=$( echo "$loop_info" | cut -f1 -d';' )
 loop_iterations=$( echo "$loop_info" | cut -f2 -d';' )
 echo -e "Loop id \t'$loop_id'"
@@ -134,6 +134,9 @@ echo "Starting experiments..."
 #Saving old prefetcher settings
 old_prefetcher_bits=($(emon --read-msr 0x1a4 | grep MSR | cut -f2 -d=|uniq ))
 
+#Saving old uncore settings
+old_uncore_bits=($(emon --read-msr 0x620 | grep MSR | cut -f2 -d=|uniq ))
+
 if [[ "${#old_prefetcher_bits[@]}" -gt "1" ]]
 then
 # Different settings among processor - not supported.
@@ -151,42 +154,58 @@ do
 	echo
 	mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size" &> /dev/null
 
-	echo "Adjusting codelet parametres..."
-	./w_adjust.sh "$codelet_folder" "$codelet_name" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
-
-	echo "Re-counting loop iterations..."
-	loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
-	res=$?
-	if [[ "$res" != "0" ]]
-	then
-		echo "Cancelling CLS."
-		exit -1
+	echo "Setting highest CPU frequency to adjust codelet parametres..."
+	./set_frequency.sh $XP_HIGH_FREQ 
+	if [[ "$UARCH" == "HASWELL" ]]; then
+		dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
+		emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 	fi
 
-	wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id;" )
-	most_important_loop=$( echo "$loop_info" | head -n 1 | grep ";")
-
-	if [[ "$wanted_loop_info" != "$most_important_loop" ]]
-	then
-		echo "Loop mismatch!"
-		tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d';' )
-		tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
-		echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
-
-		tmp_id=$( echo "$most_important_loop" | cut -f1 -d';' )
-		tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d';' )
-		echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
-
-		echo "Cancelling CLS."
-		exit -1
-	fi
-
-	echo "Loop Id;Iterations;" > "$codelet_folder/$CLS_RES_FOLDER/iterations_for_$data_size"
-	echo "$loop_info" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_$data_size"
-
-	loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
-	echo -e "Iterations \t'$loop_iterations'"
-	echo ${loop_iterations} >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
+	for variant in $variants
+	do
+		echo "Adjusting codelet parametres for the $variant variant ..."
+		if [[ "${variant}" == "ORG" ]]; then
+			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+		else
+			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+		fi
+		tail -n 1 "$codelet_folder/repetitions_history" >> "$codelet_folder/repetitions_history_${variant}"
+		sed -i '$ d' "$codelet_folder/repetitions_history" 
+	
+		echo "Re-counting loop iterations..."
+		loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ";")
+		res=$?
+		if [[ "$res" != "0" ]]
+		then
+			echo "Cancelling CLS."
+			exit -1
+		fi
+	
+		wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id;" )
+		most_important_loop=$( echo "$loop_info" | grep ";" | head -n 1)
+	
+		if [[ "$wanted_loop_info" != "$most_important_loop" ]]
+		then
+			echo "Loop mismatch!"
+			tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d';' )
+			tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
+			echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
+	
+			tmp_id=$( echo "$most_important_loop" | cut -f1 -d';' )
+			tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d';' )
+			echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
+	
+			echo "Cancelling CLS."
+			exit -1
+		fi
+	
+		echo "$variant:Loop Id;Iterations;" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+		echo "$loop_info" | tr ' ' '\n' | sed "s/\(.*\)/$variant:\1/" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+	
+		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
+		echo -e "Iterations \t'$loop_iterations'"
+		echo "$variant;${loop_iterations}" >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
+	done
 
 	for memory_load in $memory_loads
 	do
@@ -214,6 +233,10 @@ do
 		for frequency in $frequencies
 		do
 			mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
+			if [[ "$UARCH" == "HASWELL" ]]; then
+				dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
+				emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+			fi
 			./set_frequency.sh $frequency
 			res=$?
 			if [[ "$res" != "0" ]]
@@ -224,7 +247,11 @@ do
 
 			for variant in $variants
 			do
-			        res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+				loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d';' -f2)
+				repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+				echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+
+		        res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
 				mkdir ${res_path} &> /dev/null
 				./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations"
 				res=$?
@@ -236,8 +263,6 @@ do
 			done
 
 		done
-
-
 
 		if [[ "$memory_load" != "0" ]]
 		then
@@ -266,6 +291,9 @@ echo "Writing ${old_prefetcher_bits} to MSR 0x1a4 to restore prefetcher settings
 #emon --write-msr 0x1a4=${old_prefetcher_bits}
 set_prefetcher_bits ${old_prefetcher_bits}
 
+if [[ "$UARCH" == "HASWELL" ]]; then
+	emon --write-msr 0x620="$old_uncore_bits"
+fi
 
 echo "------------------------------------------------------------"
 echo "Generating results using following inputs..."

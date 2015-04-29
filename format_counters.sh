@@ -23,6 +23,8 @@ if [[ "$ENABLE_SEP" == "1" ]]; then
 	./parse_sep_output.sh $res_path
 fi
 
+rm -f $res_path/likwid_report
+
 counters=$( echo "$emon_counters" | tr "," " " | tr "." "_" | tr " " "\n" | sort --uniq | tr "\n" " " )
 sed 's/\./_/g' -i $res_path/emon_report
 
@@ -40,6 +42,17 @@ sed 's/\./_/g' -i $res_path/emon_report
 				val3=$( echo "$value" | cut -f3 -d';' )
 				val4=$( echo "$value" | cut -f4 -d';' )
 				let "val = $val1 + $val2 + $val3 + $val4"
+				echo "$counter||$val" >> $res_path/likwid_report
+			done
+			continue
+		fi
+		if [[ ( "$HOSTNAME" == "fxilab147" ) && ( "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ||  "$counter" == "FREERUN_DRAM_ENERGY_STATUS" ) ]]
+		then
+			echo "Special treatment for in-CPU energy '$counter'"
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+			for value in $values
+			do
+				val=$( echo "$value" | cut -f1 -d';' )
 				echo "$counter||$val" >> $res_path/likwid_report
 			done
 			continue
@@ -88,7 +101,10 @@ sed 's/\./_/g' -i $res_path/emon_report
 		then
 			echo "Special treatment (uncore counter) for uncore '$counter'"
 			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3 -d';' | sed 's/ //g' )
-			echo "$counter||$values" >> $res_path/likwid_report
+			for value in $values
+			do
+				echo "$counter||$value" >> $res_path/likwid_report
+			done
 		else
 			if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 			then
