@@ -4,18 +4,19 @@ source ./const.sh
 
 if [[ "$nb_args" != "5" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies)."
+	echo "ERROR! Invalid arguments (need: res folder, variants, data sizes, memory loads, frequencies)."
 	exit -1
 fi
 
-codelet_folder=$( readlink -f "$1" )
+#codelet_folder=$( readlink -f "$1" )
+res_folder=$( readlink -f "$1" )
 variants="$2"
 data_sizes="$3"
 memory_loads="$4"
 frequencies="$5"
 
 
-res_folder="$codelet_folder/$CLS_RES_FOLDER"
+#res_folder="$codelet_folder/$CLS_RES_FOLDER"
 
 
 echo "Gathering results for '$codelet_folder'"
@@ -35,7 +36,7 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 	    res_path="${datasize_path}/memload_$memory_load/freq_$frequency/variant_$variant"
 #	    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
 	    emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
-	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d';' -f2 )
+	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d${DELIM} -f2 )
 		codelet_name=$(cat "${res_folder}/codelet_name")
 	    ${FORMAT_COUNTERS_SH} "$codelet_name" $data_size $memory_load $frequency "$variant" "${loop_iterations}" "${emon_counters}" ${res_path}
 	  done
@@ -73,12 +74,12 @@ do
 	do
 		output_cpi_file="$res_folder/$CPIS_FOLDER/cpi_${memload}MBs_${freq}kHz.csv"
 		cat "$res_folder"/data_*"/memload_$memload/freq_$freq/"variant_*/cpi.csv	\
-			| sort -k5r -t ';'							\
-			| awk -F ";" '
+			| sort -k5r -t ${DELIM}							\
+			| awk -F ${DELIM} '
 				BEGIN {
 				}
 				{
-					key = $1 ";" $2 ";" $3 ";" $4;
+					key = $1 "'${DELIM}'" $2 "'${DELIM}'" $3 "'${DELIM}'" $4;
 					values[key, $5] = $6;
 					keys[key] = key;
 
@@ -99,29 +100,28 @@ do
 
 				}
 				END {
-					printf "Codelet" ";" "Data Size (N)" ";" "Memory Load (MB/s)" ";" "Frequency (kHz)" ";";
+					printf "Codelet" "'${DELIM}'" "Data Size (N)" "'${DELIM}'" "Memory Load (MB/s)" "'${DELIM}'" "Frequency (kHz)" "'${DELIM}'";
 					for (variant = 0; variant < counter; variant++)
 					{
-						printf variants[variant] ";";
+						printf variants[variant] "'${DELIM}'";
 					}
 					printf "\n";
 
 					for (key in keys)
 					{
-						printf key ";";
+						printf key "'${DELIM}'";
 						for (variant = 0; variant < counter; variant++)
 						{
-							printf values[key, variants[variant]] ";";
+							printf values[key, variants[variant]] "'${DELIM}'";
 						}
 						printf "\n";
 					}
 				}
 				'								\
-			| sort -k2n -t ';' > "$output_cpi_file"
+			| sort -k2n -t ${DELIM} > "$output_cpi_file"
 			./draw_cpi.sh "$output_cpi_file" "CPI" "CPI"
 	done
 done
-
 
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
@@ -162,19 +162,19 @@ then
 			for variant in $variant_list
 			do
 				res_file="$res_folder/$COUNTERS_FOLDER/counters_${variant}_${memload}MBs_${freq}kHz.csv"
-				header="Codelet;Data Size (N);Memory Load (MB/s);Frequency (kHz);Variant;CPI"
+				header="Codelet"${DELIM}"Data Size (N)"${DELIM}"Memory Load (MB/s)"${DELIM}"Frequency (kHz)"${DELIM}"Variant"${DELIM}"CPI"
 				for counter in $counter_list
 				do
 					counter=$( echo "$counter" | sed "s/likwid_//g" )
-					header="$header;$counter"
+					header="$header"${DELIM}"$counter"
 				done
 				echo "$header" > "$res_file"
-				cat "$res_folder"/data_*/memload_$memload/freq_$freq/variant_$variant/counters.csv | sort -k2n -t ';' >> $res_file
+				cat "$res_folder"/data_*/memload_$memload/freq_$freq/variant_$variant/counters.csv | sort -k2n -t ${DELIM} >> $res_file
 
 				for data_size in $data_size_list
 				do
 					echo "" >> $res_file
-					echo "Data Size;$data_size;" >> $res_file
+					echo "Data Size"${DELIM}"$data_size"${DELIM} >> $res_file
 					cat "$res_folder/iterations_for_${data_size}" | grep "$variant" | cut -d':' -f2 >> $res_file
 				done
 				echo "" >> $res_file

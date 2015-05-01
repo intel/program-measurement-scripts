@@ -18,12 +18,12 @@ mkdir "$counters_folder/$partial_title" &> /dev/null
 y_axis="$3"
 counters_to_draw="$4"
 
-codelet_name=$( head -n 2 "$counters_file" | tail -n 1 | cut -f1 -d';' )
-memload=$( head -n 2 "$counters_file" | tail -n 1 | cut -f3 -d';' )
-freq=$( head -n 2 "$counters_file" | tail -n 1 | cut -f4 -d';' )
-variant=$( head -n 2 "$counters_file" | tail -n 1 | cut -f5 -d';' )
+codelet_name=$( head -n 2 "$counters_file" | tail -n 1 | cut -f1 -d${DELIM} )
+memload=$( head -n 2 "$counters_file" | tail -n 1 | cut -f3 -d${DELIM} )
+freq=$( head -n 2 "$counters_file" | tail -n 1 | cut -f4 -d${DELIM} )
+variant=$( head -n 2 "$counters_file" | tail -n 1 | cut -f5 -d${DELIM} )
 
-available_counters=$( head -n 1 "$counters_file" | cut -f6- -d';' | tr ";" " " )
+available_counters=$( head -n 1 "$counters_file" | cut -f6- -d${DELIM} | tr ${DELIM} " " )
 
 declare -A counter_columns
 
@@ -77,9 +77,9 @@ done
 #echo  "plot: '$plot'"
 
 
-#plot=$(	awk -F ';' '
+#plot=$(	awk -F ${DELIM} '
 #		END{
-#			FS=";";
+#			FS="'${DELIM}'";
 #
 #			printf "plot ";
 #			for (i = 0; i < (NF - 5); i++)
@@ -96,7 +96,7 @@ done
 t=$( echo -e	"
 		#!/usr/bin/gnuplot
 
-		set datafile separator \";\"
+		set datafile separator \""${DELIM}"\"
 		set term postscript eps color size 3.8,2.8 font 10
 		set output \""${res_folder}/pic_counters_${codelet_name}_${memload}_${freq}_${variant}_${partial_title}.eps"\"
 

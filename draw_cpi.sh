@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ./const.sh
+
 nb_args=$#
 if [[ "$nb_args" != "3" ]]
 then
@@ -13,9 +15,9 @@ cpi_folder=$( dirname "$cpi_file" )
 partial_title="$2"
 y_axis="$3"
 
-codelet_name=$( tail -n 1 "$cpi_file" | cut -f1 -d';' )
-memload=$( tail -n 1 "$cpi_file" | cut -f3 -d';' )
-freq=$( tail -n 1 "$cpi_file" | cut -f4 -d';' )
+codelet_name=$( tail -n 1 "$cpi_file" | cut -f1 -d${DELIM} )
+memload=$( tail -n 1 "$cpi_file" | cut -f3 -d${DELIM} )
+freq=$( tail -n 1 "$cpi_file" | cut -f4 -d${DELIM} )
 
 #echo "Codelet name: '$codelet_name'"
 #echo "Memload: '$memload'"
@@ -26,9 +28,9 @@ title="$partial_title: $codelet_name, $memload MB/s, $freq kHz"
 echo "Drawing '$title'"
 
 
-plot=$(	awk -F ';' '
+plot=$(	awk -F ${DELIM} '
 		END{
-			FS=";";
+			FS="'${DELIM}'";
 
 			#for (i = 0; i < (NF - 5); i++)
 			#{
@@ -50,7 +52,7 @@ plot=$(	awk -F ';' '
 t=$( echo -e	"
 		#!/usr/bin/gnuplot
 
-		set datafile separator \";\"
+		set datafile separator \""${DELIM}"\"
 		set term postscript eps color size 3,1.8 font 10
 		set output \""${cpi_folder}/pic_cpi_${codelet_name}_${memload}_${freq}.eps"\"
 

@@ -3,9 +3,9 @@
 source ./const.sh
 source /opt/intel/sep/sep_vars.sh
 
-if [[ "$nb_args" != "5" ]]
+if [[ "$nb_args" != "6" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id)."
 	exit -1
 fi
 
@@ -14,6 +14,7 @@ variants="$2"
 data_sizes="$3"
 memory_loads="$4"
 frequencies="$5"
+runid="$6"
 
 set_prefetcher_bits() {
     bits="$1"
@@ -76,9 +77,9 @@ then
 	echo "Cancelling CLS."
 	exit -1
 fi
-loop_info=$( echo -e "$loop_info" | grep ';' | head -n 1 )
-loop_id=$( echo "$loop_info" | cut -f1 -d';' )
-loop_iterations=$( echo "$loop_info" | cut -f2 -d';' )
+loop_info=$( echo -e "$loop_info" | grep ${DELIM} | head -n 1 )
+loop_id=$( echo "$loop_info" | cut -f1 -d${DELIM} )
+loop_iterations=$( echo "$loop_info" | cut -f2 -d${DELIM} )
 echo -e "Loop id \t'$loop_id'"
 echo -e "Iterations \t'$loop_iterations'"
 echo "$loop_id" > "$codelet_folder/$CLS_RES_FOLDER/loop_id"
@@ -173,7 +174,7 @@ do
 		sed -i '$ d' "$codelet_folder/repetitions_history" 
 	
 		echo "Re-counting loop iterations..."
-		loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ";")
+		loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ${DELIM})
 		res=$?
 		if [[ "$res" != "0" ]]
 		then
@@ -181,30 +182,30 @@ do
 			exit -1
 		fi
 	
-		wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id;" )
-		most_important_loop=$( echo "$loop_info" | grep ";" | head -n 1)
+		wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id${DELIM}" )
+		most_important_loop=$( echo "$loop_info" | grep ${DELIM} | head -n 1)
 	
 		if [[ "$wanted_loop_info" != "$most_important_loop" ]]
 		then
 			echo "Loop mismatch!"
-			tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d';' )
-			tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
+			tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d${DELIM} )
+			tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
 			echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
 	
-			tmp_id=$( echo "$most_important_loop" | cut -f1 -d';' )
-			tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d';' )
+			tmp_id=$( echo "$most_important_loop" | cut -f1 -d${DELIM} )
+			tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d${DELIM} )
 			echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
 	
 			echo "Cancelling CLS."
 			exit -1
 		fi
 	
-		echo "$variant:Loop Id;Iterations;" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+		echo "$variant:Loop Id"${DELIM}"Iterations"${DELIM} >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
 		echo "$loop_info" | tr ' ' '\n' | sed "s/\(.*\)/$variant:\1/" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
 	
-		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d';' )
+		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
 		echo -e "Iterations \t'$loop_iterations'"
-		echo "$variant;${loop_iterations}" >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
+		echo "$variant"${DELIM}"${loop_iterations}" >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
 	done
 
 	for memory_load in $memory_loads
@@ -247,7 +248,7 @@ do
 
 			for variant in $variants
 			do
-				loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d';' -f2)
+				loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
 				repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 				echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 
@@ -303,7 +304,7 @@ echo -e "Data sizes \t'$data_sizes'"
 echo -e "Memory loads \t'$memory_loads'"
 echo -e "Frequencies \t'$frequencies'"
 
-./gather_results.sh "$codelet_folder" "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
+./gather_results.sh "$codelet_folder"/${CLS_RES_FOLDER} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
 res=$?
 if [[ "$res" != "0" ]]
 then
@@ -312,13 +313,15 @@ then
 fi
 
 END_CLS_SH=$(date '+%s')
+new_cls_folder=${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}_${runid}
 
 # At the end, rename the result folder by appending timestamp
-mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}" 
+${LOGGER_SH} ${runid} "Renamed cls directory to ${new_cls_folder}"
+mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${new_cls_folder}"
 
 ELAPSED_CLS_SH=$((${END_CLS_SH} - ${START_CLS_SH}))
 
-echo "cls.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_CLS_SH})."
+${LOGGER_SH} ${runid} "cls.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_CLS_SH})."
 
 
 echo "------------------------------------------------------------"

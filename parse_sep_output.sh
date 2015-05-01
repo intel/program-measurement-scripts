@@ -17,19 +17,19 @@ emon_counters_uncore=$(cat $res_path/uncore_events_list)
 
 	for i in $( seq $META_REPETITIONS )
 	do
-		for events in $(echo $emon_counters_core | tr ';' ' ')
+		for events in $(echo $emon_counters_core | tr ${DELIM} ' ')
 		do
 			events_code=$(echo $events | cut -d':' -f1)
 			output=$res_path"/sep_report_"$events_code"_"$i".txt"
 echo "Parsing $output ...!"
 			for event in $(echo $events | cut -d':' -f2 | tr ',' ' ')
 			do
-				values=$(echo $(grep $event  $output | cut -d',' -f 3) | tr ' ' ';')
-				echo "$event;;$values" >> "$res_path/emon_report" 
+				values=$(echo $(grep $event  $output | cut -d',' -f 3) | tr ' ' ${DELIM})
+				echo "$event"${DELIM}${DELIM}"$values" >> "$res_path/emon_report" 
 			done
 		done
 
-		for events in $(echo $emon_counters_uncore  | tr ';' ' ')
+		for events in $(echo $emon_counters_uncore  | tr ${DELIM} ' ')
 		do
 			events_code=$(echo $events | cut -d':' -f1)
 			events=$(echo $events | cut -d':' -f2)
@@ -61,7 +61,7 @@ echo "Parsing $output ...!"
 					end=$val
 				fi
 				value=$(expr $end - $begin)
-				echo "$event;;$value" >> "$res_path/emon_report"
+				echo "$event"${DELIM}${DELIM}"$value" >> "$res_path/emon_report"
 			done
 		done
 	done

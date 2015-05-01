@@ -62,35 +62,47 @@ cur_dir="$PWD"
 tmprep=$cur_dir/tmp
 mkdir -p $tmprep
 
+
 for variant in $variant_list
 do
-
 	# Building the stan metrics section
 	stan_infile="$cls_res_folder/binaries/${codelet_name}_${variant}.stan_full.csv"
-	cat $stan_infile | sed -n '1p;11p'  | tr ';' '\n' | tr "=" ":"  > $tmprep/stanh.csv			
-	cat $stan_infile | sed -n '2p;12p'  | tr ';' '\n'               > $tmprep/stanv.csv
+	cp $stan_infile /tmp/xxx
+	cat $stan_infile | sed -n '1p;11p'  | tr ${DELIM} '\n' | tr "=" ":"  > $tmprep/stanh.csv			
+	cp $tmprep/stanh.csv /tmp/yyy
+	cat $stan_infile | sed -n '2p;12p'  | tr ${DELIM} '\n'               > $tmprep/stanv.csv
+	cp $tmprep/stanv.csv /tmp/zzz
 	cat $tmprep/stanh.csv | sed 's/ /_/g' | sed 's/,//g' | sed 's/\[/(/g'	| sed 's/\]/)/g' | sed 's/-/_/g' | sed 's/\.//g' | sed 's/:/_/g' | sed 's/__/_/g' | sed 's/__/_/g' | sed 's/__/_/g'| sed 's/__/_/g'	|sed 's/__/_/g' > $tmprep/tmp.csv
+	cp $tmprep/tmp.csv /tmp/aaa
 	mv $tmprep/tmp.csv $tmprep/stanh.csv
-	paste -d';' $tmprep/stanh.csv $tmprep/stanv.csv > $tmprep/stan.csv
- 
+	paste -d${DELIM} $tmprep/stanh.csv $tmprep/stanv.csv > $tmprep/stan.csv
+	cp $tmprep/stan.csv /tmp/bbb
+	# Note the ',' is hardcoded here because ${STAN_METRICS_FILE} was hardcoded to use ',' as delimiters
 	nbsm=$(cat ${STAN_METRICS_FILE} | tr ',' '\n' | wc -l )
 	stan_metric=""
 	for ((m=1; m<=$nbsm; m++))
 	do
 		metric_name=$(cat ${STAN_METRICS_FILE} | cut -d',' -f $m)
-		metric_value=$(cat $tmprep/stan.csv | grep -w "^$metric_name" | cut -d';' -f2 | tr ',' '&')
+#		cp $tmprep/stan.csv /tmp/ttt${m}
+		metric_value=$(cat $tmprep/stan.csv | grep -w "^$metric_name" | cut -d${DELIM} -f2 | tr ',' '&')
 		if [[ "$metric_value" == "" ]] ; then
-			stan_metric="$stan_metric,0"
+			stan_metric="$stan_metric"${DELIM}"0"
 		else
 			metric_value=$(echo $metric_value | sed 's/NA/0/g')
-			stan_metric="$stan_metric,$metric_value"
+			stan_metric="$stan_metric"${DELIM}"$metric_value"
 		fi
 	done
 
-	cat ${STAN_METRICS_FILE} > $tmprep/stan_report_${variant}.csv
-	stan_metric=$( echo $stan_metric | sed 's/,\(.*\)/\1/')
+	if [[ "$DELIM" != "," ]]
+	    then
+	    cat ${STAN_METRICS_FILE} | tr ${DELIM} ${CONFLICT_DELIM} | tr ',' ${DELIM} > $tmprep/stan_report_${variant}.csv
+	else
+	    cat ${STAN_METRICS_FILE}  > $tmprep/stan_report_${variant}.csv
+	fi
+	stan_metric=$( echo $stan_metric | sed 's/'${DELIM}'\(.*\)/\1/')
 	#yes $stan_metric | head -n $nrows >> $tmprep/stan_report_${variant}.csv
 	yes $stan_metric | head -n $MAX_ROWS >> $tmprep/stan_report_${variant}.csv
+	cp $tmprep/stan_report_${variant}.csv /tmp/tt2
 
 	for frequency in $frequency_list
 	do
@@ -98,26 +110,30 @@ do
 		outfile=$tmprep/$codelet_name"_counters_"$variant"_0MBs_"$frequency"kHz.csv"
 
 		# Building the counters metrics section
-		ncols=$(head -n 1 $infile | tr ';' '\n' | wc -l)
-		converted_metrics=$(convert_metric $( head -n 1 $infile | cut -d';' -f6 ))
+		ncols=$(head -n 1 $infile | tr ${DELIM} '\n' | wc -l)
+		converted_metrics=$(convert_metric $( head -n 1 $infile | cut -d${DELIM} -f6 ))
 		for ((m=7; m<=$ncols; m++))
 		do
-			metric=$(head -n 1 $infile | cut -d';' -f $m)
+			metric=$(head -n 1 $infile | cut -d${DELIM} -f $m)
 			metric=$( convert_metric $metric )
 			converted_metrics="$converted_metrics $metric"
 		done
-		echo $converted_metrics | tr ' ' ','                     > $tmprep/counters.csv
-		#tail -n +2 $infile | cut -d';' -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
-		cat $infile | grep $codelet_name | sed '$ d' | cut -d';' -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
+#		echo $converted_metrics | tr ' ' ','                     > $tmprep/counters.csv
+		echo $converted_metrics | tr ' ' ${DELIM}                     > $tmprep/counters.csv
+		#tail -n +2 $infile | cut -d${DELIM} -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
+#		cat $infile | grep $codelet_name | sed '$ d' | cut -d';' -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
+		cat $infile | grep $codelet_name | sed '$ d' | cut -d${DELIM} -f 6-$ncols  >> $tmprep/counters.csv
 		nrows=$(tail -n +2 $tmprep/counters.csv | wc -l)
 		# Merging the stan and counters sections
-		yes $(echo "$application_name,$batch_name,$code_name,$codelet_name,$binary_loop_id,$variant,$machine_name") | head -n $nrows > $tmprep/tmp1.csv
-		cat $infile | cut -d';' -f2 | tail -n +2 | head -n $nrows > $tmprep/tmp2.csv
-		yes $(echo "$instance_id,$frequency,$memory_load,$arg1,$arg2,$arg3,$arg4,$arg5,$arg6,$nb_threads,$Timestamp,$cpu_generation") | head -n $nrows > $tmprep/tmp3.csv
-		echo "application.name,batch.name,code.name,codelet.name,binary_loop.id,decan_variant.name,machine.name,decan_experimental_configuration.data_size,decan_experimental_configuration.instance_id,decan_experimental_configuration.frequency,decan_experimental_configuration.memory_load,decan_experimental_configuration.arg1,decan_experimental_configuration.arg2,decan_experimental_configuration.arg3,decan_experimental_configuration.arg4,decan_experimental_configuration.arg5,decan_experimental_configuration.arg6,decan_experimental_configuration.nb_threads,Timestamp,cpu.generation" > $tmprep/codelet_struct.csv  
-		paste -d',' $tmprep/tmp1.csv $tmprep/tmp2.csv $tmprep/tmp3.csv >> $tmprep/codelet_struct.csv  
-		paste -d',' $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
+		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name") | head -n $nrows > $tmprep/tmp1.csv
+		cat $infile | cut -d${DELIM} -f2 | tail -n +2 | head -n $nrows > $tmprep/tmp2.csv
+		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$Timestamp"${DELIM}"$cpu_generation") | head -n $nrows > $tmprep/tmp3.csv
+		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"${DELIM}"decan_experimental_configuration.data_size"${DELIM}"decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation" > $tmprep/codelet_struct.csv  
+		paste -d${DELIM} $tmprep/tmp1.csv $tmprep/tmp2.csv $tmprep/tmp3.csv >> $tmprep/codelet_struct.csv  
+		paste -d${DELIM} $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
 		extra_rows=$(($nrows + 2))
+		cp $tmprep/stan_report_${variant}.csv /tmp/tt
+		# Following ',' is not delimiter
 	    sed -i "$extra_rows,$ d" $outfile
 	done
 done

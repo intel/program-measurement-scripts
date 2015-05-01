@@ -265,8 +265,17 @@ LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 
+
 # For all
 LOGGER_SH="${CLS_FOLDER}/logger.sh"
+GENERATE_CQA_CSV_SH="${CLS_FOLDER}/generate_cqa_csv.sh"
 LOG_FOLDER=${CLS_FOLDER}/logs
 LOG_FILE=${LOG_FOLDER}/log.txt
+
+# delimiter to use for output data e.g. ',' or ';' or other delimiters
+DELIM=';'
+#DELIM=','
+# symbol to use when conflict with delimiter happens, e.g. for ',' as delimiter
+# Cqa data may be 'a,b; c,d' => 'a_b, c_d' if '_' is used as CONFLICT_DELIM
+CONFLICT_DELIM='_'
 

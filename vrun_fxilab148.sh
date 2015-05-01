@@ -2,10 +2,24 @@
 
 source $(dirname $0)/const.sh
 
+if [[ "$nb_args" > "1" ]]
+then
+	echo "ERROR! Invalid arguments (need: run description (optional))."
+	exit -1
+fi
+
+if [[ "$nb_args" < "1" ]]
+then
+    read -p "Enter a brief desc for this run: " rundesc
+else
+    rundesc="$1"
+fi
+
+
 START_VRUN_SH=$(date '+%s')
 ${LOGGER_SH} ${START_VRUN_SH} "$0 started at $(date --date=@${START_VRUN_SH})"
 
-read -p "Enter a brief desc for this run: " rundesc
+
 ${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
 
 #variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
@@ -17,7 +31,8 @@ variants="ORG"
 #variants="FP"
 #linear_sizes="2000 10000000"
 #linear_sizes="1000 2000"
-linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
+linear_sizes="1000"
+#linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000 400000 600000 800000 1000000 2000000 4000000 6000000 8000000 10000000"
 #linear_sizes="1000000 2000000 4000000 6000000 8000000 10000000"
 #linear_sizes="1000000 4000000 8000000 10000000"
 #linear_sizes="1000 2000 4000 8000 20000  60000 100000  400000 800000 1000000  10000000"
@@ -37,8 +52,8 @@ quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 140
 #memory_loads="0 99999"
 memory_loads="0"
 #frequencies="1200000 2800000"
-#frequencies="2800000"
-frequencies="1200000"
+frequencies="2800000"
+#frequencies="1200000"
 
 linear_codelets=""
 quadratic_codelets=""
@@ -83,7 +98,7 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 #linear_codelets+=" ${ubmkprefix}/tridag_2r_de"
 #linear_codelets+=" ${ubmkprefix}/tridag_2r_1a_de"
 #linear_codelets+=" ${ubmkprefix}/tridag_2r_1a_1_de"
-#linear_codelets+=" ${ubmkprefix}/ptr_ld_branch"
+linear_codelets+=" ${ubmkprefix}/ptr_ld_branch"
 
 #linear_codelets+=" ${ubmkprefix}/svdcmp_14_ubmk_de"
 #linear_codelets+=" ${ubmkprefix}/svdcmp_14_break_ubmk_de"
@@ -182,9 +197,9 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 
 for codelet in $linear_codelets
 do
-	echo "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" | tee "$codelet/cls.log"
-	#./cls_get_metrics.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" | tee "$codelet/cls.log"
+	${LOGGER_SH} ${START_VRUN_SH} "Launching CLS on '$codelet'..."
+	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies"  "${START_VRUN_SH}" | tee "$codelet/cls.log"
+	#./cls_get_metrics.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" "${START_VRUN_SH}" | tee "$codelet/cls.log"
 	# &> "$codelet/cls.log"
 	res=$?
 	if [[ "$res" != "0" ]]
@@ -195,8 +210,8 @@ done
 
 for codelet in $quadratic_codelets
 do
-	echo "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" | tee "$codelet/cls.log"
+	${LOGGER_SH} ${START_VRUN_SH} "Launching CLS on '$codelet'..."
+	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${START_VRUN_SH}" | tee "$codelet/cls.log"
 	# &> "$codelet/cls.log"
 	res=$?
 	if [[ "$res" != "0" ]]

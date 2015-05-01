@@ -63,11 +63,11 @@ do
 	if [[ "$tmp_iter" != "" ]]
 	then
 		loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
-		final_res=$( echo -e "$loop_id;$tmp_iter;\n$final_res" )
+		final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
 	fi
 done
 
-echo "$final_res" | sort -k2nr,2nr -t ";"
+echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 
 
 exit 0

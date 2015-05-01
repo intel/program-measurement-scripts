@@ -21,7 +21,7 @@ loop_file="$bin_file".$uarch_suffix.ooo
 
 "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
 
-echo "OoO_${uarch_suffix}_normal;OoO_${uarch_suffix}_normal_stalls;OoO_${uarch_suffix}_large_resources_gain;OoO_${uarch_suffix}_large_resources_stalls;OoO_${uarch_suffix}_halved_resources_penalty;OoO_${uarch_suffix}_halved_resources_stalls;OoO_${uarch_suffix}_long_latency_penalty;OoO_${uarch_suffix}_long_latency_stalls"
+echo "OoO_${uarch_suffix}_normal"${DELIM}"OoO_${uarch_suffix}_normal_stalls"${DELIM}"OoO_${uarch_suffix}_large_resources_gain"${DELIM}"OoO_${uarch_suffix}_large_resources_stalls"${DELIM}"OoO_${uarch_suffix}_halved_resources_penalty"${DELIM}"OoO_${uarch_suffix}_halved_resources_stalls"${DELIM}"OoO_${uarch_suffix}_long_latency_penalty"${DELIM}"OoO_${uarch_suffix}_long_latency_stalls"
 
 name=$( basename "$loop_file" | sed 's/_cpi.snb.ooo//g' | sed 's/_cpi.hsw.ooo//g' )
 
@@ -51,4 +51,4 @@ res_long_latency=$( echo "$output" | grep iteration: | cut -f2 -d':' | sed 's/ /
 penalty_long_latency=$( echo "$res_long_latency - $res" | bc )
 long_latency_culprits=$( echo "$output" | grep "Stalls per iteration" | sed 's/Stalls per iteration \[\([^\]*\)\]/\1/g' )
 
-echo -e "$res;$main_culprits;$gain_infinite;$infinite_culprits;$penalty_halved;$halved_culprits;$penalty_long_latency;$long_latency_culprits"
+echo -e "$res"${DELIM}"$main_culprits"${DELIM}"$gain_infinite"${DELIM}"$infinite_culprits"${DELIM}"$penalty_halved"${DELIM}"$halved_culprits"${DELIM}"$penalty_long_latency"${DELIM}"$long_latency_culprits"

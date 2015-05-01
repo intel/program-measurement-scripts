@@ -33,14 +33,14 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ "$counter" == "UNC_L4_REQUEST_RD_HIT" || "$counter" == "UNC_L4_REQUEST_WR_HIT" || "$counter" == "UNC_L4_REQUEST_WR_FILL" || "$counter" == "UNC_L4_REQUEST_RD_EVICT_LINE_TO_DRAM" || "$counter" == "UNC_CBO_L4_SUPERLINE_ALLOC_FAIL" ]]
 		then
 			echo "Special treatment for server uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3-6 -d';' | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
-				val1=$( echo "$value" | cut -f1 -d';' )
-				val2=$( echo "$value" | cut -f2 -d';' )
-				val3=$( echo "$value" | cut -f3 -d';' )
-				val4=$( echo "$value" | cut -f4 -d';' )
+				val1=$( echo "$value" | cut -f1 -d${DELIM} )
+				val2=$( echo "$value" | cut -f2 -d${DELIM} )
+				val3=$( echo "$value" | cut -f3 -d${DELIM} )
+				val4=$( echo "$value" | cut -f4 -d${DELIM} )
 				let "val = $val1 + $val2 + $val3 + $val4"
 				echo "$counter||$val" >> $res_path/likwid_report
 			done
@@ -49,10 +49,10 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab147" ) && ( "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ||  "$counter" == "FREERUN_DRAM_ENERGY_STATUS" ) ]]
 		then
 			echo "Special treatment for in-CPU energy '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
 			for value in $values
 			do
-				val=$( echo "$value" | cut -f1 -d';' )
+				val=$( echo "$value" | cut -f1 -d${DELIM} )
 				echo "$counter||$val" >> $res_path/likwid_report
 			done
 			continue
@@ -60,18 +60,18 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab147" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
 			echo "Special treatment (recent emon) for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3-10 -d';' | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-10 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
-				val1=$( echo "$value" | cut -f1 -d';' )
-				val2=$( echo "$value" | cut -f2 -d';' )
-				val3=$( echo "$value" | cut -f3 -d';' )
-				val4=$( echo "$value" | cut -f4 -d';' )
-				val5=$( echo "$value" | cut -f5 -d';' )
-				val6=$( echo "$value" | cut -f6 -d';' )
-				val7=$( echo "$value" | cut -f7 -d';' )
-				val8=$( echo "$value" | cut -f8 -d';' )
+				val1=$( echo "$value" | cut -f1 -d${DELIM} )
+				val2=$( echo "$value" | cut -f2 -d${DELIM} )
+				val3=$( echo "$value" | cut -f3 -d${DELIM} )
+				val4=$( echo "$value" | cut -f4 -d${DELIM} )
+				val5=$( echo "$value" | cut -f5 -d${DELIM} )
+				val6=$( echo "$value" | cut -f6 -d${DELIM} )
+				val7=$( echo "$value" | cut -f7 -d${DELIM} )
+				val8=$( echo "$value" | cut -f8 -d${DELIM} )
 				let "val = $val1 + $val2 + $val3 + $val4 + $val5 + $val6 + $val7 + $val8"
 				echo "$counter||$val" >> $res_path/likwid_report
 			done
@@ -80,18 +80,18 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab148" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
 				echo "Special treatment (recent emon) for uncore '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f11-18 -d';' | sed 's/ //g' )
+				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f11-18 -d${DELIM} | sed 's/ //g' )
 				#echo "debug values: '$values'"
 				for value in $values
 				do
-					val1=$( echo "$value" | cut -f1 -d';' )
-					val2=$( echo "$value" | cut -f2 -d';' )
-					val3=$( echo "$value" | cut -f3 -d';' )
-					val4=$( echo "$value" | cut -f4 -d';' )
-					val5=$( echo "$value" | cut -f5 -d';' )
-					val6=$( echo "$value" | cut -f6 -d';' )
-					val7=$( echo "$value" | cut -f7 -d';' )
-					val8=$( echo "$value" | cut -f8 -d';' )
+					val1=$( echo "$value" | cut -f1 -d${DELIM} )
+					val2=$( echo "$value" | cut -f2 -d${DELIM} )
+					val3=$( echo "$value" | cut -f3 -d${DELIM} )
+					val4=$( echo "$value" | cut -f4 -d${DELIM} )
+					val5=$( echo "$value" | cut -f5 -d${DELIM} )
+					val6=$( echo "$value" | cut -f6 -d${DELIM} )
+					val7=$( echo "$value" | cut -f7 -d${DELIM} )
+					val8=$( echo "$value" | cut -f8 -d${DELIM} )
 					let "val = $val1 + $val2 + $val3 + $val4 + $val5 + $val6 + $val7 + $val8"
 					echo "$counter||$val" >> $res_path/likwid_report
 				done
@@ -100,7 +100,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ "$counter" == "UNC_IMC_DRAM_DATA_READS" || "$counter" == "UNC_IMC_DRAM_DATA_WRITES" || "$counter" == "UNC_PP0_ENERGY_STATUS" || "$counter" == "UNC_PKG_ENERGY_STATUS" ]]
 		then
 			echo "Special treatment (uncore counter) for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3 -d';' | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3 -d${DELIM} | sed 's/ //g' )
 			for value in $values
 			do
 				echo "$counter||$value" >> $res_path/likwid_report
@@ -109,14 +109,14 @@ sed 's/\./_/g' -i $res_path/emon_report
 			if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 			then
 				echo "Special treatment (recent emon) for uncore '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f7-10 -d';' | sed 's/ //g' )
+				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f7-10 -d${DELIM} | sed 's/ //g' )
 				#echo "debug values: '$values'"
 				for value in $values
 				do
-					val1=$( echo "$value" | cut -f1 -d';' )
-					val2=$( echo "$value" | cut -f2 -d';' )
-					val3=$( echo "$value" | cut -f3 -d';' )
-					val4=$( echo "$value" | cut -f4 -d';' )
+					val1=$( echo "$value" | cut -f1 -d${DELIM} )
+					val2=$( echo "$value" | cut -f2 -d${DELIM} )
+					val3=$( echo "$value" | cut -f3 -d${DELIM} )
+					val4=$( echo "$value" | cut -f4 -d${DELIM} )
 					let "val = $val1 + $val2 + $val3 + $val4"
 					echo "$counter||$val" >> $res_path/likwid_report
 				done
@@ -124,12 +124,12 @@ sed 's/\./_/g' -i $res_path/emon_report
 				if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
 				then
 					echo "Special treatment for server uncore '$counter'"
-					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,7 -d';' | sed 's/ //g' )
+					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,7 -d${DELIM} | sed 's/ //g' )
 					#echo "debug values: '$values'"
 					for value in $values
 					do
-						val1=$( echo "$value" | cut -f1 -d';' )
-						val2=$( echo "$value" | cut -f2 -d';' )
+						val1=$( echo "$value" | cut -f1 -d${DELIM} )
+						val2=$( echo "$value" | cut -f2 -d${DELIM} )
 						let "val = $val1 + $val2"
 						echo "$counter||$val" >> $res_path/likwid_report
 					done
@@ -137,18 +137,18 @@ sed 's/\./_/g' -i $res_path/emon_report
 					if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
 					then
 						echo "Special treatment for in-CPU energy '$counter'"
-						values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f3,4 -d';' | sed 's/ //g' )
+						values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
 						for value in $values
 						do
-							val1=$( echo "$value" | cut -f1 -d';' )
-							val2=$( echo "$value" | cut -f2 -d';' )
+							val1=$( echo "$value" | cut -f1 -d${DELIM} )
+							val2=$( echo "$value" | cut -f2 -d${DELIM} )
 							let "val = $val1 + $val2"
 							echo "$counter||$val" >> $res_path/likwid_report
 						done
 					else
 							echo "Regular treatment for '$counter'"
 							let "target_field = $XP_CORE + 3"
-							values=$( grep "$counter" $res_path/emon_report | sed 's/\t/;/g' | grep "$counter;" | cut -f$target_field -d';' | sed 's/ //g' )
+							values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g' )
 							#echo "debug values: '$values'"
 							for value in $values
 							do
@@ -160,7 +160,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		fi
 	done
 
-	echo "$codelet_name;$data_size;$memory_load;$frequency;$variant;" > $res_path/counters.csv
+	echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM} > $res_path/counters.csv
 
 	cp $res_path/cpi.csv $res_path/counters.csv
 	for counter in $counters
@@ -174,6 +174,6 @@ sed 's/\./_/g' -i $res_path/emon_report
         median=$( echo $res | tr ' ' '\n' | awk "NR==$mean_line" )
         echo $median | awk '{print $1 / '$iterations';}' > $res_path/likwid_counter_$counter
 
-		paste -d';' $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
+		paste -d${DELIM} $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
 		mv $res_path/tmp $res_path/counters.csv
 	done

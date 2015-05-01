@@ -22,9 +22,10 @@ do
 
 		#echo "Mode: $mode, option arg: $option_arg"
 		#echo "\"$MAQAO\" module=cqa bin=\"$bin_path\" loop=\"$loop_id\" uarch=SANDY_BRIDGE of=csv -ext im=$mode $option_arg"
-		"$MAQAO" module=cqa bin="$bin_path" loop="$loop_id" uarch=SANDY_BRIDGE of=csv -ext im=$mode $option_arg
-		header=$( head -n 1 loops.csv | sed 's/;$//g' | sed "s/;/;V($mode)($option)_/g" | sed "s/^/V($mode)($option)_/g" )
-		content=$( tail -n 1 loops.csv | sed 's/;$//g' )
+		#"$MAQAO" module=cqa bin="$bin_path" loop="$loop_id" uarch=SANDY_BRIDGE of=csv -ext im=$mode $option_arg
+		${GENERATE_CQA_CSV_SH} SANDY_BRIDGE "$bin_path" "$loop_id" "im=$mode $option_arg"
+		header=$( head -n 1 loops.csv | sed 's/'${DELIM}'$//g' | sed "s/${DELIM}/${DELIM}V($mode)($option)_/g" | sed "s/^/V($mode)($option)_/g" )
+		content=$( tail -n 1 loops.csv | sed 's/'${DELIM}'$//g' )
 
 		rm -f loops.csv
 
@@ -35,8 +36,8 @@ do
 				mega_header="$header"
 				mega_content="$content"
 			else
-				mega_header="$mega_header;$header"
-				mega_content="$mega_content;$content"
+				mega_header="$mega_header"${DELIM}"$header"
+				mega_content="$mega_content"${DELIM}"$content"
 			fi
 		fi
 

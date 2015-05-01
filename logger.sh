@@ -15,4 +15,5 @@ if [ ! -d ${LOG_FOLDER} ]; then
     mkdir ${LOG_FOLDER}
 fi
 
+echo ${msg}
 echo "[${runid}] ${msg}" >> ${LOG_FILE}

@@ -83,7 +83,7 @@ mean=$( echo "$res" | awk "NR==$mean_line" )
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
 echo -e "CPI \t'$normalized_mean'"
-echo "$codelet_name;$data_size;$memory_load;$frequency;$variant;$normalized_mean" > "$res_path/cpi.csv"
+echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
 echo "Ld library path: '$LD_LIBRARY_PATH'"
 
@@ -236,7 +236,7 @@ then
 	  echo $emon_counters_core >  "$res_path/core_events_list"
 	  echo $emon_counters_uncore >  "$res_path/uncore_events_list"
 	  
-	  for events in $(echo $emon_counters_core  | tr ';' ' ')
+	  for events in $(echo $emon_counters_core  | tr ${DELIM} ' ')
 	    do
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
@@ -244,7 +244,7 @@ then
 	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ${run_prog} &> "$res_path/emon_execution_log"
 	  done
 	  
-	  for events in $(echo $emon_counters_uncore  | tr ';' ' ')
+	  for events in $(echo $emon_counters_uncore  | tr ${DELIM} ' ')
 	    do	
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
