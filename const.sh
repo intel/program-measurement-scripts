@@ -45,6 +45,8 @@ else
 	source /nfs/fx/proj/openmp/compilers/intel/15.0/Linux/intel64/load0.sh
 fi
 
+
+
 MAQAO_FOLDER="$CLS_FOLDER/maqao"
 MAQAO="$MAQAO_FOLDER/maqao"
 
@@ -53,6 +55,7 @@ CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 # For w_adjust.sh use
 #CODELET_LENGTH=50
 CODELET_LENGTH=200
+#CODELET_LENGTH=400
 MIN_REPETITIONS=100
 
 # For run_codelet.sh (1/2)
@@ -60,6 +63,8 @@ META_REPETITIONS=11
 ACTIVATE_COUNTERS=1
 #ACTIVATE_COUNTERS=0
 ACTIVATE_ADVANCED_COUNTERS=0
+
+
 
 ACTIVATE_MEM_TRAFFIC_COUNTERS=1
 ACTIVATE_RESOURCE_COUNTERS=1
@@ -81,6 +86,7 @@ DISABLE_ADJ_CACHE_LINE_PREFETCHER=1
 DISABLE_DCU_PREFETCHER=1
 DISABLE_DCU_IP_PREFETCHER=1
 PREFETCHER_DISABLE_BITS=$(((${DISABLE_DCU_IP_PREFETCHER}<<3)|(${DISABLE_DCU_PREFETCHER}<<2)|(${DISABLE_ADJ_CACHE_LINE_PREFETCHER}<<1)|(${DISABLE_L2_HW_PREFETCHER})))
+
 
 # Modules
 #module load compilers/intel/12.1.3
@@ -261,6 +267,7 @@ EMON_COUNTER_NAMES_FILE="emon_counters.txt"
 LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
 
+
 #For format2cape.sh
 FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
@@ -273,9 +280,12 @@ LOG_FOLDER=${CLS_FOLDER}/logs
 LOG_FILE=${LOG_FOLDER}/log.txt
 
 # delimiter to use for output data e.g. ',' or ';' or other delimiters
-DELIM=';'
-#DELIM=','
+#DELIM=';'
+DELIM=','
 # symbol to use when conflict with delimiter happens, e.g. for ',' as delimiter
 # Cqa data may be 'a,b; c,d' => 'a_b, c_d' if '_' is used as CONFLICT_DELIM
 CONFLICT_DELIM='_'
 
+#For cls.sh and gather_results.sh 
+#control how the repetition is determined (one per data size vs one per all settings)
+REPETITION_PER_DATASIZE="1"

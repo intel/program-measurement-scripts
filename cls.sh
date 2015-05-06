@@ -23,6 +23,65 @@ set_prefetcher_bits() {
     emon --write-msr 0x1a4=${hex_prefetcher_bits}
 }
 
+find_num_repetitions_and_iterations () {
+    codelet_folder="$1"
+    codelet_name="$2"
+    data_size="$3"
+    variant="$4"
+    function_name="$5"
+    loop_id="$6"
+    repetitions_history_file="$7"
+    iteration_file="$8"
+    iterations_for_file="$9"
+
+    echo "Adjusting codelet parametres for the $variant variant ..."
+    if [[ "${variant}" == "ORG" ]]; then
+	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+    else
+	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+    fi
+    tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
+    sed -i '$ d' "$codelet_folder/repetitions_history" 
+
+    repetitions=$(cat "${repetitions_history_file}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+    
+    echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name)..."
+    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ${DELIM})
+    res=$?
+    if [[ "$res" != "0" ]]
+	then
+	echo "Cancelling CLS."
+	exit -1
+    fi
+    
+    wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id${DELIM}" )
+    most_important_loop=$( echo "$loop_info" | grep ${DELIM} | head -n 1)
+    
+    if [[ "$wanted_loop_info" != "$most_important_loop" ]]
+	then
+	echo "Loop mismatch!"
+	tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d${DELIM} )
+	tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
+	echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
+	
+	tmp_id=$( echo "$most_important_loop" | cut -f1 -d${DELIM} )
+	tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d${DELIM} )
+	echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
+	
+	echo "Cancelling CLS."
+	exit -1
+    fi
+    
+    echo "$variant:Loop Id"${DELIM}"Iterations"${DELIM} >> "${iterations_for_file}"
+    echo "$loop_info" | tr ' ' '\n' | sed "s/\(.*\)/$variant:\1/" >> "${iterations_for_file}"
+    
+    loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
+    echo -e "Iterations \t'$loop_iterations'"
+    echo "$variant"${DELIM}"${loop_iterations}" >> ${iteration_file}
+}
+
+
 START_CLS_SH=$(date '+%s')
 
 echo "------------------------------------------------------------"
@@ -69,7 +128,7 @@ then
 fi
 
 echo "------------------------------------------------------------"
-echo "Identifying the main loop..."
+echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name)..."
 loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
 res=$?
 if [[ "$res" != "0" ]]
@@ -162,52 +221,15 @@ do
 		emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 	fi
 
-	for variant in $variants
-	do
-		echo "Adjusting codelet parametres for the $variant variant ..."
-		if [[ "${variant}" == "ORG" ]]; then
-			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
-		else
-			env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
-		fi
-		tail -n 1 "$codelet_folder/repetitions_history" >> "$codelet_folder/repetitions_history_${variant}"
-		sed -i '$ d' "$codelet_folder/repetitions_history" 
+	if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
+	    for variant in $variants
+	      do
+	      
+	      find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+	      
+	    done
+	fi
 	
-		echo "Re-counting loop iterations..."
-		loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ${DELIM})
-		res=$?
-		if [[ "$res" != "0" ]]
-		then
-			echo "Cancelling CLS."
-			exit -1
-		fi
-	
-		wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id${DELIM}" )
-		most_important_loop=$( echo "$loop_info" | grep ${DELIM} | head -n 1)
-	
-		if [[ "$wanted_loop_info" != "$most_important_loop" ]]
-		then
-			echo "Loop mismatch!"
-			tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d${DELIM} )
-			tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
-			echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
-	
-			tmp_id=$( echo "$most_important_loop" | cut -f1 -d${DELIM} )
-			tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d${DELIM} )
-			echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
-	
-			echo "Cancelling CLS."
-			exit -1
-		fi
-	
-		echo "$variant:Loop Id"${DELIM}"Iterations"${DELIM} >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
-		echo "$loop_info" | tr ' ' '\n' | sed "s/\(.*\)/$variant:\1/" >> "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
-	
-		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
-		echo -e "Iterations \t'$loop_iterations'"
-		echo "$variant"${DELIM}"${loop_iterations}" >> $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}
-	done
-
 	for memory_load in $memory_loads
 	do
 		mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load" &> /dev/null
@@ -233,36 +255,48 @@ do
 
 		for frequency in $frequencies
 		do
-			mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
-			if [[ "$UARCH" == "HASWELL" ]]; then
-				dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
-				emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
-			fi
-			./set_frequency.sh $frequency
-			res=$?
-			if [[ "$res" != "0" ]]
+		  mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
+		  if [[ "$UARCH" == "HASWELL" ]]; then
+		      dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
+		      emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+		  fi
+		  ./set_frequency.sh $frequency
+		  res=$?
+		  if [[ "$res" != "0" ]]
+		      then
+		      echo "Cancelling run_codelet.sh."
+		      exit -1
+		  fi
+		  
+		  for variant in $variants
+		    do
+		    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+		    mkdir ${res_path} &> /dev/null
+
+		    if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
+			find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+			    "${res_path}/repetitions_history_${variant}" \
+			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
+			repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
+		    else
+			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
+		    fi
+		    
+		    # Generate the codelet data file for measurment.  Need to compute iteration count.
+		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+
+
+		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations"
+		    res=$?
+		    if [[ "$res" != "0" ]]
 			then
-				echo "Cancelling run_codelet.sh."
-				exit -1
-			fi
-
-			for variant in $variants
-			do
-				loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
-				repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-				echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
-
-		        res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
-				mkdir ${res_path} &> /dev/null
-				./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations"
-				res=$?
-				if [[ "$res" != "0" ]]
-				then
-					echo "Cancelling CLS."
-					exit -1
-				fi
-			done
-
+			echo "Cancelling CLS."
+			exit -1
+		    fi
+		  done
+		  
 		done
 
 		if [[ "$memory_load" != "0" ]]
