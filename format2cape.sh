@@ -19,8 +19,13 @@ source pcr_metrics.sh
 # Get codelet's res folder
 cls_res_folder=$( readlink -f "$1" )
 codelet_folder=$( echo $cls_res_folder | sed 's:/cls_res_.*::' )
-machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_[0-9]+)/\2/p' )
+#machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_[0-9]+)/\2/p' )
+machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_)([0-9]+)(_)([0-9]+)/\2/p' )
+cls_timestamp_val=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_)([0-9]+)(_)([0-9]+)/\4/p' )
+run_timestamp_val=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_)([0-9]+)(_)([0-9]+)/\6/p' )
 #machine_name="$2"
+ClsTimestamp=$( date -d @${cls_timestamp_val} +'%F %T' )
+ExprTimestamp=$( date -d @${run_timestamp_val} +'%F %T' )
 
 DATE=$( date +'%F_%T' )
 
@@ -44,7 +49,7 @@ arg4=" "
 arg5=" "
 arg6=" "
 nb_threads=" "
-Timestamp="2015-02-02 11:00:00"
+
 cpu_generation="$(cat $cls_res_folder/uarch)"
 
 # Get variant and frequency lists
@@ -127,8 +132,8 @@ do
 		# Merging the stan and counters sections
 		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name") | head -n $nrows > $tmprep/tmp1.csv
 		cat $infile | cut -d${DELIM} -f2 | tail -n +2 | head -n $nrows > $tmprep/tmp2.csv
-		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$Timestamp"${DELIM}"$cpu_generation") | head -n $nrows > $tmprep/tmp3.csv
-		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"${DELIM}"decan_experimental_configuration.data_size"${DELIM}"decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation" > $tmprep/codelet_struct.csv  
+		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$ExprTimestamp") | head -n $nrows > $tmprep/tmp3.csv
+		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"${DELIM}"decan_experimental_configuration.data_size"${DELIM}"decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"Expr Timestamp" > $tmprep/codelet_struct.csv  
 		paste -d${DELIM} $tmprep/tmp1.csv $tmprep/tmp2.csv $tmprep/tmp3.csv >> $tmprep/codelet_struct.csv  
 		paste -d${DELIM} $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
 		extra_rows=$(($nrows + 2))
