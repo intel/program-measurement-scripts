@@ -32,9 +32,14 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 	  do
 	  for variant in $variants
 	    do
-	    datasize_path="${res_folder}/data_$data_size"
-	    res_path="${datasize_path}/memload_$memory_load/freq_$frequency/variant_$variant"
+	    res_path="${res_folder}/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
 #	    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+
+	    if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
+		datasize_path="${res_folder}/data_$data_size"
+	    else
+		datasize_path=${res_path}
+	    fi
 	    emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
 	    loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d${DELIM} -f2 )
 		codelet_name=$(cat "${res_folder}/codelet_name")
@@ -45,7 +50,6 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
       done
     done
 fi
-
 
 
 
@@ -146,7 +150,10 @@ then
 	counter_list=$( echo "$counter_list" | sort --uniq | tr "\n" " " | sed "s/counter_//g" )
 	#echo "Counter_list: '$counter_list'"
 
-	for data_size in "$res_folder"/iterations_for_*
+	
+#	for data_size in "$res_folder"/iterations_for_*
+#       find command should work for both REPETITION_PER_DATASIZE or not      
+	for data_size in $(find ${res_folder} -name 'iterations_for_*')
 	do
 		data_size=$( basename "$data_size" )
 		data_size_list=$( echo -e "$data_size\n$data_size_list" )
@@ -170,13 +177,19 @@ then
 				done
 				echo "$header" > "$res_file"
 				cat "$res_folder"/data_*/memload_$memload/freq_$freq/variant_$variant/counters.csv | sort -k2n -t ${DELIM} >> $res_file
-
 				for data_size in $data_size_list
 				do
 					echo "" >> $res_file
 					echo "Data Size"${DELIM}"$data_size"${DELIM} >> $res_file
-					cat "$res_folder/iterations_for_${data_size}" | grep "$variant" | cut -d':' -f2 >> $res_file
+					if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
+#					    cat "$res_folder/iterations_for_${data_size}" | grep "$variant" | cut -d':' -f2 >> $res_file
+					    res_path="$res_folder"
+					else
+					    res_path="$res_folder/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+					fi
+					cat "${res_path}/iterations_for_${data_size}" | grep "$variant" | cut -d':' -f2 >> $res_file
 				done
+
 				echo "" >> $res_file
 				cat "$res_folder"/binaries/*_$variant.asm >> $res_file
 				echo "" >> $res_file
