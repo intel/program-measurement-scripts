@@ -187,8 +187,8 @@ done
 
 for codelet in $quadratic_codelets
 do
-	${LOGGER_SH} ${START_VRUN_SH} "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${START_VRUN_SH}" | tee "$codelet/cls.log"
+	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
+	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
 	# &> "$codelet/cls.log"
 	res=$?
 	if [[ "$res" != "0" ]]

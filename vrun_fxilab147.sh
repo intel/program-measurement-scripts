@@ -1,5 +1,14 @@
 #!/bin/bash -l
 
+source $(dirname $0)/const.sh
+source ./vrun_launcher.sh
+
+run() {
+    runId=$@
+
+
+
+
 #variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
 variants="REF LS FP DL1 FES"
 variants="REF LS FP"
@@ -93,8 +102,8 @@ quadratic_codelets="$quadratic_codelets /localdisk/amazouz/ecr_codelets/nr-codel
 
 for codelet in $linear_codelets
 do
-	echo "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" | tee "$codelet/cls.log"
+	${LOGGER_SH} ${runId}  "Launching CLS on '$codelet'..."
+	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
 	# &> "$codelet/cls.log"
 	res=$?
 	if [[ "$res" != "0" ]]
@@ -105,8 +114,8 @@ done
 
 for codelet in $quadratic_codelets
 do
-	echo "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" | tee "$codelet/cls.log"
+	${LOGGER_SH} ${runId}  "Launching CLS on '$codelet'..."
+	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
 	# &> "$codelet/cls.log"
 	res=$?
 	if [[ "$res" != "0" ]]
@@ -114,3 +123,9 @@ do
 		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
 	fi
 done
+
+}
+
+launchIt $0 run "$@"
+
+
