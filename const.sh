@@ -285,7 +285,9 @@ DELIM=','
 # symbol to use when conflict with delimiter happens, e.g. for ',' as delimiter
 # Cqa data may be 'a,b; c,d' => 'a_b, c_d' if '_' is used as CONFLICT_DELIM
 CONFLICT_DELIM='_'
+# delimiter used by MAQAO
+M_DELIM=';'
 
 #For cls.sh and gather_results.sh 
 #control how the repetition is determined (one per data size vs one per all settings)
-REPETITION_PER_DATASIZE="1"
+REPETITION_PER_DATASIZE="0"
