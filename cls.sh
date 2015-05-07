@@ -338,7 +338,14 @@ echo -e "Data sizes \t'$data_sizes'"
 echo -e "Memory loads \t'$memory_loads'"
 echo -e "Frequencies \t'$frequencies'"
 
-./gather_results.sh "$codelet_folder"/${CLS_RES_FOLDER} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
+END_CLS_SH=$(date '+%s')
+new_cls_folder=${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}_${runid}
+# At the end, rename the result folder by appending timestamp
+${LOGGER_SH} ${runid} "Renamed cls directory to ${new_cls_folder}"
+mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${new_cls_folder}"
+
+
+./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
 res=$?
 if [[ "$res" != "0" ]]
 then
@@ -346,12 +353,6 @@ then
 	exit -1
 fi
 
-END_CLS_SH=$(date '+%s')
-new_cls_folder=${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}_${runid}
-
-# At the end, rename the result folder by appending timestamp
-${LOGGER_SH} ${runid} "Renamed cls directory to ${new_cls_folder}"
-mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${new_cls_folder}"
 
 ELAPSED_CLS_SH=$((${END_CLS_SH} - ${START_CLS_SH}))
 
