@@ -343,7 +343,12 @@ new_cls_folder=${codelet_folder}/${CLS_RES_FOLDER}_${END_CLS_SH}_${runid}
 # At the end, rename the result folder by appending timestamp
 ${LOGGER_SH} ${runid} "Renamed cls directory to ${new_cls_folder}"
 mv "${codelet_folder}/${CLS_RES_FOLDER}"  "${new_cls_folder}"
+ln -s "${new_cls_folder}" ${RUN_FOLDER}/${runid}
 
+shopt -s extglob
+# copy the source and make file for record
+cp ${codelet_folder}/codelet*.@(c|f90) "${new_cls_folder}"
+cp ${codelet_folder}/Makefile "${new_cls_folder}"
 
 ./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
 res=$?

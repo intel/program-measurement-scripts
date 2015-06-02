@@ -22,10 +22,20 @@ launchIt () {
 
     START_VRUN_SH=$(date '+%s')
 
+    run_dir=${RUN_FOLDER}/${START_VRUN_SH}
+    mkdir -p ${run_dir}
+
     ${LOGGER_SH} ${START_VRUN_SH} "${launch_script} started at $(date --date=@${START_VRUN_SH})"
     ${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
+    ${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME}"
     
     ${launch_fn} ${START_VRUN_SH}
+
+# Combining all run cape data
+    for f in $( find -L ${run_dir} -name *.cape.csv ) 
+    do
+      cat $f >> ${run_dir}/cape.csv
+    done
 
 
     END_VRUN_SH=$(date '+%s')

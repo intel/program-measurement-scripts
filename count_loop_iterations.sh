@@ -25,6 +25,7 @@ $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncoun
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
+
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 if [[ "$decan_variants" == "" ]]
 then
