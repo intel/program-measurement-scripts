@@ -19,7 +19,8 @@ frequencies="$5"
 #res_folder="$codelet_folder/$CLS_RES_FOLDER"
 
 
-echo "Gathering results for '$codelet_folder'"
+#echo "Gathering results for '$codelet_folder'"
+echo "Gathering results for '$res_folder'"
 
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
     then
@@ -72,39 +73,45 @@ echo "Memload_list: '$memload_list'"
 
 echo "Gathering CPIs..."
 mkdir "$res_folder/$CPIS_FOLDER/" &> /dev/null
+
+#NOTE: This is hardcoded following the order of cpi run (generating cpi.csv).  See run_codelet.sh for details.
+cpi_header_minus_variant_cpi="Codelet"${DELIM}"Data Size (N)"${DELIM}"Memory Load (MB/s)"${DELIM}"Frequency (kHz)"${DELIM}"Iterations"${DELIM}"Repetitions"
+cpi_header=${cpi_header_minus_variant_cpi}${DELIM}"Variant"${DELIM}"CPI"
+
 for memload in $memload_list
 do
 	for freq in $freq_list
 	do
 		output_cpi_file="$res_folder/$CPIS_FOLDER/cpi_${memload}MBs_${freq}kHz.csv"
+# NOTE The following awk command also hardcoded column order following cpi.csv generation in run_codelet.sh.
 		cat "$res_folder"/data_*"/memload_$memload/freq_$freq/"variant_*/cpi.csv	\
 			| sort -k5r -t ${DELIM}							\
 			| awk -F ${DELIM} '
 				BEGIN {
 				}
 				{
-					key = $1 "'${DELIM}'" $2 "'${DELIM}'" $3 "'${DELIM}'" $4;
-					values[key, $5] = $6;
+					key = $1 "'${DELIM}'" $2 "'${DELIM}'" $3 "'${DELIM}'" $4 "'${DELIM}'" $5 "'${DELIM}'" $6;
+					values[key, $7] = $8;
 					keys[key] = key;
 
 					there = 0;
 					for (ind in variants)
 					{
-						if (variants[ind] == $5)
+						if (variants[ind] == $7)
 						{
 							there = 1;
 						}
 					}
 					if (there != 1)
 					{
-						variants[counter++] = $5;
+						variants[counter++] = $7;
 					}
 					
-					#variants[$5] = $5;
+					#variants[$7] = $7;
 
 				}
 				END {
-					printf "Codelet" "'${DELIM}'" "Data Size (N)" "'${DELIM}'" "Memory Load (MB/s)" "'${DELIM}'" "Frequency (kHz)" "'${DELIM}'";
+					printf "'"${cpi_header_minus_variant_cpi}${DELIM}"'";
 					for (variant = 0; variant < counter; variant++)
 					{
 						printf variants[variant] "'${DELIM}'";
@@ -169,7 +176,8 @@ then
 			for variant in $variant_list
 			do
 				res_file="$res_folder/$COUNTERS_FOLDER/counters_${variant}_${memload}MBs_${freq}kHz.csv"
-				header="Codelet"${DELIM}"Data Size (N)"${DELIM}"Memory Load (MB/s)"${DELIM}"Frequency (kHz)"${DELIM}"Variant"${DELIM}"CPI"
+				# NOTE: The first few columns of counters.csv was copied from cpi.csv (See format_counters.sh for details).
+				header=${cpi_header}
 				for counter in $counter_list
 				do
 					counter=$( echo "$counter" | sed "s/likwid_//g" )

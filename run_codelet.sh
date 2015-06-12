@@ -2,9 +2,9 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "7" ]]
+if [[ "$nb_args" != "8" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name, data size, memory load, frequency, variant, number of iterations)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name, data size, memory load, frequency, variant, number of iterations, repetitions)."
 	exit -1
 fi
 
@@ -15,9 +15,10 @@ memory_load=$4
 frequency=$5
 variant="$6"
 iterations="$7"
+repetitions="$8"
 
 START_RUN_CODELETS_SH=$(date '+%s')
-echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations'."
+echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
 
 
 cd $codelet_folder
@@ -83,7 +84,8 @@ mean=$( echo "$res" | awk "NR==$mean_line" )
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
 echo -e "CPI \t'$normalized_mean'"
-echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
+echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
+#echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
 echo "Ld library path: '$LD_LIBRARY_PATH'"
 

@@ -49,6 +49,13 @@ arg4=" "
 arg5=" "
 arg6=" "
 nb_threads=" "
+# follow constants are used below to start picking up counter data in counter.csv (including the CPI column), datasize, iteration and repetition respectively.
+# This is hardcoded and related to cpi.csv generation in run_codelet.sh and cpi.csv is copied to counters.csv in format_counters.sh
+# TODO: avoid hardcoding
+BEGIN_COUNTER_DATA_COLS=8
+DATASIZE_COL=2
+ITERATIONS_COL=5
+REPETITIONS_COL=6
 
 cpu_generation="$(cat $cls_res_folder/uarch)"
 
@@ -107,7 +114,7 @@ do
 	stan_metric=$( echo $stan_metric | sed 's/'${DELIM}'\(.*\)/\1/')
 	#yes $stan_metric | head -n $nrows >> $tmprep/stan_report_${variant}.csv
 	yes $stan_metric | head -n $MAX_ROWS >> $tmprep/stan_report_${variant}.csv
-	cp $tmprep/stan_report_${variant}.csv /tmp/tt2
+#	cp $tmprep/stan_report_${variant}.csv /tmp/tt2
 
 	for frequency in $frequency_list
 	do
@@ -116,25 +123,37 @@ do
 
 		# Building the counters metrics section
 		ncols=$(head -n 1 $infile | tr ${DELIM} '\n' | wc -l)
-		converted_metrics=$(convert_metric $( head -n 1 $infile | cut -d${DELIM} -f6 ))
-		for ((m=7; m<=$ncols; m++))
+#		converted_metrics=$(convert_metric $( head -n 1 $infile | cut -d${DELIM} -f6 ))
+		converted_metrics=()
+		for ((m=${BEGIN_COUNTER_DATA_COLS}; m<=$ncols; m++))
 		do
 			metric=$(head -n 1 $infile | cut -d${DELIM} -f $m)
 			metric=$( convert_metric $metric )
-			converted_metrics="$converted_metrics $metric"
+#			converted_metrics="$converted_metrics $metric"
+			converted_metrics+=($metric)
 		done
 #		echo $converted_metrics | tr ' ' ','                     > $tmprep/counters.csv
-		echo $converted_metrics | tr ' ' ${DELIM}                     > $tmprep/counters.csv
+#		echo $converted_metrics | tr ' ' ${DELIM}                     > $tmprep/counters.csv
+		# See http://mywiki.wooledge.org/BashFAQ/100 for info of this trick to convert array to delimited string
+		(IFS=${DELIM}; echo "${converted_metrics[*]}")           > $tmprep/counters.csv
 		#tail -n +2 $infile | cut -d${DELIM} -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
 #		cat $infile | grep $codelet_name | sed '$ d' | cut -d';' -f 6-$ncols | tr ';' ',' >> $tmprep/counters.csv
-		cat $infile | grep $codelet_name | sed '$ d' | cut -d${DELIM} -f 6-$ncols  >> $tmprep/counters.csv
+		cat $infile | grep $codelet_name | sed '$ d' | cut -d${DELIM} -f ${BEGIN_COUNTER_DATA_COLS}-$ncols  >> $tmprep/counters.csv
 		nrows=$(tail -n +2 $tmprep/counters.csv | wc -l)
 		# Merging the stan and counters sections
-		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name") | head -n $nrows > $tmprep/tmp1.csv
-		cat $infile | cut -d${DELIM} -f2 | tail -n +2 | head -n $nrows > $tmprep/tmp2.csv
-		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$ExprTimestamp") | head -n $nrows > $tmprep/tmp3.csv
-		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"${DELIM}"decan_experimental_configuration.data_size"${DELIM}"decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"Expr Timestamp" > $tmprep/codelet_struct.csv  
-		paste -d${DELIM} $tmprep/tmp1.csv $tmprep/tmp2.csv $tmprep/tmp3.csv >> $tmprep/codelet_struct.csv  
+
+		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"> $tmprep/codelet_mach_info.csv
+		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name") | head -n $nrows >> $tmprep/codelet_mach_info.csv
+
+		echo "decan_experimental_configuration.data_size"${DELIM}"Iterations"${DELIM}"Repetitions" > $tmprep/ds_itr_rep_cols.csv
+		cat $infile | cut -d${DELIM} -f${DATASIZE_COL},${ITERATIONS_COL},${REPETITIONS_COL} | tail -n +2 | head -n $nrows >> $tmprep/ds_itr_rep_cols.csv
+
+		echo "decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"Expr Timestamp" > $tmprep/decan_cpu_run_info.csv
+		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$ExprTimestamp") | head -n $nrows >> $tmprep/decan_cpu_run_info.csv
+
+
+		paste -d${DELIM} $tmprep/codelet_mach_info.csv $tmprep/ds_itr_rep_cols.csv $tmprep/decan_cpu_run_info.csv > $tmprep/codelet_struct.csv  
+
 		paste -d${DELIM} $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
 		extra_rows=$(($nrows + 2))
 		cp $tmprep/stan_report_${variant}.csv /tmp/tt

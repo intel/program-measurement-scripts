@@ -288,7 +288,7 @@ do
 		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 
 
-		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations"
+		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 		    res=$?
 		    if [[ "$res" != "0" ]]
 			then
