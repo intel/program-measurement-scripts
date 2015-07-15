@@ -23,6 +23,20 @@ set_prefetcher_bits() {
     emon --write-msr 0x1a4=${hex_prefetcher_bits}
 }
 
+set_thp() {
+    setting="$1"
+    # NOTE: setuid bit of hugeadm assumed to be set by root.
+    echo "Huge page setting ==> ${THP_SETTING}"
+    hugeadm --thp-${THP_SETTING}
+    new_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
+    if [[ "${new_thp_setting}" != "${setting}" ]]
+	then
+# Failed to set THP for experiment.  Quit.
+	echo "Failed to set THP (Huge page).  Cancelling CLS."
+	exit -1
+    fi
+}
+
 find_num_repetitions_and_iterations () {
     codelet_folder="$1"
     codelet_name="$2"
@@ -204,6 +218,11 @@ then
 	exit -1
 fi
 
+# Change Huge page settings
+# save orignal setting first
+old_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
+set_thp ${THP_SETTING}
+
 # Change prefetcher settings
 set_prefetcher_bits ${PREFETCHER_DISABLE_BITS}
 
@@ -325,6 +344,8 @@ done
 echo "Writing ${old_prefetcher_bits} to MSR 0x1a4 to restore prefetcher settings."
 #emon --write-msr 0x1a4=${old_prefetcher_bits}
 set_prefetcher_bits ${old_prefetcher_bits}
+# restore thp setting
+set_thp ${old_thp_setting}
 
 if [[ "$UARCH" == "HASWELL" ]]; then
 	emon --write-msr 0x620="$old_uncore_bits"
