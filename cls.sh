@@ -28,11 +28,13 @@ set_thp() {
     # NOTE: setuid bit of hugeadm assumed to be set by root.
     echo "Huge page setting ==> ${THP_SETTING}"
     hugeadm --thp-${THP_SETTING}
+# Sleep to wait for system state updated.
+    sleep 5
     new_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
     if [[ "${new_thp_setting}" != "${setting}" ]]
 	then
 # Failed to set THP for experiment.  Quit.
-	echo "Failed to set THP (Huge page).  Cancelling CLS."
+	echo "Failed to set THP (Huge page) from ${setting} to ${new_thp_setting}.  Cancelling CLS."
 	exit -1
     fi
 }
