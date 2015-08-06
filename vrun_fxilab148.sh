@@ -72,7 +72,8 @@ linear_sizes="100 1000 10000 400000"
 #quadratic_sizes="10 30 100 400 630 928"
 #quadratic_sizes="100 400"
 # try to follow Hafid's sizes
-quadratic_sizes="100 208 240 352 400 528"
+#quadratic_sizes="100 208 240 352 400 528"
+quadratic_sizes="100"
 #quadratic_sizes="10 30 100 400"
 
 #quadratic_sizes="400 2500"
@@ -239,9 +240,9 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 #quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sVS_sx"
 
 # more RO ones
-quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_ro_de"
-quadratic_codelets+=" ${quad_s1_prefix}/mprove_8/mprove_8_ro_me"
-quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_ro_se"
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_ro_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/mprove_8/mprove_8_ro_me"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_ro_se"
 
 
 #quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13s_de"
@@ -278,7 +279,7 @@ quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_ro_de"
 
 
 # more RO ones
-quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_ro_se"
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_ro_se"
 
 
 # Should never run jacobi again (duplicated code)

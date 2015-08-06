@@ -77,7 +77,7 @@ ACTIVATE_LFB_COUNTERS=1
 ACTIVATE_TOPDOWN_COUNTERS=1
 ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS=0
 ACTIVATE_TOPDOWN_FE_LAT_COUNTERS=0
-ACTIVATE_LIFE_COUNTERS=1
+ACTIVATE_LIFE_COUNTERS=0
 FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 
 # For cls.sh
@@ -108,6 +108,7 @@ export LANG=en_US.utf8
 export LC_ALL=en_US.utf8
 
 # For counter measurements + CQA parameter (?)
+
 some_res=$( echo "$HOSTNAME" | grep "silvermont" )
 if [[ "$some_res" == "" ]]
 then

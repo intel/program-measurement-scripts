@@ -2,24 +2,55 @@
 
 source ./const.sh
 
+
 bin="./OoO"
 bin_file="$1"
 loop_id="$2"
 
+set_arch_names()
+{
+    uarch_input="$1"
+    case "$uarch_input" in
+	"SANDY_BRIDGE")
+           local_uarch="sandy_bridge"
+	   uarch_suffix="snb"
+	   ;;
+	 "HASWELL")
+  	   local_uarch="haswell"
+	   uarch_suffix="hsw"
+	   ;;
+    
+	 "IVY_BRIDGE")
+	   local_uarch="ivy_bridge"
+	   uarch_suffix="ivb"
+	   ;;
+	 *)
+	   exit -1
+	   ;;
+    esac
+    loop_file="$bin_file".$uarch_suffix.ooo
+}
 
-local_uarch="sandy_bridge"
-uarch_suffix="snb"
-if [[ "$UARCH" == "HASWELL" ]]
-then
-	local_uarch="haswell"
-	uarch_suffix="hsw"
-fi
+# Generate files for all archs
+for ua in SANDY_BRIDGE HASWELL IVY_BRIDGE
+  do
+  set_arch_names ${ua}
+  "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+done
 
-loop_file="$bin_file".$uarch_suffix.ooo
+#local_uarch="sandy_bridge"
+#uarch_suffix="snb"
+
+#set arch names for local architecture.
+set_arch_names ${UARCH}
+
+#loop_file="$bin_file".$uarch_suffix.ooo
 
 #echo "Trying to generate OoO input file from '$bin_file', loop id = '$loop_id'" 1>&2
 
-"$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+#"$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+
+
 
 echo "OoO_${uarch_suffix}_normal"${DELIM}"OoO_${uarch_suffix}_normal_stalls"${DELIM}"OoO_${uarch_suffix}_large_resources_gain"${DELIM}"OoO_${uarch_suffix}_large_resources_stalls"${DELIM}"OoO_${uarch_suffix}_halved_resources_penalty"${DELIM}"OoO_${uarch_suffix}_halved_resources_stalls"${DELIM}"OoO_${uarch_suffix}_long_latency_penalty"${DELIM}"OoO_${uarch_suffix}_long_latency_stalls"
 
