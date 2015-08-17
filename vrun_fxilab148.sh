@@ -23,17 +23,27 @@ variants="ORG"
 #linear_sizes="2000 10000 400000 8000000"
 #linear_sizes="2000 8000 400000"
 # Even small datasizes for LDA code (like svd11)
-linear_sizes="600 800 1000"
+#linear_sizes="600 800 1000"
 #linear_sizes="1000"
 #linear_sizes="400 2000 10000"
 #ptr_sizes="400 2000 10000 800000"
 #ptr_sizes="10000 800000"
-ptr_sizes="800000"
+#ptr_sizes="800000"
+#ptr_sizes="100 200 400 600 800 1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000"
+ptr_sizes="600 1000"
 #linear_sizes="400000"
+#linear_sizes="200000 400000 600000 800000"
 #linear_sizes="2000 10000"
+#linear_sizes="1000 10000"
+#linear_sizes="10000"
+# Will check size problem below for hqr13 and toe3
+linear_sizes="100 1000 10000 400000"
+#linear_sizes="3000 4000 5000"
+
 
 #linear_sizes="800000"
 #linear_sizes="100 200 400 600 800"
+#linear_sizes="1100 1200 1400 1600 1800"
 #linear_sizes="1000000 2000000 4000000 6000000 8000000 10000000"
 #linear_sizes="1000000 4000000 8000000 10000000"
 #linear_sizes="1000 2000 4000 8000 20000  60000 100000  400000 800000 1000000  10000000"
@@ -56,7 +66,16 @@ ptr_sizes="800000"
 #quadratic_sizes="208 352 608 928 1200 1500 2000 3000"
 #quadratic_sizes="208 352 608 928 1300 2500"
 #quadratic_sizes="208 240 400 2500 3000"
-quadratic_sizes="400"
+#quadratic_sizes="400"
+#quadratic_sizes="928 1008 1100"
+#quadratic_sizes="928"
+#quadratic_sizes="10 30 100 400 630 928"
+#quadratic_sizes="100 400"
+# try to follow Hafid's sizes
+#quadratic_sizes="100 208 240 352 400 528"
+quadratic_sizes="100"
+#quadratic_sizes="10 30 100 400"
+
 #quadratic_sizes="400 2500"
 #memory_loads="0 99999"
 memory_loads="0"
@@ -124,7 +143,21 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_de"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_wo_de"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro1r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro2r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro3r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro5r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro6r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro7r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro8r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro9r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro10r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro11r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro12r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro24r_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_ro36r_de"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_wo1w_de"
+#linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_wo4w_de"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_dx"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_mulsd_de"
 #linear_codelets+=" ${lin_s1_prefix}/balanc_3/balanc_3_mulmovsd_de"
@@ -157,11 +190,26 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 #linear_codelets+=" ${lin_s1_prefix}/tridag_1/tridag_1_de"
 #linear_codelets+=" ${lin_s1_prefix}/tridag_2/tridag_2_de"
 
+# more RO ones
+#linear_codelets+=" ${lin_s1_prefix}/mprove_9/mprove_9_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/svdcmp_13/svdcmp_13_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/svdcmp_14/svdcmp_14_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_2/toeplz_2_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_3/toeplz_3_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/toeplz_4/toeplz_4_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/tridag_1/tridag_1_ro_de"
+#linear_codelets+=" ${lin_s1_prefix}/tridag_2/tridag_2_ro_de"
+
+#linear_codelets+=" ${prefix}/intel_codelets/1D_loop-Stride_1/s319/s319_ro_se"
+#linear_codelets+=" ${prefix}/intel_codelets/1D_loop-Stride_1/s1244/s1244_ro_se"
+
+
 
 #linear_codelets+=" ${lin_sclda_prefix}/elmhes_11/elmhes_11_de"
+#linear_codelets+=" ${lin_sclda_prefix}/elmhes_11/elmhes_11_ro_de"
 #linear_codelets+=" ${lin_sclda_prefix}/svdcmp_6/svdcmp_6_de"
 #linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_de"
-linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
+#linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
 #linear_codelets+=" ${lin_sclda_prefix}/elmhes_11/elmhes_11_dx"
 #linear_codelets+=" ${lin_sclda_prefix}/svdcmp_6/svdcmp_6_dx"
 #linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_dx"
@@ -169,6 +217,11 @@ linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
 
 
 #linear_codelets+=" ${lin_slda_prefix}/hqr_15/hqr_15_se"
+
+# more RO ones
+# somehow broken - need to fix script.
+#linear_codelets+=" ${lin_slda_prefix}/hqr_15/hqr_15_ro_se"
+
 
 
 #quadratic_codelets+=" ${quad_s1_prefix}/hqr_12sq/hqr_12sq_se"
@@ -186,6 +239,11 @@ linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
 #quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sU1_sVS_sx"
 #quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_sVS_sx"
 
+# more RO ones
+#quadratic_codelets+=" ${quad_s1_prefix}/matadd_16/matadd_16_ro_de"
+#quadratic_codelets+=" ${quad_s1_prefix}/mprove_8/mprove_8_ro_me"
+#quadratic_codelets+=" ${quad_s1_prefix}/svbksb_3/svbksb_3_ro_se"
+
 
 #quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13s_de"
 
@@ -202,6 +260,11 @@ linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
 #quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sU1_sVS_dx"
 #quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_sVS_dx"
 
+# more RO ones
+#quadratic_codelets+=" ${quad_slda_prefix}/lop_13/lop_13_ro_de"
+#quadratic_codelets+=" ${quad_slda_prefix}/relax2_26/relax2_26_ro_de"
+quadratic_codelets+=" ${quad_slda_prefix}/rstrct_29/rstrct_29_ro_de"
+
 
 #quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_se"
 #quadratic_codelets+=" ${quadt_s1_prefix}/hqr_12/hqr_12_sU1_sVS_sx"
@@ -215,13 +278,18 @@ linear_codelets+=" ${lin_sclda_prefix}/svdcmp_11/svdcmp_11_ro_de"
 #quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_sVS_sx"
 
 
+# more RO ones
+#quadratic_codelets+=" ${quadt_s1_prefix}/ludcmp_4/ludcmp_4_ro_se"
+
+
 # Should never run jacobi again (duplicated code)
 #quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sU1_sVS_sx"
 #quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sVS_sx"
 #quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sU1_sVS_se"
 #quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_sVS_se"
 #quadratic_codelets+=" ${quadt_s1_prefix}/jacobi_5/jacobi_5_se"
-
+# Skip 2D loops for now.
+#quadratic_codelets=""
 
 for codelet in $linear_codelets
 do

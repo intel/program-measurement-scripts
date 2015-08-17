@@ -73,6 +73,11 @@ function get_fe_uops (instr)
 		res = disp ["nb_uops"]["max"]
 	end
 
+	if (instr:is_store () and get_nb_components (instr) > 2)
+	then
+		res = 3
+	end
+
 	return res
 end
 
@@ -84,6 +89,9 @@ function get_nb_components (instr)
 	if (disp ~= nil)
 	then
 		res = count (disp ["uops_groups"])
+
+		--io.write ("\nInstr[" .. instr : tostring() .. "]: " .. res .. "\n")
+
 		if (is_avx_div (instr))
 		then
 			if (instr : is_load ())
@@ -111,11 +119,27 @@ function get_component_type (instr, pos)
 		end
 	else if (instr:is_store ())
 	then
-		if (pos == 1)
+		if (get_nb_components (instr) > 2)
 		then
-			res = "store_addr"
+			if (pos == 1 or pos > 3)
+			then
+				res = "compute"
+			end
+			if (pos == 2)
+			then
+				res = "store_addr"
+			end
+			if (pos == 3)
+			then
+				res = "store"
+			end
 		else
-			res = "store"
+			if (pos == 1)
+			then
+				res = "store_addr"
+			else
+				res = "store"
+			end
 		end
 	else if (instr:is_branch ())
 	then
@@ -218,7 +242,7 @@ function get_component_inputs (instr, pos)
 	comp_type = get_component_type (instr, pos)
 	operands = instr : get_operands ()
 
-	if ((instr : get_name () == "XORPS" or instr : get_name () == "XORPD" or instr : get_name () == "VXORPD" or instr : get_name () == "VXORPS") and comp_type == "nop")
+	if ((instr : get_name () == "XORPS" or instr : get_name () == "XORPD" or instr : get_name () == "VXORPD" or instr : get_name () == "VXORPS" or instr : get_name () == "XOR") and comp_type == "nop")
 	then
 		res = ""
 	elseif (comp_type == "load" or instr:get_name () == "LEA")
@@ -254,8 +278,13 @@ function get_component_outputs (instr, pos)
 
 	if (comp_type == "load")
 	then
-		operands = instr : get_operands ()
-		res = get_compute_operands (operands, "write")
+		if (get_nb_components (instr) >= 2)
+		then
+			res = ""
+		else
+			operands = instr : get_operands ()
+			res = get_compute_operands (operands, "write")
+		end
 	elseif (comp_type == "compute")
 	then
 		-- might need to modify "test" if integer op
@@ -296,6 +325,7 @@ function get_component_latency (instr, pos)
 	elseif (comp_type == "compute")
 	then
 		res = instr : get_dispatch () ["latency"]["max"]
+		--io.write ("haha " .. res .. " hehe")
 		if (is_avx_div (instr))
 		then
 			if ((get_fe_uops (instr) == 3 and pos == 1) or (get_fe_uops (instr) == 4 and pos == 2))
@@ -304,6 +334,10 @@ function get_component_latency (instr, pos)
 			else
 				res = math.floor (res / 2)
 			end
+		end
+		if (instr:is_store ())
+		then
+			res = 1
 		end
 	elseif (comp_type == "store_addr")
 	then
@@ -353,11 +387,12 @@ function get_component_nb_uops (instr, pos)
 end
 
 function get_compute_component_eligible_ports (instr, pos)
-	local res = "", i, ports, disp, uop_groups, id, uop_group, units, cpt
+	local res = "", i, ports, disp, uop_groups, id, uop_group, units, cpt, zpt
 
-	ports = {0, 0, 0, 0, 0, 0, 0}
-	saved_ports = {0, 0, 0, 0, 0, 0, 0}
-	cpt = pos
+	zpt = 0
+	ports = {0, 0, 0, 0, 0, 0, 0, 0}
+	saved_ports = {0, 0, 0, 0, 0, 0, 0, 0}
+	cpt = 1
 
 	disp = instr:get_dispatch ()
 
@@ -366,7 +401,7 @@ function get_compute_component_eligible_ports (instr, pos)
 		uop_groups = disp ["uops_groups"]
 		for id in pairs (uop_groups)
 		do
-			if (cpt >= pos)
+			if (cpt <= pos)
 			then
 				for i = 1, 8, 1	do ports [i] = 0 end
 
@@ -375,17 +410,19 @@ function get_compute_component_eligible_ports (instr, pos)
 
 				for id2 in pairs (units)
 				do
-					--print ("\n" .. id2 .. ": " .. units [id2])
+					--print ("\n Pos: " .. pos .. ", cpt: " .. cpt .. ", id2: "  .. id2 .. ": " .. units [id2] .. ", Zpt: " .. zpt .. "\n")
 					ports [units [id2] + 1] = "x"
 				end
 
-				cpt = cpt - 1
+				--cpt = cpt - 1
 												-- TODO: check if it works as intended for instructions with several components
 				if (ports [3] == 0 and ports [4] == 0 and ports [5] == 0)
 				then
 					for i = 1, 8, 1	do saved_ports [i] = ports [i] end
+					cpt = cpt + 1
 				end
 			end
+			zpt = zpt + 1
 		end
 	end
 
@@ -420,7 +457,7 @@ function is_avx_div (instr)
 
 	if (instr : get_name () == "VDIVPS" or instr : get_name () == "VDIVPD" or instr : get_name () == "VSQRTPS" or instr : get_name () == "VSQRTPD")
 	then
-		res = true
+			res = true
 	end
 
 	return res
@@ -452,7 +489,12 @@ function get_component_port_use (instr, pos)
 		res = "0 ,0 ,x ,x ,0 ,0 ,0 ,0"
 	elseif (comp_type == "store_addr")
 	then
-		res = "0 ,0 ,x ,x ,0 ,0 ,0 ,0"
+		if (uarch_c == Consts.x86_64.UARCH_HASWELL)
+		then
+			res = "0 ,0 ,x ,x ,0 ,0 ,0 ,x"
+		else
+			res = "0 ,0 ,x ,x ,0 ,0 ,0 ,0"
+		end
 	elseif (comp_type == "store")
 	then
 		res = "0 ,0 ,0 ,0 ,1 ,0 ,0 ,0"
@@ -499,7 +541,7 @@ function get_component_special (instr, pos)
 					nb = nb - 1
 				end
 			end
-			if (uarch_c == Consts.x86_64.UARCH_HASWELL)
+			if (uarch_c == Consts.x86_64.UARCH_HASWELL or uarch_c == Consts.x86_64.UARCH_IVY_BRIDGE)
 			then
 				if (nb <= 13)
 				then
@@ -565,7 +607,7 @@ for current_function in bin:functions () do
 								io.write (pad ("" .. ";", 1))
 								io.write (pad ("" .. ";", 1))
 								io.write (pad ("1" .. ";", 1))
-								io.write (pad (" , , , , , x, , " .. ";", 3))
+								io.write (pad (" , , , , ,x, , " .. ";", 3))
 								io.write (pad ("" .. ";", 1))								
 							else
 								type = get_component_type (instr, i)

@@ -23,13 +23,32 @@ if [[ "$ENABLE_SEP" == "1" ]]; then
 	./parse_sep_output.sh $res_path
 fi
 
-rm -f $res_path/likwid_report
+rm -f $res_path/likwid_report $res_path/likwid_counter_*
 
 counters=$( echo "$emon_counters" | tr "," " " | tr "." "_" | tr " " "\n" | sort --uniq | tr "\n" " " )
 sed 's/\./_/g' -i $res_path/emon_report
 
 	for counter in $counters
 	do
+		if [[ ( "$HOSTNAME" == "fxhaswell" ) && ( "$counter" == "UNC_CBO_CACHE_LOOKUP_ANY_I" || "$counter" == "UNC_CBO_CACHE_LOOKUP_ANY_MESI" ||  "$counter" == "UNC_CBO_EGRESS_ALLOCATION_AD_CORE" ||  "$counter" == "UNC_CBO_EGRESS_ALLOCATION_BL_CACHE" ||  "$counter" == "UNC_CBO_EGRESS_OCCUPANCY_AD_CORE" ||  "$counter" == "UNC_CBO_EGRESS_OCCUPANCY_BL_CACHE" ||  "$counter" == "UNC_CBO_INGRESS_ALLOCATION_IRQ" ||  "$counter" == "UNC_CBO_INGRESS_OCCUPANACY_IRQ" ||  "$counter" == "UNC_CBO_TOR_ALLOCATION_DRD" ||  "$counter" == "UNC_CBO_TOR_OCCUPANCY_DRD_VALID" ) ]]
+		then
+			echo "Special treatment for server uncore '$counter'"
+			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
+			#echo "debug values: '$values'"
+			for value in $values
+			do
+				val1=$( echo "$value" | cut -f1 -d${DELIM} )
+				val2=$( echo "$value" | cut -f2 -d${DELIM} )
+				val3=$( echo "$value" | cut -f3 -d${DELIM} )
+				val4=$( echo "$value" | cut -f4 -d${DELIM} )
+				echo "${counter}_0||$val1" >> $res_path/likwid_report
+				echo "${counter}_1||$val2" >> $res_path/likwid_report
+				echo "${counter}_2||$val3" >> $res_path/likwid_report
+				echo "${counter}_3||$val4" >> $res_path/likwid_report
+			done
+			continue
+		fi
+
 		if [[ "$counter" == "UNC_L4_REQUEST_RD_HIT" || "$counter" == "UNC_L4_REQUEST_WR_HIT" || "$counter" == "UNC_L4_REQUEST_WR_FILL" || "$counter" == "UNC_L4_REQUEST_RD_EVICT_LINE_TO_DRAM" || "$counter" == "UNC_CBO_L4_SUPERLINE_ALLOC_FAIL" ]]
 		then
 			echo "Special treatment for server uncore '$counter'"
@@ -160,7 +179,12 @@ sed 's/\./_/g' -i $res_path/emon_report
 		fi
 	done
 
+
 	echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM} > $res_path/counters.csv
+	if [[ "$HOSTNAME" == "fxhaswell" ]]
+	then
+		counters=$(echo $counters | sed 's:\(UNC_CBO_CACHE_LOOKUP_ANY_I\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_CACHE_LOOKUP_ANY_MESI\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_ALLOCATION_AD_CORE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_ALLOCATION_BL_CACHE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_OCCUPANCY_AD_CORE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_OCCUPANCY_BL_CACHE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_INGRESS_ALLOCATION_IRQ\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_INGRESS_OCCUPANACY_IRQ\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_TOR_ALLOCATION_DRD\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_TOR_OCCUPANCY_DRD_VALID\):\1_0 \1_1 \1_2 \1_3:')
+	fi
 
 	cp $res_path/cpi.csv $res_path/counters.csv
 	for counter in $counters
