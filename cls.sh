@@ -20,6 +20,10 @@ memory_loads="$4"
 frequencies="$5"
 runid="$6"
 
+echo "VV1: ${variants}"
+echo "SS1: ${data_sizes}"
+echo "ML: ${memory_loads}"
+
 set_prefetcher_bits() {
     bits="$1"
     hex_prefetcher_bits=$(printf "0x%x" ${bits})
@@ -380,7 +384,7 @@ ln -s "${new_cls_folder}" ${RUN_FOLDER}/${runid}
 
 shopt -s extglob
 # copy the source and make file for record
-cp ${codelet_folder}/codelet*.@(c|f90) "${new_cls_folder}"
+cp ${codelet_folder}/codelet*.@(c|f90|s) "${new_cls_folder}"
 cp ${codelet_folder}/Makefile "${new_cls_folder}"
 
 ./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
