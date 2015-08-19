@@ -457,22 +457,28 @@ run_codelets=(
     ptr_ld_branch
 )
 
+run_codelets=(
+    ptr_ld_branch
+)
+
 for codelet in ${run_codelets[@]}
 do
   codelet_path=${name2path[${codelet}]}
   sizes=${name2sizes[${codelet}]}
 #  echo ${codelet_path}
 #  ls ${codelet_path}
+#  echo "SS: ${sizes}"
 
   echo "Launching CLS on $codelet_path...for sizes $sizes"
 
 
   ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
-  ./cls.sh "$codelet_path" "$variants" "sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet_path/cls.log"
+  ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet_path/cls.log"
   res=$?
   if [[ "$res" != "0" ]]
       then
-      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
+#      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
+      ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
   fi
 done
 
