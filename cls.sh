@@ -1,7 +1,11 @@
 #!/bin/bash -l
 
 source ./const.sh
-source /opt/intel/sep/sep_vars.sh
+
+if [ -f /opt/intel/sep/sep_vars.sh ];
+then
+    source /opt/intel/sep/sep_vars.sh
+fi
 
 if [[ "$nb_args" != "6" ]]
 then
