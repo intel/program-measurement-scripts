@@ -221,7 +221,7 @@ MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --
 
 
 # Set the highest frequency the CPU can run (no Turbo-boost)
-if [[ "$HOSTANAME" == "fxilab147" ]] ; then
+if [[ "$HOSTNAME" == "fxilab147" ]] ; then
 	XP_HIGH_FREQ="2500000"
 else
 	XP_HIGH_FREQS=( $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies) )
