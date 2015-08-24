@@ -2,9 +2,9 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "2" ]]
+if [[ "$nb_args" != "3" ]]
 then
-	echo "ERROR! Invalid arguments (need the binary's path and the function's name)."
+	echo "ERROR! Invalid arguments (need the binary's path, the function's name and the data size)."
 	exit -1
 fi
 
@@ -12,20 +12,23 @@ fi
 binary_path=$( readlink -f "$1" )
 binary_folder=$( dirname "$binary_path" )
 function_name="$2"
-
+data_size="$3"
 
 declare -A count_values
-
 
 #echo "Generation of splitncount for '$binary_path' ('$function_name')"
 
 
 cd $binary_folder
+
+# Create the datasize file for codelet run
+echo "10 ${data_size}" > ./codelet.data
 $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
-
+echo HERE > /tmp/count.out.txt
+cat $PWD/$DECAN_REPORT >> /tmp/count.out.txt
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 if [[ "$decan_variants" == "" ]]
 then
@@ -33,7 +36,7 @@ then
 	exit -1
 fi
 rm -f $PWD/$DECAN_REPORT
-
+echo DONE >> /tmp/count.out.txt
 
 loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
 

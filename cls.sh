@@ -20,10 +20,6 @@ memory_loads="$4"
 frequencies="$5"
 runid="$6"
 
-echo "VV1: ${variants}"
-echo "SS1: ${data_sizes}"
-echo "ML: ${memory_loads}"
-
 set_prefetcher_bits() {
     bits="$1"
     hex_prefetcher_bits=$(printf "0x%x" ${bits})
@@ -76,8 +72,8 @@ find_num_repetitions_and_iterations () {
     repetitions=$(cat "${repetitions_history_file}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
     echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
     
-    echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name)..."
-    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name"  | grep ${DELIM})
+    echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
+    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" | grep ${DELIM})
     res=$?
     if [[ "$res" != "0" ]]
 	then
@@ -157,9 +153,10 @@ then
 	exit -1
 fi
 
+first_data_size=$( echo ${data_sizes} | awk '{print $1;}' )
 echo "------------------------------------------------------------"
-echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name)..."
-loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" )
+echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
+loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" )
 res=$?
 if [[ "$res" != "0" ]]
 then
