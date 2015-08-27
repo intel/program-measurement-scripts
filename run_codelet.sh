@@ -81,6 +81,8 @@ rm -f time.out
 res=$( echo "$res" | sort -k1n,1n )
 let "mean_line = ($META_REPETITIONS / 2) + 1"
 mean=$( echo "$res" | awk "NR==$mean_line" )
+echo MEAN: ${mean}
+echo ITERATION: ${iterations}
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
 echo -e "CPI \t'$normalized_mean'"

@@ -461,10 +461,10 @@ run_codelets=(
 #     hqr_13_de
 #     hqr_15_sr_se
 # )
-#run_codelets=(
-#    ptr_ld_branch
-#)
-#name2sizes[ptr_ld_branch]="200"
+run_codelets=(
+    ptr_ld_branch
+)
+name2sizes[ptr_ld_branch]="200"
 
 set -o pipefail # make sure pipe of tee would not reset return code.
 

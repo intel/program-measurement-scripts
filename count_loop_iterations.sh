@@ -2,9 +2,9 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "3" ]]
+if [[ "$nb_args" != "4" ]]
 then
-	echo "ERROR! Invalid arguments (need the binary's path, the function's name and the data size)."
+	echo "ERROR! Invalid arguments (need the binary's path, the function's name, the data size and repetition)."
 	exit -1
 fi
 
@@ -13,6 +13,8 @@ binary_path=$( readlink -f "$1" )
 binary_folder=$( dirname "$binary_path" )
 function_name="$2"
 data_size="$3"
+repetition="$4"
+
 
 declare -A count_values
 
@@ -22,7 +24,7 @@ declare -A count_values
 cd $binary_folder
 
 # Create the datasize file for codelet run
-echo "10 ${data_size}" > ./codelet.data
+echo "${repetition} ${data_size}" > ./codelet.data
 $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 

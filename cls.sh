@@ -61,6 +61,7 @@ find_num_repetitions_and_iterations () {
     iterations_for_file="$9"
 
     echo "Adjusting codelet parametres for the $variant variant ..."
+
     if [[ "${variant}" == "ORG" ]]; then
 	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
     else
@@ -73,7 +74,7 @@ find_num_repetitions_and_iterations () {
     echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
     
     echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
-    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" | grep ${DELIM})
+    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
     res=$?
     if [[ "$res" != "0" ]]
 	then
@@ -156,7 +157,8 @@ fi
 first_data_size=$( echo ${data_sizes} | awk '{print $1;}' )
 echo "------------------------------------------------------------"
 echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
-loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" )
+# Get the target loop with repetition of 10 to save time.
+loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" 10 )
 res=$?
 if [[ "$res" != "0" ]]
 then
