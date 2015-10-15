@@ -32,7 +32,8 @@ linear_clda_sizes="1000 10000"
 #ptr_sizes="800000"
 #ptr_sizes="100 200 400 600 800 1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000"
 #ptr_sizes="600 1000"
-ptr_sizes="200 1000 10000"
+#ptr_sizes="200 1000 10000"
+ptr_sizes="10000"
 #linear_sizes="400000"
 #linear_sizes="200000 400000 600000 800000"
 #linear_sizes="2000 10000"
@@ -62,6 +63,10 @@ linear_sizes="1000 10000 400000"
 
 
 #linear_sizes="1000 2000 4000 6000 8000 10000 20000 40000"
+#linear_sizes="200000"
+
+
+
 #quadratic_sizes="208 240 304 352 400 528 608 704 800 928 1008 1100 1200 1300 1400 1500 1600 1800 2000 2500 3000"
 #quadratic_sizes="800"
 #quadratic_sizes="1500 3000 6000"
@@ -81,10 +86,12 @@ linear_sizes="1000 10000 400000"
 quadratic_sizes="208 400 528"
 
 #quadratic_sizes="400 2500"
+#quadratic_sizes="3000"
 #memory_loads="0 99999"
 memory_loads="0"
 #frequencies="1200000 2800000"
-frequencies="2800000"
+#frequencies="2800000"
+frequencies="2500000"
 #frequencies="1200000 2000000 2800000"
 #frequencies="1200000 1300000 1400000 1500000 1700000 1800000 1900000 2000000 2100000 2200000 2300000 2500000 2600000 2700000 2800000"
 #frequencies="1200000"
@@ -95,7 +102,8 @@ ptr_codelets=""
 
 
 prefix="/nfs/fx/home/cwong29/working/NR-scripts"
-ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
+#ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
+ubmkprefix="${prefix}/nr-codelets/bws"
 nr_prefix="${prefix}/nr-codelets/numerical_recipes"
 saeed_prefix="${prefix}/intel_codelets"   
 
@@ -304,68 +312,85 @@ declare -A name2path
 declare -A name2sizes
 
 
-lin_s1_codelets=(
-    "balanc_3/balanc_3_sr_de" "balanc_3/balanc_3_sr_sVS_de" 
-    "elmhes_10/elmhes_10_sr_de" "elmhes_10/elmhes_10_sr_sVS_de" 
-    "four1_2/four1_2_sr_me"
-    "hqr_13/hqr_13_de" "hqr_13/hqr_13_sVS_de"
-    "mprove_9/mprove_9_sr_de" "mprove_9/mprove_9_sr_sVS_de"
-    "realft_4/realft_4_sr_de"
-    "svdcmp_13/svdcmp_13_sr_de" "svdcmp_13/svdcmp_13_sr_sVS_de"
-    "svdcmp_14/svdcmp_14_sr_de" "svdcmp_14/svdcmp_14_sr_sVS_de"
-    "toeplz_1/toeplz_1_de" "toeplz_1/toeplz_1_sVS_de"
-    "toeplz_2/toeplz_2_sr_de"
-    "toeplz_4/toeplz_4_sr_de"
-    "tridag_1/tridag_1_sr_de"
-    "tridag_2/tridag_2_sr_de"
-)
+# lin_s1_codelets=(
+#     "balanc_3/balanc_3_de" "balanc_3/balanc_3_sVS_de" 
+#     "balanc_3/balanc_3_ro_de" "balanc_3/balanc_3_ro_sVS_de" 
+#     "balanc_3/balanc_3_sr_de" "balanc_3/balanc_3_sr_sVS_de" 
+#     "elmhes_10/elmhes_10_sr_de" "elmhes_10/elmhes_10_sr_sVS_de" 
+#     "four1_2/four1_2_sr_me"
+#     "hqr_13/hqr_13_de" "hqr_13/hqr_13_sVS_de"
+#     "mprove_9/mprove_9_sr_de" "mprove_9/mprove_9_sr_sVS_de"
+#     "realft_4/realft_4_sr_de"
+#     "svdcmp_13/svdcmp_13_sr_de" "svdcmp_13/svdcmp_13_sr_sVS_de"
+#     "svdcmp_14/svdcmp_14_sr_de" "svdcmp_14/svdcmp_14_sr_sVS_de"
+#     "toeplz_1/toeplz_1_de" "toeplz_1/toeplz_1_sVS_de"
+#     "toeplz_2/toeplz_2_sr_de"
+#     "toeplz_4/toeplz_4_sr_de"
+#     "tridag_1/tridag_1_sr_de"
+#     "tridag_2/tridag_2_sr_de"
+# )
 
-saeed_lin_s1_codelets=(
-    "s1244/s1244_sr_se" "s1244/s1244_sr_sVS_se"
-    "s319/s319_sr_se" "s319/s319_sr_sVS_se"
-)
+# saeed_lin_s1_codelets=(
+#     "s1244/s1244_sr_se" "s1244/s1244_sr_sVS_se"
+#     "s319/s319_sr_se" "s319/s319_sr_sVS_se"
+# )
 
-lin_sclda_codelets=(
-    "elmhes_11/elmhes_11_sr_de" "elmhes_11/elmhes_11_sr_sVS_de"
-    "svdcmp_11/svdcmp_11_sr_de" "svdcmp_11/svdcmp_11_sr_sVS_de"
-    "svdcmp_6/svdcmp_6_de" "svdcmp_6/svdcmp_6_sVS_de"
-)
+# lin_sclda_codelets=(
+#     "elmhes_11/elmhes_11_sr_de" "elmhes_11/elmhes_11_sr_sVS_de"
+#     "svdcmp_11/svdcmp_11_sr_de" "svdcmp_11/svdcmp_11_sr_sVS_de"
+#     "svdcmp_6/svdcmp_6_de" "svdcmp_6/svdcmp_6_sVS_de"
+# )
 
-lin_slda_codelets=( "hqr_15/hqr_15_sr_se" )
+# lin_slda_codelets=( "hqr_15/hqr_15_sr_se" )
 
-quad_s1_codelets=(
-    "matadd_16/matadd_16_sr_de" "matadd_16/matadd_16_sr_sVS_de"
-    "mprove_8/mprove_8_sr_me" "mprove_8/mprove_8_sr_sVS_me"
-    "svbksb_3/svbksb_3_sr_se" "svbksb_3/svbksb_3_sr_sVS_se"
-)
+# quad_s1_codelets=(
+#     "matadd_16/matadd_16_sr_de" "matadd_16/matadd_16_sr_sVS_de"
+#     "mprove_8/mprove_8_sr_me" "mprove_8/mprove_8_sr_sVS_me"
+#     "svbksb_3/svbksb_3_sr_se" "svbksb_3/svbksb_3_sr_sVS_se"
+# )
 
-quad_slda_codelets=(
-    "lop_13/lop_13_sr_de" "lop_13/lop_13_sr_sVS_de"
-    "relax2_26/relax2_26_sr_de" "relax2_26/relax2_26_sr_sVS_de"
-    "rstrct_29/rstrct_29_sr_de" "rstrct_29/rstrct_29_sr_sVS_de"
-)
+# quad_slda_codelets=(
+#     "lop_13/lop_13_sr_de" "lop_13/lop_13_sr_sVS_de"
+#     "relax2_26/relax2_26_sr_de" "relax2_26/relax2_26_sr_sVS_de"
+#     "rstrct_29/rstrct_29_sr_de" "rstrct_29/rstrct_29_sr_sVS_de"
+# )
 
-quadt_s1_codelets=(
-    "hqr_12/hqr_12_se" "hqr_12/hqr_12_sVS_se"
-    "ludcmp_4/ludcmp_4_sr_se" "ludcmp_4/ludcmp_4_sr_sVS_se"
-)
+# quadt_s1_codelets=(
+#     "hqr_12/hqr_12_se" "hqr_12/hqr_12_sVS_se"
+#     "ludcmp_4/ludcmp_4_sr_se" "ludcmp_4/ludcmp_4_sr_sVS_se"
+# )
 
-ubmk_codelets=("ptr_ld_branch")
+# ubmk_codelets=("ptr_ld_branch")
 
+# This function should automatically add all the code information under the prefix path
 fill_codelet_maps()
 {
     cnt_prefix="$1"
     cnt_sizes="$2"
-    cnt_codelets=($3)
+#    cnt_codelets=($3)
 
-    cnt_codelets=(${cnt_codelets[@]/#/${cnt_prefix}\/})
+#    echo prefix ${cnt_prefix}
 
-    for codelet_path in ${cnt_codelets[@]}
+    # include trailing / to exclude files
+    all_codelets=($( ls -d ${cnt_prefix}/*/*/ ))
+    # remove trailing /
+    all_codelets=(${all_codelets[@]/%\//})
+
+#    echo ALL codelets: ${all_codelets[@]}
+
+
+#    cnt_codelets=(${cnt_codelets[@]/#/${cnt_prefix}\/})
+#    echo CNT_codelets ${cnt_codelets[@]}
+
+#    exit
+
+#    for codelet_path in ${cnt_codelets[@]}
+    for codelet_path in ${all_codelets[@]}
     do
       codelet_name=$(basename ${codelet_path})
-#      echo ${codelet_name}
-#      echo ${codelet_path}
-#      echo ${cnt_sizes}
+#       echo CN ${codelet_name}
+#       echo CP ${codelet_path}
+#       echo CS ${cnt_sizes}
       name2path+=([${codelet_name}]=${codelet_path})
       name2sizes+=([${codelet_name}]=${cnt_sizes})
     done
@@ -373,17 +398,110 @@ fill_codelet_maps()
 }
 
 
-fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}" "$(IFS=' '; echo ${lin_s1_codelets[@]})"
-fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}" "$(IFS=' '; echo ${saeed_lin_s1_codelets[@]})"
-fill_codelet_maps ${lin_slda_prefix} "${linear_sizes}" "$(IFS=' '; echo ${lin_slda_codelets[@]})"
-fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}" "$(IFS=' '; echo ${lin_sclda_codelets[@]})"
-fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_s1_codelets[@]})"
-fill_codelet_maps ${quad_slda_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_slda_codelets[@]})"
-fill_codelet_maps ${quadt_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quadt_s1_codelets[@]})"
-fill_codelet_maps ${ubmkprefix} "${ptr_sizes}" "$(IFS=' '; echo ${ubmk_codelets[@]})"
+# fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}" "$(IFS=' '; echo ${lin_s1_codelets[@]})"
+# fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}" "$(IFS=' '; echo ${saeed_lin_s1_codelets[@]})"
+# fill_codelet_maps ${lin_slda_prefix} "${linear_sizes}" "$(IFS=' '; echo ${lin_slda_codelets[@]})"
+# fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}" "$(IFS=' '; echo ${lin_sclda_codelets[@]})"
+# fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_s1_codelets[@]})"
+# fill_codelet_maps ${quad_slda_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_slda_codelets[@]})"
+# fill_codelet_maps ${quadt_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quadt_s1_codelets[@]})"
+# fill_codelet_maps ${ubmkprefix} "${ptr_sizes}" "$(IFS=' '; echo ${ubmk_codelets[@]})"
 
-name2sizes[toeplz_1_de]="1000 4000 10000 400000"
-name2sizes[toeplz_1_sVS_de]="1000 4000 10000 400000"
+fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}"
+fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}"
+fill_codelet_maps ${lin_slda_prefix} "${linear_sizes}"
+fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}"
+fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${quad_slda_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${quadt_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${ubmkprefix} "${ptr_sizes}"
+
+name2sizes[rstrct_29_de]="2500"
+name2sizes[rstrct_29_sVS_de]="2500"
+name2sizes[hqr_15_se]="6000"
+name2sizes[hqr_15_sr_se]="6000"
+
+
+
+
+
+name2sizes[rstrct_29_de]="355"
+name2sizes[rstrct_29_sVS_de]="355"
+name2sizes[rstrct_29_sr_de]="355"
+name2sizes[rstrct_29_sr_sVS_de]="355"
+# name2sizes[relax2_26_sr_de]="304"
+# name2sizes[relax2_26_sr_sVS_de]="304"
+# name2sizes[relax2_26_de]="304"
+# name2sizes[relax2_26_sVS_de]="304"
+# name2sizes[s319_sr_se]="200000"
+# name2sizes[s319_sr_sVS_se]="200000"
+# name2sizes[s319_se]="200000"
+# name2sizes[s319_sVS_se]="200000"
+# name2sizes[s319_sr_se]="100000"
+# name2sizes[s319_sr_sVS_se]="100000"
+# name2sizes[s319_se]="100000"
+# name2sizes[s319_sVS_se]="100000"
+name2sizes[s319_sr_se]="60000"
+name2sizes[s319_sr_sVS_se]="60000"
+name2sizes[s319_se]="60000"
+name2sizes[s319_sVS_se]="60000"
+name2sizes[s1244_sr_se]="59961"
+name2sizes[s1244_sr_sVS_se]="59961"
+name2sizes[s1244_se]="59961"
+name2sizes[s1244_sVS_se]="59961"
+
+name2sizes[matadd-flb_16_sr_de]="352"
+name2sizes[matadd-flb_16_sr_sVS_de]="352"
+name2sizes[matadd-flb_16_de]="352"
+name2sizes[matadd-flb_16_sVS_de]="352"
+name2sizes[ludcmp-sq_4_se]="544"
+name2sizes[ludcmp-sq_4_sVS_se]="544"
+name2sizes[ludcmp-sq_4_sr_se]="544"
+name2sizes[ludcmp-sq_4_sr_sVS_se]="544"
+
+
+# mating matadd-flb and lud4-sq datasizes
+name2sizes[matadd_16_sr_de]="352"
+name2sizes[matadd_16_sr_sVS_de]="352"
+name2sizes[matadd_16_de]="352"
+name2sizes[matadd_16_sVS_de]="352"
+name2sizes[ludcmp_4_se]="544"
+name2sizes[ludcmp_4_sVS_se]="544"
+name2sizes[ludcmp_4_sr_se]="544"
+name2sizes[ludcmp_4_sr_sVS_se]="544"
+
+# new sq variant and matching unmodified runs.
+
+name2sizes[hqr-sq_12_se]="544"
+name2sizes[hqr-sq_12_sVS_se]="544"
+name2sizes[hqr_12_se]="544"
+name2sizes[hqr_12_sVS_se]="544"
+
+# Get rid of peel
+name2sizes[relax2_26_sr_de]="306"
+name2sizes[relax2_26_sr_sVS_de]="306"
+name2sizes[relax2_26_de]="306"
+name2sizes[relax2_26_sVS_de]="306"
+
+name2sizes[lop_13_de]="355"
+name2sizes[lop_13_sVS_de]="355"
+name2sizes[lop_13_sr_de]="355"
+name2sizes[lop_13_sr_sVS_de]="355"
+
+
+
+name2sizes[toeplz_4_de]="200000"
+name2sizes[toeplz_4_sr_de]="200000"
+name2sizes[tridag_2_de]="200000"
+name2sizes[tridag_2_sr_de]="200000"
+name2sizes[mprove_9_de]="200000"
+name2sizes[mprove_9_sVS_de]="200000"
+name2sizes[mprove_9_sr_de]="200000"
+name2sizes[mprove_9_sr_sVS_de]="200000"
+
+
+#name2sizes[toeplz_1_de]="1000 4000 10000 400000"
+#name2sizes[toeplz_1_sVS_de]="1000 4000 10000 400000"
 
 
 
@@ -442,6 +560,31 @@ name2sizes[toeplz_1_sVS_de]="1000 4000 10000 400000"
 # nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sr_se
 # nr-codelets/numerical_recipes/2DT_loop-Stride_1/ludcmp_4/ludcmp_4_sr_sVS_se
 
+
+orig_only_codelets=(
+    hqr_13_de hqr_13_sVS_de
+    toeplz_1_de toeplz_1_sVS_de
+    svdcmp_6_de svdcmp_6_sVS_de
+    hqr_12_se hqr_12_sVS_se 
+    ptr_ld_branch
+)
+
+sr_codelets=(
+    balanc_3_sr_de balanc_3_sr_sVS_de elmhes_10_sr_de elmhes_10_sr_sVS_de four1_2_sr_me 
+    mprove_9_sr_de mprove_9_sr_sVS_de realft_4_sr_de
+    svdcmp_13_sr_de svdcmp_13_sr_sVS_de svdcmp_14_sr_de svdcmp_14_sr_sVS_de
+    toeplz_2_sr_de toeplz_4_sr_de
+    tridag_1_sr_de tridag_2_sr_de
+    s1244_sr_se s1244_sr_sVS_se s319_sr_se s319_sr_sVS_se
+    elmhes_11_sr_de elmhes_11_sr_sVS_de svdcmp_11_sr_de svdcmp_11_sr_sVS_de 
+    hqr_15_sr_se
+    matadd_16_sr_de matadd_16_sr_sVS_de mprove_8_sr_me mprove_8_sr_sVS_me svbksb_3_sr_se svbksb_3_sr_sVS_se
+    lop_13_sr_de lop_13_sr_sVS_de relax2_26_sr_de relax2_26_sr_sVS_de rstrct_29_sr_de rstrct_29_sr_sVS_de
+    ludcmp_4_sr_se ludcmp_4_sr_sVS_se
+)
+ro_codelets=(${sr_codelets[@]/_sr_/_ro_})
+orig_codelets=(${sr_codelets[@]/_sr_/_} ${orig_only_codelets[@]})
+
 run_codelets=(
     balanc_3_sr_de balanc_3_sr_sVS_de elmhes_10_sr_de elmhes_10_sr_sVS_de four1_2_sr_me 
     hqr_13_de hqr_13_sVS_de mprove_9_sr_de mprove_9_sr_sVS_de realft_4_sr_de
@@ -457,16 +600,81 @@ run_codelets=(
     ptr_ld_branch
 )
 
-# run_codelets=(
-#     hqr_13_de
-#     hqr_15_sr_se
+#variants="DL1"
+
+# run_codelets=( 
+# #    relax2_26_sr_de relax2_26_sr_sVS_de
+# #    relax2_26_de  relax2_26_sVS_de
+
+# #    rstrct_29_sr_de rstrct_29_sr_sVS_de
+# #    rstrct_29_de  rstrct_29_sVS_de
+#     matadd-flb_16_sr_de matadd-flb_16_sr_sVS_de  matadd-flb_16_de matadd-flb_16_sVS_de
+#     ludcmp-sq_4_se ludcmp-sq_4_sVS_se ludcmp-sq_4_sr_se ludcmp-sq_4_sr_sVS_se
+#     s319_sr_se  s319_sr_sVS_se
+#     s319_se s319_sVS_se
+#     s1244_se s1244_sVS_se
+#     s1244_sr_se s1244_sr_sVS_se  
+
 # )
-run_codelets=(
-    ptr_ld_branch
+
+run_codelets=( 
+    lop_13_de lop_13_sVS_de lop_13_sr_de lop_13_sr_sVS_de
+    relax2_26_de relax2_26_sVS_de relax2_26_sr_de relax2_26_sr_sVS_de
+    toeplz_4_de toeplz_4_sr_de
+    tridag_2_de tridag_2_sr_de
+    mprove_9_de mprove_9_sVS_de mprove_9_sr_de mprove_9_sr_sVS_de
+    hqr-sq_12_se hqr-sq_12_sVS_se
+
+    matadd_16_de matadd_16_sVS_de matadd_16_sr_de matadd_16_sr_sVS_de
+    ludcmp_4_se ludcmp_4_sVS_se ludcmp_4_sr_se ludcmp_4_sr_sVS_se
+    hqr_12_se hqr_12_sVS_se
 )
-name2sizes[ptr_ld_branch]="200"
+
+
+# run_codelets=( 
+#     ${sr_codelets[@]} 
+# #    ${ro_codelets[@]}
+# #    ${orig_codelets[@]} 
+# )
+
+# run_codelets=( 
+#  s1244_se s1244_sVS_se  s319_se s319_sVS_se
+#  s1244_sr_se s1244_sr_sVS_se  s319_sr_se s319_sr_sVS_se
+# )
+
+
+# run_codelets=(
+#     balanc_3_sr_de balanc_3_sr_sVS_de    
+#     balanc_3_ro_de balanc_3_ro_sVS_de
+#     balanc_3_de balanc_3_sVS_de
+#     ptr_ld_branch
+# )
+
+#  run_codelets=(
+# # #     hqr_13_de
+# #     hqr_15_sr_se
+# #     hqr_15_se
+#      svbksb_3_se svbksb_3_sVS_se
+# )
+
+# run_codelets=(
+# #    ptr_ld_branch
+# #    ptr2_ld_branch
+# #    ptr3_ld_branch
+# #    ptr4_ld_branch
+#     ptr5_ld_branch
+#     ptr6_ld_branch
+#     ptr7_ld_branch
+#     ptr8_ld_branch
+#     ptr9_ld_branch
+#     ptr10_ld_branch
+#     ptr11_ld_branch
+# )
+#name2sizes[ptr_ld_branch]="200"
 
 set -o pipefail # make sure pipe of tee would not reset return code.
+
+
 
 for codelet in ${run_codelets[@]}
 do
@@ -477,7 +685,6 @@ do
 #  echo "SS: ${sizes}"
 
   echo "Launching CLS on $codelet_path...for sizes $sizes"
-
 
   ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
 
@@ -491,47 +698,47 @@ do
 done
 
 
-exit
+# exit
 
 
 
-### Added above
+# ### Added above
 
-for codelet in $linear_codelets
-do
-	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
-	#./cls_get_metrics.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
-	# &> "$codelet/cls.log"
-	res=$?
-	if [[ "$res" != "0" ]]
-	then
-		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
-	fi
-done
+# for codelet in $linear_codelets
+# do
+# 	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
+# 	./cls.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
+# 	#./cls_get_metrics.sh "$codelet" "$variants" "$linear_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
+# 	# &> "$codelet/cls.log"
+# 	res=$?
+# 	if [[ "$res" != "0" ]]
+# 	then
+# 		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
+# 	fi
+# done
 
-for codelet in $quadratic_codelets
-do
-	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
-	# &> "$codelet/cls.log"
-	res=$?
-	if [[ "$res" != "0" ]]
-	then
-		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
-	fi
-done
-for codelet in $ptr_codelets
-do
-	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
-	./cls.sh "$codelet" "$variants" "$ptr_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
-	# &> "$codelet/cls.log"
-	res=$?
-	if [[ "$res" != "0" ]]
-	then
-		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
-	fi
-done
+# for codelet in $quadratic_codelets
+# do
+# 	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
+# 	./cls.sh "$codelet" "$variants" "$quadratic_sizes" "$memory_loads" "$frequencies" "${runId}" | tee "$codelet/cls.log"
+# 	# &> "$codelet/cls.log"
+# 	res=$?
+# 	if [[ "$res" != "0" ]]
+# 	then
+# 		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
+# 	fi
+# done
+# for codelet in $ptr_codelets
+# do
+# 	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
+# 	./cls.sh "$codelet" "$variants" "$ptr_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
+# 	# &> "$codelet/cls.log"
+# 	res=$?
+# 	if [[ "$res" != "0" ]]
+# 	then
+# 		echo -e "\tAn error occured! Check '$codelet/cls.log' for more information."
+# 	fi
+# done
 
 
 }
