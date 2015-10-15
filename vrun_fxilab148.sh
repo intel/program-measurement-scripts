@@ -617,18 +617,18 @@ run_codelets=(
 
 # )
 
-run_codelets=( 
-    lop_13_de lop_13_sVS_de lop_13_sr_de lop_13_sr_sVS_de
-    relax2_26_de relax2_26_sVS_de relax2_26_sr_de relax2_26_sr_sVS_de
-    toeplz_4_de toeplz_4_sr_de
-    tridag_2_de tridag_2_sr_de
-    mprove_9_de mprove_9_sVS_de mprove_9_sr_de mprove_9_sr_sVS_de
-    hqr-sq_12_se hqr-sq_12_sVS_se
+# run_codelets=( 
+#     lop_13_de lop_13_sVS_de lop_13_sr_de lop_13_sr_sVS_de
+#     relax2_26_de relax2_26_sVS_de relax2_26_sr_de relax2_26_sr_sVS_de
+#     toeplz_4_de toeplz_4_sr_de
+#     tridag_2_de tridag_2_sr_de
+#     mprove_9_de mprove_9_sVS_de mprove_9_sr_de mprove_9_sr_sVS_de
+#     hqr-sq_12_se hqr-sq_12_sVS_se
 
-    matadd_16_de matadd_16_sVS_de matadd_16_sr_de matadd_16_sr_sVS_de
-    ludcmp_4_se ludcmp_4_sVS_se ludcmp_4_sr_se ludcmp_4_sr_sVS_se
-    hqr_12_se hqr_12_sVS_se
-)
+#     matadd_16_de matadd_16_sVS_de matadd_16_sr_de matadd_16_sr_sVS_de
+#     ludcmp_4_se ludcmp_4_sVS_se ludcmp_4_sr_se ludcmp_4_sr_sVS_se
+#     hqr_12_se hqr_12_sVS_se
+# )
 
 
 # run_codelets=( 
@@ -643,12 +643,12 @@ run_codelets=(
 # )
 
 
-# run_codelets=(
+ run_codelets=(
 #     balanc_3_sr_de balanc_3_sr_sVS_de    
 #     balanc_3_ro_de balanc_3_ro_sVS_de
 #     balanc_3_de balanc_3_sVS_de
-#     ptr_ld_branch
-# )
+     ptr_ld_branch
+ )
 
 #  run_codelets=(
 # # #     hqr_13_de
