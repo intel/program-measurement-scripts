@@ -500,7 +500,12 @@ function get_component_port_use (instr, pos)
 		res = "0 ,0 ,0 ,0 ,1 ,0 ,0 ,0"
 	elseif (comp_type == "branch" or is_macrofused (instr))
 	then
-		res = "0 ,0 ,0 ,0 ,0 ,1 ,0 ,0"
+		if (uarch_c == Consts.x86_64.UARCH_HASWELL)
+		then
+			res = "0 ,0 ,0 ,0 ,0 ,x ,x ,0"
+		else
+			res = "0 ,0 ,0 ,0 ,0 ,1 ,0 ,0"
+		end
 	elseif (comp_type == "compute")
 	then
 		--res = "? ,? ,0 ,0 ,0 ,? ,0 ,0"
@@ -522,7 +527,7 @@ function get_component_special (instr, pos)
 
 	if (comp_type == "load")
 	then
-		if (instr : uses_YMM () and (string.find (instr : get_name (), "PS") ~= nil or string.find (instr : get_name (), "PD") ~= nil))
+		if (uarch_c ~= Consts.x86_64.UARCH_HASWELL and instr : uses_YMM () and (string.find (instr : get_name (), "PS") ~= nil or string.find (instr : get_name (), "PD") ~= nil))
 		then
 			res = "avx_mem:2"
 		end
