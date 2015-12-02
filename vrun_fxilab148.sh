@@ -27,13 +27,15 @@ variants="ORG"
 #linear_sizes="1000"
 #linear_sizes="400 2000 10000"
 linear_clda_sizes="1000 10000"
-#ptr_sizes="400 2000 10000 800000"
-#ptr_sizes="10000 800000"
-#ptr_sizes="800000"
-#ptr_sizes="100 200 400 600 800 1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000"
-#ptr_sizes="600 1000"
-#ptr_sizes="200 1000 10000"
-ptr_sizes="10000"
+#ubmk_sizes="400 2000 10000 800000"
+#ubmk_sizes="10000 800000"
+#ubmk_sizes="800000"
+#ubmk_sizes="100 200 400 600 800 1000 2000 4000 6000 8000 10000 20000 40000 60000 80000 100000 200000"
+#ubmk_sizes="600 1000"
+#ubmk_sizes="200 1000 10000"
+#ubmk_sizes="10000"
+ubmk_sizes="100000 200000"
+
 #linear_sizes="400000"
 #linear_sizes="200000 400000 600000 800000"
 #linear_sizes="2000 10000"
@@ -405,7 +407,7 @@ fill_codelet_maps()
 # fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_s1_codelets[@]})"
 # fill_codelet_maps ${quad_slda_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quad_slda_codelets[@]})"
 # fill_codelet_maps ${quadt_s1_prefix} "${quadratic_sizes}" "$(IFS=' '; echo ${quadt_s1_codelets[@]})"
-# fill_codelet_maps ${ubmkprefix} "${ptr_sizes}" "$(IFS=' '; echo ${ubmk_codelets[@]})"
+# fill_codelet_maps ${ubmkprefix} "${ubmk_sizes}" "$(IFS=' '; echo ${ubmk_codelets[@]})"
 
 fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}"
@@ -414,7 +416,7 @@ fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}"
 fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}"
 fill_codelet_maps ${quad_slda_prefix} "${quadratic_sizes}"
 fill_codelet_maps ${quadt_s1_prefix} "${quadratic_sizes}"
-fill_codelet_maps ${ubmkprefix} "${ptr_sizes}"
+fill_codelet_maps ${ubmkprefix} "${ubmk_sizes}"
 
 name2sizes[rstrct_29_de]="2500"
 name2sizes[rstrct_29_sVS_de]="2500"
@@ -458,6 +460,7 @@ name2sizes[ludcmp-sq_4_se]="544"
 name2sizes[ludcmp-sq_4_sVS_se]="544"
 name2sizes[ludcmp-sq_4_sr_se]="544"
 name2sizes[ludcmp-sq_4_sr_sVS_se]="544"
+name2sizes[ludcmp-sq-no-outer_4_sr_sVS_se]="544"
 
 
 # mating matadd-flb and lud4-sq datasizes
@@ -631,11 +634,11 @@ run_codelets=(
 # )
 
 
-# run_codelets=( 
-#     ${sr_codelets[@]} 
+run_codelets=( 
+     ${sr_codelets[@]} 
 # #    ${ro_codelets[@]}
-# #    ${orig_codelets[@]} 
-# )
+    ${orig_codelets[@]} 
+)
 
 # run_codelets=( 
 #  s1244_se s1244_sVS_se  s319_se s319_sVS_se
@@ -643,12 +646,32 @@ run_codelets=(
 # )
 
 
- run_codelets=(
+# run_codelets=(
 #     balanc_3_sr_de balanc_3_sr_sVS_de    
 #     balanc_3_ro_de balanc_3_ro_sVS_de
 #     balanc_3_de balanc_3_sVS_de
-     ptr_ld_branch
- )
+#     ptr_ld_branch
+# )
+
+#run_codelets=(
+#    ludcmp_4_sr_sVS_se
+#    s1244_sr_se
+#    s1244_sr_sVS_se
+#    s1244_se
+#    s1244_sVS_se
+#    s319_sVS_se
+#    s319_se
+#    s319_sr_sVS_se
+#    s319_sr_se
+#    rstrct_29_sr_de
+#    rstrct_29_sr_sVS_de
+#    mprove_9_sr_sVS_de
+#    lop_13_sr_de
+#     mprove_9_de mprove_9_sVS_de mprove_9_sr_de mprove_9_sr_sVS_de
+#     toeplz_4_de toeplz_4_sr_de
+#     tridag_2_de tridag_2_sr_de
+#)
+
 
 #  run_codelets=(
 # # #     hqr_13_de
@@ -670,10 +693,352 @@ run_codelets=(
 #     ptr10_ld_branch
 #     ptr11_ld_branch
 # )
+
+# run_codelets=(
+#     ptr_fpld_branch
+# #    movq_1Sx1
+#     ptr1_movaps-2rip_branch
+#     ptr2_movaps-2rip_branch
+#     ptr3_movaps-2rip_branch
+#     ptr4_movaps-2rip_branch
+#     ptr5_movaps-2rip_branch
+#     ptr6_movaps-2rip_branch
+#     ptr7_movaps-2rip_branch
+#     ptr8_movaps-2rip_branch
+#     ptr9_movaps-2rip_branch
+#     ptr10_movaps-2rip_branch
+#     ptr11_movaps-2rip_branch
+
+# #    ptr1_movsd_branch
+
+# #    ptr_ld_branch
+
+
+# #    ptr3_ld_branch
+    
+# #    ptr5_ld_branch
+    
+# #    ptr7_ld_branch
+    
+# #    ptr9_ld_branch
+# #    ptr10_ld_branch
+# #    loads_1Sx4-s64-movaps
+# #    loads_2Sx4-s64-movaps
+# #    loads_4Sx4-s64-movaps
+
+# #     ptr2_ld_branch
+# #     ptr4_ld_branch
+# #     ptr6_ld_branch
+# #     ptr8_ld_branch
+
+# #    hqr_12_sVS_se 
+# #    loads_1Sx4-movaps
+# #     loads_1Sx4-movss
+
+# #    loads_1Sx4-movsd
+
+# #  loads_1Sx4-movsd_rip loads_1Sx4-movss_rip loads_1Sx4-movups_rip
+# # loads_2Sx4-movaps_rip loads_2Sx4-movsd_rip loads_2Sx4-movss_rip loads_2Sx4-movups_rip
+# # loads_4Sx4-movaps_rip loads_4Sx4-movsd_rip loads_4Sx4-movss_rip loads_4Sx4-movups_rip
+# )
+
 #name2sizes[ptr_ld_branch]="200"
+name2sizes[ptr_ld_branch]="200 1000 10000"
+name2sizes[ptr_fpld_branch]="200 1000 10000"
+name2sizes[movq_1Sx1]="200 1000 10000"
+name2sizes[ptr2_ld_branch]="200 1000 10000"
+name2sizes[ptr3_ld_branch]="200 1000 10000"
+name2sizes[ptr4_ld_branch]="200 1000 10000"
+name2sizes[ptr5_ld_branch]="200 1000 10000"
+name2sizes[ptr6_ld_branch]="200 1000 10000"
+name2sizes[ptr7_ld_branch]="200 1000 10000"
+name2sizes[ptr8_ld_branch]="200 1000 10000"
+name2sizes[ptr9_ld_branch]="200 1000 10000"
+name2sizes[ptr10_ld_branch]="200 1000 10000"
+name2sizes[loads_1Sx4-movaps]="2000 100000 200000"
+name2sizes[loads_1Sx4-movss]="2000 100000 200000"
+name2sizes[loads_1Sx4-movsd]="2000 100000 200000"
+name2sizes[loads_1Sx4-s64-movaps]="2000 100000 200000"
+name2sizes[loads_2Sx4-s64-movaps]="2000 100000 200000"
+name2sizes[loads_4Sx4-s64-movaps]="2000 100000 200000"
+
+name2sizes[ptr1_movaps_branch]="200 1000 10000"
+name2sizes[ptr2_movaps_branch]="200 1000 10000"
+name2sizes[ptr3_movaps_branch]="200 1000 10000"
+name2sizes[ptr4_movaps_branch]="200 1000 10000"
+name2sizes[ptr5_movaps_branch]="200 1000 10000"
+name2sizes[ptr6_movaps_branch]="200 1000 10000"
+name2sizes[ptr7_movaps_branch]="200 1000 10000"
+name2sizes[ptr8_movaps_branch]="200 1000 10000"
+name2sizes[ptr9_movaps_branch]="200 1000 10000"
+name2sizes[ptr10_movaps_branch]="200 1000 10000"
+name2sizes[ptr11_movaps_branch]="200 1000 10000"
+
+name2sizes[ptr1_movaps_branch]="10000"
+name2sizes[ptr2_movaps_branch]="10000"
+name2sizes[ptr3_movaps_branch]="10000"
+name2sizes[ptr4_movaps_branch]="10000"
+name2sizes[ptr5_movaps_branch]="10000"
+name2sizes[ptr6_movaps_branch]="10000"
+name2sizes[ptr7_movaps_branch]="10000"
+name2sizes[ptr8_movaps_branch]="10000"
+name2sizes[ptr9_movaps_branch]="10000"
+name2sizes[ptr10_movaps_branch]="10000"
+name2sizes[ptr11_movaps_branch]="10000"
+
+
+name2sizes[ptr1_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr2_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr3_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr4_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr5_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr6_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr7_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr8_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr9_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr10_movaps-2rip_branch]="200 1000 10000"
+name2sizes[ptr11_movaps-2rip_branch]="200 1000 10000"
+
+
+name2sizes[ptr2_movaps-15lfbhit-off0_branch]="10000"
+
+
+name2sizes[ptr2_movaps-15rip_branch]="10000"
+
+name2sizes[ptr2_movaps-1lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-2lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-3lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-4lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-5lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-6lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-7lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-8lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-9lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-10lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-11lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-12lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-13lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-14lfbhit_branch]="10000"
+name2sizes[ptr2_movaps-15lfbhit_branch]="10000"
+
+name2sizes[ptr1_movaps-1lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-2lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-3lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-4lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-5lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-6lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-7lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-8lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-9lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-10lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-11lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-12lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-13lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-14lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-15lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-16lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-17lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-18lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-19lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-20lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-21lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-22lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-23lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-24lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-25lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-26lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-27lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-28lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-29lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-30lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-31lfbhit_branch]="10000"
+name2sizes[ptr1_movaps-32lfbhit_branch]="10000"
+
+# name2sizes[ptr1_movaps-1lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-2lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-3lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-4lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-5lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-6lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-7lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-8lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-9lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-10lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-11lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-12lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-13lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-14lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-15lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-16lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-17lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-18lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-19lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-20lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-21lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-22lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-23lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-24lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-25lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-26lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-27lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-28lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-29lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-30lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-31lfbhit_branch]="200"
+# name2sizes[ptr1_movaps-32lfbhit_branch]="200"
+
+
+name2sizes[ptr4_movaps-1lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-2lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-3lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-4lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-5lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-6lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-7lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-8lfbhit_branch]="10000"
+name2sizes[ptr4_movaps-9lfbhit_branch]="10000"
+
+
+
+# Switched focus to 2D
+run_codelets=(
+#hqr-sq_12_se hqr-sq_12_sVS_se
+#hqr-sq-no-tail_12_se hqr-sq-no-tail_12_sVS_se
+#hqr-sq-no-tail_12_se hqr-sq-no-tail_12_sVS_se
+#hqr-1d_12_se hqr-1d_12_sVS_se
+#hqr-1d_12_fp-w-rip-sVS_se
+#hqr-1d_12_fp-no-rip-sVS_se
+#hqr-1d_12_ls-sVS_se
+#hqr-1d_12_no-andps-sVS_se
+#hqr-1d_12_no-red-sVS_se
+#hqr-1d_12_no-rip-sVS_se
+#hqr-1d_12_sU8-sVS_se
+#hqr-1ds64_12_sVS_se
+#hqr-1ds64_12_ls-sVS_se
+#ludcmp-sq_4_sr_sVS_se
+#ludcmp-sq-no-outer_4_sr_sVS_se
+
+
+#ptr1_movaps-15lfbhit_branch
+
+#ptr2_movaps-15rip_branch
+#ptr2_movaps-15lfbhit-off0_branch
+
+
+
+# ptr1_movaps-1lfbhit_branch
+# ptr1_movaps-2lfbhit_branch
+# ptr1_movaps-3lfbhit_branch
+# ptr1_movaps-4lfbhit_branch
+# ptr1_movaps-5lfbhit_branch
+# ptr1_movaps-6lfbhit_branch
+# ptr1_movaps-7lfbhit_branch
+# ptr1_movaps-8lfbhit_branch
+# ptr1_movaps-9lfbhit_branch
+# ptr1_movaps-10lfbhit_branch
+# ptr1_movaps-11lfbhit_branch
+# ptr1_movaps-12lfbhit_branch
+# ptr1_movaps-13lfbhit_branch
+# ptr1_movaps-14lfbhit_branch
+# ptr1_movaps-15lfbhit_branch
+# ptr1_movaps-16lfbhit_branch
+# ptr1_movaps-17lfbhit_branch
+# ptr1_movaps-18lfbhit_branch
+# ptr1_movaps-19lfbhit_branch
+
+# ptr1_movaps-20lfbhit_branch
+# ptr1_movaps-21lfbhit_branch
+# ptr1_movaps-22lfbhit_branch
+# ptr1_movaps-23lfbhit_branch
+# ptr1_movaps-24lfbhit_branch
+# ptr1_movaps-25lfbhit_branch
+# ptr1_movaps-26lfbhit_branch
+# ptr1_movaps-27lfbhit_branch
+# ptr1_movaps-28lfbhit_branch
+# ptr1_movaps-29lfbhit_branch
+# ptr1_movaps-30lfbhit_branch
+# ptr1_movaps-31lfbhit_branch
+# ptr1_movaps-32lfbhit_branch
+
+# ptr2_movaps-1lfbhit_branch
+# ptr2_movaps-2lfbhit_branch
+# ptr2_movaps-3lfbhit_branch
+# ptr2_movaps-4lfbhit_branch
+# ptr2_movaps-5lfbhit_branch
+# ptr2_movaps-6lfbhit_branch
+# ptr2_movaps-7lfbhit_branch
+# ptr2_movaps-8lfbhit_branch
+# ptr2_movaps-9lfbhit_branch
+# ptr2_movaps-10lfbhit_branch
+# ptr2_movaps-11lfbhit_branch
+# ptr2_movaps-12lfbhit_branch
+# ptr2_movaps-13lfbhit_branch
+# ptr2_movaps-14lfbhit_branch
+# ptr2_movaps-15lfbhit_branch
+
+
+# ptr4_movaps-1lfbhit_branch
+# ptr4_movaps-2lfbhit_branch
+# ptr4_movaps-3lfbhit_branch
+# ptr4_movaps-4lfbhit_branch
+# ptr4_movaps-5lfbhit_branch
+# ptr4_movaps-6lfbhit_branch
+# ptr4_movaps-7lfbhit_branch
+# ptr4_movaps-8lfbhit_branch
+# ptr4_movaps-9lfbhit_branch
+
+    ptr1_movaps_branch
+    ptr2_movaps_branch
+    ptr3_movaps_branch
+    ptr4_movaps_branch
+    ptr5_movaps_branch
+    ptr6_movaps_branch
+    ptr7_movaps_branch
+    ptr8_movaps_branch
+    ptr9_movaps_branch
+    ptr10_movaps_branch
+    ptr11_movaps_branch
+
+)
+
+# Overriden above defn
+# name2sizes[hqr-sq_12_se]="544"
+# name2sizes[hqr-sq_12_sVS_se]="544"
+# name2sizes[hqr-1d_12_se]="295936"
+# name2sizes[hqr-1d_12_sVS_se]="295936"
+name2sizes[hqr-1d_12_fp-w-rip-sVS_se]="295936"
+name2sizes[hqr-1d_12_fp-no-rip-sVS_se]="295936"
+
+#name2sizes[hqr-1d_12_ls-sVS_se]="295936"
+name2sizes[hqr-1d_12_ls-sVS_se]="1000 10000"
+name2sizes[hqr-1d_12_no-andps-sVS_se]="295936"
+name2sizes[hqr-1d_12_no-red-sVS_se]="295936"
+name2sizes[hqr-1d_12_no-rip-sVS_se]="295936"
+name2sizes[hqr-1d_12_sU8-sVS_se]="295936"
+#name2sizes[hqr-1ds64_12_sVS_se]="295936"
+name2sizes[hqr-1ds64_12_sVS_se]="1000 10000"
+#name2sizes[hqr-1ds64_12_ls-sVS_se]="1000 10000 295936"
+name2sizes[hqr-1ds64_12_ls-sVS_se]="64000 640000 18939904"
+
+
+name2sizes[hqr-sq_12_se]="30 240"
+name2sizes[hqr-sq_12_sVS_se]="30 240"
+name2sizes[hqr-1d_12_se]="1000 10000"
+name2sizes[hqr-1d_12_sVS_se]="1000 10000"
+#name2sizes[hqr-sq-no-tail_12_se]="240 500 550 600"
+#name2sizes[hqr-sq-no-tail_12_sVS_se]="240 500 550 600"
+name2sizes[hqr-sq-no-tail_12_se]="800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 3800 4000"
+name2sizes[hqr-sq-no-tail_12_sVS_se]="800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000 3200 3400 3600 3800 4000"
+
+
+
+
+
+#name2sizes[ptr_ld_branch]="10000"
+#name2sizes[loads_1Sx4-movsd]="200000"
+
 
 set -o pipefail # make sure pipe of tee would not reset return code.
-
 
 
 for codelet in ${run_codelets[@]}
@@ -731,7 +1096,7 @@ done
 # for codelet in $ptr_codelets
 # do
 # 	${LOGGER_SH} ${runId} "Launching CLS on '$codelet'..."
-# 	./cls.sh "$codelet" "$variants" "$ptr_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
+# 	./cls.sh "$codelet" "$variants" "$ubmk_sizes" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet/cls.log"
 # 	# &> "$codelet/cls.log"
 # 	res=$?
 # 	if [[ "$res" != "0" ]]

@@ -287,7 +287,7 @@ STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 LOGGER_SH="${CLS_FOLDER}/logger.sh"
 GENERATE_CQA_CSV_SH="${CLS_FOLDER}/generate_cqa_csv.sh"
 LOG_FOLDER=${CLS_FOLDER}/logs
-LOG_FILE=${LOG_FOLDER}/log.txt
+LOG_FILE=${LOG_FOLDER}/log.${HOSTNAME}.txt
 RUN_FOLDER=${LOG_FOLDER}/runs
 
 # delimiter to use for output data e.g. ',' or ';' or other delimiters

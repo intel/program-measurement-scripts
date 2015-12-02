@@ -110,6 +110,7 @@ find_num_repetitions_and_iterations () {
 
 
 START_CLS_SH=$(date '+%s')
+${LOGGER_SH} ${runid} "cls.sh begins at $(date --date=@${START_CLS_SH})"
 
 echo "------------------------------------------------------------"
 echo "CLS"
