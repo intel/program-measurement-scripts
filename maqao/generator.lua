@@ -280,7 +280,9 @@ function get_component_outputs (instr, pos)
 	then
 		if (get_nb_components (instr) >= 2)
 		then
-			res = ""
+			--res = ""
+			operands = instr : get_operands ()
+			res = get_compute_operands (operands, "write")
 		else
 			operands = instr : get_operands ()
 			res = get_compute_operands (operands, "write")
