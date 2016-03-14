@@ -98,8 +98,6 @@ then
     echo "Running counters..."
     
 
-    for i in $( seq $META_REPETITIONS )
-      do
       basic_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD"
       tlb_counters="DTLB_LOAD_MISSES.MISS_CAUSES_A_WALK,DTLB_LOAD_MISSES.STLB_HIT,DTLB_STORE_MISSES.MISS_CAUSES_A_WALK,DTLB_STORE_MISSES.STLB_HIT,DTLB_LOAD_MISSES.WALK_DURATION,DTLB_STORE_MISSES.WALK_DURATION"
       lfb_counters="L1D_PEND_MISS.PENDING,MEM_LOAD_UOPS_RETIRED.L1_MISS,MEM_LOAD_UOPS_RETIRED.HIT_LFB,L1D_PEND_MISS.PENDING_CYCLES"
@@ -223,54 +221,9 @@ then
       append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${tor_life_counters}
       append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${egr_ad_life_counters}
       append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${egr_bl_life_counters}
+      append_counters $ACTIVATE_OTHER_COUNTERS "OtherCounts" ${other_counters}
 
-
-#       if [[ "$ACTIVATE_MEM_TRAFFIC_COUNTERS" != "0" ]]
-# 	  then
-# 	  if [ -z ${mem_traffic_counters} ]
-# 	      then
-# 	      echo "ERROR! ACTIVATED empty traffic counters"
-# 	      exit -1
-# 	  else
-# 	      emon_counters+=",${mem_traffic_counters}"
-# 	  fi
-#       fi      
-
-#       if [[ "$ACTIVATE_RESOURCE_COUNTERS" != "0" ]]
-# 	  then
-# 	  if [ -z ${resource_counters} ]
-# 	      then
-# 	      echo "ERROR! ACTIVATED empty resource counters"
-# 	      exit -1
-# 	  else
-# 	      emon_counters+=",${resource_counters}"
-# 	  fi
-#       fi      
-
-
-#       if [[ "$ACTIVATE_TLB_COUNTERS" != "0" ]]
-# 	  then
-# 	  if [ -z ${tlb_counters} ]
-# 	      then
-# 	      echo "ERROR! ACTIVATED empty TLB counters"
-# 	      exit -1
-# 	  else
-# 	      emon_counters+=",${tlb_counters}"
-# 	  fi
-#       fi      
-
-#       if [[ "$ACTIVATE_TOPDOWN_COUNTERS" != "0" ]]
-# 	  then
-# 	  if [ -z ${topdown_counters} ]
-# 	      then
-# 	      echo "ERROR! ACTIVATED empty TOPDOWN counters"
-# 	      exit -1
-# 	  else
-# 	      emon_counters+=",${topdown_counters}"
-# 	  fi
-#       fi      
-
-      emon_counters+=",${other_counters}"
+#      emon_counters+=",${other_counters}"
       
       
       
@@ -291,9 +244,15 @@ then
 	  esac
 	  
       fi
+
+      echo "COUNTER LIST: " ${emon_counters}
+
       echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
 #		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
 		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+
+    for i in $( seq $META_REPETITIONS )
+      do
       if [[ "ENABLE_SEP" == "1" ]];then
 	  emon_counters_to_run=$(./split_counters.sh $emon_counters)
 	  emon_counters_core=$(echo $emon_counters_to_run | tr '#' '\n' | head -n 1)
