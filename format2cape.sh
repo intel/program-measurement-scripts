@@ -79,16 +79,16 @@ for variant in $variant_list
 do
 	# Building the stan metrics section
 	stan_infile="$cls_res_folder/binaries/${codelet_name}_${variant}.stan_full.csv"
-	cp $stan_infile /tmp/xxx
+#	cp $stan_infile /tmp/xxx
 	cat $stan_infile | sed -n '1p;11p'  | tr ${DELIM} '\n' | tr "=" ":"  > $tmprep/stanh.csv			
-	cp $tmprep/stanh.csv /tmp/yyy
+#	cp $tmprep/stanh.csv /tmp/yyy
 	cat $stan_infile | sed -n '2p;12p'  | tr ${DELIM} '\n'               > $tmprep/stanv.csv
-	cp $tmprep/stanv.csv /tmp/zzz
+#	cp $tmprep/stanv.csv /tmp/zzz
 	cat $tmprep/stanh.csv | sed 's/ /_/g' | sed 's/,//g' | sed 's/\[/(/g'	| sed 's/\]/)/g' | sed 's/-/_/g' | sed 's/\.//g' | sed 's/:/_/g' | sed 's/__/_/g' | sed 's/__/_/g' | sed 's/__/_/g'| sed 's/__/_/g'	|sed 's/__/_/g' > $tmprep/tmp.csv
-	cp $tmprep/tmp.csv /tmp/aaa
+#	cp $tmprep/tmp.csv /tmp/aaa
 	mv $tmprep/tmp.csv $tmprep/stanh.csv
 	paste -d${DELIM} $tmprep/stanh.csv $tmprep/stanv.csv > $tmprep/stan.csv
-	cp $tmprep/stan.csv /tmp/bbb
+#	cp $tmprep/stan.csv /tmp/bbb
 	# Note the ',' is hardcoded here because ${STAN_METRICS_FILE} was hardcoded to use ',' as delimiters
 	nbsm=$(cat ${STAN_METRICS_FILE} | tr ',' '\n' | wc -l )
 	stan_metric=""
@@ -148,15 +148,15 @@ do
 		echo "decan_experimental_configuration.data_size"${DELIM}"Iterations"${DELIM}"Repetitions" > $tmprep/ds_itr_rep_cols.csv
 		cat $infile | cut -d${DELIM} -f${DATASIZE_COL},${ITERATIONS_COL},${REPETITIONS_COL} | tail -n +2 | head -n $nrows >> $tmprep/ds_itr_rep_cols.csv
 
-		echo "decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"Expr Timestamp" > $tmprep/decan_cpu_run_info.csv
-		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$ExprTimestamp") | head -n $nrows >> $tmprep/decan_cpu_run_info.csv
+		echo "decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.frequency"${DELIM}"decan_experimental_configuration.memory_load"${DELIM}"decan_experimental_configuration.arg1"${DELIM}"decan_experimental_configuration.arg2"${DELIM}"decan_experimental_configuration.arg3"${DELIM}"decan_experimental_configuration.arg4"${DELIM}"decan_experimental_configuration.arg5"${DELIM}"decan_experimental_configuration.arg6"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"Expr Timestamp"${DELIM}"TS#"${DELIM}"Expr TS#" > $tmprep/decan_cpu_run_info.csv
+		yes $(echo "$instance_id"${DELIM}"$frequency"${DELIM}"$memory_load"${DELIM}"$arg1"${DELIM}"$arg2"${DELIM}"$arg3"${DELIM}"$arg4"${DELIM}"$arg5"${DELIM}"$arg6"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$ExprTimestamp"${DELIM}"$cls_timestamp_val"${DELIM}"$run_timestamp_val") | head -n $nrows >> $tmprep/decan_cpu_run_info.csv
 
 
 		paste -d${DELIM} $tmprep/codelet_mach_info.csv $tmprep/ds_itr_rep_cols.csv $tmprep/decan_cpu_run_info.csv > $tmprep/codelet_struct.csv  
 
 		paste -d${DELIM} $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
 		extra_rows=$(($nrows + 2))
-		cp $tmprep/stan_report_${variant}.csv /tmp/tt
+#		cp $tmprep/stan_report_${variant}.csv /tmp/tt
 		# Following ',' is not delimiter
 	    sed -i "$extra_rows,$ d" $outfile
 	done
