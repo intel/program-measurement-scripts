@@ -46,7 +46,7 @@ loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
 #echo "$decan_variants" &>blabla
 #for loop_id in $loop_ids
 #do
-#	echo "Found loop '$loop_id'" &> blabli
+#	echo "Found loop '$loop_id'" &> /tmp/blabli
 #done
 
 for decan_variant in $decan_variants
@@ -54,8 +54,8 @@ do
 	#"./$decan_variant"
 	"./$decan_variant" &> "$decan_variant.dprof"
 	count_values[$decan_variant]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
-#	cat "$decan_variant.dprof" 1>&2
-#	echo "COUNT: " ${count_values[$decan_variant]} 1>&2
+	cat "$decan_variant.dprof" 1>&2
+	echo "COUNT: " ${count_values[$decan_variant]} 1>&2
 	rm -f "$decan_variant" "$decan_variant.dprof"
 done
 

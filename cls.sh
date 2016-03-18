@@ -81,6 +81,8 @@ find_num_repetitions_and_iterations () {
 	echo "Cancelling CLS."
 	exit -1
     fi
+
+
     
     wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id${DELIM}" )
     most_important_loop=$( echo "$loop_info" | grep ${DELIM} | head -n 1)
@@ -102,6 +104,20 @@ find_num_repetitions_and_iterations () {
     
     echo "$variant:Loop Id"${DELIM}"Iterations"${DELIM} >> "${iterations_for_file}"
     echo "$loop_info" | tr ' ' '\n' | sed "s/\(.*\)/$variant:\1/" >> "${iterations_for_file}"
+
+    num_loop_exe=$( echo "$loop_info" | grep ${DELIM} | wc -l)
+#    echo "num loop exe  is " ${num_loop_exe}
+#    echo -e "LOOP INFO BEGIN\n${loop_info}\nLOOP INFO END"
+
+    if [[ "${STRICT_SINGLE_LOOP}" != "0" ]]
+	then
+	if [[ "$num_loop_exe" != "1" ]]
+	    then
+	    echo "Multiple loops executed. Cancelling CLS."
+	    exit -1
+	fi
+    fi
+
     
     loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
     echo -e "Iterations \t'$loop_iterations'"
