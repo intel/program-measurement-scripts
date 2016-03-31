@@ -222,4 +222,4 @@ function convert_metric {
 		sed 's/__/_/g'
 }
 
-convert_metric "$1"
+#convert_metric "$1"

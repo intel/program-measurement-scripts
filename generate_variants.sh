@@ -2,7 +2,7 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "4" ]]
+if [[ "$nb_args" != "5" ]]
 then
 	echo "ERROR! Invalid arguments (need the binary's path and the function's name)."
 	exit -1
@@ -14,6 +14,7 @@ binary_name=$( basename "$binary_path" )
 function_name="$2"
 loop_id="$3"
 variants="$4"
+save_binary_path=$( readlink -f "$5" )
 
 different_builds="cpi"
 # Always generate *_hwc
@@ -81,7 +82,8 @@ do
 				exit -1
 			fi
 
-			cp "${binary_name}_${variant}_${build}" "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+#			cp "${binary_name}_${variant}_${build}" "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+			cp "${binary_name}_${variant}_${build}" "${save_binary_path}"
 
 		else
 			echo "Error! Variant '$variant' could not be identified!"

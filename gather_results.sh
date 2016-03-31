@@ -82,6 +82,8 @@ for memload in $memload_list
 do
 	for freq in $freq_list
 	do
+	  echo res_folder is $res_folder
+	  echo cpifolder is $CPIS_FOLDER
 		output_cpi_file="$res_folder/$CPIS_FOLDER/cpi_${memload}MBs_${freq}kHz.csv"
 # NOTE The following awk command also hardcoded column order following cpi.csv generation in run_codelet.sh.
 		cat "$res_folder"/data_*"/memload_$memload/freq_$freq/"variant_*/cpi.csv	\
@@ -217,6 +219,6 @@ else
 fi
 
 echo "Converting gathered data to Cape format..."
-${FORMAT_2_CAPE_SH} ${res_folder} ${HOSTNAME}
+${FORMAT_2_CAPE_SH} ${res_folder} $(hostname)
 
 exit 0

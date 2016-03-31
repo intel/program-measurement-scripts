@@ -2,9 +2,9 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "3" ]]
+if [[ "$nb_args" != "4" ]]
 then
-	echo "ERROR! Invalid arguments (need the binary's folder path, the generated binary's name and the function's name)."
+	echo "ERROR! Invalid arguments (need the binary's folder path, the generated binary's name, the function's name and build path)."
 	exit -1
 fi
 
@@ -12,12 +12,18 @@ fi
 binary_folder=$( readlink -f "$1" )
 binary_name="$2"
 codelet_name="$3"
+build_folder=$( readlink -f "$4" )
 
+echo mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
 
 echo "Generating codelet '$binary_folder/$codelet_name'..."
 
-cd "$binary_folder"
+build_files=$(find ${binary_folder} -maxdepth 1 -type f)
+cp ${build_files} ${build_folder}
+
+cd ${build_folder}
+#cd "$binary_folder"
 if [[ "$ENABLE_SEP" == "1" ]]
 then
 	make clean ENABLE_SEP=sep all

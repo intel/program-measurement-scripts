@@ -6,18 +6,20 @@ MAX_ROWS=30
 
 nb_args=$#
 
-if [[ $nb_args -lt 1 ]]
+if [[ $nb_args -lt 2 ]]
 then
-#	echo "ERROR! Invalid arguments (need: CLS res's folder, machine name)."
-	echo "ERROR! Invalid arguments (need: CLS res's folder)."
+	echo "ERROR! Invalid arguments (need: CLS res's folder, real machine name)."
+#	echo "ERROR! Invalid arguments (need: CLS res's folder)."
 	exit -1
 fi
 
 # pcr_metrics.sh uses $1
 source pcr_metrics.sh
 
+
 # Get codelet's res folder
 cls_res_folder=$( readlink -f "$1" )
+real_machine_name="$2"
 codelet_folder=$( echo $cls_res_folder | sed 's:/cls_res_.*::' )
 #machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_[0-9]+)/\2/p' )
 machine_name=$( echo $cls_res_folder | sed -n -E 's/(.*cls_res_)(.*)(_)([0-9]+)(_)([0-9]+)/\2/p' )
@@ -28,6 +30,8 @@ ClsTimestamp=$( date -d @${cls_timestamp_val} +'%F %T' )
 ExprTimestamp=$( date -d @${run_timestamp_val} +'%F %T' )
 
 DATE=$( date +'%F_%T' )
+
+echo "run format2cape.sh at res folder: ${cls_res_folder}"
 
 # Set meta data of codelet
 codelet_meta="$codelet_folder/codelet.meta"
@@ -71,8 +75,11 @@ frequency_list=$(ls $cls_res_folder/counters/counters_*kHz.csv | sed 's:.*MBs_::
 
 
 cur_dir="$PWD"
-tmprep=$cur_dir/tmp
-mkdir -p $tmprep
+#tmprep=$cur_dir/tmp
+#mkdir -p $tmprep
+
+
+tmprep=$(mktemp -d --tmpdir=$cur_dir tmp.XXXXXXXXXX)
 
 
 for variant in $variant_list
@@ -142,8 +149,8 @@ do
 		nrows=$(tail -n +2 $tmprep/counters.csv | wc -l)
 		# Merging the stan and counters sections
 
-		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"> $tmprep/codelet_mach_info.csv
-		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name") | head -n $nrows >> $tmprep/codelet_mach_info.csv
+		echo "application.name"${DELIM}"batch.name"${DELIM}"code.name"${DELIM}"codelet.name"${DELIM}"binary_loop.id"${DELIM}"decan_variant.name"${DELIM}"machine.name"${DELIM}"real.machine.name"> $tmprep/codelet_mach_info.csv
+		yes $(echo "$application_name"${DELIM}"$batch_name"${DELIM}"$code_name"${DELIM}"$codelet_name"${DELIM}"$binary_loop_id"${DELIM}"$variant"${DELIM}"$machine_name"${DELIM}"$real_machine_name") | head -n $nrows >> $tmprep/codelet_mach_info.csv
 
 		echo "decan_experimental_configuration.data_size"${DELIM}"Iterations"${DELIM}"Repetitions" > $tmprep/ds_itr_rep_cols.csv
 		cat $infile | cut -d${DELIM} -f${DATASIZE_COL},${ITERATIONS_COL},${REPETITIONS_COL} | tail -n +2 | head -n $nrows >> $tmprep/ds_itr_rep_cols.csv

@@ -50,17 +50,17 @@ set_thp() {
 }
 
 find_num_repetitions_and_iterations () {
-    codelet_folder="$1"
-    codelet_name="$2"
-    data_size="$3"
-    variant="$4"
+    local codelet_folder="$1"
+    local codelet_name="$2"
+    local data_size="$3"
+    local variant="$4"
     function_name="$5"
-    loop_id="$6"
-    repetitions_history_file="$7"
-    iteration_file="$8"
-    iterations_for_file="$9"
+    local loop_id="$6"
+    local repetitions_history_file="$7"
+    local iteration_file="$8"
+    local iterations_for_file="$9"
 
-    echo "Adjusting codelet parametres for the $variant variant ..."
+    echo "Adjusting codelet parametres for the $variant variant ...${codelet_folder}"
 
     if [[ "${variant}" == "ORG" ]]; then
 	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
@@ -157,25 +157,37 @@ echo "Removing older results (if any)..."
 rm -R -f "$codelet_folder/$CLS_RES_FOLDER"
 echo "Recreating results folder..."
 mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
+build_folder=$codelet_folder/$CLS_RES_FOLDER/build
+# ensured it is at the same level as codelet_folder so that relative paths in Makefile is preserved it will be moved to the build_folder 
+# after generating original
+build_tmp_folder=$(mktemp -d --tmpdir=${codelet_folder}/..)
+
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
 echo "$META_REPETITIONS" > "$codelet_folder/$CLS_RES_FOLDER/meta_repetitions"
 echo "$PRETTY_UARCH" > "$codelet_folder/$CLS_RES_FOLDER/uarch"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
-./generate_original.sh $codelet_folder $binary_name $codelet_name
+./generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
 res=$?
 if [[ "$res" != "0" ]]
 then
 	echo "Cancelling CLS."
 	exit -1
 fi
+mv ${build_tmp_folder} "${build_folder}"
+
+# codelet.o if exist will be stored under cls_res_folder
+# program executable file is at ${build_folder}/${codelet_name}
+codelet_exe=${build_folder}/${codelet_name}
 
 first_data_size=$( echo ${data_sizes} | awk '{print $1;}' )
 echo "------------------------------------------------------------"
-echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
+#echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
+echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
 # Get the target loop with repetition of 10 to save time.
-loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" 10 )
+#loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" 10 )
+loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 10 )
 res=$?
 if [[ "$res" != "0" ]]
 then
@@ -191,7 +203,8 @@ echo "$loop_id" > "$codelet_folder/$CLS_RES_FOLDER/loop_id"
 
 echo "------------------------------------------------------------"
 echo "Creating DECAN variants..."
-./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
+#./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
+./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 
 res=$?
 if [[ "$res" != "0" ]]
@@ -276,7 +289,8 @@ do
 	    for variant in $variants
 	      do
 	      
-	      find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+#	      find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+	      find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
 	      
 	    done
 	fi
@@ -325,21 +339,26 @@ do
 		    mkdir ${res_path} &> /dev/null
 
 		    if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
-			find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+# 			find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+# 			    "${res_path}/repetitions_history_${variant}" \
+# 			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
+			find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 			    "${res_path}/repetitions_history_${variant}" \
 			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
 			repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 			loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
 		    else
-			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+#			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			repetitions=$(cat "$build_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 			loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
 		    fi
 		    
 		    # Generate the codelet data file for measurment.  Need to compute iteration count.
-		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+#		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+		    echo "$repetitions $data_size" > "${build_folder}/codelet.data"
 
-
-		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
+#		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
+		    ./run_codelet.sh "$build_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 		    res=$?
 		    if [[ "$res" != "0" ]]
 			then
@@ -417,15 +436,15 @@ ELAPSED_CLS_SH=$((${END_CLS_SH} - ${START_CLS_SH}))
 ${LOGGER_SH} ${runid} "cls.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_CLS_SH})."
 
 
-echo "------------------------------------------------------------"
-echo "Cleaning up..."
-./cleanup_codelet_folder.sh "$codelet_folder" "$codelet_name" "$variants"
-res=$?
-if [[ "$res" != "0" ]]
-then
-	echo "Cancelling CLS."
-	exit -1
-fi
+# echo "------------------------------------------------------------"
+# echo "Cleaning up..."
+# ./cleanup_codelet_folder.sh "$codelet_folder" "$codelet_name" "$variants"
+# res=$?
+# if [[ "$res" != "0" ]]
+# then
+# 	echo "Cancelling CLS."
+# 	exit -1
+# fi
 
 
 if [[ "$HOSTNAME" == "massenet" ]]

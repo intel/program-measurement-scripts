@@ -19,11 +19,14 @@ repetitions="$8"
 
 START_RUN_CODELETS_SH=$(date '+%s')
 echo "run_codelets.sh started at $(date --date=@${START_RUN_CODELETS_SH})."
-echo "Xp: '$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
+echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
 
 
 cd $codelet_folder
-res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+echo "Codelet folder: $codelet_folder"
+#res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+res_path="$codelet_folder/../data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+echo "Res folder: $res_path"
 
 TASKSET=$( which taskset )
 NUMACTL=$( which numactl )
@@ -335,7 +338,7 @@ fi
 
 END_RUN_CODELETS_SH=$(date '+%s')
 ELAPSED_RUN_CODELETS_SH=$((${END_RUN_CODELETS_SH} - ${START_RUN_CODELETS_SH}))
-echo "run_codelets.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_RUN_CODELETS_SH}) seconds at $(date --date=@${END_VRUN_CODELETS_SH})."
+echo "run_codelets.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_RUN_CODELETS_SH}) seconds at $(date --date=@${END_RUN_CODELETS_SH})."
 
 
 
