@@ -2,6 +2,7 @@
 
 source ./const.sh
 
+
 if [[ "$nb_args" != "4" ]]
 then
 	echo "ERROR! Invalid arguments (need the binary's path, the function's name, the data size and repetition)."
@@ -30,6 +31,7 @@ $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
 echo HERE > /tmp/count.out.txt
+echo ${LD_LIBRARY_PATH} >> /tmp/count.out.txt
 cat $PWD/$DECAN_REPORT >> /tmp/count.out.txt
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 if [[ "$decan_variants" == "" ]]

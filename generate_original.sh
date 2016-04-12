@@ -24,12 +24,26 @@ cp ${build_files} ${build_folder}
 
 cd ${build_folder}
 #cd "$binary_folder"
+
+
 if [[ "$ENABLE_SEP" == "1" ]]
 then
-	make clean ENABLE_SEP=sep all
+    make clean ENABLE_SEP=sep ${emon_api_flags} all
 else
-	make clean all
+    if [[ "$ACTIVATE_EMON_API" == "1" ]]
+	then
+	make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" all
+	if [[ "$?" != "0" ]]
+	    then
+	    echo "ERROR! Make did not succeed in creating EMON API instrumented codelet."
+	    exit -1
+	fi
+	mv "$binary_name" "$codelet_name"_emon_api
+	cp "$codelet_name"_emon_api "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+    fi
+    make clean all
 fi
+
 # &> /dev/null
 res=$?
 

@@ -9,6 +9,7 @@ then
 	exit -1
 fi
 
+set -x
 codelet_name="$1"
 data_size=$2
 memory_load=$3
@@ -17,6 +18,7 @@ variant="$5"
 iterations="$6"
 emon_counters=$7
 res_path=$8
+set +x
 
 
 if [[ "$ENABLE_SEP" == "1" ]]; then
@@ -27,13 +29,14 @@ rm -f $res_path/likwid_report $res_path/likwid_counter_*
 
 counters=$( echo "$emon_counters" | tr "," " " | tr "." "_" | tr " " "\n" | sort --uniq | tr "\n" " " )
 sed 's/\./_/g' -i $res_path/emon_report
+sed 's/,//g'  $res_path/emon_report > $res_path/emon_report.trim
 
 	for counter in $counters
 	do
 		if [[ ( "$HOSTNAME" == "fxhaswell" ) && ( "$counter" == "UNC_CBO_CACHE_LOOKUP_ANY_I" || "$counter" == "UNC_CBO_CACHE_LOOKUP_ANY_MESI" ||  "$counter" == "UNC_CBO_EGRESS_ALLOCATION_AD_CORE" ||  "$counter" == "UNC_CBO_EGRESS_ALLOCATION_BL_CACHE" ||  "$counter" == "UNC_CBO_EGRESS_OCCUPANCY_AD_CORE" ||  "$counter" == "UNC_CBO_EGRESS_OCCUPANCY_BL_CACHE" ||  "$counter" == "UNC_CBO_INGRESS_ALLOCATION_IRQ" ||  "$counter" == "UNC_CBO_INGRESS_OCCUPANACY_IRQ" ||  "$counter" == "UNC_CBO_TOR_ALLOCATION_DRD" ||  "$counter" == "UNC_CBO_TOR_OCCUPANCY_DRD_VALID" ) ]]
 		then
 			echo "Special treatment for server uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
@@ -52,7 +55,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ "$counter" == "UNC_L4_REQUEST_RD_HIT" || "$counter" == "UNC_L4_REQUEST_WR_HIT" || "$counter" == "UNC_L4_REQUEST_WR_FILL" || "$counter" == "UNC_L4_REQUEST_RD_EVICT_LINE_TO_DRAM" || "$counter" == "UNC_CBO_L4_SUPERLINE_ALLOC_FAIL" ]]
 		then
 			echo "Special treatment for server uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
@@ -68,7 +71,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab147" ) && ( "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ||  "$counter" == "FREERUN_DRAM_ENERGY_STATUS" ) ]]
 		then
 			echo "Special treatment for in-CPU energy '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
 			for value in $values
 			do
 				val=$( echo "$value" | cut -f1 -d${DELIM} )
@@ -79,7 +82,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab147" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
 			echo "Special treatment (recent emon) for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-10 -d${DELIM} | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-10 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
 			for value in $values
 			do
@@ -99,7 +102,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ ( "$HOSTNAME" == "fxilab148" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 		then
 				echo "Special treatment (recent emon) for uncore '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f11-18 -d${DELIM} | sed 's/ //g' )
+				values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f11-18 -d${DELIM} | sed 's/ //g' )
 				#echo "debug values: '$values'"
 				for value in $values
 				do
@@ -119,7 +122,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 		if [[ "$counter" == "UNC_IMC_DRAM_DATA_READS" || "$counter" == "UNC_IMC_DRAM_DATA_WRITES" || "$counter" == "UNC_PP0_ENERGY_STATUS" || "$counter" == "UNC_PKG_ENERGY_STATUS" ]]
 		then
 			echo "Special treatment (uncore counter) for uncore '$counter'"
-			values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3 -d${DELIM} | sed 's/ //g' )
+			values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3 -d${DELIM} | sed 's/ //g' )
 			for value in $values
 			do
 				echo "$counter||$value" >> $res_path/likwid_report
@@ -128,7 +131,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 			if [[ ( "$HOSTNAME" == "fxe32lin04" || "$HOSTNAME" == "fxtcarilab027" ) && ( "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ) ]]
 			then
 				echo "Special treatment (recent emon) for uncore '$counter'"
-				values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f7-10 -d${DELIM} | sed 's/ //g' )
+				values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f7-10 -d${DELIM} | sed 's/ //g' )
 				#echo "debug values: '$values'"
 				for value in $values
 				do
@@ -143,7 +146,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 				if [[ "$counter" == "UNC_M_CAS_COUNT_RD" || "$counter" == "UNC_M_CAS_COUNT_WR" ]]
 				then
 					echo "Special treatment for server uncore '$counter'"
-					values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,7 -d${DELIM} | sed 's/ //g' )
+					values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,7 -d${DELIM} | sed 's/ //g' )
 					#echo "debug values: '$values'"
 					for value in $values
 					do
@@ -156,7 +159,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 					if [[ "$counter" == "FREERUN_PKG_ENERGY_STATUS" || "$counter" == "FREERUN_CORE_ENERGY_STATUS" ]]
 					then
 						echo "Special treatment for in-CPU energy '$counter'"
-						values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
+						values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
 						for value in $values
 						do
 							val1=$( echo "$value" | cut -f1 -d${DELIM} )
@@ -167,7 +170,7 @@ sed 's/\./_/g' -i $res_path/emon_report
 					else
 							echo "Regular treatment for '$counter'"
 							let "target_field = $XP_CORE + 3"
-							values=$( grep "$counter" $res_path/emon_report | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g' )
+							values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g' )
 							#echo "debug values: '$values'"
 							for value in $values
 							do

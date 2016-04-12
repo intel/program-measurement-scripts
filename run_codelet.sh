@@ -71,9 +71,12 @@ if [[ "${variant}" == "ORG" ]]
     then
 # Run the original program
     run_prog="./${codelet_name}"
+    run_prog_emon_api="./${codelet_name}"_emon_api
 else
 # Run the DECAN generated program
     run_prog="./${codelet_name}_${variant}_hwc"
+    # Not really handled.
+    run_prog_emon_api="./${codelet_name}_${variant}_emon_api_hwc"
 fi
 
 for i in $( seq $META_REPETITIONS )
@@ -163,7 +166,7 @@ then
 
       case "$UARCH" in
 	  "SANDY_BRIDGE")
-	  topdown_mem_counters="CYCLE_ACTIVITY.STALL_CYCLES_L1D_PENDING,CYCLE_ACTIVITY.STALL_CYCLES_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
+	  topdown_mem_counters="CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
 
 	  mem_hit_counters+=",MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
 
@@ -323,11 +326,35 @@ then
 # 	      $NUMACTL -m $XP_NODE -C 17 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 18 ${run_prog} &
 	  fi
-	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+	  if [[ "$ACTIVATE_EMON_API" != "0" ]]
+	  then 
+	      # Using advanced control so need to generate the file for counters
+	      # Split events into files
+	      rm -f event.* emon_api.out
+	      emon --dry-run -C"($emon_counters)" | csplit -z --quiet --prefix=event. - '/^\S/' '{*}'
+	      # Now run instrumented code for each event set
+	      for evfile in event.*
+	      do
+		evlist=($(tail -n +2 ${evfile}))
+		evlist=$(IFS=','; echo "${evlist[*]}")
+		cat <<EOF > emon_api_config_file
+<EMON_CONFIG>
+EVENTS = "${evlist}"
+DURATION=99999999999
+</EMON_CONFIG>
+EOF
+                $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &> "$res_path/emon_execution_log"
+		mv emon_api_config_file emon_api_config_file.${evfile}
+	      done
+	      grep -v "Subtraction" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
+	      mv emon_api.out emon_api.out.sav
+	  else
+	      emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+	  fi
       fi
     done
 else
-    echo "Skipping counters (not activated)."
+    echo "Skipping counters (not activated)."l 
 fi
 
 # if [[ "$ACTIVATE_COUNTERS" != "0" ]]
