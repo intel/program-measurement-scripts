@@ -116,6 +116,14 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
     echo "Running counters..."
     
+      emon -v > "$res_path/emon_info" 
+      if [[ $( grep SEP "$res_path/emon_info" ) == "" ]]
+	  then 
+	  old_emon="1"
+      else 
+	  old_emon="0"
+      fi      
+
 
       basic_counters="INST_RETIRED.ANY,CPU_CLK_UNHALTED.REF_TSC,CPU_CLK_UNHALTED.THREAD"
       mem_hit_counters="MEM_LOAD_UOPS_RETIRED.L1_HIT,MEM_LOAD_UOPS_RETIRED.L1_MISS,MEM_LOAD_UOPS_RETIRED.HIT_LFB,MEM_LOAD_UOPS_RETIRED.L2_HIT"
@@ -166,7 +174,12 @@ then
 
       case "$UARCH" in
 	  "SANDY_BRIDGE")
-	  topdown_mem_counters="CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
+          if [[ "$old_emon" == "1" ]]
+	      then
+	      topdown_mem_counters="CYCLE_ACTIVITY.STALL_CYCLES_L1D_PENDING,CYCLE_ACTIVITY.STALL_CYCLES_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
+	  else
+	      topdown_mem_counters="CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING,MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
+	  fi
 
 	  mem_hit_counters+=",MEM_LOAD_UOPS_RETIRED.LLC_HIT,MEM_LOAD_UOPS_RETIRED.LLC_MISS"
 
@@ -278,6 +291,7 @@ then
 
       echo "COUNTER LIST: " ${emon_counters}
 
+
       echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
 #		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
 		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
@@ -333,26 +347,32 @@ then
 	      rm -f event.* emon_api.out
 	      emon --dry-run -C"($emon_counters)" | csplit -z --quiet --prefix=event. - '/^\S/' '{*}'
 	      # Now run instrumented code for each event set
+	      numRuns=$( ls -l event.* |wc -l )
+	      runCnt=0
 	      for evfile in event.*
 	      do
+		((runCnt++))
+		echo -ne "Meta repetition: (${i}/${META_REPETITIONS}); Counter set collection: (${runCnt}/${numRuns}) \r"
 		evlist=($(tail -n +2 ${evfile}))
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
 <EMON_CONFIG>
 EVENTS = "${evlist}"
 DURATION=99999999999
+OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
                 $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &> "$res_path/emon_execution_log"
 		mv emon_api_config_file emon_api_config_file.${evfile}
+		grep -v "Subtraction" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
+		mv emon_api.out emon_api.out.${evfile}
 	      done
-	      grep -v "Subtraction" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
-	      mv emon_api.out emon_api.out.sav
 	  else
 	      emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
 	  fi
       fi
     done
+    echo -ne '\n'
 else
     echo "Skipping counters (not activated)."l 
 fi
