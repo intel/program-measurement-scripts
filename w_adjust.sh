@@ -2,9 +2,9 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "5" ]]
+if [[ "$nb_args" != "6" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, desired length)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, max number of repetition, desired length)."
 	exit -1
 fi
 
@@ -12,7 +12,8 @@ codelet_folder="$1"
 binary_name="$2"
 desired_size="$3"
 min_repet="$4"
-desired_length="$5"
+max_repet="$5"
+desired_length="$6"
 
 echo "W_adjust: Going to assess the right number of repetitions (to reach $desired_length hundredths of second) for codelet '$codelet_folder' with a data set of '$desired_size'"
 
@@ -24,8 +25,15 @@ res=0
 
 cd $codelet_folder
 
-while [ $res -le $desired_length  -a $current_repetitions -le 1000000000 -a $current_repetitions -ge 0 ]
+while [ $res -le $desired_length  -a $current_repetitions -le ${HARD_MAX_REPETITIONS} -a $current_repetitions -ge 0 ]
 do
+  	if [[ $current_repetitions -ge ${MAX_REPETITIONS} ]]
+	then
+	    echo "max repetitions reached, setting repetition to ${MAX_REPETITIONS}"
+	    saved_repetitions=${MAX_REPETITIONS}
+	    break
+	fi
+
 	echo "Trying number of repetitions = $current_repetitions"
 	echo "$current_repetitions $desired_size" > codelet.data
 	saved_repetitions=$current_repetitions

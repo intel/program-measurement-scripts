@@ -10,11 +10,13 @@ then
 fi
 
 
+set -x
 binary_path=$( readlink -f "$1" )
 binary_folder=$( dirname "$binary_path" )
 function_name="$2"
 data_size="$3"
 repetition="$4"
+set +x
 
 
 declare -A count_values

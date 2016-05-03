@@ -2,7 +2,7 @@
 
 source ./const.sh
 
-if [[ "$nb_args" != "8" ]]
+if [[ "$nb_args" != "11" ]]
 then
 	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name, data size, memory load, frequency, variant, number of iterations, repetitions)."
 	exit -1
@@ -16,6 +16,15 @@ frequency=$5
 variant="$6"
 iterations="$7"
 repetitions="$8"
+start_codelet_loop_time="$9"
+num_codelets="${10}"
+cnt_codelet_idx="${11}"
+
+sec_to_ddhhmmss() {
+    secs="$1"
+    echo $((${secs}/86400))"d "$(date -d "1970-01-01 + ${secs}sec" "+%H:%M:%S")
+}
+
 
 START_RUN_CODELETS_SH=$(date '+%s')
 echo "run_codelets.sh started at $(date --date=@${START_RUN_CODELETS_SH})."
@@ -296,6 +305,11 @@ then
 #		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
 		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 
+    START_COUNTER_RUN_TIME=$(date +%s)
+    totalRunCnt=0
+    eta="NA"
+    eta_all="NA"
+
     for i in $( seq $META_REPETITIONS )
       do
       if [[ "ENABLE_SEP" == "1" ]];then
@@ -352,7 +366,11 @@ then
 	      for evfile in event.*
 	      do
 		((runCnt++))
-		echo -ne "Meta repetition: (${i}/${META_REPETITIONS}); Counter set collection: (${runCnt}/${numRuns}) \r"
+		((totalRunCnt++))
+
+		echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); CnterSet: (${runCnt}/${numRuns}); "
+		echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
+
 		evlist=($(tail -n +2 ${evfile}))
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
@@ -366,9 +384,32 @@ EOF
 		mv emon_api_config_file emon_api_config_file.${evfile}
 		grep -v "Subtraction" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
 		mv emon_api.out emon_api.out.${evfile}
+
+		remainingRunCnt=$(((${META_REPETITIONS}*${numRuns})-${totalRunCnt}))
+		CURRENT_COUNTER_RUN_TIME=$(date +%s)
+		eta=$((((${CURRENT_COUNTER_RUN_TIME}-${START_COUNTER_RUN_TIME})*${remainingRunCnt})/${totalRunCnt}))
+		EST_CURRENT_FINISH_TIME=$((${CURRENT_COUNTER_RUN_TIME}+${eta}))
+		remainingCodeletRunCnt=$((${num_codelets}-${cnt_codelet_idx}))
+		eta_all=$(sec_to_ddhhmmss $((((${EST_CURRENT_FINISH_TIME}-${start_codelet_loop_time})*${remainingCodeletRunCnt})/${cnt_codelet_idx} + ${eta})))
+		eta=$(sec_to_ddhhmmss $eta)
 	      done
 	  else
+	      ((totalRunCnt++))
+
+	      echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); "
+	      echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
+
 	      emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+
+	      remainingRunCnt=$(((${META_REPETITIONS}*1)-${totalRunCnt}))
+	      CURRENT_COUNTER_RUN_TIME=$(date +%s)
+	      eta=$((((${CURRENT_COUNTER_RUN_TIME}-${START_COUNTER_RUN_TIME})*${remainingRunCnt})/${totalRunCnt}))
+	      EST_CURRENT_FINISH_TIME=$((${CURRENT_COUNTER_RUN_TIME}+${eta}))
+	      remainingCodeletRunCnt=$((${num_codelets}-${cnt_codelet_idx}))
+
+	      eta_all=$(sec_to_ddhhmmss $((((${EST_CURRENT_FINISH_TIME}-${start_codelet_loop_time})*${remainingCodeletRunCnt})/${cnt_codelet_idx} + ${eta})))
+	      eta=$(sec_to_ddhhmmss $eta)
+
 	  fi
       fi
     done

@@ -34,7 +34,7 @@ launchIt () {
 # Combining all run cape data
     for f in $( find -L ${run_dir} -name *.cape.csv ) 
     do
-      cat $f >> ${run_dir}/cape.csv
+      cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
     done
 
 
@@ -80,7 +80,7 @@ launchAll() {
 # Combining all run cape data
     for f in $( find -L ${run_dir} -name *.cape.csv ) 
     do
-      cat $f >> ${run_dir}/cape.csv
+      cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
     done
 
 
@@ -112,7 +112,16 @@ runLoop() {
     echo RUN codelets : ${run_codelets[@]}
 
     count=0
-    
+
+    start_codelet_loop_time=$(date '+%s')    
+    num_codelets=0
+    for codelet in ${run_codelets[@]}
+      do
+      sizes_arr=(${name2sizes[${codelet}]})
+      ((num_codelets+=${#sizes_arr[@]}))
+    done
+
+    codelet_id=0
     for codelet in ${run_codelets[@]}
       do
       codelet_path=${name2path[${codelet}]}
@@ -125,13 +134,15 @@ runLoop() {
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
       
-      ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" | tee "$codelet_path/cls.log"
+      ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" | tee "$codelet_path/cls.log" 
       res=$?
       if [[ "$res" != "0" ]]
 	  then
 #      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
 	  ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
       fi
+      sizes_arr=(${sizes})
+      ((codelet_id+=${#sizes_arr[@]}))
     done
     
 }

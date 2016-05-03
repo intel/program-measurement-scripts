@@ -7,9 +7,9 @@ then
     source /opt/intel/sep/sep_vars.sh
 fi
 
-if [[ "$nb_args" != "6" ]]
+if [[ "$nb_args" != "9" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id, start codelet loop run time, num codelet, current codelet run index)."
 	exit -1
 fi
 
@@ -19,6 +19,11 @@ data_sizes="$3"
 memory_loads="$4"
 frequencies="$5"
 runid="$6"
+start_codelet_loop_time="$7"
+num_codelets="$8"
+cnt_codelet_idx="$9"
+
+
 
 set_prefetcher_bits() {
     bits="$1"
@@ -63,9 +68,9 @@ find_num_repetitions_and_iterations () {
     echo "Adjusting codelet parametres for the $variant variant ...${codelet_folder}"
 
     if [[ "${variant}" == "ORG" ]]; then
-	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
     else
-	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $CODELET_LENGTH
+	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
     fi
     tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
     sed -i '$ d' "$codelet_folder/repetitions_history" 
@@ -358,7 +363,9 @@ do
 		    echo "$repetitions $data_size" > "${build_folder}/codelet.data"
 
 #		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
-		    ./run_codelet.sh "$build_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
+		    ((cnt_codelet_idx++))
+		    ./run_codelet.sh "$build_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx}
+
 		    res=$?
 		    if [[ "$res" != "0" ]]
 			then
