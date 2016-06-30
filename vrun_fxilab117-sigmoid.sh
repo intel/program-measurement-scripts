@@ -780,7 +780,9 @@ name2sizes[lop_13_sr_sVS_de]="27000"
 name2sizes[ludcmp-sq_4_sr_se]="9000"
 name2sizes[ludcmp-sq_4_sr_sVS_se]="9000"
 
-name2sizes[ludcmp-sq_4_sr_se]="80 128 176 224 272 320 352 400 448 496 544 1392 2240 3088 3920 4768 5616 6464 7312 8160 9008"
+#name2sizes[ludcmp-sq_4_sr_se]="80 128 176 224 272 320 352 400 448 496 544 1392 2240 3088 3920 4768 5616 6464 7312 8160 9008"
+name2sizes[ludcmp-sq_4_sr_se]="256 384 512 640 768 880 1008 1136 1264 1568 1728 1904 2064 2416 2576 2752 2912"
+
 
 name2sizes[matadd-flb_16_sr_de]="9000"
 name2sizes[matadd-flb_16_sr_sVS_de]="9000"
