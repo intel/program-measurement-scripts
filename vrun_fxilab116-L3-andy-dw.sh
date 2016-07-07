@@ -104,12 +104,13 @@ quadratic_codelets=""
 ptr_codelets=""
 
 
-prefix="/nfs/fx/home/cwong29/working/NR-scripts"
+#prefix="/nfs/fx/home/cwong29/working/NR-scripts"
 prefix=$(readlink -f ..)
 #ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
 ubmkprefix="${prefix}/nr-codelets/bws"
 nr_prefix="${prefix}/nr-codelets/numerical_recipes"
 saeed_prefix="${prefix}/intel_codelets"   
+andy_prefix="${prefix}/andy_codelets/invitro"
 
 lin_s1_prefix="${nr_prefix}/1D_loop-Stride_1"
 lin_slda_prefix="${nr_prefix}/1D_loop-Stride_LDA"
@@ -119,6 +120,7 @@ quad_slda_prefix="${nr_prefix}/2D_loop-Stride_LDA"
 quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 
 saeed_lin_s1_prefix="${saeed_prefix}/1D_loop-Stride_1"
+andy_lin_s1_prefix="${andy_prefix}/1D_loop-Stride_1"
 
 
 
@@ -414,6 +416,7 @@ fill_codelet_maps()
 
 fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}"
+fill_codelet_maps "${andy_lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps ${lin_slda_prefix} "${linear_sizes}"
 fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}"
 fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}"
@@ -1415,6 +1418,8 @@ name2sizes[ptr11_vmovaps_branch]="10000"
 
 name2sizes[ptr6_movaps-3lfbhit-12rip_branch]="10000"
 name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
+name2sizes[sp.c_lhsx_line885_loop.c.0_dx2]="64"
+name2sizes[sp.c_lhsx_line885_loop.c.0_sVS_dx2]="64"
 
 # Switched focus to 2D
 # run_codelets=(
@@ -1837,8 +1842,8 @@ run_codelets=(
     # hqr_15_sr_sx2
     # hqr-sq_12_sx2
 #     hqr-sq_12_sVS_sx2
-#     lop_13_sr_dx2
-#     lop_13_sr_sVS_dx2
+    # lop_13_sr_dx2
+    # lop_13_sr_sVS_dx2
     # ludcmp-sq_4_sr_sx2 
     # ludcmp-sq_4_sr_sVS_sx2
     # matadd-flb_16_sr_dx2
@@ -1851,8 +1856,8 @@ run_codelets=(
     # realft_4_sr_dx2
     # relax2_26_sr_dx2 
     # relax2_26_sr_sVS_dx2
-#     rstrct_29_sr_dx2
-#     rstrct_29_sr_sVS_dx2
+    # rstrct_29_sr_dx2
+    # rstrct_29_sr_sVS_dx2
     # s1244_sr_sx2 
     # s1244_sr_sVS_sx2 
     # s319_sr_sx2
@@ -1865,14 +1870,16 @@ run_codelets=(
     # svdcmp_13_sr_sVS_dx2 
     # svdcmp_14_sr_dx2
     # svdcmp_14_sr_sVS_dx2
-#     svdcmp_6_dx2
+    # svdcmp_6_dx2
 #     svdcmp_6_sVS_dx2
-     toeplz_1_dx2
-      toeplz_1_sVS_dx2 
+    # toeplz_1_dx2
+#      toeplz_1_sVS_dx2 
     # toeplz_2_sr_dx2 
     # toeplz_4_sr_dx2
     # tridag_1_sr_dx2
     # tridag_2_sr_dx2
+  sp.c_lhsx_line885_loop.c.0_dx2     
+#  sp.c_lhsx_line885_loop.c.0_sVS_dx2
 )
 
 
@@ -2148,8 +2155,8 @@ name2sizes[four1_2_sr_mx2]="200000"
 name2sizes[hqr_15_sr_sx2]="6000"
 name2sizes[hqr-sq_12_sx2]="544"
 name2sizes[hqr-sq_12_sVS_sx2]="544"
-name2sizes[lop_13_sr_dx2]="356"
-name2sizes[lop_13_sr_sVS_dx2]="356"
+name2sizes[lop_13_sr_dx2]="354"
+name2sizes[lop_13_sr_sVS_dx2]="354"
 name2sizes[ludcmp-sq_4_sr_sx2]="544" 
 name2sizes[ludcmp-sq_4_sr_sVS_sx2]="544"
 name2sizes[matadd-flb_16_sr_dx2]="352"
@@ -2162,8 +2169,8 @@ name2sizes[ptr1_vmovaps_branch]="10000"
 name2sizes[realft_4_sr_dx2]="200000"
 name2sizes[relax2_26_sr_dx2]="306" 
 name2sizes[relax2_26_sr_sVS_dx2]="306"
-name2sizes[rstrct_29_sr_dx2]="359"
-name2sizes[rstrct_29_sr_sVS_dx2]="359"
+name2sizes[rstrct_29_sr_dx2]="355"
+name2sizes[rstrct_29_sr_sVS_dx2]="355"
 name2sizes[s1244_sr_sx2]="59961" 
 name2sizes[s1244_sr_sVS_sx2]="59961" 
 name2sizes[s319_sr_sx2]="60000"
@@ -2176,10 +2183,10 @@ name2sizes[svdcmp_13_sr_dx2]="200000"
 name2sizes[svdcmp_13_sr_sVS_dx2]="200000" 
 name2sizes[svdcmp_14_sr_dx2]="200000"
 name2sizes[svdcmp_14_sr_sVS_dx2]="200000"
-name2sizes[svdcmp_6_dx2]="10016"
-name2sizes[svdcmp_6_sVS_dx2]="10016"
-name2sizes[toeplz_1_dx2]="100001"
-name2sizes[toeplz_1_sVS_dx2]="100001" 
+name2sizes[svdcmp_6_dx2]="10000"
+name2sizes[svdcmp_6_sVS_dx2]="10000"
+name2sizes[toeplz_1_dx2]="100000"
+name2sizes[toeplz_1_sVS_dx2]="100000" 
 name2sizes[toeplz_2_sr_dx2]="200000"
 name2sizes[toeplz_4_sr_dx2]="200000"
 name2sizes[tridag_1_sr_dx2]="10000"
