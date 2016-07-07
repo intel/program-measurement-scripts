@@ -55,6 +55,7 @@ do
 	#echo "Res without dot: $res"
 	res=$( echo $res | sed 's/^[0]*//' )
 	#echo "Res without 0s: $res"
+	echo "Got: ${res} while targeting to ${desired_length}"
 
 	if [[ "$res" == "" ]]
 	then
