@@ -25,7 +25,7 @@ res=0
 
 cd $codelet_folder
 
-while [ $res -le $desired_length  -a $current_repetitions -le ${HARD_MAX_REPETITIONS} -a $current_repetitions -ge 0 ]
+while [ $res -lt $desired_length  -a $current_repetitions -le ${HARD_MAX_REPETITIONS} -a $current_repetitions -ge 0 ]
 do
   	if [[ $current_repetitions -ge ${MAX_REPETITIONS} ]]
 	then
@@ -64,9 +64,11 @@ do
 		#echo "Forced repetitions = $current_repetitions"
 		res=0
 	else
-		if [ $res -le $desired_length  ]
+		if [ $res -lt $desired_length  ]
 		then
-			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
+#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
+#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
+                        current_repetitions=$(echo ${current_repetitions} ${res} ${desired_length} |awk '{x=$1*(($3/$2)); print (x-int(x) > 0)?int(x)+1:int(x)}')
 			#echo "Deduced repetitions = $current_repetitions"
 		fi
 	fi
