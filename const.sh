@@ -1,30 +1,54 @@
 #!/bin/bash -l
 
+# A bit ugly HOSTNAME -> UARCH detection but will keep it for the time being
+# TODO: Use more robust method.
+# if [[ "$HOSTNAME" == "fxe32lin04.fx.intel.com" ]]
+# then
+# 	export HOSTNAME="fxe32lin04"
+# else
+# 	if echo "$HOSTNAME" | grep "fxatom"
+# 	then
+# 		export HOSTNAME="fxsilvermont"
+# 	else
+# 		if echo "$HOSTNAME" | grep "fxilab10"
+# 		then
+# 			export HOSTNAME="fxhaswell-desktop"
+# 		else
+# 			if echo "$HOSTNAME" | grep "fxilab11"
+# 			then
+# 				export HOSTNAME="fxhaswell"
+# 			else
+# 				if [[ "$HOSTNAME" == "fxilab150" || "$HOSTNAME" == "fxilab151" || "$HOSTNAME" == "fxilab152" ]]
+# 				then
+# 					export HOSTNAME="fxhaswell-l4"
+# 				fi
+# 			fi
+# 		fi
+# 	fi
+# fi
 
-if [[ "$HOSTNAME" == "fxe32lin04.fx.intel.com" ]]
-then
+case "$HOSTNAME" in
+    fxe32lin04.fx.intel.com)
 	export HOSTNAME="fxe32lin04"
-else
-	if echo "$HOSTNAME" | grep "fxatom"
-	then
-		export HOSTNAME="fxsilvermont"
-	else
-		if echo "$HOSTNAME" | grep "fxilab10"
-		then
-			export HOSTNAME="fxhaswell-desktop"
-		else
-			if echo "$HOSTNAME" | grep "fxilab11"
-			then
-				export HOSTNAME="fxhaswell"
-			else
-				if [[ "$HOSTNAME" == "fxilab150" || "$HOSTNAME" == "fxilab151" || "$HOSTNAME" == "fxilab152" ]]
-				then
-					export HOSTNAME="fxhaswell-l4"
-				fi
-			fi
-		fi
-	fi
-fi
+	;;
+    fxatom*)
+	export HOSTNAME="fxsilvermont"
+	;;
+    fxilab10*)
+	export HOSTNAME="fxhaswell-desktop"
+	;;
+    fxilab11*)
+	export HOSTNAME="fxhaswell"
+	;;
+    fxilab149*|fxilab15[0-2]*)
+	export HOSTNAME="fxhaswell-l4"
+	;;
+    fxilab16[0-7]*)
+	export HOSTNAME="fxhaswell-server"
+	;;
+esac
+
+
 REALHOSTNAME=$(hostname)
 
 nb_args="$#"
@@ -156,6 +180,7 @@ then
 	UARCH="IVY_BRIDGE"
 	PRETTY_UARCH="Ivy Bridge"
 fi
+
 
 # For generate_variants.sh
 declare -A transforms
