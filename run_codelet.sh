@@ -393,7 +393,7 @@ OUTPUT_FILE=emon_api.out
 EOF
                 $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &> "$res_path/emon_execution_log"
 		mv emon_api_config_file emon_api_config_file.${evfile}
-		grep -v "Subtraction" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
+		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
 		mv emon_api.out emon_api.out.${evfile}
 
 		remainingRunCnt=$(((${META_REPETITIONS}*${numRuns})-${totalRunCnt}))
