@@ -96,7 +96,7 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
     echo "Running counters..."
     emon -v > "$res_path/emon_info" 
-    emon_counters=$(env -i ./build_counter_list.sh "$res_path/emon_info" )
+    emon_counters=$(${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
     echo "COUNTER LIST: " ${emon_counters}
 
 
