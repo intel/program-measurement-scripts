@@ -4,7 +4,7 @@ source ./const.sh
 
 if [[ "$nb_args" != "1" ]]
 then
-        echo "ERROR! Invalid arguments (need the requested frequency, in kHz)."
+        echo "ERROR! Invalid arguments (need the requested core frequencies, in kHz)."
         exit -1
 fi
 
@@ -14,7 +14,7 @@ target_frequency=$1
 case "${paths[$HOSTNAME]}" in
 
 *)
-        echo "Setting frequency to '$target_frequency'"
+        echo "Setting core frequency to '$target_frequency'"
 # Adapt to Intel FX
         for ((i=0;i<$(nproc);i++))
         do
