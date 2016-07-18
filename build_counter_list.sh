@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-source ./const.sh
+source $(dirname $0)/const.sh
 
 if [[ "$nb_args" != "1" ]]
 then
