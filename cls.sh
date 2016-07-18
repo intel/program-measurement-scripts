@@ -25,34 +25,6 @@ cnt_codelet_idx="$9"
 
 
 
-set_prefetcher_bits() {
-    bits="$1"
-    hex_prefetcher_bits=$(printf "0x%x" ${bits})
-    echo "Writing ${hex_prefetcher_bits} to MSR 0x1a4 to change prefetcher settings."
-    emon --write-msr 0x1a4=${hex_prefetcher_bits}
-}
-
-set_thp() {
-    setting="$1"
-    # NOTE: setuid bit of hugeadm assumed to be set by root.
-    echo "Huge page setting ==> ${THP_SETTING}"
-
-    cur_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
-    if [[ "${cur_thp_setting}" != "${THP_SETTING}" ]]; then
-	hugeadm --thp-${THP_SETTING}
-# Sleep to wait for system state updated.
-	sleep 5
-	new_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
-	if [[ "${new_thp_setting}" != "${setting}" ]]
-	    then
-# Failed to set THP for experiment.  Quit.
-	    echo "Failed to set THP (Huge page) from ${setting} to ${new_thp_setting}.  Cancelling CLS."
-	    exit -1
-	fi
-    else
-	echo "Current THP setting is already ${cur_thp_setting}."
-    fi
-}
 
 find_num_repetitions_and_iterations () {
     local codelet_folder="$1"
@@ -255,22 +227,14 @@ fi
 echo "------------------------------------------------------------"
 echo "Starting experiments..."
 
-#Saving old prefetcher settings
-old_prefetcher_bits=($(emon --read-msr 0x1a4 | grep MSR | cut -f2 -d=|uniq ))
-
-#Saving old uncore settings
-old_uncore_bits=($(emon --read-msr 0x620 | grep MSR | cut -f2 -d=|uniq ))
-
-if [[ "${#old_prefetcher_bits[@]}" -gt "1" ]]
+old_settings=$(${CLS_FOLDER}/save_system_settings.sh)
+if [[ $? != "0" ]]
 then
-# Different settings among processor - not supported.
-	echo "Processors with different original prefetcher settings.  Cancelling CLS."
-	exit -1
+    echo "Failure saving system settings.  Cancelling CLS."
+    exit -1
 fi
 
 # Change Huge page settings
-# save orignal setting first
-old_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
 set_thp ${THP_SETTING}
 
 # Change prefetcher settings
@@ -284,11 +248,11 @@ do
 	mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size" &> /dev/null
 
 	echo "Setting highest CPU frequency to adjust codelet parametres..."
-	./set_frequency.sh $XP_HIGH_FREQ 
-	if [[ "$UARCH" == "HASWELL" ]]; then
-		dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
-		emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
-	fi
+	./set_frequency.sh -c $XP_HIGH_FREQ -m $XP_HIGH_FREQ -M $XP_HIGH_FREQ
+	# if [[ "$UARCH" == "HASWELL" ]]; then
+	# 	dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
+	# 	emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+	# fi
 
 	if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
 	    for variant in $variants
@@ -326,11 +290,11 @@ do
 		for frequency in $frequencies
 		do
 		  mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
-		  if [[ "$UARCH" == "HASWELL" ]]; then
-		      dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
-		      emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
-		  fi
-		  ./set_frequency.sh $frequency
+		  # if [[ "$UARCH" == "HASWELL" ]]; then
+		  #     dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
+		  #     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+		  # fi
+		  ./set_frequency.sh $frequency -m $frequency -M $frequency
 		  res=$?
 		  if [[ "$res" != "0" ]]
 		      then
@@ -398,16 +362,9 @@ do
 # 	fi
 done
 
-# Restore prefetcher settings.
-echo "Writing ${old_prefetcher_bits} to MSR 0x1a4 to restore prefetcher settings."
-#emon --write-msr 0x1a4=${old_prefetcher_bits}
-set_prefetcher_bits ${old_prefetcher_bits}
-# restore thp setting
-set_thp ${old_thp_setting}
 
-if [[ "$UARCH" == "HASWELL" ]]; then
-	emon --write-msr 0x620="$old_uncore_bits"
-fi
+${CLS_FOLDER}/restore_system_settings.sh ${old_settings}
+
 
 echo "------------------------------------------------------------"
 echo "Generating results using following inputs..."
