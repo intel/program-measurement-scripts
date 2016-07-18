@@ -23,13 +23,21 @@ fi
 #Saving old uncore settings
 old_uncore_bits=($(emon --read-msr 0x620 | grep MSR | cut -f2 -d=|uniq ))
 
+ ((hi_bits=old_uncore_bits>>8))
+ ((lo_bits=old_uncore_bits&0xff))
+# In same units as Core freq.
+ ((min_uncore_freq=hi_bits*100000))
+ ((max_uncore_freq=lo_bits*100000))
+
+
 # save orignal THP setting first
 old_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
 
 old_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
 
 
-echo $old_prefetcher_bits  $old_thp_setting $old_frequency $old_uncore_bits
+#echo $old_prefetcher_bits  $old_thp_setting $old_frequency $old_uncore_bits
+echo $old_prefetcher_bits  $old_thp_setting $old_frequency $min_uncore_freq $max_uncore_freq
 
 exit 0
 

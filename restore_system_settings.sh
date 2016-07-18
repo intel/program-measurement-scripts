@@ -9,7 +9,7 @@
 
 source $(dirname $0)/const.sh
 
-if [[ "$nb_args" != "4" ]]
+if [[ "$nb_args" != "5" ]]
 then
         echo "ERROR! Invalid arguments (need prefetcher bits, thp setting, freq, uncore bit)."
         exit -1
@@ -18,7 +18,8 @@ fi
 old_prefetcher_bits="$1"
 old_thp_setting="$2"
 old_frequency="$3"
-old_uncore_bits="$4"
+min_uncore_frequency="$4"
+max_uncore_frequency="$5"
 
 
 # Restore prefetcher settings.
@@ -28,8 +29,5 @@ set_prefetcher_bits ${old_prefetcher_bits}
 # restore thp setting
 set_thp ${old_thp_setting}
 
-if [[ "$UARCH" == "HASWELL" ]]; then
-	emon --write-msr 0x620="$old_uncore_bits"
-fi
+$(dirname $0)/set_frequency.sh -c ${old_frequency} -m ${min_uncore_frequency} -M ${max_uncore_frequency}
 
-$(dirname $0)/set_frequency.sh ${old_frequency}

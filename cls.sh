@@ -248,11 +248,11 @@ do
 	mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size" &> /dev/null
 
 	echo "Setting highest CPU frequency to adjust codelet parametres..."
-	./set_frequency.sh $XP_HIGH_FREQ 
-	if [[ "$UARCH" == "HASWELL" ]]; then
-		dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
-		emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
-	fi
+	./set_frequency.sh -c $XP_HIGH_FREQ -m $XP_HIGH_FREQ -M $XP_HIGH_FREQ
+	# if [[ "$UARCH" == "HASWELL" ]]; then
+	# 	dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
+	# 	emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+	# fi
 
 	if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
 	    for variant in $variants
@@ -290,11 +290,11 @@ do
 		for frequency in $frequencies
 		do
 		  mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
-		  if [[ "$UARCH" == "HASWELL" ]]; then
-		      dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
-		      emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
-		  fi
-		  ./set_frequency.sh $frequency
+		  # if [[ "$UARCH" == "HASWELL" ]]; then
+		  #     dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
+		  #     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
+		  # fi
+		  ./set_frequency.sh $frequency -m $frequency -M $frequency
 		  res=$?
 		  if [[ "$res" != "0" ]]
 		      then
