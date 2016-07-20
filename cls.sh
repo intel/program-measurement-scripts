@@ -115,6 +115,11 @@ echo -e "Memory loads \t'$memory_loads'"
 echo -e "Frequencies \t'$frequencies'"
 echo -e "Meta repets\t'$META_REPETITIONS'"
 
+# Print out some version info
+${MAQAO} -v
+${DECAN} -v
+
+
 echo "------------------------------------------------------------"
 echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
