@@ -41,17 +41,18 @@ ${GENERATE_CQA_CSV_SH} "$local_uarch" "$bin_folder/$codelet_name" $loop_id
 cat loops.csv | sed 's/'${DELIM}'$//g' > "$bin_folder/${codelet_name}.stan_full.csv"
 
 rm loops.csv
-group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
-new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
-echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
+
+#group_analysis=$( ./group_analysis.sh "$bin_folder/$codelet_name" "$loop_id" | tail -n 2 )
+#new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
+#echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
 ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/$codelet_name" "$loop_id" )
 new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
-vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/$codelet_name" "$loop_id" )
-new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
-echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
+#vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/$codelet_name" "$loop_id" )
+#new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
+#echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
 
 "$MAQAO" "${MAQAO_FOLDER}/loop_id_in_object.lua" binary_name="$bin_folder/$codelet_name" loop_id="$loop_id" object_name="$bin_folder/../codelet.o" > "$bin_folder/../loop_id_in_obj"

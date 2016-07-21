@@ -35,7 +35,8 @@ set_arch_names()
 for ua in SANDY_BRIDGE HASWELL IVY_BRIDGE
   do
   set_arch_names ${ua}
-  "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+#  "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+  "$MAQAO" ${MAQAO_FOLDER}/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
 done
 
 #local_uarch="sandy_bridge"

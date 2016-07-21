@@ -2,7 +2,7 @@
 
 source const.sh
 
-MAX_ROWS=30
+# MAX_ROWS=30
 
 nb_args=$#
 
@@ -114,13 +114,16 @@ do
 
 	if [[ "$DELIM" != "," ]]
 	    then
-	    cat ${STAN_METRICS_FILE} | tr ${DELIM} ${CONFLICT_DELIM} | tr ',' ${DELIM} > $tmprep/stan_report_${variant}.csv
+	    cat ${STAN_METRICS_FILE} | tr ${DELIM} ${CONFLICT_DELIM} | tr ',' ${DELIM} > $tmprep/stan_report_${variant}.h.csv
 	else
-	    cat ${STAN_METRICS_FILE}  > $tmprep/stan_report_${variant}.csv
+	    cat ${STAN_METRICS_FILE}  > $tmprep/stan_report_${variant}.h.csv
 	fi
 	stan_metric=$( echo $stan_metric | sed 's/'${DELIM}'\(.*\)/\1/')
 	#yes $stan_metric | head -n $nrows >> $tmprep/stan_report_${variant}.csv
-	yes $stan_metric | head -n $MAX_ROWS >> $tmprep/stan_report_${variant}.csv
+#	yes $stan_metric | head -n $MAX_ROWS >> $tmprep/stan_report_${variant}.csv
+
+
+
 #	cp $tmprep/stan_report_${variant}.csv /tmp/tt2
 
 	for frequency in $frequency_list
@@ -161,11 +164,18 @@ do
 
 		paste -d${DELIM} $tmprep/codelet_mach_info.csv $tmprep/ds_itr_rep_cols.csv $tmprep/decan_cpu_run_info.csv > $tmprep/codelet_struct.csv  
 
+		cat $tmprep/stan_report_${variant}.h.csv > $tmprep/stan_report_${variant}.csv
+		yes $stan_metric | head -n $nrows >> $tmprep/stan_report_${variant}.csv
+
 		paste -d${DELIM} $tmprep/codelet_struct.csv $tmprep/counters.csv $tmprep/stan_report_${variant}.csv > $outfile
-		extra_rows=$(($nrows + 2))
+
+
+#		extra_rows=$(($nrows + 2))
 #		cp $tmprep/stan_report_${variant}.csv /tmp/tt
 		# Following ',' is not delimiter
-	    sed -i "$extra_rows,$ d" $outfile
+#	    sed -i "$extra_rows,$ d" $outfile
+
+
 	done
 done
 head -n 1     $tmprep/${codelet_name}_counters_${variant}_0MBs_${frequency}kHz.csv > ${cape_file}
