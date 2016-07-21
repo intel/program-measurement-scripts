@@ -104,7 +104,8 @@ quadratic_codelets=""
 ptr_codelets=""
 
 
-prefix="/nfs/fx/home/cwong29/working/NR-scripts"
+#prefix="/nfs/fx/home/cwong29/working/NR-scripts"
+prefix=$(readlink -f ..)
 #ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
 ubmkprefix="${prefix}/nr-codelets/bws"
 nr_prefix="${prefix}/nr-codelets/numerical_recipes"
@@ -1250,8 +1251,98 @@ name2sizes[ptr4_movaps-7lfbhit_branch]="1000"
 name2sizes[ptr4_movaps-8lfbhit_branch]="1000"
 name2sizes[ptr4_movaps-9lfbhit_branch]="1000"
 
+name2sizes[ptr1_vmovaps-1lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-2lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-3lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-4lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-5lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-6lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-7lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-8lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-9lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-10lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-11lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-12lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-13lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-14lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-15lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-16lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-17lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-18lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-19lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-20lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-21lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-22lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-23lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-24lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-25lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-26lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-27lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-28lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-29lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-30lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-31lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps-32lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-1lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-2lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-3lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-4lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-5lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-6lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-7lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-8lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-9lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-10lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-11lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-12lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-13lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-14lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-15lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-16lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-17lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-18lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-19lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-20lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-21lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-22lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-23lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-24lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-25lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-26lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-27lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-28lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-29lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-30lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-31lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-32lfbhit_branch]="1000"
+name2sizes[ptr2_vmovaps-33lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-1lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-2lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-3lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-4lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-5lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-6lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-7lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-8lfbhit_branch]="1000"
+name2sizes[ptr4_vmovaps-9lfbhit_branch]="1000"
+name2sizes[ptr1_vmovaps_branch]="1000"
+name2sizes[ptr2_vmovaps_branch]="1000"
+name2sizes[ptr3_vmovaps_branch]="1000"
+name2sizes[ptr4_vmovaps_branch]="1000"
+name2sizes[ptr5_vmovaps_branch]="1000"
+name2sizes[ptr6_vmovaps_branch]="1000"
+name2sizes[ptr7_vmovaps_branch]="1000"
+name2sizes[ptr8_vmovaps_branch]="1000"
+name2sizes[ptr9_vmovaps_branch]="1000"
+name2sizes[ptr10_vmovaps_branch]="1000"
+name2sizes[ptr11_vmovaps_branch]="1000"
+
+
 name2sizes[ptr6_movaps-3lfbhit-12rip_branch]="10000"
 name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
+
+
+
 
 # Switched focus to 2D
 # run_codelets=(
@@ -1711,7 +1802,7 @@ run_codelets=(
     tridag_2_sr_dx2
 )
 
-ptr_run_codelets=(
+run_codelets=(
 #  ptr1_movaps-1lfbhit_branch
 #  ptr1_movaps-2lfbhit_branch
 #  ptr1_movaps-3lfbhit_branch
@@ -1791,17 +1882,17 @@ ptr_run_codelets=(
 #  ptr4_movaps-8lfbhit_branch
 #  ptr4_movaps-9lfbhit_branch
 
- ptr1_movaps_branch
- ptr2_movaps_branch
- ptr3_movaps_branch
- ptr4_movaps_branch
- ptr5_movaps_branch
- ptr6_movaps_branch
- ptr7_movaps_branch
- ptr8_movaps_branch
- ptr9_movaps_branch
- ptr10_movaps_branch
- ptr11_movaps_branch
+ # ptr1_movaps_branch
+ # ptr2_movaps_branch
+ # ptr3_movaps_branch
+ # ptr4_movaps_branch
+ # ptr5_movaps_branch
+ # ptr6_movaps_branch
+ # ptr7_movaps_branch
+ # ptr8_movaps_branch
+ # ptr9_movaps_branch
+ # ptr10_movaps_branch
+ # ptr11_movaps_branch
 
 #  ptr1_movaps-2rip_branch
 #  ptr2_movaps-2rip_branch
@@ -1814,6 +1905,98 @@ ptr_run_codelets=(
 #  ptr9_movaps-2rip_branch
 #  ptr10_movaps-2rip_branch
 #  ptr11_movaps-2rip_branch
+
+ptr1_vmovaps-1lfbhit_branch
+ptr1_vmovaps-2lfbhit_branch
+ptr1_vmovaps-3lfbhit_branch
+ptr1_vmovaps-4lfbhit_branch
+ptr1_vmovaps-5lfbhit_branch
+ptr1_vmovaps-6lfbhit_branch
+ptr1_vmovaps-7lfbhit_branch
+ptr1_vmovaps-8lfbhit_branch
+ptr1_vmovaps-9lfbhit_branch
+ptr1_vmovaps-10lfbhit_branch
+ptr1_vmovaps-11lfbhit_branch
+ptr1_vmovaps-12lfbhit_branch
+ptr1_vmovaps-13lfbhit_branch
+ptr1_vmovaps-14lfbhit_branch
+ptr1_vmovaps-15lfbhit_branch
+ptr1_vmovaps-16lfbhit_branch
+ptr1_vmovaps-17lfbhit_branch
+ptr1_vmovaps-18lfbhit_branch
+ptr1_vmovaps-19lfbhit_branch
+ptr1_vmovaps-20lfbhit_branch
+ptr1_vmovaps-21lfbhit_branch
+ptr1_vmovaps-22lfbhit_branch
+ptr1_vmovaps-23lfbhit_branch
+ptr1_vmovaps-24lfbhit_branch
+ptr1_vmovaps-25lfbhit_branch
+ptr1_vmovaps-26lfbhit_branch
+ptr1_vmovaps-27lfbhit_branch
+ptr1_vmovaps-28lfbhit_branch
+ptr1_vmovaps-29lfbhit_branch
+ptr1_vmovaps-30lfbhit_branch
+ptr1_vmovaps-31lfbhit_branch
+ptr1_vmovaps-32lfbhit_branch
+
+ptr2_vmovaps-1lfbhit_branch
+ptr2_vmovaps-2lfbhit_branch
+ptr2_vmovaps-3lfbhit_branch
+ptr2_vmovaps-4lfbhit_branch
+ptr2_vmovaps-5lfbhit_branch
+ptr2_vmovaps-6lfbhit_branch
+ptr2_vmovaps-7lfbhit_branch
+ptr2_vmovaps-8lfbhit_branch
+ptr2_vmovaps-9lfbhit_branch
+ptr2_vmovaps-10lfbhit_branch
+ptr2_vmovaps-11lfbhit_branch
+ptr2_vmovaps-12lfbhit_branch
+ptr2_vmovaps-13lfbhit_branch
+ptr2_vmovaps-14lfbhit_branch
+ptr2_vmovaps-15lfbhit_branch
+ptr2_vmovaps-16lfbhit_branch
+ptr2_vmovaps-17lfbhit_branch
+ptr2_vmovaps-18lfbhit_branch
+ptr2_vmovaps-19lfbhit_branch
+ptr2_vmovaps-20lfbhit_branch
+ptr2_vmovaps-21lfbhit_branch
+ptr2_vmovaps-22lfbhit_branch
+
+ptr2_vmovaps-23lfbhit_branch
+ptr2_vmovaps-24lfbhit_branch
+ptr2_vmovaps-25lfbhit_branch
+ptr2_vmovaps-26lfbhit_branch
+
+ptr2_vmovaps-27lfbhit_branch
+ptr2_vmovaps-28lfbhit_branch
+ptr2_vmovaps-29lfbhit_branch
+ptr2_vmovaps-30lfbhit_branch
+ptr2_vmovaps-31lfbhit_branch
+ptr2_vmovaps-32lfbhit_branch
+ptr2_vmovaps-33lfbhit_branch
+
+ptr4_vmovaps-1lfbhit_branch
+ptr4_vmovaps-2lfbhit_branch
+ptr4_vmovaps-3lfbhit_branch
+ptr4_vmovaps-4lfbhit_branch
+ptr4_vmovaps-5lfbhit_branch
+ptr4_vmovaps-6lfbhit_branch
+ptr4_vmovaps-7lfbhit_branch
+ptr4_vmovaps-8lfbhit_branch
+ptr4_vmovaps-9lfbhit_branch
+
+ptr1_vmovaps_branch
+ptr2_vmovaps_branch
+ptr3_vmovaps_branch
+ptr4_vmovaps_branch
+ptr5_vmovaps_branch
+ptr6_vmovaps_branch
+ptr7_vmovaps_branch
+ptr8_vmovaps_branch
+ptr9_vmovaps_branch
+ptr10_vmovaps_branch
+ptr11_vmovaps_branch
+
 )
 
 # run_codelets=(
