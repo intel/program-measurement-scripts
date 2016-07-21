@@ -20,30 +20,35 @@ launchIt () {
     fi
 
 
-    START_VRUN_SH=$(date '+%s')
+    (
+	echo "Pending executing ${launch_script} at $(date)..."
+	flock 888 || exit 1;
+	echo "Start executing ${launch_script} at $(date)..."
 
-    run_dir=${RUN_FOLDER}/${START_VRUN_SH}
-    mkdir -p ${run_dir}
+	START_VRUN_SH=$(date '+%s')
 
-    ${LOGGER_SH} ${START_VRUN_SH} "${launch_script} started at $(date --date=@${START_VRUN_SH})"
-    ${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
-    ${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
-    
-    ${launch_fn} ${START_VRUN_SH}
+	run_dir=${RUN_FOLDER}/${START_VRUN_SH}
+	mkdir -p ${run_dir}
 
-# Combining all run cape data
-    for f in $( find -L ${run_dir} -name *.cape.csv ) 
-    do
-      cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
-    done
+	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} started at $(date --date=@${START_VRUN_SH})"
+	${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
+	${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
+	
+	${launch_fn} ${START_VRUN_SH}
+
+	# Combining all run cape data
+	for f in $( find -L ${run_dir} -name *.cape.csv ) 
+	do
+	    cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
+	done
 
 
-    END_VRUN_SH=$(date '+%s')
-    ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
-    
-    ${LOGGER_SH} ${START_VRUN_SH} "${launch_script} finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})"     
-    
-
+	END_VRUN_SH=$(date '+%s')
+	ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
+	
+	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})"     
+	
+    ) 888>/tmp/vrun.lock
 }
 
 launchAll() {
