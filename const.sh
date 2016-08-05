@@ -131,6 +131,8 @@ FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 
 # For cls.sh
 STRICT_SINGLE_LOOP=1
+# Whether to really run the code.  0 => only compile, generate assembly and static reports.
+ACTIVATE_EXPERIMENTS=1
 ACTIVATE_DYNAMIC_GROUPING=0
 COMBINATORICS="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics"
 COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"

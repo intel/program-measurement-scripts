@@ -21,6 +21,8 @@ frequencies="$5"
 
 #echo "Gathering results for '$codelet_folder'"
 echo "Gathering results for '$res_folder'"
+if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]
+then
 
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
     then
@@ -217,8 +219,10 @@ then
 else
 	echo "Skipping counters (not activated)."
 fi
+fi
 
 echo "Converting gathered data to Cape format..."
-${FORMAT_2_CAPE_SH} ${res_folder} $(hostname)
+echo Format2Cape cmd ${FORMAT_2_CAPE_SH} ${res_folder} $(hostname) ${variants}
+${FORMAT_2_CAPE_SH} ${res_folder} $(hostname) ${variants}
 
 exit 0
