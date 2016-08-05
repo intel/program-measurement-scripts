@@ -89,9 +89,18 @@ find_num_repetitions_and_iterations () {
     if [[ "${STRICT_SINGLE_LOOP}" != "0" ]]
 	then
 	if [[ "$num_loop_exe" != "1" ]]
-	    then
+	then
 	    echo "Multiple loops executed. Cancelling CLS."
 	    exit -1
+	else
+	    echo "Single loop executed. Acceptable for strict runs."
+	fi
+    else
+	if [[ "$num_loop_exe" != "1" ]]
+	    then
+	    echo "Multiple loops executed but proceed for non-strict runs"
+	else
+	    echo "Single loop executed."
 	fi
     fi
 
