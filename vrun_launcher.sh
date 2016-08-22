@@ -85,7 +85,7 @@ launchAll() {
     ${launch_fn} ${START_VRUN_SH}
 
 # Combining all run cape data
-    for f in $( find -L ${run_dir} -name *.cape.csv ) 
+    for f in $( find -L ${run_dir} -name *.cape.csv| sort ) 
     do
       cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
     done
