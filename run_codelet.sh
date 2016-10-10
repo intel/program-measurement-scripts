@@ -1,6 +1,11 @@
 #!/bin/bash -l
 
 source ./const.sh
+if [ -f /opt/intel/sep/sep_vars.sh ];
+then
+    source /opt/intel/sep/sep_vars.sh
+fi
+
 
 if [[ "$nb_args" != "11" ]]
 then
@@ -55,8 +60,8 @@ if [[ "${variant}" == "ORG" ]]
 else
 # Run the DECAN generated program
     run_prog="./${codelet_name}_${variant}_hwc"
-    # Not really handled.
-    run_prog_emon_api="./${codelet_name}_${variant}_emon_api_hwc"
+# See generate_variants.sh to see emon_api binary is used to generate this binary
+    run_prog_emon_api="./${codelet_name}_${variant}_hwc"
 fi
 
 for i in $( seq $META_REPETITIONS )

@@ -1876,52 +1876,52 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 # )
 
 run_codelets=(
-    balanc_3_dx2
-   balanc_3_sVS_dx2 
-   elmhes_10_dx2
-    elmhes_10_sVS_dx2 
-    elmhes_11_dx2
-    elmhes_11_sVS_dx2 
-    four1_2_mx2 
-    hqr_15_sx2
-#    hqr-sq_12_sx2
-#    hqr-sq_12_sVS_sx2
-    lop_13_dx2
-    lop_13_sVS_dx2
-    ludcmp-sq_4_sx2 
-    ludcmp-sq_4_sVS_sx2
-    matadd-flb_16_dx2
-    matadd-flb_16_sVS_dx2  
-    mprove_8_mx2
-    mprove_8_sVS_mx2
-    mprove_9_dx2
-    mprove_9_sVS_dx2
-#    ptr1_vmovaps_branch
-    realft_4_dx2
-    relax2_26_dx2 
-    relax2_26_sVS_dx2
-    rstrct_29_dx2
-    rstrct_29_sVS_dx2
-    s1244_sx2 
-    s1244_sVS_sx2 
-    s319_sx2
-    s319_sVS_sx2
-    svbksb_3_sx2
-    svbksb_3_sVS_sx2
-    svdcmp_11_dx2
-    svdcmp_11_sVS_dx2 
-    svdcmp_13_dx2
-    svdcmp_13_sVS_dx2 
-    svdcmp_14_dx2
-    svdcmp_14_sVS_dx2
-#    svdcmp_6_dx2
-#    svdcmp_6_sVS_dx2
-#    toeplz_1_dx2
-#    toeplz_1_sVS_dx2 
-    toeplz_2_dx2 
-    toeplz_4_dx2
-    tridag_1_dx2
-    tridag_2_dx2
+#     balanc_3_dx2
+#    balanc_3_sVS_dx2 
+#    elmhes_10_dx2
+#     elmhes_10_sVS_dx2 
+#     elmhes_11_dx2
+#     elmhes_11_sVS_dx2 
+#     four1_2_mx2 
+#     hqr_15_sx2
+# #    hqr-sq_12_sx2
+# #    hqr-sq_12_sVS_sx2
+#     lop_13_dx2
+#     lop_13_sVS_dx2
+#     ludcmp-sq_4_sx2 
+#     ludcmp-sq_4_sVS_sx2
+#     matadd-flb_16_dx2
+#     matadd-flb_16_sVS_dx2  
+#     mprove_8_mx2
+#     mprove_8_sVS_mx2
+#     mprove_9_dx2
+#     mprove_9_sVS_dx2
+# #    ptr1_vmovaps_branch
+#     realft_4_dx2
+#     relax2_26_dx2 
+#     relax2_26_sVS_dx2
+#     rstrct_29_dx2
+#     rstrct_29_sVS_dx2
+#     s1244_sx2 
+#     s1244_sVS_sx2 
+#     s319_sx2
+#     s319_sVS_sx2
+#     svbksb_3_sx2
+#     svbksb_3_sVS_sx2
+#     svdcmp_11_dx2
+#     svdcmp_11_sVS_dx2 
+#     svdcmp_13_dx2
+     svdcmp_13_sVS_dx2 
+#     svdcmp_14_dx2
+#     svdcmp_14_sVS_dx2
+# #    svdcmp_6_dx2
+# #    svdcmp_6_sVS_dx2
+# #    toeplz_1_dx2
+# #    toeplz_1_sVS_dx2 
+#     toeplz_2_dx2 
+#     toeplz_4_dx2
+#     tridag_1_dx2
+#     tridag_2_dx2
 )
 
 

@@ -42,6 +42,7 @@ find_num_repetitions_and_iterations () {
     if [[ "${variant}" == "ORG" ]]; then
 	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
     else
+	echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
     fi
     tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
@@ -159,6 +160,7 @@ echo "$PRETTY_UARCH" > "$codelet_folder/$CLS_RES_FOLDER/uarch"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
+echo ./generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
 ./generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
 res=$?
 if [[ "$res" != "0" ]]
@@ -195,6 +197,7 @@ echo "$loop_id" > "$codelet_folder/$CLS_RES_FOLDER/loop_id"
 echo "------------------------------------------------------------"
 echo "Creating DECAN variants..."
 #./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
+#echo ./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 ./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
 
 res=$?

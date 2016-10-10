@@ -41,6 +41,7 @@ else
 	mv "$binary_name" "$codelet_name"_emon_api
 	cp "$codelet_name"_emon_api "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
     fi
+    # This will regenerate original binary without EMON API
     make clean all
 fi
 

@@ -7,10 +7,11 @@ run() {
     runId=$@
 
 #variants="REF LS FP DL1 NOLS-NOFP FP_SAN REF_SAN FES LS_FES FP_FES"
-variants="REF LS FP DL1 FES"
+#variants="REF LS FP DL1 FES"
 #variants="REF LS FP"
 #variants="REF"
 variants="ORG"
+#variants="DL1"
 #variants="REF_SAN"
 #variants="FP"
 #variants="LS"
@@ -1754,103 +1755,134 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 # )
 
 # run_codelets=(
-#     # balanc_3_sr_dx2
-#     # balanc_3_sr_sVS_dx2 
+#     balanc_3_sr_dx2
+#     balanc_3_sr_sVS_dx2 
 #      elmhes_10_sr_dx2
 #      elmhes_10_sr_sVS_dx2 
-#     # elmhes_11_sr_dx2
-#     # elmhes_11_sr_sVS_dx2 
-#     # four1_2_sr_mx2 
-#     # hqr_15_sr_sx2
-#     # hqr-sq_12_sx2
-#     # hqr-sq_12_sVS_sx2
+#     elmhes_11_sr_dx2
+#     elmhes_11_sr_sVS_dx2 
+#     four1_2_sr_mx2 
+#     hqr_15_sr_sx2
+#     hqr-sq_12_sx2
+#     hqr-sq_12_sVS_sx2
 #      lop_13_sr_dx2
 #      lop_13_sr_sVS_dx2
-#     # ludcmp-sq_4_sr_sx2 
-#     # ludcmp-sq_4_sr_sVS_sx2
-#     # matadd-flb_16_sr_dx2
-#     # matadd-flb_16_sr_sVS_dx2  
+#     ludcmp-sq_4_sr_sx2 
+#     ludcmp-sq_4_sr_sVS_sx2
+#     matadd-flb_16_sr_dx2
+#     matadd-flb_16_sr_sVS_dx2  
 #      mprove_8_sr_mx2
 #      mprove_8_sr_sVS_mx2
 #      mprove_9_sr_dx2
 #      mprove_9_sr_sVS_dx2
-#     # ptr1_vmovaps_branch
-#     # realft_4_sr_dx2
-#     # relax2_26_sr_dx2 
-#     # relax2_26_sr_sVS_dx2
+#     ptr1_vmovaps_branch
+#     realft_4_sr_dx2
+#     relax2_26_sr_dx2 
+#     relax2_26_sr_sVS_dx2
 #      rstrct_29_sr_dx2
 #      rstrct_29_sr_sVS_dx2
 #      s1244_sr_sx2 
 #      s1244_sr_sVS_sx2 
 #      s319_sr_sx2
 #      s319_sr_sVS_sx2
-#     # svbksb_3_sr_sx2
-#     # svbksb_3_sr_sVS_sx2
-#     # svdcmp_11_sr_dx2
-#     # svdcmp_11_sr_sVS_dx2 
-#     # svdcmp_13_sr_dx2
-#     # svdcmp_13_sr_sVS_dx2 
+#     svbksb_3_sr_sx2
+#     svbksb_3_sr_sVS_sx2
+#     svdcmp_11_sr_dx2
+#     svdcmp_11_sr_sVS_dx2 
+#     svdcmp_13_sr_dx2
+#     svdcmp_13_sr_sVS_dx2 
 #      svdcmp_14_sr_dx2
 #      svdcmp_14_sr_sVS_dx2
-#     # svdcmp_6_dx2
-#     # svdcmp_6_sVS_dx2
-#     # toeplz_1_dx2
-#     # toeplz_1_sVS_dx2 
-#     # toeplz_2_sr_dx2 
-#     # toeplz_4_sr_dx2
-#     # tridag_1_sr_dx2
-#     # tridag_2_sr_dx2
+#     svdcmp_6_dx2
+#     svdcmp_6_sVS_dx2
+#     toeplz_1_dx2
+#     toeplz_1_sVS_dx2 
+#     toeplz_2_sr_dx2 
+#     toeplz_4_sr_dx2
+#     tridag_1_sr_dx2
+#     tridag_2_sr_dx2
 # )
 
-run_codelets=(
-    balanc_3_dx2
-   balanc_3_sVS_dx2 
-   elmhes_10_dx2
-    elmhes_10_sVS_dx2 
-    elmhes_11_dx2
-    elmhes_11_sVS_dx2 
-    four1_2_mx2 
-    hqr_15_sx2
-#    hqr-sq_12_sx2
-#    hqr-sq_12_sVS_sx2
-    lop_13_dx2
-    lop_13_sVS_dx2
-    ludcmp-sq_4_sx2 
-    ludcmp-sq_4_sVS_sx2
-    matadd-flb_16_dx2
-    matadd-flb_16_sVS_dx2  
-    mprove_8_mx2
-    mprove_8_sVS_mx2
-    mprove_9_dx2
-    mprove_9_sVS_dx2
-#    ptr1_vmovaps_branch
-    realft_4_dx2
-    relax2_26_dx2 
-    relax2_26_sVS_dx2
-    rstrct_29_dx2
-    rstrct_29_sVS_dx2
-    s1244_sx2 
-    s1244_sVS_sx2 
-    s319_sx2
-    s319_sVS_sx2
-    svbksb_3_sx2
-    svbksb_3_sVS_sx2
-    svdcmp_11_dx2
-    svdcmp_11_sVS_dx2 
-    svdcmp_13_dx2
-    svdcmp_13_sVS_dx2 
-    svdcmp_14_dx2
-    svdcmp_14_sVS_dx2
-#    svdcmp_6_dx2
-#    svdcmp_6_sVS_dx2
-#    toeplz_1_dx2
-#    toeplz_1_sVS_dx2 
-    toeplz_2_dx2 
-    toeplz_4_dx2
-    tridag_1_dx2
-    tridag_2_dx2
-)
+ run_codelets=(
+#     balanc_3_dx2
+#    balanc_3_sVS_dx2 
+#    elmhes_10_dx2
+#     elmhes_10_sVS_dx2 
+#     elmhes_11_dx2
+#     elmhes_11_sVS_dx2 
+#     four1_2_mx2 
+#     hqr_15_sx2
+#     hqr-sq_12_sx2
+#     hqr-sq_12_sVS_sx2
+#      lop_13_dx2
+#     lop_13_sVS_dx2
+#     ludcmp-sq_4_sx2 
+#     ludcmp-sq_4_sVS_sx2
+#     matadd-flb_16_dx2
+#     matadd-flb_16_sVS_dx2  
+#     mprove_8_mx2
+#     mprove_8_sVS_mx2
+#     mprove_9_dx2
+#     mprove_9_sVS_dx2
+#     ptr1_vmovaps_branch
+#     realft_4_dx2
+#     relax2_26_dx2 
+#     relax2_26_sVS_dx2
+#      rstrct_29_dx2
+#     rstrct_29_sVS_dx2
+#      s1244_sx2 
+#     s1244_sVS_sx2 
+#      s319_sx2
+#     s319_sVS_sx2
+#     svbksb_3_sx2
+#     svbksb_3_sVS_sx2
+#     svdcmp_11_dx2
+#     svdcmp_11_sVS_dx2 
+#     svdcmp_13_dx2
+     svdcmp_13_sVS_dx2 
+#     svdcmp_14_dx2
+#     svdcmp_14_sVS_dx2
+#     svdcmp_6_dx2
+#     svdcmp_6_sVS_dx2
+#     toeplz_1_dx2
+#     toeplz_1_sVS_dx2 
+#     toeplz_2_dx2 
+#     toeplz_4_dx2
+#     tridag_1_dx2
+#     tridag_2_dx2
+ )
 
+ # run_codelets=(
+ #    #  balanc_3_dl1_dx2
+ #    # elmhes_10_dl1_dx2
+ #    #  elmhes_11_dl1_dx2
+ #    #   lop_13_dl1_dx2
+ #    #  ludcmp-sq_4_dl1_sx2 
+ #    #  matadd-flb_16_dl1_dx2
+ #    #  mprove_8_dl1_mx2
+ #    #  mprove_9_dl1_dx2
+ #    #  relax2_26_dl1_dx2 
+
+ #    #   rstrct_29_dl1_dx2
+
+ #    #   s1244_dl1_sx2 
+
+ #    #   s319_dl1_sx2
+
+ #    #  svbksb_3_dl1_sx2
+
+ #    #  svdcmp_11_dl1_dx2
+
+ #    #  svdcmp_13_dl1_dx2
+
+ #    #  svdcmp_14_dl1_dx2
+
+ #     hqr-sq_12_dl1_sx2
+ #     svdcmp_6_dl1_dx2
+
+ #     toeplz_1_dl1_dx2
+
+ # )
 
 # run_codelets=(
 # #  ptr1_movaps-1lfbhit_branch
@@ -2098,6 +2130,7 @@ name2sizes[elmhes_11_sr_sVS_dx2]="944"
 name2sizes[four1_2_sr_mx2]="10000" 
 name2sizes[hqr_15_sr_sx2]="600"
 name2sizes[hqr-sq_12_sx2]="96"
+name2sizes[hqr-sq_12_dl1_sx2]="96"
 name2sizes[hqr-sq_12_sVS_sx2]="96"
 name2sizes[lop_13_sr_dx2]="100"
 name2sizes[lop_13_sr_sVS_dx2]="100"
@@ -2128,8 +2161,10 @@ name2sizes[svdcmp_13_sr_sVS_dx2]="10000"
 name2sizes[svdcmp_14_sr_dx2]="9008"
 name2sizes[svdcmp_14_sr_sVS_dx2]="9008"
 name2sizes[svdcmp_6_dx2]="992"
+name2sizes[svdcmp_6_dl1_dx2]="992"
 name2sizes[svdcmp_6_sVS_dx2]="992"
 name2sizes[toeplz_1_dx2]="4001"
+name2sizes[toeplz_1_dl1_dx2]="4001"
 name2sizes[toeplz_1_sVS_dx2]="4001" 
 name2sizes[toeplz_2_sr_dx2]="8000"
 name2sizes[toeplz_4_sr_dx2]="9000"
@@ -2138,41 +2173,57 @@ name2sizes[tridag_2_sr_dx2]="8000"
 
 name2sizes[balanc_3_dx2]="10000"
 name2sizes[balanc_3_sVS_dx2]="10000" 
+name2sizes[balanc_3_dl1_dx2]="10000"
 name2sizes[elmhes_10_dx2]="9008"
+name2sizes[elmhes_10_dl1_dx2]="9008"
 name2sizes[elmhes_10_sVS_dx2]="9008" 
 name2sizes[elmhes_11_dx2]="944"
+name2sizes[elmhes_11_dl1_dx2]="944"
 name2sizes[elmhes_11_sVS_dx2]="944" 
 name2sizes[four1_2_mx2]="10000" 
 name2sizes[hqr_15_sx2]="600"
 #name2sizes[hqr-sq_12_sx2]="96"
 #name2sizes[hqr-sq_12_sVS_sx2]="96"
 name2sizes[lop_13_dx2]="100"
+name2sizes[lop_13_dl1_dx2]="100"
 name2sizes[lop_13_sVS_dx2]="100"
 name2sizes[ludcmp-sq_4_sx2]="96" 
+name2sizes[ludcmp-sq_4_dl1_sx2]="96" 
 name2sizes[ludcmp-sq_4_sVS_sx2]="96"
 name2sizes[matadd-flb_16_dx2]="80"
+name2sizes[matadd-flb_16_dl1_dx2]="80"
 name2sizes[matadd-flb_16_sVS_dx2]="80"  
 name2sizes[mprove_8_mx2]="104"
+name2sizes[mprove_8_dl1_mx2]="104"
 name2sizes[mprove_8_sVS_mx2]="104"
 name2sizes[mprove_9_dx2]="9008"
+name2sizes[mprove_9_dl1_dx2]="9008"
 name2sizes[mprove_9_sVS_dx2]="9008"
 #name2sizes[ptr1_vmovaps_branch]="1000"
 name2sizes[realft_4_dx2]="10000"
 name2sizes[relax2_26_dx2]="90" 
+name2sizes[relax2_26_dl1_dx2]="90" 
 name2sizes[relax2_26_sVS_dx2]="90"
 name2sizes[rstrct_29_dx2]="104"
+name2sizes[rstrct_29_dl1_dx2]="104"
 name2sizes[rstrct_29_sVS_dx2]="104"
 name2sizes[s1244_sx2]="8505" 
+name2sizes[s1244_dl1_sx2]="8505" 
 name2sizes[s1244_sVS_sx2]="8505" 
 name2sizes[s319_sx2]="7008"
+name2sizes[s319_dl1_sx2]="7008"
 name2sizes[s319_sVS_sx2]="7008"
 name2sizes[svbksb_3_sx2]="96"
+name2sizes[svbksb_3_dl1_sx2]="96"
 name2sizes[svbksb_3_sVS_sx2]="96"
 name2sizes[svdcmp_11_dx2]="1000"
+name2sizes[svdcmp_11_dl1_dx2]="1000"
 name2sizes[svdcmp_11_sVS_dx2]="1000" 
 name2sizes[svdcmp_13_dx2]="10000"
+name2sizes[svdcmp_13_dl1_dx2]="10000"
 name2sizes[svdcmp_13_sVS_dx2]="10000" 
 name2sizes[svdcmp_14_dx2]="9008"
+name2sizes[svdcmp_14_dl1_dx2]="9008"
 name2sizes[svdcmp_14_sVS_dx2]="9008"
 #name2sizes[svdcmp_6_dx2]="992"
 #name2sizes[svdcmp_6_sVS_dx2]="992"
