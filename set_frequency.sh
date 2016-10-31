@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-source ./const.sh
+#source ./const.sh
 
 # if [[ "$nb_args" != "1" ]]
 # then
@@ -8,11 +8,31 @@ source ./const.sh
 #         exit -1
 # fi
 
+declare -A duty2hex
+
+duty2hex[100.00]="0x0"
+duty2hex[93.75]="0x1f"
+duty2hex[87.50]="0x1e"
+duty2hex[81.25]="0x1d"
+duty2hex[75.00]="0x1c"
+duty2hex[68.75]="0x1b"
+duty2hex[62.50]="0x1a"
+duty2hex[56.25]="0x19"
+duty2hex[50.00]="0x18"
+duty2hex[43.75]="0x17"
+duty2hex[37.50]="0x16"
+duty2hex[31.25]="0x15"
+duty2hex[25.00]="0x14"
+duty2hex[18.75]="0x13"
+duty2hex[12.50]="0x12"
+duty2hex[6.25]="0x11"
+
 target_frequency=""
 min_uncore_frequency=""
 max_uncore_frequency=""
+duty_cycle_level=""
 
-while getopts ":c:m:M:" OPTION; do
+while getopts ":c:m:M:D:" OPTION; do
     case $OPTION in
 	c)
 	    target_frequency=${OPTARG}
@@ -23,8 +43,11 @@ while getopts ":c:m:M:" OPTION; do
 	M)
 	    max_uncore_frequency=${OPTARG}
 	    ;;
+	D)
+	    duty_cycle_level=${OPTARG}
+	    ;;
 	*)
-	    echo "Unexpected argument, usage: $0 -c <core freq> -m <min. uncore freq> -M <max. uncore freq>"
+	    echo "Unexpected argument, usage: $0 -c <core freq> -m <min. uncore freq> -M <max. uncore freq> -D <duty cycle level>"
 	    exit -1
 	    ;;
     esac
@@ -90,6 +113,23 @@ then
 else
     echo "Uncore freq settings: must specify both min and max freq."
     exit -1
+fi
+
+
+if [[ ! -z ${duty_cycle_level} ]]
+then
+	duty_cycle_level=$(printf "%.2f" ${duty_cycle_level})
+	duty_bits=${duty2hex[${duty_cycle_level}]}
+	if [[ ${duty_bits} != "" ]]
+	then
+		echo "Setting duty cycle level to ${duty_cycle_level}%"
+		emon --write-msr 0x19a=${duty_bits}
+	else
+		echo "Duty cycle setting: non supported level."
+		exit -1
+	fi
+else
+	echo "Duty cycle level unchanged."
 fi
 
 exit 0
