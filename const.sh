@@ -65,10 +65,19 @@ export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
 #export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
 #export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
-if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
-	source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh
+
+if [ -d /nfs/fx/proj/openmp ]; then
+  COMPILER_ROOT=/nfs/fx/proj/openmp
 else
-	source /nfs/fx/proj/openmp/compilers/intel/15.0/Linux/intel64/load0.sh
+  # Austin settings
+  COMPILER_ROOT=/nfs/site/proj/openmp
+fi
+
+if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
+	source ${COMPILER_ROOT}/compilers/intel/12.1/Linux/intel64/load.sh
+else
+#	source ${COMPILER_ROOT}/compilers/intel/15.0/Linux/intel64/load0.sh
+	source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
 fi
 
 
@@ -130,7 +139,8 @@ ACTIVATE_UOP_ISSUE_RETIRE_COUNTERS=${ACTIVATE_FOR_MLM}
 FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
 
 # For cls.sh
-STRICT_SINGLE_LOOP=1
+#STRICT_SINGLE_LOOP=1
+STRICT_SINGLE_LOOP=0
 # Whether to really run the code.  0 => only compile, generate assembly and static reports.
 ACTIVATE_EXPERIMENTS=1
 ACTIVATE_DYNAMIC_GROUPING=0
@@ -139,10 +149,11 @@ COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 SEC_TO_DHMS_SH="$CLS_FOLDER/sec2dhms.sh"
 
 # see https://software.intel.com/en-us/articles/disclosure-of-hw-prefetcher-control-on-some-intel-processors
-DISABLE_L2_HW_PREFETCHER=1
-DISABLE_ADJ_CACHE_LINE_PREFETCHER=1
-DISABLE_DCU_PREFETCHER=1
-DISABLE_DCU_IP_PREFETCHER=1
+ALL_DISABLE=0
+DISABLE_L2_HW_PREFETCHER=$ALL_DISABLE
+DISABLE_ADJ_CACHE_LINE_PREFETCHER=$ALL_DISABLE
+DISABLE_DCU_PREFETCHER=$ALL_DISABLE
+DISABLE_DCU_IP_PREFETCHER=$ALL_DISABLE
 PREFETCHER_DISABLE_BITS=$(((${DISABLE_DCU_IP_PREFETCHER}<<3)|(${DISABLE_DCU_PREFETCHER}<<2)|(${DISABLE_ADJ_CACHE_LINE_PREFETCHER}<<1)|(${DISABLE_L2_HW_PREFETCHER})))
 
 # Hugh page settings (always, madvise, never)

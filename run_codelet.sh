@@ -184,9 +184,10 @@ DURATION=99999999999
 OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
-                $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &> "$res_path/emon_execution_log"
+                $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 		mv emon_api_config_file emon_api_config_file.${evfile}
 		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
+echo $res_path
 		mv emon_api.out emon_api.out.${evfile}
 
 		remainingRunCnt=$(((${META_REPETITIONS}*${numRuns})-${totalRunCnt}))

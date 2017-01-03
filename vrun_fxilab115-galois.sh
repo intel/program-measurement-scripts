@@ -1437,7 +1437,9 @@ name2sizes[Crystal_div.c_Crystal_div_line65_loop.c.0_de]=64
 name2sizes[Crystal_div.c_Crystal_div_line65_loop.c.0_dx]=64
 name2sizes[Crystal_div.c_Crystal_div_line65_loop.c.0_dx2]=64
 #name2sizes[bfs-load-preloaded_sVS_ig]="rmat22.gr:4 rmat22.gr:5 rmat22.gr:6"
-name2sizes[bfs-load-preloaded_sVS_ig]="rmat22.gr:0 rmat22.gr:1 rmat22.gr:2 rmat22.gr:3 rmat22.gr:7 rmat22.gr:8 rmat22.gr:9 rmat22.gr:10 rmat22.gr:11 rmat22.gr:12 rmat22.gr:13"
+name2sizes[bfs-load-preloaded_sVS_ig]="rmat22.gr:1:1"
+name2sizes[bfs-load-preloaded-sort_sVS_ig]="rmat22.gr:1:0 rmat22.gr:1:1 rmat22.gr:1:2 rmat22.gr:1:3 rmat22.gr:1:4 rmat22.gr:1:5 rmat22.gr:1:6 rmat22.gr:1:7 rmat22.gr:1:8 rmat22.gr:1:9 rmat22.gr:1:10 rmat22.gr:1:11 rmat22.gr:1:12 rmat22.gr:1:13"
+#name2sizes[bfs-load-preloaded-sort_sVS_ig]="rmat22.gr:1:8 rmat22.gr:1:9 rmat22.gr:1:10 rmat22.gr:1:11 rmat22.gr:1:12 rmat22.gr:1:13"
 #name2sizes[bfs-load-preloaded_sVS_ig]=100
 
 
@@ -1909,7 +1911,8 @@ run_codelets=(
    # sp.c_lhsy_line1028_loop.c.0_dx2
 #  sp.c_lhsx_line885_loop.c.0_sVS_dx2
 #  sp.c_lhsx_line885_loop.c.0_dx3
-   bfs-load-preloaded_sVS_ig
+   bfs-load-preloaded-sort_sVS_ig
+#   bfs-load-preloaded_sVS_ig
 )
 
 

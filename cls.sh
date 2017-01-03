@@ -135,10 +135,10 @@ echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
-if [[ "$function_name" != "codelet_" ]]
-then
-	function_name="$function_name"_
-fi
+#if [[ "$function_name" != "codelet_" ]]
+#then
+#	function_name="$function_name"_
+#fi
 #function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 echo -e "Codelet name \t'$codelet_name'"
 echo -e "Binary name \t'$binary_name'"
