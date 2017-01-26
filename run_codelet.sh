@@ -74,9 +74,11 @@ do
 	then 
 		for cc in ${XP_REST_CORES}
 	  	do
+			echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
 			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
 	  	done
 	fi
+	echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
 done
@@ -142,24 +144,11 @@ then
       else
 #	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 #	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
-	  if [[ "$MC_RUN" != "0" ]]
-	  then 
-	  	for cc in ${XP_REST_CORES}
-	  	do
-			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
-	  	done
-# 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 13 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 14 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 15 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 16 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 17 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 18 ${run_prog} &
-	  fi
 	  if [[ "$ACTIVATE_EMON_API" != "0" ]]
 	  then 
+
+
+
 	      # Using advanced control so need to generate the file for counters
 	      # Split events into files
 	      rm -f event.* emon_api.out
@@ -184,7 +173,28 @@ DURATION=99999999999
 OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
+#	   	emon -stop 2> /dev/null	
+                echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+
+
+		if [[ "$MC_RUN" != "0" ]]
+		then 
+	  	    for cc in ${XP_REST_CORES}
+	  	    do
+			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	  	    done
+		fi
+
+
                 $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+
+		while pgrep emon -u $USER > /dev/null; do sleep 1; done;
+
+		if [[ "$MC_RUN" != "0" ]]
+		then 
+		    while pgrep $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
+		fi
+
 		mv emon_api_config_file emon_api_config_file.${evfile}
 		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
 echo $res_path
@@ -199,6 +209,24 @@ echo $res_path
 		eta=$(sec_to_ddhhmmss $eta)
 	      done
 	  else
+	      if [[ "$MC_RUN" != "0" ]]
+	      then 
+	  	  for cc in ${XP_REST_CORES}
+	  	  do
+		      $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	  	  done
+# 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 13 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 14 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 15 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 16 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 17 ${run_prog} &
+# 	      $NUMACTL -m $XP_NODE -C 18 ${run_prog} &
+	      fi
+
+
 	      ((totalRunCnt++))
 
 	      echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); "
