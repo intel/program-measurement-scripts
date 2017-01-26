@@ -38,7 +38,7 @@ for counter in $counters
   do
   counter_list+=( $counter )
   case "$counter" in
-      "UNC_M_CAS_COUNT_RD" | "UNC_M_CAS_COUNT_WR" )
+      "UNC_M_CAS_COUNT_RD" | "UNC_M_CAS_COUNT_WR" | "UNC_M_ACT_COUNT_RD" |"UNC_M_ACT_COUNT_WR" | "UNC_M_PRE_COUNT_PAGE_MISS" | "UNC_M_PRE_COUNT_WR" | "UNC_M_PRE_COUNT_RD")
       echo "Special treatment for server uncore '$counter'"
       # Add all columns
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3- -d${DELIM} | sed 's/ //g' )

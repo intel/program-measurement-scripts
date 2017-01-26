@@ -101,7 +101,7 @@ topdown_port_util_counters="${topdown_port_counters},ARITH.FPU_DIV_ACTIVE"
 topdown_fe_lat_counters="IDQ.MS_UOPS:e1"
 
 topdown_exe_counters="RS_EVENTS.EMPTY_CYCLES,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
-
+mem_rowbuff_counters=""
 
 case "$UARCH" in
     "SANDY_BRIDGE")
@@ -138,6 +138,7 @@ case "$UARCH" in
 	case "$emon_db" in
 	    haswell_server)
 		mem_traffic_counters+=",UNC_M_CAS_COUNT.RD,UNC_M_CAS_COUNT.WR"
+		mem_rowbuff_counters="UNC_M_ACT_COUNT.RD,UNC_M_ACT_COUNT.WR,UNC_M_PRE_COUNT.PAGE_MISS,UNC_M_PRE_COUNT.WR,UNC_M_PRE_COUNT.RD"
 		;;
 
 	    crystalwell)
@@ -193,6 +194,7 @@ topdown_counters="${topdown_ms_seq_counters},${topdown_exe_counters},${topdown_m
 emon_counters="${basic_counters}"
 append_counters $ACTIVATE_MEM_TRAFFIC_COUNTERS "traffic" ${mem_traffic_counters}
 append_counters $ACTIVATE_MEM_HIT_COUNTERS "memhit" ${mem_hit_counters}
+append_counters $ACTIVATE_MEM_ROWBUFF_COUNTERS "rowbuff" ${mem_rowbuff_counters}
 append_counters $ACTIVATE_RESOURCE_COUNTERS "resource" ${resource_counters}
 append_counters $ACTIVATE_TLB_COUNTERS "TLB" ${tlb_counters}
 append_counters $ACTIVATE_SQ_COUNTERS "SuperQ" ${sq_counters}
