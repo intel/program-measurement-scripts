@@ -316,6 +316,10 @@ XP_NUM_CORES=${#XP_ALL_CORES[@]}
 XP_CORE=${XP_ALL_CORES[${XP_NUM_CORES}-1]}
 # Also record the rest of cores for multiple core runs
 XP_REST_CORES=${XP_ALL_CORES[@]:0:(${XP_NUM_CORES}-1)}
+#MC_NUM_CORES=${XP_NUM_CORES}
+#MC_NUM_CORES=6
+MC_NUM_CORES=2
+MC_ALL_CORES=${XP_ALL_CORES[@]:0:(${MC_NUM_CORES}-1)}
 
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 
@@ -323,7 +327,7 @@ MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
 ENABLE_SEP=0
 
 # By default single core runs
-MC_RUN=0
+MC_RUN=1
 
 # Set the path for the probe library
 NR_FOLDER="~/localdisk/NR/nr-codelets"

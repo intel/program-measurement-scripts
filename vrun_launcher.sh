@@ -105,6 +105,7 @@ runLoop() {
     local variants="$2"
     local memory_loads="$3"
     local frequencies="$4"
+    local num_cores="$5"
 
 # uses global variables assumed below
 # declare -gA name2path
@@ -127,6 +128,8 @@ runLoop() {
       sizes_arr=(${name2sizes[${codelet}]})
       ((num_codelets+=${#sizes_arr[@]}))
     done
+    num_cores_arr=(${num_cores})
+    ((num_codelets*=${#num_cores_arr[@]}))
 
     codelet_id=0
     for codelet in ${run_codelets[@]}
@@ -141,7 +144,7 @@ runLoop() {
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
       
-      ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" | tee "$codelet_path/cls.log" 
+      ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" | tee "$codelet_path/cls.log" 
       res=$?
       if [[ "$res" != "0" ]]
 	  then
@@ -150,6 +153,7 @@ runLoop() {
       fi
       sizes_arr=(${sizes})
       ((codelet_id+=${#sizes_arr[@]}))
+      ((codelet_id*=${#num_cores_arr[@]}))
     done
     
 }

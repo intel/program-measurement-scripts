@@ -7,7 +7,7 @@ then
 fi
 
 
-if [[ "$nb_args" != "11" ]]
+if [[ "$nb_args" != "12" ]]
 then
 	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name, data size, memory load, frequency, variant, number of iterations, repetitions)."
 	exit -1
@@ -24,6 +24,9 @@ repetitions="$8"
 start_codelet_loop_time="$9"
 num_codelets="${10}"
 cnt_codelet_idx="${11}"
+num_core="${12}"
+
+nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 
 sec_to_ddhhmmss() {
     secs="$1"
@@ -33,13 +36,13 @@ sec_to_ddhhmmss() {
 
 START_RUN_CODELETS_SH=$(date '+%s')
 echo "run_codelets.sh started at $(date --date=@${START_RUN_CODELETS_SH})."
-echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
+echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', num_core '$num_core', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
 
 
 cd $codelet_folder
 echo "Codelet folder: $codelet_folder"
-#res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
-res_path="$codelet_folder/../data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
+#res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
+res_path="$codelet_folder/../data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
 echo "Res folder: $res_path"
 
 TASKSET=$( which taskset )
@@ -72,7 +75,7 @@ do
 #  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	if [[ "$MC_RUN" != "0" ]]
 	then 
-		for cc in ${XP_REST_CORES}
+		for cc in ${nc_all_cores}
 	  	do
 			echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
 			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
@@ -93,7 +96,8 @@ echo ITERATION: ${iterations}
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
 echo -e "CPI \t'$normalized_mean'"
-echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
+# Here the order of field is assumed by gather_results.sh
+echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$num_core"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
 echo "Ld library path: '$LD_LIBRARY_PATH'"
@@ -179,20 +183,20 @@ EOF
 
 		if [[ "$MC_RUN" != "0" ]]
 		then 
-	  	    for cc in ${XP_REST_CORES}
+	  	    for cc in ${nc_all_cores}
 	  	    do
-			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
 	  	    done
 		fi
 
 
                 $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
-		while pgrep emon -u $USER > /dev/null; do sleep 1; done;
+		while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
 
 		if [[ "$MC_RUN" != "0" ]]
 		then 
-		    while pgrep $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
+		    while pgrep -x $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
 		fi
 
 		mv emon_api_config_file emon_api_config_file.${evfile}
@@ -211,7 +215,7 @@ echo $res_path
 	  else
 	      if [[ "$MC_RUN" != "0" ]]
 	      then 
-	  	  for cc in ${XP_REST_CORES}
+	  	  for cc in ${nc_all_cores}
 	  	  do
 		      $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
 	  	  done

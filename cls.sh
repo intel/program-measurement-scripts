@@ -7,9 +7,9 @@ then
     source /opt/intel/sep/sep_vars.sh
 fi
 
-if [[ "$nb_args" != "9" ]]
+if [[ "$nb_args" != "10" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id, start codelet loop run time, num codelet, current codelet run index)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores)."
 	exit -1
 fi
 
@@ -22,7 +22,7 @@ runid="$6"
 start_codelet_loop_time="$7"
 num_codelets="$8"
 cnt_codelet_idx="$9"
-
+num_cores="${10}"
 
 
 
@@ -122,6 +122,7 @@ echo -e "Codelet \t'$codelet_folder'"
 echo -e "Variants \t'$variants'"
 echo -e "Data sizes \t'$data_sizes'"
 echo -e "Memory loads \t'$memory_loads'"
+echo -e "Number of cores \t'$num_cores'"
 echo -e "Frequencies \t'$frequencies'"
 echo -e "Meta repets\t'$META_REPETITIONS'"
 
@@ -135,10 +136,10 @@ echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
-#if [[ "$function_name" != "codelet_" ]]
-#then
-#	function_name="$function_name"_
-#fi
+if [[ "$function_name" == "codelet" ]]
+then
+	function_name="$function_name"_
+fi
 #function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 echo -e "Codelet name \t'$codelet_name'"
 echo -e "Binary name \t'$binary_name'"
@@ -264,7 +265,8 @@ then
     do
 	echo
 	echo
-	mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size" &> /dev/null
+	data_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size"
+	mkdir "$data_path" &> /dev/null
 
 	echo "Setting highest CPU frequency to adjust codelet parametres..."
 	./set_frequency.sh -c $XP_HIGH_FREQ -m $XP_HIGH_FREQ -M $XP_HIGH_FREQ
@@ -278,19 +280,20 @@ then
 	    do
 		
 		#	      find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
-		find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+		find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "${data_path}/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
 		
 	    done
 	fi
 	
 	for memory_load in $memory_loads
 	do
-	    mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load" &> /dev/null
+	    memory_load_path="${data_path}/memload_$memory_load"
+	    mkdir "$memory_load_path" &> /dev/null
 	    killall -9 memloader --quiet &> /dev/null
 	    if [[ "$memory_load" != "0" ]]
 	    then
 		echo "Starting a memloader for '$memory_load' MB/s ($MEMLOAD_ARGS_LIST)"
-		$MEMLOADER --target_bw=$memory_load $MEMLOAD_ARGS_LIST > "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/memloader.log" &
+		$MEMLOADER --target_bw=$memory_load $MEMLOAD_ARGS_LIST > "$memory_load_path/memloader.log" &
 		memload_pid=$!
 		sleep 5
 		kill -0 $memload_pid &> /dev/null
@@ -308,7 +311,8 @@ then
 
 	    for frequency in $frequencies
 	    do
-		mkdir "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency" &> /dev/null
+		frequency_path="$memory_load_path/freq_$frequency"
+		mkdir "$frequency_path" &> /dev/null
 		# if [[ "$UARCH" == "HASWELL" ]]; then
 		#     dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
 		#     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
@@ -323,40 +327,48 @@ then
 		
 		for variant in $variants
 		do
-		    res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant"
-		    mkdir ${res_path} &> /dev/null
-
-		    if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
-			# 			find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
-			# 			    "${res_path}/repetitions_history_${variant}" \
-			# 			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
-			find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
-			    "${res_path}/repetitions_history_${variant}" \
-			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
-			repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-			loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
-		    else
-			#			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-			repetitions=$(cat "$build_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-			loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
-		    fi
+		    variant_path="$frequency_path/variant_$variant"
+		    mkdir ${variant_path} &> /dev/null
 		    
-		    # Generate the codelet data file for measurment.  Need to compute iteration count.
-		    #		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
-		    echo "$repetitions $data_size" > "${build_folder}/codelet.data"
+		    for num_core in $num_cores
+		    do
+			res_path="$variant_path/numcores_$num_core"
+			mkdir ${res_path} &> /dev/null
 
-		    #		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
-		    ((cnt_codelet_idx++))
-		    ./run_codelet.sh "$build_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx}
 
-		    res=$?
-		    if [[ "$res" != "0" ]]
-		    then
-			echo "Cancelling CLS."
-			exit -1
-		    fi
+			if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
+			    # 			find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+			    # 			    "${res_path}/repetitions_history_${variant}" \
+			    # 			    "${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
+			    find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+				"${res_path}/repetitions_history_${variant}" \
+				"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
+			    repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			    loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
+			else
+			    #			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			    repetitions=$(cat "$build_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
+			    loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
+			fi
+		    
+			# Generate the codelet data file for measurment.  Need to compute iteration count.
+			#		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
+			echo "$repetitions $data_size" > "${build_folder}/codelet.data"
+
+			#		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
+			((cnt_codelet_idx++))
+			./run_codelet.sh "$build_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${num_core}
+
+			res=$?
+			if [[ "$res" != "0" ]]
+			then
+			    echo "Cancelling CLS."
+			    exit -1
+			fi
+
+		    done
+
 		done
-		
 	    done
 
 	    if [[ "$memory_load" != "0" ]]
@@ -377,6 +389,7 @@ echo -e "Codelet \t'$codelet_folder'"
 echo -e "Variants \t'$variants'"
 echo -e "Data sizes \t'$data_sizes'"
 echo -e "Memory loads \t'$memory_loads'"
+echo -e "Number of cores \t'$num_cores'"
 echo -e "Frequencies \t'$frequencies'"
 
 END_CLS_SH=$(date '+%s')
@@ -391,8 +404,8 @@ shopt -s extglob
 cp ${codelet_folder}/codelet*.@(c|f90|s) "${new_cls_folder}"
 cp ${codelet_folder}/Makefile "${new_cls_folder}"
 
-echo ./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
-./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" 
+echo ./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" "$num_cores"
+./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" "$num_cores"
 res=$?
 if [[ "$res" != "0" ]]
 then

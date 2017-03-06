@@ -134,7 +134,7 @@ for counter in $counters
   esac
 done
 
-
+# Line below redundant?
 	echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM} > $res_path/counters.csv
 # 	if [[ "$HOSTNAME" == "fxhaswell" ]]
 # 	then
