@@ -182,6 +182,7 @@ echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_d
 # Get the target loop with repetition of 10 to save time.
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" 10 )
 loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 10 )
+#loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 2 )
 res=$?
 if [[ "$res" != "0" ]]
 then

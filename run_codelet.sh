@@ -201,7 +201,8 @@ EOF
 
 		mv emon_api_config_file emon_api_config_file.${evfile}
 		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
-echo $res_path
+# Uncomment below to print res path
+#echo $res_path
 		mv emon_api.out emon_api.out.${evfile}
 
 		remainingRunCnt=$(((${META_REPETITIONS}*${numRuns})-${totalRunCnt}))

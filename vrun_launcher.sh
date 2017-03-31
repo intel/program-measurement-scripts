@@ -152,8 +152,9 @@ runLoop() {
 	  ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
       fi
       sizes_arr=(${sizes})
-      ((codelet_id+=${#sizes_arr[@]}))
-      ((codelet_id*=${#num_cores_arr[@]}))
+#      ((codelet_id+=${#sizes_arr[@]}))
+#      ((codelet_id*=${#num_cores_arr[@]}))
+      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
     done
     
 }

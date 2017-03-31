@@ -1456,7 +1456,8 @@ name2sizes[bfs-load-preloaded-sort-noaddsub_sVS_ig]="rmat22.gr:0:2 rmat22.gr:0:3
 #name2sizes[bfs-load-preloaded-sort-noaddsub_sVS_ig]="1G-sorted-stride.gr:0:0"
 #name2sizes[bfs-load-preloaded_sVS_ig]="rmat22.gr:0 rmat22.gr:1 rmat22.gr:2 rmat22.gr:3 rmat22.gr:7 rmat22.gr:8 rmat22.gr:9 rmat22.gr:10 rmat22.gr:11 rmat22.gr:12 rmat22.gr:13"
 #name2sizes[bfs-load-preloaded_sVS_ig]=100
-name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
+#name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
+name2sizes[pr-sync-pull]="USA-road-transpose.gr:0:-1"
 
 
 # Switched focus to 2D
