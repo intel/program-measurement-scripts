@@ -143,6 +143,10 @@ done
 
 
 	cp $res_path/cpi.csv $res_path/counters.csv
+#	echo -n "CPI"${DELIM}>$res_path/counter_names.csv
+	echo $(IFS=${DELIM}; echo "${counter_list[*]}") > $res_path/counter_names.csv
+
+	echo > $res_path/counter_values.csv
 	for counter in ${counter_list[@]}
 	do
 		##echo "Processing counter '$counter'"
@@ -163,6 +167,10 @@ done
 
 		paste -d${DELIM} $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
 		mv $res_path/tmp $res_path/counters.csv
+		paste -d${DELIM} $res_path/counter_values.csv $res_path/likwid_counter_$counter > $res_path/tmp
+		mv $res_path/tmp $res_path/counter_values.csv
 	done
+	# Remove the extra leading comma because counter_values.csv was empty in the beginning
+	sed -i 's/^,//g' $res_path/counter_values.csv
 
 rm ${tmp_file}

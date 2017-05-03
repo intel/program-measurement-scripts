@@ -93,11 +93,13 @@ quadratic_sizes="100"
 #memory_loads="0 99999"
 memory_loads="0"
 #num_cores="2 4 8"
-num_cores="1 2 4 8"
+#num_cores="1 2 4 8"
 #num_cores="1 2 8"
-#num_cores="1"
+#num_cores="1 2"
+num_cores="1"
 #num_cores="4"
 #num_cores="8"
+prefetchers="0 15"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
 frequencies="2400000"
@@ -1456,8 +1458,24 @@ name2sizes[bfs-load-preloaded-sort-noaddsub_sVS_ig]="rmat22.gr:0:2 rmat22.gr:0:3
 #name2sizes[bfs-load-preloaded-sort-noaddsub_sVS_ig]="1G-sorted-stride.gr:0:0"
 #name2sizes[bfs-load-preloaded_sVS_ig]="rmat22.gr:0 rmat22.gr:1 rmat22.gr:2 rmat22.gr:3 rmat22.gr:7 rmat22.gr:8 rmat22.gr:9 rmat22.gr:10 rmat22.gr:11 rmat22.gr:12 rmat22.gr:13"
 #name2sizes[bfs-load-preloaded_sVS_ig]=100
+name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1"
+#name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1"
+name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
+name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1"
+name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 #name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
 name2sizes[pr-sync-pull]="USA-road-transpose.gr:0:-1"
+#name2sizes[pr-pull-topo-sync_dx2]="USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
+name2sizes[pr-pull-topo-sync_dx2]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1 rmat22.gr:0:-1"
+name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1 rmat22.gr:0:-1"
+
+name2sizes[sssp-pull-topo-async]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
+name2sizes[sssp-pull-topo-sync_ix2]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
+
+#name2sizes[cc-pull-topo-sync_ix2]="rmat16-2e22-sym.gr:0:-1"
+name2sizes[cc-pull-topo-async]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.NY-symmetric.gr:0:-1 rmat22.sym.gr:0:-1"
+name2sizes[cc-pull-topo-sync_ix2]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.NY-symmetric.gr:0:-1 rmat22.sym.gr:0:-1"
+
 
 
 # Switched focus to 2D
@@ -1936,7 +1954,15 @@ run_codelets=(
 #   bfs-load-preloaded-noaddsub_sVS_ig
 
 #   bfs-load-preloaded-sort-noaddsub_sVS_ig
-    pr-sync-pull
+#    pr-sync-pull
+    bfs-pull-topo-sync_ix2
+#    bfs-pull-topo-async_ig
+#    cc-pull-topo-async
+#    cc-pull-topo-sync_ix2 
+#    pr-pull-topo-async
+#    pr-pull-topo-sync_dx2
+#    sssp-pull-topo-async
+#    sssp-pull-topo-sync_ix2
 )
 
 
@@ -2202,7 +2228,8 @@ name2sizes[hqr-sq-no-tail_12_sVS_se]="800 1000 1200 1400 1600 1800 2000 2200 240
 
 
 
-name2sizes[balanc_3_sr_dx2]="80000000"
+#name2sizes[balanc_3_sr_dx2]="80000000"
+name2sizes[balanc_3_sr_dx2]="10000"
 name2sizes[balanc_3_sr_sVS_dx2]="80000000" 
 name2sizes[elmhes_10_sr_dx2]="200000"
 name2sizes[elmhes_10_sr_sVS_dx2]="200000" 
@@ -2255,7 +2282,7 @@ name2sizes[tridag_2_sr_dx2]="200000"
 #name2sizes[ptr_ld_branch]="10000"
 #name2sizes[loads_1Sx4-movsd]="200000"
 
-runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores"
+runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores" "$prefetchers"
 
 return
 

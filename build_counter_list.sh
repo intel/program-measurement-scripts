@@ -139,6 +139,7 @@ case "$UARCH" in
 	    haswell_server)
 		mem_traffic_counters+=",UNC_M_CAS_COUNT.RD,UNC_M_CAS_COUNT.WR"
 		mem_rowbuff_counters="UNC_M_ACT_COUNT.RD,UNC_M_ACT_COUNT.WR,UNC_M_PRE_COUNT.PAGE_MISS,UNC_M_PRE_COUNT.WR,UNC_M_PRE_COUNT.RD"
+		energy_counters="FREERUN_PKG_ENERGY_STATUS,FREERUN_CORE_ENERGY_STATUS,FREERUN_DRAM_ENERGY_STATUS"
 		;;
 
 	    crystalwell)
@@ -212,6 +213,7 @@ append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${tor_life_counters}
 append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${egr_ad_life_counters}
 append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${egr_bl_life_counters}
 append_counters $ACTIVATE_OTHER_COUNTERS "OtherCounts" ${other_counters}
+append_counters $ACTIVATE_ENERGY_COUNTERS "EnergyCounts" ${energy_counters}
 append_counters $ACTIVATE_UOP_ISSUE_RETIRE_COUNTERS "UopIssueRetireCounts" ${uop_issue_retire_counters}
 
 #      emon_counters+=",${other_counters}"

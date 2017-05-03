@@ -110,6 +110,8 @@ MAX_REPETITIONS=${HARD_MAX_REPETITIONS}
 
 # For run_codelet.sh (1/2)
 META_REPETITIONS=11
+#META_REPETITIONS=3
+META_REPETITIONS=1
 ACTIVATE_COUNTERS=1
 #ACTIVATE_COUNTERS=0
 ACTIVATE_ADVANCED_COUNTERS=0
@@ -138,8 +140,12 @@ ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS=0
 ACTIVATE_TOPDOWN_FE_LAT_COUNTERS=0
 ACTIVATE_LIFE_COUNTERS=0
 ACTIVATE_OTHER_COUNTERS=0
+ACTIVATE_ENERGY_COUNTERS=1
 ACTIVATE_UOP_ISSUE_RETIRE_COUNTERS=${ACTIVATE_FOR_MLM}
 FORMAT_COUNTERS_SH="$CLS_FOLDER/format_counters.sh"
+
+IGNORE_LOOP_DETECTION_ERROR=1
+PGM_METRIC_FILE="metrics.out"
 
 # For cls.sh
 #STRICT_SINGLE_LOOP=1
@@ -152,7 +158,7 @@ COMBINATORICS_SH="$CLS_FOLDER/dynamic_grouping/combinatorics/combinatorics.sh"
 SEC_TO_DHMS_SH="$CLS_FOLDER/sec2dhms.sh"
 
 # see https://software.intel.com/en-us/articles/disclosure-of-hw-prefetcher-control-on-some-intel-processors
-ALL_DISABLE=1
+ALL_DISABLE=0
 DISABLE_L2_HW_PREFETCHER=$ALL_DISABLE
 DISABLE_ADJ_CACHE_LINE_PREFETCHER=$ALL_DISABLE
 DISABLE_DCU_PREFETCHER=$ALL_DISABLE
@@ -349,9 +355,16 @@ LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
 
 
+
 #For format2cape.sh
 FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
+declare -A nameMap=(
+[data]=decan_experimental_configuration.data_size 
+[memload]=decan_experimental_configuration.memory_load 
+[freq]=decan_experimental_configuration.frequency
+[variant]=decan_variant.name
+[numcores]=decan_experimental_configuration.num_core)
 
 
 # For all
@@ -373,6 +386,7 @@ M_DELIM=';'
 #For cls.sh and gather_results.sh 
 #control how the repetition is determined (one per data size vs one per all settings)
 REPETITION_PER_DATASIZE="0"
+MSR_POWER_UNIT="0x606"
 
 set_prefetcher_bits() {
     bits="$1"

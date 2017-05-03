@@ -4,7 +4,7 @@ source ./const.sh
 
 if [ -f /opt/intel/sep/sep_vars.sh ];
 then
-    source /opt/intel/sep/sep_vars.sh
+    source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
 

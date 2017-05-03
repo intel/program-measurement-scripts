@@ -3,28 +3,35 @@
 source ./const.sh
 if [ -f /opt/intel/sep/sep_vars.sh ];
 then
-    source /opt/intel/sep/sep_vars.sh
+    source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
 
-if [[ "$nb_args" != "12" ]]
+if [[ "$nb_args" != "8" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name, data size, memory load, frequency, variant, number of iterations, repetitions)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name,  number of iterations, repetitions,...)."
 	exit -1
 fi
 
 codelet_folder=$( readlink -f "$1" )
 codelet_name="$2"
-data_size=$3
-memory_load=$4
-frequency=$5
-variant="$6"
-iterations="$7"
-repetitions="$8"
-start_codelet_loop_time="$9"
-num_codelets="${10}"
-cnt_codelet_idx="${11}"
-num_core="${12}"
+
+
+#data_size=$3
+#memory_load=$4
+#frequency=$5
+
+#variant="$6"
+iterations="$3"
+repetitions="$4"
+start_codelet_loop_time="$5"
+num_codelets="$6"
+cnt_codelet_idx="$7"
+
+#num_core="${12}"
+#prefetcher="${13}"
+res_path="$8"
+variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 
 nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 
@@ -36,13 +43,13 @@ sec_to_ddhhmmss() {
 
 START_RUN_CODELETS_SH=$(date '+%s')
 echo "run_codelets.sh started at $(date --date=@${START_RUN_CODELETS_SH})."
-echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', num_core '$num_core', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
+#echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', num_core '$num_core', prefetcher '$prefetcher', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
 
 
 cd $codelet_folder
 echo "Codelet folder: $codelet_folder"
 #res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
-res_path="$codelet_folder/../data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
+#res_path="$codelet_folder/../prefetchers_$prefetcher/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
 echo "Res folder: $res_path"
 
 TASKSET=$( which taskset )
@@ -52,8 +59,9 @@ rm -f time.out
 
 
 
-echo "Computing CPI..."
+echo "Computing CPI and record program dumped metrics..."
 res=""
+pgm_dumped_metric_values=""
 
 if [[ "${variant}" == "ORG" ]]
     then
@@ -84,7 +92,11 @@ do
 	echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
+	if [ -f $PGM_METRIC_FILE ]; then
+	    pgm_dumped_metric_values=$( tail -n 1 $PGM_METRIC_FILE )$( echo -e "\n$pgm_dumped_metric_values" )
+	fi
 done
+
 rm -f time.out
 
 
@@ -93,14 +105,32 @@ let "mean_line = ($META_REPETITIONS / 2) + 1"
 mean=$( echo "$res" | awk "NR==$mean_line" )
 echo MEAN: ${mean}
 echo ITERATION: ${iterations}
+
+
+
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
 echo -e "CPI \t'$normalized_mean'"
 # Here the order of field is assumed by gather_results.sh
-echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$num_core"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
+#echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$num_core"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
+echo "Iterations"${DELIM}"Repetitions"${DELIM}"CPI" > "$res_path/cpi_names.csv"
+echo "$iterations"${DELIM}"$repetitions"${DELIM}"$normalized_mean" > "$res_path/cpi_values.csv"
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
-echo "Ld library path: '$LD_LIBRARY_PATH'"
+if [ -f $PGM_METRIC_FILE ]; then
+    pgm_dumped_metric_names=$( head -n 1 $PGM_METRIC_FILE )
+    echo "METRIC INFO: names"
+    echo $pgm_dumped_metric_names
+    echo "METRIC INFO: values"
+    echo $pgm_dumped_metric_values
+    pgm_metric_mean=$( echo "$pgm_dumped_metric_values" | awk "NR==$mean_line" )
+    echo $pgm_dumped_metric_names > $res_path/pgm_metrics.csv
+    echo $pgm_metric_mean >> $res_path/pgm_metrics.csv
+fi
+
+echo "RES:"$res_path
+
+#echo "Ld library path: '$LD_LIBRARY_PATH'"
 
 
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]

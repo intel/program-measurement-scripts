@@ -106,6 +106,7 @@ runLoop() {
     local memory_loads="$3"
     local frequencies="$4"
     local num_cores="$5"
+    local prefetchers="$6"
 
 # uses global variables assumed below
 # declare -gA name2path
@@ -131,6 +132,10 @@ runLoop() {
     num_cores_arr=(${num_cores})
     ((num_codelets*=${#num_cores_arr[@]}))
 
+    prefetchers_arr=(${prefetchers})
+    ((num_codelets*=${#prefetchers_arr[@]}))
+
+
     codelet_id=0
     for codelet in ${run_codelets[@]}
       do
@@ -144,17 +149,25 @@ runLoop() {
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
       
-      ./cls.sh "$codelet_path" "$variants" "${sizes}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" | tee "$codelet_path/cls.log" 
+
+    for sz in ${sizes[@]}
+      do
+
+      ./cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" | tee "$codelet_path/cls.log" 
       res=$?
       if [[ "$res" != "0" ]]
 	  then
 #      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
 	  ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
       fi
-      sizes_arr=(${sizes})
+      ((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr})))
+    done
+
+#      sizes_arr=(${sizes})
+
 #      ((codelet_id+=${#sizes_arr[@]}))
 #      ((codelet_id*=${#num_cores_arr[@]}))
-      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
+#      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
     done
     
 }
