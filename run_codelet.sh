@@ -32,6 +32,7 @@ cnt_codelet_idx="$7"
 #prefetcher="${13}"
 res_path="$8"
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
+num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 
 nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 
@@ -113,8 +114,8 @@ normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 echo -e "CPI \t'$normalized_mean'"
 # Here the order of field is assumed by gather_results.sh
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$num_core"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
-echo "Iterations"${DELIM}"Repetitions"${DELIM}"CPI" > "$res_path/cpi_names.csv"
-echo "$iterations"${DELIM}"$repetitions"${DELIM}"$normalized_mean" > "$res_path/cpi_values.csv"
+echo "Iterations"${DELIM}"Repetitions"${DELIM}"CPI" > "$res_path/cpi_nv.csv"
+echo "$iterations"${DELIM}"$repetitions"${DELIM}"$normalized_mean" >> "$res_path/cpi_nv.csv"
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
 if [ -f $PGM_METRIC_FILE ]; then

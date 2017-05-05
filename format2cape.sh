@@ -35,7 +35,7 @@ ExprTimestamp=$( date -d @${run_timestamp_val} +'%F %T' )
 
 DATE=$( date +'%F_%T' )
 
-echo "run format2cape.sh at res folder: ${cls_res_folder}"
+echo "format2cape.sh invoked under res folder: ${cls_res_folder}"
 
 # Set meta data of codelet
 codelet_meta="$codelet_folder/codelet.meta"
@@ -86,44 +86,53 @@ gen_filler_info() {
    yes $(echo "$instance_id"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$energy_unit"${DELIM}"$ExprTimestamp"${DELIM}"$cls_timestamp_val"${DELIM}"$run_timestamp_val") | head -n $nr >> $of
 }
 
-counter_value_files=$(find $cls_res_folder -name 'counter_values.csv')
-counter_name_files=$(find $cls_res_folder -name 'counter_names.csv')
-counter_names=$( cat $counter_name_files | uniq)
-counter_values=$( cat $counter_value_files )
+combine_csv() {
+    local files="$1"
+    local outcsv="$2"
 
-if [[ $(echo "$counter_names" | wc -l) != "1" ]]
-then
-    echo "Unexpected corrupted counter collection, exiting"
-    exit -1
-fi
+    if [[ $(ls $files 2>/dev/null|wc -l) == "0" ]]; then
+	# no file, nothing to do, don't generate $outcsv
+	return
+    fi
+
+    names=$(head -1 -q $files|uniq)
+    if [[ $(echo "$names" | wc -l) != "1" ]]
+    then
+	echo "Unexpected corrupted csv data collection, exiting"
+	exit -1
+    fi
+    echo "$names" > $outcsv
+    blanks=$(echo "$names"|sed "s/[^'${DELIM}']//g")
+    # below need to be fault tolerance to insert empty rows for empty data
+    for f in $files; do
+	values=$(tail -n +2 -q $f)
+	if [ x"$values" != x ]; then
+	    echo "$values" >> $outcsv
+	else
+	    echo "$blanks" >> $outcsv
+	fi
+    done
+}
 
 tmprep=$(mktemp -d --tmpdir=$cur_dir tmp.XXXXXXXXXX)
 
-echo "$counter_names" > $tmprep/counters.csv
-echo "$counter_values" >> $tmprep/counters.csv
+counter_nv_files=$(find $cls_res_folder -name ${COUNTER_FNAME}'.csv')
+combine_csv "$counter_nv_files" $tmprep/counters.csv
 
-cpi_iteration_rep_value_files=$(echo "$counter_value_files" |sed 's/counter_values/cpi_values/g')
-cpi_iteration_rep_name_files=$(echo "$counter_value_files" |sed 's/counter_values/cpi_names/g')
-cpi_iteration_rep_names=$( cat $cpi_iteration_rep_name_files | uniq )
-cpi_iteration_rep_values=$( cat $cpi_iteration_rep_value_files )
-echo "$cpi_iteration_rep_names" > $tmprep/cpi_iteration_rep.csv
-echo "$cpi_iteration_rep_values" >> $tmprep/cpi_iteration_rep.csv
+cpi_iteration_rep_nv_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/cpi_nv/g')
+combine_csv "$cpi_iteration_rep_nv_files" $tmprep/cpi_iteration_rep.csv
 
-pgm_metrics_files=$(echo "$counter_value_files" |sed 's/counter_values/pgm_metrics/g')
-pgm_names=$(head -1 -q $pgm_metrics_files|uniq)
-pgm_values=$(tail -n +2 -q $pgm_metrics_files)
-echo "$pgm_names" > $tmprep/pgm.csv
-echo "$pgm_values" >> $tmprep/pgm.csv
-
+pgm_metrics_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/pgm_metrics/g')
+combine_csv "$pgm_metrics_files" $tmprep/pgm.csv
 
 # <same repeated machine/filler info> below
-num_rows=$(echo "$counter_values" | wc -l)
+num_rows=$(echo "$counter_nv_files" | wc -l)
 gen_codelet_mach_info $num_rows $tmprep/codelet_mach_info.csv
 gen_filler_info $num_rows $tmprep/filler_info.csv # including timestamp and cpu generation info
 
-# <per run setting info> below
-runinfo=$(echo "$counter_value_files" |sed 's|'$cls_res_folder'||g')  # Used '|' as delimiter as cls_res_folder contains slash
-runinfo=$(echo "$runinfo" |sed 's|/counter_values\.csv||g') 
+# <per run setting info> below, collected from path to counter value files
+runinfo=$(echo "$counter_nv_files" |sed 's|'$cls_res_folder'||g')  # Used '|' as delimiter as cls_res_folder contains slash
+runinfo=$(echo "$runinfo" |sed 's|/'${COUNTER_FNAME}'\.csv||g') 
 runinfo_values=$(echo "$runinfo" |sed 's|/[^_]*_|,|g'|sed 's|^,||g')  # get rid of <setting name>_, then leading comma
 
 runinfo_names=$(echo "$runinfo" |sed 's|_[^/]*|,|g' |sed 's|/||g' | sed 's|,$||g')  # get rid of _<setting value> , then remove slashes and last comma
@@ -133,9 +142,6 @@ do
     runinfo_names=$(echo "$runinfo_names" |sed 's|'$m'|'${nameMap[$m]}'|g')
 done
 
-#echo "$runinfo"
-#echo "$runinfo_values"
-#echo "$runinfo_names"
 
 echo "$runinfo_names" |uniq > $tmprep/runinfo.csv
 echo "$runinfo_values" >> $tmprep/runinfo.csv
@@ -143,45 +149,50 @@ echo "$runinfo_values" >> $tmprep/runinfo.csv
 #Finally, get the stan report (if any)
 # Pickup the variant_... from runinfo and use that to construct the path to stan report
 stan_infiles=$(echo "$runinfo" | sed 's|.*/variant_\([^/]*\)/.*|'$cls_res_folder/binaries/${codelet_name}'_\1.stan_full.csv|g')
-stan_names=$(head -1 -q $stan_infiles|uniq)
-# Convert the names to make various characters becoming underscore
-stan_names=$(echo $stan_names |sed "s/[ :-]/_/g"|sed "s/_\+/_/g"|sed "s/\[/(/g"|sed "s/\]/)/g") # Also converted various naming of stan metrics to follow final format
-stan_values=$(tail -n +2 -q $stan_infiles)
-echo "$stan_names" > $tmprep/stan.csv
-echo "$stan_values" >> $tmprep/stan.csv
+combine_csv "$stan_infiles" $tmprep/stan.csv
 
-echo Extracting stan columns only specified in stan metric file: ${STAN_METRICS_FILE}
-IFS=$'\n' need_stan_cols=($(cat ${STAN_METRICS_FILE}|sed "s/,/\n/g"))
-IFS=$'\n' stan_cols_in_file=($(head -1 $tmprep/stan.csv|sed "s/,/\n/g")) # Also converted various naming of stan metrics to follow final format
-declare -A stan_col_index
-si=0
-while [ $si -lt ${#stan_cols_in_file[@]} ]
-do
-#    echo ${stan_cols_in_file[$si]} is $si
-    (( stan_col_index[${stan_cols_in_file[$si]}]=si+1 ))  # indendedly using the si+1 because cut indices starts from 1
-    (( si++ ))
-done
-#echo "TRIMMING STAN FLIE"
-#Use the index to find out the indices of needed stan cols
-need_indices=()
-echo > $tmprep/stan_trimmed.csv
-for sc in ${need_stan_cols[@]}
-do
-    idx=${stan_col_index[$sc]}
-#    echo $sc is $idx
-    if [ x"$idx" != x ]; then
-	# Idx not empty
-	paste -d${DELIM} $tmprep/stan_trimmed.csv <(cut -d${DELIM} -f$idx $tmprep/stan.csv) > $tmprep/tmp.csv
-	mv $tmprep/tmp.csv $tmprep/stan_trimmed.csv
-    fi
-done 
-sed -i "s/^,//g" $tmprep/stan_trimmed.csv # Remove the leading comma
+if [ -f $tmprep/stan.csv ]; then
+    # Below only fix the first line which is the header
+    #stan_names=$(echo $stan_names |sed "s/[ :-]/_/g"|sed "s/_\+/_/g"|sed "s/\[/(/g"|sed "s/\]/)/g") # Also converted various naming of stan metrics to follow final format
+    sed -i "1 s/[ :-]/_/g; 1 s/_\+/_/g; 1 s/\[/(/g; 1 s/\]/)/g" $tmprep/stan.csv # Converted various naming of stan metrics to follow final format
+
+
+    echo Extracting stan columns only specified in stan metric file: ${STAN_METRICS_FILE}
+    IFS=$'\n' need_stan_cols=($(cat ${STAN_METRICS_FILE}|sed "s/,/\n/g"))
+    IFS=$'\n' stan_cols_in_file=($(head -1 $tmprep/stan.csv|sed "s/,/\n/g")) # Also converted various naming of stan metrics to follow final format
+    declare -A stan_col_index
+    si=0
+    while [ $si -lt ${#stan_cols_in_file[@]} ]
+    do
+	#    echo ${stan_cols_in_file[$si]} is $si
+	(( stan_col_index[${stan_cols_in_file[$si]}]=si+1 ))  # indendedly using the si+1 because cut indices starts from 1
+	(( si++ ))
+    done
+    #echo "TRIMMING STAN FLIE"
+    #Use the index to find out the indices of needed stan cols
+    need_indices=()
+    echo > $tmprep/stan_trimmed.csv
+    for sc in ${need_stan_cols[@]}
+    do
+	idx=${stan_col_index[$sc]}
+	#    echo $sc is $idx
+	if [ x"$idx" != x ]; then
+	    # Idx not empty
+	    paste -d${DELIM} $tmprep/stan_trimmed.csv <(cut -d${DELIM} -f$idx $tmprep/stan.csv) > $tmprep/tmp.csv
+	    mv $tmprep/tmp.csv $tmprep/stan_trimmed.csv
+	fi
+    done 
+    sed -i "s/^,//g" $tmprep/stan_trimmed.csv # Remove the leading comma
+fi
 
 
 # format is pretty much:
 #   <same repeated machine/filler info> <per run setting obtained from run_info> <counters> <stan data>
-paste -d${DELIM} $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv > $cape_file
+# Collect all csv files skipping non-existing files
+all_csv_files=$(ls  -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv 2>/dev/null)
+paste -d${DELIM} $all_csv_files > $cape_file
 
+echo Deleting TMPDIR $tmprep
 rm -R $tmprep
 
 

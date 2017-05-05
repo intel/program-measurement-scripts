@@ -9,7 +9,7 @@ then
 	exit -1
 fi
 
-set -x
+#set -x
 codelet_name="$1"
 data_size=$2
 memory_load=$3
@@ -20,6 +20,16 @@ emon_counters=$7
 res_path=$8
 set +x
 
+verbose=0
+
+fc_echo() {
+    local msg="$1"
+
+    if [[ "$verbose" == "1" ]]; then
+	echo "$msg"
+    fi
+
+}
 
 if [[ "$ENABLE_SEP" == "1" ]]; then
 	./parse_sep_output.sh $res_path
@@ -39,7 +49,7 @@ for counter in $counters
   counter_list+=( $counter )
   case "$counter" in
       "UNC_M_CAS_COUNT_RD" | "UNC_M_CAS_COUNT_WR" | "UNC_M_ACT_COUNT_RD" |"UNC_M_ACT_COUNT_WR" | "UNC_M_PRE_COUNT_PAGE_MISS" | "UNC_M_PRE_COUNT_WR" | "UNC_M_PRE_COUNT_RD")
-      echo "Special treatment for server uncore '$counter'"
+      fc_echo "Special treatment for server uncore '$counter'"
       # Add all columns
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3- -d${DELIM} | sed 's/ //g' )
       #echo "debug values: '$values'"
@@ -64,7 +74,7 @@ for counter in $counters
       ;;
       
       "FREERUN_PKG_ENERGY_STATUS" | "FREERUN_CORE_ENERGY_STATUS" | "FREERUN_DRAM_ENERGY_STATUS" )
-      echo "Special treatment for in-CPU energy '$counter'"
+      fc_echo "Special treatment for in-CPU energy '$counter'"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
       for value in $values
 	do
@@ -76,7 +86,7 @@ for counter in $counters
       ;;
       
       "UNC_L4_REQUEST_RD_HIT" | "UNC_L4_REQUEST_WR_HIT" | "UNC_L4_REQUEST_WR_FILL" | "UNC_L4_REQUEST_RD_EVICT_LINE_TO_DRAM" | "UNC_CBO_L4_SUPERLINE_ALLOC_FAIL")
-      echo "Special treatment for server uncore '$counter'"
+      fc_echo "Special treatment for server uncore '$counter'"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
                 	#echo "debug values: '$values'"
       for value in $values
@@ -91,7 +101,7 @@ for counter in $counters
       ;;
       
       "UNC_IMC_DRAM_DATA_READS" | "UNC_IMC_DRAM_DATA_WRITES" | "UNC_PP0_ENERGY_STATUS" | "UNC_PKG_ENERGY_STATUS")
-      echo "Special treatment (uncore counter) for uncore '$counter'"
+      fc_echo "Special treatment (uncore counter) for uncore '$counter'"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3 -d${DELIM} | sed 's/ //g' )
       for value in $values
 	do
@@ -100,7 +110,7 @@ for counter in $counters
       ;;
       
       "UNC_CBO_CACHE_LOOKUP_ANY_I" | "UNC_CBO_CACHE_LOOKUP_ANY_MESI" | "UNC_CBO_EGRESS_ALLOCATION_AD_CORE" | "UNC_CBO_EGRESS_ALLOCATION_BL_CACHE" |  "UNC_CBO_EGRESS_OCCUPANCY_AD_CORE" |  "UNC_CBO_EGRESS_OCCUPANCY_BL_CACHE" |  "UNC_CBO_INGRESS_ALLOCATION_IRQ" | "UNC_CBO_INGRESS_OCCUPANACY_IRQ" | "UNC_CBO_TOR_ALLOCATION_DRD" |  "UNC_CBO_TOR_OCCUPANCY_DRD_VALID")
-      echo "Special treatment for server uncore '$counter'"
+      fc_echo "Special treatment for server uncore '$counter'"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3-6 -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
       > ${tmp_file}      
@@ -123,7 +133,7 @@ for counter in $counters
       
       
       *)
-      echo "Regular treatment for '$counter'"
+      fc_echo "Regular treatment for '$counter'"
       let "target_field = $XP_CORE + 3"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g' )
 			#echo "debug values: '$values'"
@@ -135,42 +145,47 @@ for counter in $counters
 done
 
 # Line below redundant?
-	echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM} > $res_path/counters.csv
+#	echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM} > $res_path/counters.csv
 # 	if [[ "$HOSTNAME" == "fxhaswell" ]]
 # 	then
 # 		counters=$(echo $counters | sed 's:\(UNC_CBO_CACHE_LOOKUP_ANY_I\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_CACHE_LOOKUP_ANY_MESI\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_ALLOCATION_AD_CORE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_ALLOCATION_BL_CACHE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_OCCUPANCY_AD_CORE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_EGRESS_OCCUPANCY_BL_CACHE\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_INGRESS_ALLOCATION_IRQ\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_INGRESS_OCCUPANACY_IRQ\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_TOR_ALLOCATION_DRD\):\1_0 \1_1 \1_2 \1_3:;s:\(UNC_CBO_TOR_OCCUPANCY_DRD_VALID\):\1_0 \1_1 \1_2 \1_3:')
 # 	fi
 
 
-	cp $res_path/cpi.csv $res_path/counters.csv
+#	cp $res_path/cpi.csv $res_path/counters.csv
 #	echo -n "CPI"${DELIM}>$res_path/counter_names.csv
-	echo $(IFS=${DELIM}; echo "${counter_list[*]}") > $res_path/counter_names.csv
+	echo $(IFS=${DELIM}; echo "${counter_list[*]}") > $res_path/counter_nv.csv
 
 	echo > $res_path/counter_values.csv
 	for counter in ${counter_list[@]}
 	do
-		##echo "Processing counter '$counter'"
-		##echo "Debug: $( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' )"
-		#grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | awk '{average += ($1 /'$iterations'); } END {print average / NR;}' > $res_path/likwid_counter_$counter
+	    ##echo "Processing counter '$counter'"
+	    ##echo "Debug: $( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' )"
+	    #grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | awk '{average += ($1 /'$iterations'); } END {print average / NR;}' > $res_path/likwid_counter_$counter
 
-#        let "mean_line = ($META_REPETITIONS / 2) + 1"
+	    #        let "mean_line = ($META_REPETITIONS / 2) + 1"
 
 
-        res=$( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | sort -n )
-	elements=$( echo $res | tr ' ' '\n' )
-	numels=$( echo "$elements" |wc -l )
-        let "mean_line = ($numels / 2) + 1"
-	echo "Selecting median data for " ${counter} " from " $numels " samples"
-#        median=$( echo $res | tr ' ' '\n' | awk "NR==$mean_line" )
-        median=$( echo "$elements" | awk "NR==$mean_line" )
-        echo $median | awk '{print $1 / '$iterations';}' > $res_path/likwid_counter_$counter
+            res=$( grep "$counter \|$counter|" $res_path/likwid_report | sed "s/ //g" | cut -f3 -d'|' | sort -n )
+	    if [ x"$res" != x ]; then
+		# res not empty
+		elements=$( echo $res | tr ' ' '\n' )
+		numels=$( echo "$elements" |wc -l )
+		let "mean_line = ($numels / 2) + 1"
+		fc_echo "Selecting median data for  ${counter}  from  $numels  samples"
+		#        median=$( echo $res | tr ' ' '\n' | awk "NR==$mean_line" )
+		median=$( echo "$elements" | awk "NR==$mean_line" )
+		echo $median | awk '{print $1 / '$iterations';}' > $res_path/likwid_counter_$counter
+	    else
+		echo "" > $res_path/likwid_counter_$counter
+	    fi
 
-		paste -d${DELIM} $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
-		mv $res_path/tmp $res_path/counters.csv
-		paste -d${DELIM} $res_path/counter_values.csv $res_path/likwid_counter_$counter > $res_path/tmp
-		mv $res_path/tmp $res_path/counter_values.csv
+	    #		paste -d${DELIM} $res_path/counters.csv $res_path/likwid_counter_$counter > $res_path/tmp
+	    #		mv $res_path/tmp $res_path/counters.csv
+	    paste -d${DELIM} $res_path/counter_values.csv $res_path/likwid_counter_$counter > $res_path/tmp
+	    mv $res_path/tmp $res_path/counter_values.csv
 	done
 	# Remove the extra leading comma because counter_values.csv was empty in the beginning
-	sed -i 's/^,//g' $res_path/counter_values.csv
+	sed 's/^,//g' $res_path/counter_values.csv >> $res_path/counter_nv.csv
 
 rm ${tmp_file}
