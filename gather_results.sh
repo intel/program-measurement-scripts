@@ -36,8 +36,6 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 
 	run_info=${res_path#$res_folder}	# remove the prefix
 	variant=$(echo $run_info|sed 's/.*\(variant_\)\([^/]\+\).*/\2/') # match after variant_
-	echo "R:" $res_path
-	echo "RR: " $run_info
 	if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
 	    datasize_path="${res_folder}/data_$data_size"
 	else
@@ -46,7 +44,7 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 	emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
 	loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d${DELIM} -f2 )
 #	codelet_name=$(cat "${res_folder}/codelet_name")
-	echo ${FORMAT_COUNTERS_SH} \"\" \"\" \"\" \"\" \"\" "${loop_iterations}" "${emon_counters}" ${res_path}
+	echo Format counter cmd: ${FORMAT_COUNTERS_SH} \"\" \"\" \"\" \"\" \"\" "${loop_iterations}" "${emon_counters}" ${res_path}
 	${FORMAT_COUNTERS_SH} "" "" "" "" "" "${loop_iterations}" "${emon_counters}" ${res_path}
     done
 

@@ -117,7 +117,7 @@ MAX_REPETITIONS=${HARD_MAX_REPETITIONS}
 # For run_codelet.sh (1/2)
 META_REPETITIONS=11
 #META_REPETITIONS=3
-META_REPETITIONS=1
+#META_REPETITIONS=1
 ACTIVATE_COUNTERS=1
 #ACTIVATE_COUNTERS=0
 ACTIVATE_ADVANCED_COUNTERS=0
@@ -381,6 +381,8 @@ declare -A nameMap=(
 [freq]=decan_experimental_configuration.frequency
 [variant]=decan_variant.name
 [numcores]=decan_experimental_configuration.num_core)
+COUNTER_FNAME="counter_nv"
+
 
 
 # For all
