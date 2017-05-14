@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash 
 
 #source ./const.sh
 
@@ -62,23 +62,32 @@ then
 
 	*)
             echo "Setting core frequency to '$target_frequency'"
-	    # Adapt to Intel FX
-            for ((i=0;i<$(nproc);i++))
-            do
-                cpufreq-set -c $i -g userspace
-                cpufreq-set -c $i -f $target_frequency
-            done    
-	    #       echo "userspace" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
-	    # Adapt to Intel FX
-	    #       echo "$target_frequency" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed > /dev/null
-	    # Adapt to Intel FX
-            actual_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
-	    #       actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
-            #echo "Actual frequency: '$actual_frequency'"
-
-	    #Potential fix for Silvermont CPI issues?
+	    if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+		(( max_frequency=$(wmic cpu get MaxClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
+		(( percent=100*target_frequency/max_frequency ))
+		powercfg.exe -setacvalueindex SCHEME_MIN SUB_PROCESSOR PROCTHROTTLEMIN $percent
+		powercfg.exe -setacvalueindex SCHEME_MIN SUB_PROCESSOR PROCTHROTTLEMAX $percent
+		powercfg.exe -SETACTIVE SCHEME_MIN
+		(( actual_frequency=$(wmic cpu get CurrentClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
+	    else
+		# Adapt to Intel FX
+		for ((i=0;i<$(nproc);i++))
+		do
+                    cpufreq-set -c $i -g userspace
+                    cpufreq-set -c $i -f $target_frequency
+		done    
+		#       echo "userspace" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
+		# Adapt to Intel FX
+		#       echo "$target_frequency" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed > /dev/null
+		# Adapt to Intel FX
+		actual_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
+		#       actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
+		#echo "Actual frequency: '$actual_frequency'"
+		
+		#Potential fix for Silvermont CPI issues?
+	    fi
 	    sleep 1
-
+	    
             if [[ "$target_frequency" != "$actual_frequency" ]]
             then
                 echo "ERROR! Frequency change failed!"

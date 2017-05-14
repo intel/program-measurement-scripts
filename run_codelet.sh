@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash 
 
 source ./const.sh
 if [ -f /opt/intel/sep/sep_vars.sh ];
@@ -32,12 +32,22 @@ cnt_codelet_idx="$7"
 #prefetcher="${13}"
 res_path="$8"
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
+num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 
 nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 
 sec_to_ddhhmmss() {
     secs="$1"
     echo $((${secs}/86400))"d "$(date -d "1970-01-01 + ${secs}sec" "+%H:%M:%S")
+}
+
+run_cygwin() {
+    cc="$1"
+    run_prog="$2"
+    (( hexcc=1<<($cc + 1 - 1) )) # +1 because Windows CPU# starts from 1
+    hexcc=$(printf "%x" $hexcc)
+    echo cmd /c start /b /wait /affinity $hexcc ${run_prog}
+    cmd /c start /b /wait /affinity $hexcc ${run_prog}
 }
 
 
@@ -80,21 +90,34 @@ do
 	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
 #	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
 #	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
-#  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+    #  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+    if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    
 	if [[ "$MC_RUN" != "0" ]]
-	then 
-		for cc in ${nc_all_cores}
-	  	do
-			echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
-			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
-	  	done
+	then
+	    
+	    for cc in ${nc_all_cores}
+	    do
+		run_cygwin $cc ${run_prog}
+	    done
+	fi
+	run_cygwin $XP_CORE ${run_prog}
+    else
+	if [[ "$MC_RUN" != "0" ]]
+	then
+	    for cc in ${nc_all_cores}
+	    do
+		echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
+		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	    done
+	    
 	fi
 	echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
-	res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
-	if [ -f $PGM_METRIC_FILE ]; then
-	    pgm_dumped_metric_values=$( tail -n 1 $PGM_METRIC_FILE )$( echo -e "\n$pgm_dumped_metric_values" )
-	fi
+    fi
+    res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
+    if [ -f $PGM_METRIC_FILE ]; then
+	pgm_dumped_metric_values=$( tail -n 1 $PGM_METRIC_FILE )$( echo -e "\n$pgm_dumped_metric_values" )
+    fi
 done
 
 rm -f time.out
@@ -137,7 +160,9 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
     echo "Running counters..."
     emon -v > "$res_path/emon_info" 
-    emon_counters=$( env -i ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
+    #    emon_counters=$( env -i ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
+    echo Build counter list with cmd: ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" 
+    emon_counters=$( ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
     echo "COUNTER LIST: " ${emon_counters}
 
 
@@ -198,7 +223,7 @@ then
 		echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); CnterSet: (${runCnt}/${numRuns}); "
 		echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
 
-		evlist=($(tail -n +2 ${evfile}))
+		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
 <EMON_CONFIG>
@@ -207,27 +232,45 @@ DURATION=99999999999
 OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
-#	   	emon -stop 2> /dev/null	
-                echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+		#	   	emon -stop 2> /dev/null
+    if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    		
+        echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+	cat emon_api_config_file
+
+	if [[ "$MC_RUN" != "0" ]]
+	then 
+	    for cc in ${nc_all_cores}
+	    do
+		run_cygwin ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
+	    done
+	fi
+	run_cygwin ${XP_CORE} ${run_prog_emon_api} &>> "$res_path/emon_execution_log.core=${cc}" &
+	while ps -W|grep -i emon.exe > /dev/null; do sleep 1; done
+	
+	if [[ "$MC_RUN" != "0" ]]
+	then
+	    while ps -W|grep -i $(basename ${run_prog}) > /dev/null; do sleep 1; done	    
+	fi
+    else
+        echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
 
-		if [[ "$MC_RUN" != "0" ]]
-		then 
-	  	    for cc in ${nc_all_cores}
-	  	    do
-			$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
-	  	    done
-		fi
-
-
-                $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
-
-		while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
-
-		if [[ "$MC_RUN" != "0" ]]
-		then 
-		    while pgrep -x $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
-		fi
+	if [[ "$MC_RUN" != "0" ]]
+	then 
+	    for cc in ${nc_all_cores}
+	    do
+		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
+	    done
+	fi
+	
+        $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+	while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
+	
+	if [[ "$MC_RUN" != "0" ]]
+	then 
+	    while pgrep -x $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
+	fi
+    fi
 
 		mv emon_api_config_file emon_api_config_file.${evfile}
 		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
@@ -245,13 +288,23 @@ EOF
 	      done
 	  else
 	      if [[ "$MC_RUN" != "0" ]]
-	      then 
-	  	  for cc in ${nc_all_cores}
-	  	  do
-		      $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
-	  	  done
-# 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
+	      then
+		  if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then		  
+	  	      for cc in ${nc_all_cores}
+	  	      do
+			  (( hexcc=1<<($cc - 1) ))
+			  hexcc=$(printf "%x" $hexcc)
+			  echo cmd /c start /b /affinity $hexcc ${run_prog}
+			  cmd /c start /b /affinity $hexcc ${run_prog}
+	  	      done
+		  else
+		      for cc in ${nc_all_cores}
+	  	      do
+			  $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+	  	      done
+		  fi
+		  # 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
+		  # 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 13 ${run_prog} &
 # 	      $NUMACTL -m $XP_NODE -C 14 ${run_prog} &

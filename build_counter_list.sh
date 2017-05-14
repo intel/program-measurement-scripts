@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash 
 
 source $(dirname $0)/const.sh
 
@@ -16,7 +16,7 @@ then
 else 
     old_emon="0"
 fi      
-emon_db=$(grep "EMON Database" ${emon_info_file}|cut -f4 -d' ')
+emon_db=$(grep "EMON Database" ${emon_info_file}|cut -f4 -d' '|tr -d '\r')
 
 mk_histo_counters()
 {

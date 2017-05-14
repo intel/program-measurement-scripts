@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash 
 
 # A bit ugly HOSTNAME -> UARCH detection but will keep it for the time being
 # TODO: Use more robust method.
@@ -27,7 +27,7 @@
 # 	fi
 # fi
 
-case "$HOSTNAME" in
+case $(echo "$HOSTNAME" | tr "[:upper:]" "[:lower:]" )  in
     fxe32lin04.fx.intel.com)
 	export HOSTNAME="fxe32lin04"
 	;;
@@ -75,7 +75,13 @@ fi
 
 if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
 	source ${COMPILER_ROOT}/compilers/intel/12.1/Linux/intel64/load.sh
-else
+elif [[ "$(uname)" != "CYGWIN_NT-6.2" ]]; then
+    # /cygdrive/c/Program\ Files\ \(x86\)/IntelSWTools/compilers_and_libraries/windows/bin/compilervars.bat  intel64 >/dev/null
+#    if ! which ifort &> /dev/null; then
+#	echo ifort not found.  Need to restart Cygwin with set vars script invoked.
+#	exit -1
+#    fi
+#else
 #	source ${COMPILER_ROOT}/compilers/intel/15.0/Linux/intel64/load0.sh
 	source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
 fi
@@ -296,6 +302,8 @@ MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --
 # Set the highest frequency the CPU can run (no Turbo-boost)
 if [[ "$HOSTNAME" == "fxilab147" ]] ; then
 	XP_HIGH_FREQ="2500000"
+elif [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+        (( XP_HIGH_FREQ=$(wmic cpu get MaxClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
 else
 	XP_HIGH_FREQS=( $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies) )
 	if [ "$(cat /proc/cpuinfo | grep 'ida')" == "" ]; then
@@ -305,18 +313,26 @@ else
 	fi
 fi
 
-# expected output from numactl -H
-NUMACTL=$( which numactl )
-# node 0 cpus: 0 1 2 3 4 5 6 7 8 9
-XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
-if [[ "$HOSTNAME" == "fxilab147" ]]
-then
-    # NODE 1 is bad, hardcoded to select first node
-    XP_NODE=0
+if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+    # Use EMON to get topology and pick the max of second col which is package
+    XP_NODE=$(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2|awk '$2>=max {max=$2}; END {print max}')
+    XP_ALL_CORES=( $(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2 |awk '$2 ~ /'${XP_NODE}'/ {print $1}'))
+
+else
+    # expected output from numactl -H
+    NUMACTL=$( which numactl )
+    # node 0 cpus: 0 1 2 3 4 5 6 7 8 9
+    XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
+    if [[ "$HOSTNAME" == "fxilab147" ]]
+    then
+	# NODE 1 is bad, hardcoded to select first node
+	XP_NODE=0
+    fi
+    
+    #XP_NODE=${XP_NODES[$HOSTNAME]}
+    # All cores at the XP_NODE node
+    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
 fi
-#XP_NODE=${XP_NODES[$HOSTNAME]}
-# All cores at the XP_NODE node
-XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
 #XP_CORE=${XP_CORES[$HOSTNAME]}
 # last core of the node
@@ -397,6 +413,10 @@ set_prefetcher_bits() {
 
 set_thp() {
     setting="$1"
+    if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+	echo "SET_THP disabled for Cygwin"
+	return;
+    fi
     # NOTE: setuid bit of hugeadm assumed to be set by root.
     echo "Huge page setting ==> ${THP_SETTING}"
 

@@ -1,4 +1,5 @@
-#!/bin/bash -l
+#!/bin/bash 
+##!/bin/bash -l
 
 source ./const.sh
 
@@ -31,8 +32,12 @@ then
     make clean ENABLE_SEP=sep ${emon_api_flags} all
 else
     if [[ "$ACTIVATE_EMON_API" == "1" ]]
-	then
-	make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" all
+    then
+	if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+	    make clean LIBS="measure_emon_api_dca.lib prog_api.lib" LIBPATH="-LIBPATH:../../../../../cape-common/lib -LIBPATH:z:/software/DCA/EMON_DCA_engineering_build_v01/lib64" all
+	else
+	    make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" all
+	fi
 	if [[ "$?" != "0" ]]
 	    then
 	    echo "ERROR! Make did not succeed in creating EMON API instrumented codelet."

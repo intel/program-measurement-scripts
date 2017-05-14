@@ -1,4 +1,5 @@
-#!/bin/bash -l
+#!/bin/bash 
+##!/bin/bash -l
 
 source ./const.sh
 
@@ -42,10 +43,12 @@ find_num_repetitions_and_iterations () {
     echo "Adjusting codelet parametres for the $variant variant ...${codelet_folder}"
 
     if [[ "${variant}" == "ORG" ]]; then
-	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
+#	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
     else
 #	echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+#	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
     fi
     tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
     sed -i '$ d' "$codelet_folder/repetitions_history" 
@@ -54,7 +57,8 @@ find_num_repetitions_and_iterations () {
     echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
     
     echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
-    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+#    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+    loop_info=$( ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
     res=$?
 
     if [[ "$res" != "0" ]]
@@ -185,13 +189,14 @@ build_tmp_folder=$(mktemp -d --tmpdir=${codelet_folder}/..)
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
 echo "$META_REPETITIONS" > "$codelet_folder/$CLS_RES_FOLDER/meta_repetitions"
 echo "$PRETTY_UARCH" > "$codelet_folder/$CLS_RES_FOLDER/uarch"
-energy_unit_msr_value=$(emon --read-msr $MSR_POWER_UNIT|grep =|cut -f2 -d=|uniq)
+echo MSR_POWER_UNIT is $MSR_POWER_UNIT
+energy_unit_msr_value=$(emon --read-msr $MSR_POWER_UNIT|grep =|cut -f2 -d=|uniq|tr -d "\r")
 if [[ $(echo "$energy_unit_msr_value" | wc -l) != "1" ]]
 then
     echo "Unexpected corrupted MSR POWER UNIT counter, exiting"
     exit -1
 else
-
+    echo energy_unit_msr_value is \"$energy_unit_msr_value\"
     energy_units=$((( ($energy_unit_msr_value>>8)&0x1f )))
     energy_units=$(echo 0.5^$energy_units|bc -l)
     echo $energy_units > "$codelet_folder/$CLS_RES_FOLDER/energy_units"
@@ -223,7 +228,8 @@ echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_d
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${first_data_size}" 10 )
 try_repetitions=2
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 10 )
-loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
+# loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
+loop_info=$( ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 11 )
 res=$?
 if [[ "$res" != "0" ]]
@@ -425,6 +431,7 @@ then
 
 			    #		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 			    ((cnt_codelet_idx++))
+			    echo Executing run_codelet.sh: ./run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
 			    ./run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
 
 			    res=$?

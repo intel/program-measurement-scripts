@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash
 
 source ./const.sh
 
@@ -46,7 +46,7 @@ if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 	emon_counters=$(cat "${res_path}/${EMON_COUNTER_NAMES_FILE}")
 	loop_iterations=$(cat "${datasize_path}/${LOOP_ITERATION_COUNT_FILE}" | grep $variant | cut -d${DELIM} -f2 )
 #	codelet_name=$(cat "${res_folder}/codelet_name")
-	echo ${FORMAT_COUNTERS_SH} "" "" "" "" "" "${loop_iterations}" "${emon_counters}" ${res_path}
+	echo ${FORMAT_COUNTERS_SH} \"\" \"\" \"\" \"\" \"\" "${loop_iterations}" "${emon_counters}" ${res_path}
 	${FORMAT_COUNTERS_SH} "" "" "" "" "" "${loop_iterations}" "${emon_counters}" ${res_path}
     done
 

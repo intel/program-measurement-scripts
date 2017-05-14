@@ -43,8 +43,8 @@ for counter in $counters
       # Add all columns
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3- -d${DELIM} | sed 's/ //g' )
       #echo "debug values: '$values'"
-      nc=$( grep number_of_processors $res_path/emon_info | awk '{print $3}' )
-      c_per_pkg=$( grep "Cores Per Package:" $res_path/emon_info  | awk -F"[:|)]" '{print $2}' )
+      nc=$( grep number_of_processors $res_path/emon_info | awk '{print $3}' |tr -d '\r')
+      c_per_pkg=$( grep "Cores Per Package:" $res_path/emon_info  | awk -F"[:|)]" '{print $2}' | tr -d '\r')
       let "npkg = $nc / $c_per_pkg"
 
       split_counters=""
