@@ -93,13 +93,17 @@ quadratic_sizes="100"
 #memory_loads="0 99999"
 memory_loads="0"
 #num_cores="2 4 8"
-num_cores="1 2 4 8"
+#num_cores="1 2 4 8"
+#num_cores="1 8"
+#num_cores="2 4"
 #num_cores="1 2 8"
 #num_cores="1 2"
 #num_cores="1"
 #num_cores="4"
-#num_cores="8"
+num_cores="2 4"
 prefetchers="0 15"
+#prefetchers="0"
+#prefetchers="15"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
 frequencies="2400000"
@@ -1462,14 +1466,19 @@ name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1"
 #name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1"
 name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 name2sizes[bfs-pull-topo-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1"
-name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.NY.gr:0:-1 USA-road-d.FLA.gr:0:-1 USA-road-d.USA.gr"
+name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.NY.gr:0:-1 USA-road-d.FLA.gr:0:-1 USA-road-d.USA.gr:0:-1"
+#name2sizes[bfs-push-data-sync_ix2]="USA-road-d.USA.gr:0:-1"
+#name2sizes[bfs-push-data-sync_ix2]="USA-road-d.W.gr:0:-1"
+name2sizes[bfs-push-data-sync_ix2]="rmat16-2e22.gr:0:-1"
+name2sizes[bfs-push-data-async_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
 #name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1"
 name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 #name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
 name2sizes[pr-sync-pull]="USA-road-transpose.gr:0:-1"
 #name2sizes[pr-pull-topo-sync_dx2]="USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 name2sizes[pr-pull-topo-sync_dx2]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1 rmat22.gr:0:-1"
-name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1 rmat22.gr:0:-1"
+#name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1 rmat22.gr:0:-1"
+name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.W-transpose.gr:0:-1"
 
 name2sizes[sssp-pull-topo-async]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
 name2sizes[sssp-pull-topo-sync_ix2]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
@@ -1958,11 +1967,12 @@ run_codelets=(
 #   bfs-load-preloaded-sort-noaddsub_sVS_ig
 #    pr-sync-pull
 #    bfs-pull-topo-sync_ix2
-    bfs-push-data-sync_ix2
+#    bfs-push-data-sync_ix2
+#    bfs-push-data-async_ix2
 #    bfs-pull-topo-async_ig
 #    cc-pull-topo-async
 #    cc-pull-topo-sync_ix2 
-#    pr-pull-topo-async
+    pr-pull-topo-async
 #    pr-pull-topo-sync_dx2
 #    sssp-pull-topo-async
 #    sssp-pull-topo-sync_ix2
