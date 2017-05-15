@@ -33,9 +33,7 @@ launchIt () {
 	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} started at $(date --date=@${START_VRUN_SH})"
 	${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
 	${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
-echo HERE ${launch_fn}	
 	${launch_fn} ${START_VRUN_SH}
-echo HERE1     
 	# Combining all run cape data
 	for f in $( find -L ${run_dir} -name *.cape.csv ) 
 	do

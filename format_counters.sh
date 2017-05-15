@@ -40,7 +40,7 @@ rm -f $res_path/likwid_report $res_path/likwid_counter_*
 counters=$( echo "$emon_counters" | tr "," " " | tr "." "_" | tr " " "\n" | sort --uniq | tr "\n" " " )
 sed 's/\./_/g' -i $res_path/emon_report
 # Remove commas in EMON output as commas may be used as delimiters below.
-sed 's/,//g'  $res_path/emon_report > $res_path/emon_report.trim
+sed 's/,//g'  $res_path/emon_report |tr -d '\r' > $res_path/emon_report.trim
 
 tmp_file=$( mktemp )
 counter_list=()
@@ -60,13 +60,16 @@ for counter in $counters
       split_counters=""
       # Clear the file for split counter info
       > ${tmp_file}
-      for value in $values
-	do
-	ndata=$( echo $value |tr -dc ','|wc -c )
-        let "ndata_per_pkg = ${ndata} / ${npkg}"
-	echo ${value}|awk -v RS=${DELIM} -v counter=${counter} '{s+=$1}END{print counter"||"s}' >> $res_path/likwid_report
-	# per socket counts, assuming numbers are contiguously put together for each socket
-	echo $value |awk -v RS=${DELIM} -v BATCH=${ndata_per_pkg} -v counter=${counter} 'BEGIN{i=0}{s+=$1} NR%BATCH==0 {print counter"_"i"||"s;s=0;i++}' >> ${tmp_file}
+      for value0 in $values
+      do
+	  value=$( echo $value0 |sed 's/,$//g')
+          ((ndata=$( echo $value |tr -dc ','|wc -c )+1))
+          let "ndata_per_pkg = ${ndata} / ${npkg}"
+	  echo ${value}|awk -v RS=${DELIM} -v counter=${counter} '{s+=$1}END{print counter"||"s}' >> $res_path/likwid_report
+	  # per socket counts, assuming numbers are contiguously put together for each socket
+	  # Uncomment below to print command
+	  # echo 'echo '$value' |awk -v RS='${DELIM}' -v BATCH='${ndata_per_pkg}' -v counter='${counter}" 'BEGIN{i=0}{s+=\$1} NR%BATCH==0 {print counter"'"_"i"||"'"s;s=0;i++}' >> "${tmp_file}
+	  echo $value |awk -v RS=${DELIM} -v BATCH=${ndata_per_pkg} -v counter=${counter} 'BEGIN{i=0}{s+=$1} NR%BATCH==0 {print counter"_"i"||"s;s=0;i++}' >> ${tmp_file}
       done
       cat ${tmp_file} >> $res_path/likwid_report
       readarray -t split_counters < <(cut -f1 -d'|' ${tmp_file} |sort |uniq)
