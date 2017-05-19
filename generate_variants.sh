@@ -92,7 +92,7 @@ EOF
 		    rm "$generated_binary"
 		fi
 	    done
-	    if [[ "$keep_one" != "1" ]]
+	    if [[ "$keep_one" != "1" && ${variant} != "REF" ]]
 	    then
 		echo "Error! Keep_one should equal 1, not '$keep_one'!"
 		exit -1

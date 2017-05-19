@@ -93,14 +93,14 @@ quadratic_sizes="100"
 #memory_loads="0 99999"
 memory_loads="0"
 #num_cores="2 4 8"
-#num_cores="1 2 4 8"
+num_cores="1 2 4 8"
 #num_cores="1 8"
 #num_cores="2 4"
 #num_cores="1 2 8"
 #num_cores="1 2"
 #num_cores="1"
 #num_cores="4"
-num_cores="2 4"
+#num_cores="2 4"
 prefetchers="0 15"
 #prefetchers="0"
 #prefetchers="15"
@@ -1471,6 +1471,7 @@ name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105.gr:0:-1 rm
 #name2sizes[bfs-push-data-sync_ix2]="USA-road-d.W.gr:0:-1"
 name2sizes[bfs-push-data-sync_ix2]="rmat16-2e22.gr:0:-1"
 name2sizes[bfs-push-data-async_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
+name2sizes[bfs-push-data-sync_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
 #name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1"
 name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 #name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
@@ -1482,6 +1483,9 @@ name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22
 
 name2sizes[sssp-pull-topo-async]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
 name2sizes[sssp-pull-topo-sync_ix2]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
+name2sizes[sssp-push-delta-sync_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1"
+name2sizes[sssp-push-delta-async_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1"
+
 
 #name2sizes[cc-pull-topo-sync_ix2]="rmat16-2e22-sym.gr:0:-1"
 name2sizes[cc-pull-topo-async]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.NY-symmetric.gr:0:-1 rmat22.sym.gr:0:-1"
@@ -1972,10 +1976,12 @@ run_codelets=(
 #    bfs-pull-topo-async_ig
 #    cc-pull-topo-async
 #    cc-pull-topo-sync_ix2 
-    pr-pull-topo-async
+#    pr-pull-topo-async
 #    pr-pull-topo-sync_dx2
 #    sssp-pull-topo-async
 #    sssp-pull-topo-sync_ix2
+    sssp-push-delta-sync_ix2
+#    sssp-push-delta-async_ix2
 )
 
 

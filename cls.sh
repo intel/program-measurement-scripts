@@ -232,7 +232,8 @@ try_repetitions=2
 loop_info=$( ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 11 )
 res=$?
-if [[ "$res" != "0" ]]
+
+if [[ "$res" != "0" || "X${loop_info}" == "X" ]]
 then
     if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]
     then
