@@ -1980,8 +1980,8 @@ run_codelets=(
 #    pr-pull-topo-sync_dx2
 #    sssp-pull-topo-async
 #    sssp-pull-topo-sync_ix2
-    sssp-push-delta-sync_ix2
-#    sssp-push-delta-async_ix2
+#    sssp-push-delta-sync_ix2
+    sssp-push-delta-async_ix2
 )
 
 

@@ -251,7 +251,13 @@ then
     loop_info=$( echo -e "$loop_info" | grep ${DELIM} | head -n 1 )
     loop_id=$( echo "$loop_info" | cut -f1 -d${DELIM} )
     loop_iterations=$( echo "$loop_info" | cut -f2 -d${DELIM} )
-else
+    if [[ "$loop_iterations" == "0" ]]; then
+	# Just make it a failed case
+	loop_detection_success=0
+    fi
+fi
+
+if [[ "$loop_detection_success" == "0" ]]; then
     echo "LOOP DETECTION ERROR IGNORED"
     loop_info=""
     loop_id=-1
