@@ -93,6 +93,7 @@ quadratic_sizes="100"
 #quadratic_sizes="3000"
 #memory_loads="0 99999"
 memory_loads="0"
+num_cores="1"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
 frequencies="2500000"
@@ -1149,6 +1150,7 @@ name2sizes[ptr2_movaps-33lfbhit_branch]="1000"
 #name2sizes[balanc_3_sr_de]="200000"
 #name2sizes[balanc_3_sr_sVS_de]="200000"
 name2sizes[balanc_3_sr_de]="2000 10000 200000"
+name2sizes[balanc_3_sr_de]="10000"
 name2sizes[balanc_3_sr_ls-sVS_de]="200000"
 name2sizes[balanc_3_sr_ls-sU24-sVS_de]="200000"
 name2sizes[balanc_3_sr_ls-sU24-lfb-sVS_de]="200000"
@@ -1714,7 +1716,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 # #lop_13_sr_ls1_de
 # )
 
-# run_codelets=(
+ run_codelets=(
 #     balanc_3_sr_de balanc_3_sr_sVS_de 
 #     elmhes_10_sr_de elmhes_10_sr_sVS_de 
 #     elmhes_11_sr_de
@@ -1726,7 +1728,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 #     lop_13_sr_de
 #     lop_13_sr_sVS_de
 #     ludcmp-sq_4_sr_se 
-#     ludcmp-sq_4_sr_sVS_se
+     ludcmp-sq_4_sr_sVS_se
 #      matadd-flb_16_sr_de matadd-flb_16_sr_sVS_de  
 #     mprove_8_sr_me mprove_8_sr_sVS_me
 #     mprove_9_sr_de mprove_9_sr_sVS_de
@@ -1752,7 +1754,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 #     toeplz_4_sr_de
 #     tridag_1_sr_de
 #      tridag_2_sr_de
-# )
+ )
 
 # run_codelets=(
 #     balanc_3_sr_dx2
@@ -1803,7 +1805,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 #     tridag_2_sr_dx2
 # )
 
- run_codelets=(
+# run_codelets=(
 #     balanc_3_dx2
 #    balanc_3_sVS_dx2 
 #    elmhes_10_dx2
@@ -1839,7 +1841,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 #     svdcmp_11_dx2
 #     svdcmp_11_sVS_dx2 
 #     svdcmp_13_dx2
-     svdcmp_13_sVS_dx2 
+#     svdcmp_13_sVS_dx2 
 #     svdcmp_14_dx2
 #     svdcmp_14_sVS_dx2
 #     svdcmp_6_dx2
@@ -1850,7 +1852,7 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 #     toeplz_4_dx2
 #     tridag_1_dx2
 #     tridag_2_dx2
- )
+# )
 
  # run_codelets=(
  #    #  balanc_3_dl1_dx2
@@ -2081,9 +2083,9 @@ name2sizes[ptr6_movaps-3lfbhit_branch]="10000"
 
 # )
 
-# run_codelets=(
-#     balanc_3_sr_de
-# )
+run_codelets=(
+     balanc_3_sr_de
+)
 
 # Overriden above defn
 name2sizes[hqr-sq_12_se]="96"
@@ -2238,7 +2240,7 @@ name2sizes[tridag_2_dx2]="8000"
 #name2sizes[ptr_ld_branch]="10000"
 #name2sizes[loads_1Sx4-movsd]="200000"
 
-runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  
+runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"   "$num_cores"
 
 return
 
