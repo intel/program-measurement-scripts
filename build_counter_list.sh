@@ -37,6 +37,8 @@ append_counters()
     item_type="$2"
     more_items="$3"
 
+# More checkes for activate because it could be an associate array
+
     if [[ "${activate}" != "0" ]]
 	then
 	if [ -z ${more_items} ]
@@ -151,6 +153,8 @@ case "$UARCH" in
 		;&
 	    *)
 		mem_traffic_counters+=",UNC_IMC_DRAM_DATA_READS,UNC_IMC_DRAM_DATA_WRITES"
+		mem_rowbuff_counters=""  # no rowbuff counters
+		energy_counters="UNC_PKG_ENERGY_STATUS,UNC_PP0_ENERGY_STATUS,UNC_PP1_ENERGY_STATUS"
 		;;
 	esac
 
