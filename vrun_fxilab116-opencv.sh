@@ -92,7 +92,8 @@ quadratic_sizes="100"
 #quadratic_sizes="3000"
 #memory_loads="0 99999"
 memory_loads="0"
-num_cores="1"
+num_cores="3"
+prefetchers="0"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
 frequencies="2500000"
@@ -123,8 +124,15 @@ quadt_s1_prefix="${nr_prefix}/2DT_loop-Stride_1"
 
 saeed_lin_s1_prefix="${saeed_prefix}/1D_loop-Stride_1"
 andy_lin_s1_prefix="${andy_prefix}/1D_loop-Stride_1"
+
 opencv_lin_s1_prefix="${opencv_prefix}/1D_loop-Stride_1"
+opencv_quad_sp_prefix="${opencv_prefix}/2D_loop-Sparse"
 opencv_quad_s1_prefix="${opencv_prefix}/2D_loop-Stride_1"
+opencv_quad_slda_prefix="${opencv_prefix}/2D_loop-Stride_CLDA"
+opencv_cube_s1_prefix="${opencv_prefix}/3D_loop-Stride_1"
+opencv_cube_slda_prefix="${opencv_prefix}/3D_loop-Stride_CLDA"
+opencv_cuben_s1_prefix="${opencv_prefix}/3DN_loop-Stride_1"
+opencv_cuben_slda_prefix="${opencv_prefix}/3DN_loop-Stride_CLDA"
 
 
 
@@ -421,8 +429,15 @@ fill_codelet_maps()
 fill_codelet_maps "${lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps "${saeed_lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps "${andy_lin_s1_prefix}" "${linear_sizes}"
-#fill_codelet_maps "${opencv_lin_s1_prefix}" "${linear_sizes}"
+fill_codelet_maps "${opencv_lin_s1_prefix}" "${linear_sizes}"
 fill_codelet_maps ${opencv_quad_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_quad_sp_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_quad_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_quad_slda_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_cube_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_cube_slda_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_cuben_s1_prefix} "${quadratic_sizes}"
+fill_codelet_maps ${opencv_cuben_slda_prefix} "${quadratic_sizes}"
 fill_codelet_maps ${lin_slda_prefix} "${linear_sizes}"
 fill_codelet_maps ${lin_sclda_prefix} "${linear_clda_sizes}"
 fill_codelet_maps ${quad_s1_prefix} "${quadratic_sizes}"
@@ -1488,6 +1503,73 @@ name2sizes[arithm_core_c.c_sub_float_line253_se]="64"
 name2sizes[arithm_core_c.c_sub_short_line201_ie]="64"
 name2sizes[arithm_core_c.c_sub_uchar_line149_be]="64"
 
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line310_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line310_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line310_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line310_s_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line317_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line317_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Otsu_uchar_line317_s_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line376_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line376_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line376_s_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line385_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line385_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line385_s_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line394_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line394_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line394_s_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line425_l_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line425_m_bx2]="64"
+name2sizes[thresh.c_getThreshVal_Triangle_uchar_line425_s_bx2]="64"
+name2sizes[thresh.c_thresh_uchar_line70_l_bx2]="64"
+name2sizes[thresh.c_thresh_uchar_line70_m_bx2]="64"
+name2sizes[thresh.c_thresh_uchar_line70_s_bx2]="64"
+name2sizes[arithm_core_c.c_add_uchar_line12_l_bx2]="64"
+name2sizes[arithm_core_c.c_add_uchar_line12_m_bx2]="64"
+name2sizes[arithm_core_c.c_add_uchar_line12_s_bx2]="64"
+name2sizes[arithm_core_c.c_addWeighted_uchar_line1013_l_bx2]="64"
+name2sizes[arithm_core_c.c_addWeighted_uchar_line1013_m_bx2]="64"
+name2sizes[arithm_core_c.c_addWeighted_uchar_line1013_s_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line292_l_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line292_m_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line292_s_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line314_l_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line314_m_bx2]="64"
+name2sizes[arithm_core_c.c_cmp_uchar_line314_s_bx2]="64"
+name2sizes[arithm_core_c.c_div_uchar_line851_l_bx2]="64"
+name2sizes[arithm_core_c.c_div_uchar_line851_m_bx2]="64"
+name2sizes[arithm_core_c.c_div_uchar_line851_s_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line583_l_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line583_m_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line583_s_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line606_l_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line606_m_bx2]="64"
+name2sizes[arithm_core_c.c_mul_uchar_line606_s_bx2]="64"
+name2sizes[arithm_core_c.c_recip_uchar_line934_l_bx2]="64"
+name2sizes[arithm_core_c.c_recip_uchar_line934_m_bx2]="64"
+name2sizes[arithm_core_c.c_recip_uchar_line934_s_bx2]="64"
+name2sizes[arithm_core_c.c_sub_uchar_line146_l_bx2]="64"
+name2sizes[arithm_core_c.c_sub_uchar_line146_m_bx2]="64"
+name2sizes[arithm_core_c.c_sub_uchar_line146_s_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line236_l_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line236_m_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line236_s_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line196_l_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line196_m_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line196_s_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line211_l_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line211_m_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line211_s_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line261_l_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line261_m_bx2]="64"
+name2sizes[integral.c_integral_uchar_int32_float_line261_s_bx2]="64"
+name2sizes[morph.c_morphrowfilter_max_uchar_line197_l_bx2]="64"
+name2sizes[morph.c_morphrowfilter_max_uchar_line197_m_bx2]="64"
+name2sizes[morph.c_morphrowfilter_max_uchar_line197_s_bx2]="64"
+name2sizes[morph.c_morphrowfilter_min_uchar_line24_l_bx2]="64"
+name2sizes[morph.c_morphrowfilter_min_uchar_line24_m_bx2]="64"
+name2sizes[morph.c_morphrowfilter_min_uchar_line24_s_bx2]="64"
 
 # Switched focus to 2D
 # run_codelets=(
@@ -2009,7 +2091,7 @@ run_codelets=(
 # arithm_core_c.c_sub_short_line201_ix2
 # arithm_core_c.c_sub_uchar_line149_bx2
 
-arithm_core_c.c_addWeighted_int32_line1107_Ie
+#arithm_core_c.c_addWeighted_int32_line1107_Ie
 #arithm_core_c.c_cmp_float_line557_se
 #arithm_core_c.c_addWeighted_short_line1078_ie
 #arithm_core_c.c_addWeighted_uchar_line1020_be
@@ -2038,6 +2120,73 @@ arithm_core_c.c_addWeighted_int32_line1107_Ie
 #arithm_core_c.c_sub_float_line253_se
 #arithm_core_c.c_sub_short_line201_ie
 #arithm_core_c.c_sub_uchar_line149_be
+
+thresh.c_getThreshVal_Otsu_uchar_line310_l_bx2                                                                       
+thresh.c_getThreshVal_Otsu_uchar_line310_m_bx2                                                                       
+thresh.c_getThreshVal_Otsu_uchar_line310_s_bx2                                                                       
+thresh.c_getThreshVal_Otsu_uchar_line317_l_bx2                                                                       
+thresh.c_getThreshVal_Otsu_uchar_line317_m_bx2                                                                       
+thresh.c_getThreshVal_Otsu_uchar_line317_s_bx2                                                                       
+thresh.c_getThreshVal_Triangle_uchar_line376_l_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line376_m_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line376_s_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line385_l_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line385_m_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line385_s_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line394_l_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line394_m_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line394_s_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line425_l_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line425_m_bx2                                                                   
+thresh.c_getThreshVal_Triangle_uchar_line425_s_bx2                                                                   
+thresh.c_thresh_uchar_line70_l_bx2                                                                                   
+thresh.c_thresh_uchar_line70_m_bx2                                                                                   
+thresh.c_thresh_uchar_line70_s_bx2                                                                                   
+arithm_core_c.c_add_uchar_line12_l_bx2                                                                               
+arithm_core_c.c_add_uchar_line12_m_bx2                                                                               
+arithm_core_c.c_add_uchar_line12_s_bx2                                                                               
+arithm_core_c.c_addWeighted_uchar_line1013_l_bx2                                                                     
+arithm_core_c.c_addWeighted_uchar_line1013_m_bx2                                                                     
+arithm_core_c.c_addWeighted_uchar_line1013_s_bx2                                                                     
+arithm_core_c.c_cmp_uchar_line292_l_bx2                                                                              
+arithm_core_c.c_cmp_uchar_line292_m_bx2                                                                              
+arithm_core_c.c_cmp_uchar_line292_s_bx2                                                                              
+arithm_core_c.c_cmp_uchar_line314_l_bx2
+arithm_core_c.c_cmp_uchar_line314_m_bx2
+arithm_core_c.c_cmp_uchar_line314_s_bx2
+arithm_core_c.c_div_uchar_line851_l_bx2
+arithm_core_c.c_div_uchar_line851_m_bx2
+arithm_core_c.c_div_uchar_line851_s_bx2
+arithm_core_c.c_mul_uchar_line583_l_bx2
+arithm_core_c.c_mul_uchar_line583_m_bx2
+arithm_core_c.c_mul_uchar_line583_s_bx2
+arithm_core_c.c_mul_uchar_line606_l_bx2
+arithm_core_c.c_mul_uchar_line606_m_bx2
+arithm_core_c.c_mul_uchar_line606_s_bx2
+arithm_core_c.c_recip_uchar_line934_l_bx2
+arithm_core_c.c_recip_uchar_line934_m_bx2
+arithm_core_c.c_recip_uchar_line934_s_bx2
+arithm_core_c.c_sub_uchar_line146_l_bx2
+arithm_core_c.c_sub_uchar_line146_m_bx2
+arithm_core_c.c_sub_uchar_line146_s_bx2
+integral.c_integral_uchar_int32_float_line236_l_bx2
+integral.c_integral_uchar_int32_float_line236_m_bx2
+integral.c_integral_uchar_int32_float_line236_s_bx2
+integral.c_integral_uchar_int32_float_line196_l_bx2
+integral.c_integral_uchar_int32_float_line196_m_bx2
+integral.c_integral_uchar_int32_float_line196_s_bx2
+integral.c_integral_uchar_int32_float_line211_l_bx2
+integral.c_integral_uchar_int32_float_line211_m_bx2
+integral.c_integral_uchar_int32_float_line211_s_bx2
+integral.c_integral_uchar_int32_float_line261_l_bx2
+integral.c_integral_uchar_int32_float_line261_m_bx2
+integral.c_integral_uchar_int32_float_line261_s_bx2
+morph.c_morphrowfilter_max_uchar_line197_l_bx2
+morph.c_morphrowfilter_max_uchar_line197_m_bx2
+morph.c_morphrowfilter_max_uchar_line197_s_bx2
+morph.c_morphrowfilter_min_uchar_line24_l_bx2
+morph.c_morphrowfilter_min_uchar_line24_m_bx2
+morph.c_morphrowfilter_min_uchar_line24_s_bx2
 )
 
 
@@ -2356,7 +2505,7 @@ name2sizes[tridag_2_sr_dx2]="200000"
 #name2sizes[ptr_ld_branch]="10000"
 #name2sizes[loads_1Sx4-movsd]="200000"
 
-runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores"
+runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores" "$prefetchers"
 
 return
 
