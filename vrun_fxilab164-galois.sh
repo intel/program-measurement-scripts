@@ -93,16 +93,16 @@ quadratic_sizes="100"
 #memory_loads="0 99999"
 memory_loads="0"
 #num_cores="2 4 8"
-num_cores="1 2 4 8"
+#num_cores="1 2 4 8"
 #num_cores="1 8"
 #num_cores="2 4"
 #num_cores="1 2 8"
 #num_cores="1 2"
-#num_cores="1"
+num_cores="1"
 #num_cores="4"
 #num_cores="2 4"
-prefetchers="0 15"
-#prefetchers="0"
+prefetchers="0"
+#prefetchers="0 15"
 #prefetchers="15"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
@@ -1472,6 +1472,8 @@ name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1 wikipedia-20051105.gr:0:-1 rm
 name2sizes[bfs-push-data-sync_ix2]="rmat16-2e22.gr:0:-1"
 name2sizes[bfs-push-data-async_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
 name2sizes[bfs-push-data-sync_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
+name2sizes[bfs-push-data-async-stldeq_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
+name2sizes[bfs-push-data-sync-fifo_ix2]="wikipedia-20051105.gr:0:-1 rmat16-2e22.gr:0:-1 USA-road-d.W.gr:0:-1"
 #name2sizes[bfs-push-data-sync_ix2]="rmat22.gr:0:-1"
 name2sizes[bfs-pull-topo-async_ig]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1 USA-road-d.FLA-transpose.gr:0:-1"
 #name2sizes[pr-sync-pull]="rmat22.gr:0:-1 wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22-transpose.gr:0:-1"
@@ -1483,13 +1485,63 @@ name2sizes[pr-pull-topo-async]="wikipedia-20051105-transpose.gr:0:-1 rmat16-2e22
 
 name2sizes[sssp-pull-topo-async]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
 name2sizes[sssp-pull-topo-sync_ix2]="rmat16-2e22-transpose.gr:0:-1 USA-road-d.NY-transpose.gr:0:-1"
-name2sizes[sssp-push-delta-sync_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1"
-name2sizes[sssp-push-delta-async_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1"
-
+name2sizes[sssp-push-delta-sync_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1 wikipedia-20051105-weighted.gr:13:-1"
+name2sizes[sssp-push-delta-async_ix2]="rmat16-2e22.gr:13:-1 USA-road-d.W.gr:13:-1 wikipedia-20051105-weighted.gr:13:-1"
+#name2sizes[sssp-push-delta-sync_ix2]="wikipedia-20051105-weighted.gr:13:-1"
+#name2sizes[sssp-push-delta-async_ix2]="wikipedia-20051105-weighted.gr:13:-1"
 
 #name2sizes[cc-pull-topo-sync_ix2]="rmat16-2e22-sym.gr:0:-1"
 name2sizes[cc-pull-topo-async]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.NY-symmetric.gr:0:-1 rmat22.sym.gr:0:-1"
 name2sizes[cc-pull-topo-sync_ix2]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.NY-symmetric.gr:0:-1 rmat22.sym.gr:0:-1"
+name2sizes[cc-uf-id_ix2]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.W-symmetric.gr:0:-1"
+name2sizes[cc-uf-topo-node_ix2]="wikipedia-20051105-symmetric.gr:0:-1 rmat16-2e22-sym.gr:0:-1 USA-road-d.W-symmetric.gr:0:-1"
+
+name2sizes[balanc_3_dx2]="80000000"
+name2sizes[balanc_3_sVS_dx2]="80000000"
+name2sizes[elmhes_10_dx2]="80000000"
+name2sizes[elmhes_10_sVS_dx2]="80000000"
+name2sizes[elmhes_11_dx2]="4000000"
+name2sizes[elmhes_11_sVS_dx2]="4000000"
+name2sizes[four1_2_mx2]="80000000"
+name2sizes[hqr_15_sx2]="50000"
+name2sizes[hqr-sq_12_sx2]="9024"
+name2sizes[hqr-sq_12_sVS_sx2]="9024"
+name2sizes[lop_13_dx2]="13524"
+name2sizes[lop_13_sVS_dx2]="13524"
+name2sizes[ludcmp-sq_4_sx2]="9008"
+name2sizes[ludcmp-sq_4_sVS_sx2]="9008"
+name2sizes[matadd-flb_16_dx2]="9008"
+name2sizes[matadd-flb_16_sVS_dx2]="9008"
+name2sizes[mprove_8_mx2]="13504"
+name2sizes[mprove_8_sVS_mx2]="13504"
+name2sizes[mprove_9_dx2]="80000000" 
+name2sizes[mprove_9_sVS_dx2]="80000000"
+name2sizes[ptr1_vmovaps_branch]="4000000"
+name2sizes[realft_4_dx2]="80000000"
+name2sizes[relax2_26_dx2]="9002" 
+name2sizes[relax2_26_sVS_dx2]="9002" 
+name2sizes[rstrct_29_dx2]="27016"
+name2sizes[rstrct_29_sVS_dx2]="27016"
+name2sizes[s1244_sx2]="80000001"
+name2sizes[s1244_sVS_sx2]="80000001"
+name2sizes[s319_sx2]="80000000"
+name2sizes[s319_sVS_sx2]="80000000"
+name2sizes[svbksb_3_sx2]="12000"
+name2sizes[svbksb_3_sVS_sx2]="12000"
+name2sizes[svdcmp_11_dx2]="400000"
+name2sizes[svdcmp_11_sVS_dx2]="4000000"
+name2sizes[svdcmp_13_dx2]="80000000"
+name2sizes[svdcmp_13_sVS_dx2]="80000000"
+name2sizes[svdcmp_14_dx2]="80000000" 
+name2sizes[svdcmp_14_sVS_dx2]="80000000" 
+name2sizes[svdcmp_6_dx2]="4000000"
+name2sizes[svdcmp_6_sVS_dx2]="4000000"
+name2sizes[toeplz_1_dx2]="80000001"
+name2sizes[toeplz_1_sVS_dx2]="80000001"
+name2sizes[toeplz_2_dx2]="80000000"
+name2sizes[toeplz_4_dx2]="80000000"
+name2sizes[tridag_1_dx2]="8000000"
+name2sizes[tridag_2_dx2]="80000000"
 
 
 
@@ -1903,87 +1955,191 @@ run_codelets=(
 #     tridag_2_sr_de
 )
 
+#GA set below
+# run_codelets=(
+# #  balanc_3_sr_de
+# #    balanc_3_sr_dx2
+# #    balanc_3_sr_sVS_dx2 
+# #    elmhes_10_sr_dx2
+#     # elmhes_10_sr_sVS_dx2 
+# #     elmhes_11_sr_dx2
+#     # elmhes_11_sr_sVS_dx2 
+#     # four1_2_sr_mx2 
+#     # hqr_15_sr_sx2
+#     # hqr-sq_12_sx2
+# #     hqr-sq_12_sVS_sx2
+#     # lop_13_sr_dx2
+#     # lop_13_sr_sVS_dx2
+#     # ludcmp-sq_4_sr_sx2 
+#     # ludcmp-sq_4_sr_sVS_sx2
+#     # matadd-flb_16_sr_dx2
+#     # matadd-flb_16_sr_sVS_dx2  
+#     # mprove_8_sr_mx2
+#     # mprove_8_sr_sVS_mx2
+#     # mprove_9_sr_dx2
+#     # mprove_9_sr_sVS_dx2
+#     # ptr1_vmovaps_branch
+#     # realft_4_sr_dx2
+#     # relax2_26_sr_dx2 
+#     # relax2_26_sr_sVS_dx2
+#     # rstrct_29_sr_dx2
+#     # rstrct_29_sr_sVS_dx2
+#     # s1244_sr_sx2 
+#     # s1244_sr_sVS_sx2 
+#     # s319_sr_sx2
+#     # s319_sr_sVS_sx2
+#     # svbksb_3_sr_sx2
+#     # svbksb_3_sr_sVS_sx2
+#     # svdcmp_11_sr_dx2
+#     # svdcmp_11_sr_sVS_dx2 
+#     # svdcmp_13_sr_dx2
+#     # svdcmp_13_sr_sVS_dx2 
+#     # svdcmp_14_sr_dx2
+#     # svdcmp_14_sr_sVS_dx2
+#     # svdcmp_6_dx2
+# #     svdcmp_6_sVS_dx2
+#     # toeplz_1_dx2
+# #      toeplz_1_sVS_dx2 
+#     # toeplz_2_sr_dx2 
+#     # toeplz_4_sr_dx2
+#     # tridag_1_sr_dx2
+#     # tridag_2_sr_dx2
+#    # cg.c_main_line271_loop.c.0_dx2
+#    # cg.c_main_line271_loop.c.0_dx
+#    # cg.c_main_line271_loop.c.0_de
+#    # Crystal_div.c_Crystal_div_line65_loop.c.0_de
+#    # Crystal_div.c_Crystal_div_line65_loop.c.0_dx
+#    # Crystal_div.c_Crystal_div_line65_loop.c.0_dx2
+#    # sp.c_lhsy_line1028_loop.c.0_de
+#    # sp.c_lhsy_line1028_loop.c.0_dx
+#    # sp.c_lhsy_line1028_loop.c.0_dx2
+# #  sp.c_lhsx_line885_loop.c.0_sVS_dx2
+# #  sp.c_lhsx_line885_loop.c.0_dx3
+# #   bfs-load-preloaded_sVS_ig
+# #   bfs-load-preloaded-sort_sVS_ig
+# #   bfs-load-preloaded-nosub_sVS_ig
+# #   bfs-load-preloaded-sort-nosub_sVS_ig
+# #   bfs-load-preloaded-noaddsub_sVS_ig
+
+# #   bfs-load-preloaded-sort-noaddsub_sVS_ig
+# #    pr-sync-pull
+# #    bfs-pull-topo-sync_ix2
+
+#     bfs-push-data-sync_ix2
+#     bfs-push-data-async_ix2
+#     bfs-push-data-async-stldeq_ix2
+#     bfs-push-data-sync-fifo_ix2
+
+# #    bfs-pull-topo-async_ig
+# #    cc-pull-topo-async
+# #    cc-pull-topo-sync_ix2 
+#     cc-uf-id_ix2
+#     cc-uf-topo-node_ix2
+#     pr-pull-topo-async
+# #    pr-pull-topo-sync_dx2
+# #    sssp-pull-topo-async
+# #    sssp-pull-topo-sync_ix2
+#     sssp-push-delta-sync_ix2
+#     sssp-push-delta-async_ix2
+# )
+
+# run_codelets=(
+# #   balanc_3_dx2
+#    balanc_3_sVS_dx2 
+# #   elmhes_10_dx2
+#    elmhes_10_sVS_dx2 
+# #   elmhes_11_dx2
+#    elmhes_11_sVS_dx2 
+#    four1_2_mx2 
+#    hqr_15_sx2
+# #   hqr-sq_12_sx2
+#    hqr-sq_12_sVS_sx2
+# #   lop_13_dx2
+#    lop_13_sVS_dx2
+# #   ludcmp-sq_4_sx2 
+#    ludcmp-sq_4_sVS_sx2
+# #   matadd-flb_16_dx2
+#    matadd-flb_16_sVS_dx2  
+# #   mprove_8_mx2
+#    mprove_8_sVS_mx2
+# #   mprove_9_dx2
+#    mprove_9_sVS_dx2
+#    ptr1_vmovaps_branch
+#    realft_4_dx2
+# #   relax2_26_dx2 
+#    relax2_26_sVS_dx2
+# #   rstrct_29_dx2
+#    rstrct_29_sVS_dx2
+# #   s1244_sx2 
+#    s1244_sVS_sx2 
+# #   s319_sx2
+#    s319_sVS_sx2
+# #   svbksb_3_sx2
+#    svbksb_3_sVS_sx2
+# #   svdcmp_11_dx2
+#    svdcmp_11_sVS_dx2 
+# #   svdcmp_13_dx2
+#    svdcmp_13_sVS_dx2 
+# #   svdcmp_14_dx2
+#    svdcmp_14_sVS_dx2
+# #   svdcmp_6_dx2
+#    svdcmp_6_sVS_dx2
+# #   toeplz_1_dx2
+#    toeplz_1_sVS_dx2 
+#    toeplz_2_dx2 
+#    toeplz_4_dx2
+#    tridag_1_dx2
+#    tridag_2_dx2
+# )
+
 run_codelets=(
-#  balanc_3_sr_de
-#    balanc_3_sr_dx2
-#    balanc_3_sr_sVS_dx2 
-#    elmhes_10_sr_dx2
-    # elmhes_10_sr_sVS_dx2 
-#     elmhes_11_sr_dx2
-    # elmhes_11_sr_sVS_dx2 
-    # four1_2_sr_mx2 
-    # hqr_15_sr_sx2
-    # hqr-sq_12_sx2
-#     hqr-sq_12_sVS_sx2
-    # lop_13_sr_dx2
-    # lop_13_sr_sVS_dx2
-    # ludcmp-sq_4_sr_sx2 
-    # ludcmp-sq_4_sr_sVS_sx2
-    # matadd-flb_16_sr_dx2
-    # matadd-flb_16_sr_sVS_dx2  
-    # mprove_8_sr_mx2
-    # mprove_8_sr_sVS_mx2
-    # mprove_9_sr_dx2
-    # mprove_9_sr_sVS_dx2
-    # ptr1_vmovaps_branch
-    # realft_4_sr_dx2
-    # relax2_26_sr_dx2 
-    # relax2_26_sr_sVS_dx2
-    # rstrct_29_sr_dx2
-    # rstrct_29_sr_sVS_dx2
-    # s1244_sr_sx2 
-    # s1244_sr_sVS_sx2 
-    # s319_sr_sx2
-    # s319_sr_sVS_sx2
-    # svbksb_3_sr_sx2
-    # svbksb_3_sr_sVS_sx2
-    # svdcmp_11_sr_dx2
-    # svdcmp_11_sr_sVS_dx2 
-    # svdcmp_13_sr_dx2
-    # svdcmp_13_sr_sVS_dx2 
-    # svdcmp_14_sr_dx2
-    # svdcmp_14_sr_sVS_dx2
-    # svdcmp_6_dx2
-#     svdcmp_6_sVS_dx2
-    # toeplz_1_dx2
-#      toeplz_1_sVS_dx2 
-    # toeplz_2_sr_dx2 
-    # toeplz_4_sr_dx2
-    # tridag_1_sr_dx2
-    # tridag_2_sr_dx2
-   # cg.c_main_line271_loop.c.0_dx2
-   # cg.c_main_line271_loop.c.0_dx
-   # cg.c_main_line271_loop.c.0_de
-   # Crystal_div.c_Crystal_div_line65_loop.c.0_de
-   # Crystal_div.c_Crystal_div_line65_loop.c.0_dx
-   # Crystal_div.c_Crystal_div_line65_loop.c.0_dx2
-   # sp.c_lhsy_line1028_loop.c.0_de
-   # sp.c_lhsy_line1028_loop.c.0_dx
-   # sp.c_lhsy_line1028_loop.c.0_dx2
-#  sp.c_lhsx_line885_loop.c.0_sVS_dx2
-#  sp.c_lhsx_line885_loop.c.0_dx3
-#   bfs-load-preloaded_sVS_ig
-#   bfs-load-preloaded-sort_sVS_ig
-#   bfs-load-preloaded-nosub_sVS_ig
-#   bfs-load-preloaded-sort-nosub_sVS_ig
-#   bfs-load-preloaded-noaddsub_sVS_ig
-
-#   bfs-load-preloaded-sort-noaddsub_sVS_ig
-#    pr-sync-pull
-#    bfs-pull-topo-sync_ix2
-#    bfs-push-data-sync_ix2
-#    bfs-push-data-async_ix2
-#    bfs-pull-topo-async_ig
-#    cc-pull-topo-async
-#    cc-pull-topo-sync_ix2 
-#    pr-pull-topo-async
-#    pr-pull-topo-sync_dx2
-#    sssp-pull-topo-async
-#    sssp-pull-topo-sync_ix2
-#    sssp-push-delta-sync_ix2
-    sssp-push-delta-async_ix2
+   balanc_3_de
+   balanc_3_sVS_de 
+  elmhes_10_de
+   elmhes_10_sVS_de 
+   elmhes_11_de
+   elmhes_11_sVS_de 
+    four1_2_me 
+   hqr_15_se
+  hqr-sq_12_se
+  hqr-sq_12_sVS_se
+   lop_13_de
+   lop_13_sVS_de
+   ludcmp-sq_4_se 
+   ludcmp-sq_4_sVS_se
+   matadd-flb_16_de
+   matadd-flb_16_sVS_de  
+   mprove_8_me
+   mprove_8_sVS_me
+   mprove_9_de
+   mprove_9_sVS_de
+  ptr1_vmovaps_branch
+    realft_4_de
+   relax2_26_de 
+   relax2_26_sVS_de
+   rstrct_29_de
+   rstrct_29_sVS_de
+   s1244_se 
+   s1244_sVS_se 
+   s319_se
+   s319_sVS_se
+   svbksb_3_se
+   svbksb_3_sVS_se
+   svdcmp_11_de
+   svdcmp_11_sVS_de 
+   svdcmp_13_de
+    svdcmp_13_sVS_de 
+   svdcmp_14_de
+   svdcmp_14_sVS_de
+  svdcmp_6_de
+  svdcmp_6_sVS_de
+  toeplz_1_de
+  toeplz_1_sVS_de 
+   toeplz_2_de 
+   toeplz_4_de
+   tridag_1_de
+   tridag_2_de
 )
-
 
 # run_codelets=(
 # #  ptr1_movaps-1lfbhit_branch
@@ -2247,53 +2403,58 @@ name2sizes[hqr-sq-no-tail_12_sVS_se]="800 1000 1200 1400 1600 1800 2000 2200 240
 
 
 
-#name2sizes[balanc_3_sr_dx2]="80000000"
-name2sizes[balanc_3_sr_dx2]="10000"
-name2sizes[balanc_3_sr_sVS_dx2]="80000000" 
-name2sizes[elmhes_10_sr_dx2]="200000"
-name2sizes[elmhes_10_sr_sVS_dx2]="200000" 
-name2sizes[elmhes_11_sr_dx2]="4000000"
-name2sizes[elmhes_11_sr_sVS_dx2]="4000000" 
-name2sizes[four1_2_sr_mx2]="200000" 
-name2sizes[hqr_15_sr_sx2]="6000"
-name2sizes[hqr-sq_12_sx2]="544"
-name2sizes[hqr-sq_12_sVS_sx2]="544"
-name2sizes[lop_13_sr_dx2]="354"
-name2sizes[lop_13_sr_sVS_dx2]="354"
-name2sizes[ludcmp-sq_4_sr_sx2]="544" 
-name2sizes[ludcmp-sq_4_sr_sVS_sx2]="544"
-name2sizes[matadd-flb_16_sr_dx2]="352"
-name2sizes[matadd-flb_16_sr_sVS_dx2]="352"  
-name2sizes[mprove_8_sr_mx2]="400"
-name2sizes[mprove_8_sr_sVS_mx2]="400"
-name2sizes[mprove_9_sr_dx2]="200000"
-name2sizes[mprove_9_sr_sVS_dx2]="200000"
-name2sizes[ptr1_vmovaps_branch]="10000"
-name2sizes[realft_4_sr_dx2]="200000"
-name2sizes[relax2_26_sr_dx2]="306" 
-name2sizes[relax2_26_sr_sVS_dx2]="306"
-name2sizes[rstrct_29_sr_dx2]="355"
-name2sizes[rstrct_29_sr_sVS_dx2]="355"
-name2sizes[s1244_sr_sx2]="59961" 
-name2sizes[s1244_sr_sVS_sx2]="59961" 
-name2sizes[s319_sr_sx2]="60000"
-name2sizes[s319_sr_sVS_sx2]="60000"
-name2sizes[svbksb_3_sr_sx2]="400"
-name2sizes[svbksb_3_sr_sVS_sx2]="400"
-name2sizes[svdcmp_11_sr_dx2]="10000"
-name2sizes[svdcmp_11_sr_sVS_dx2]="10000" 
-name2sizes[svdcmp_13_sr_dx2]="200000"
-name2sizes[svdcmp_13_sr_sVS_dx2]="200000" 
-name2sizes[svdcmp_14_sr_dx2]="200000"
-name2sizes[svdcmp_14_sr_sVS_dx2]="200000"
-name2sizes[svdcmp_6_dx2]="10000"
-name2sizes[svdcmp_6_sVS_dx2]="10000"
-name2sizes[toeplz_1_dx2]="100000"
-name2sizes[toeplz_1_sVS_dx2]="100000" 
-name2sizes[toeplz_2_sr_dx2]="200000"
-name2sizes[toeplz_4_sr_dx2]="200000"
-name2sizes[tridag_1_sr_dx2]="10000"
-name2sizes[tridag_2_sr_dx2]="200000"
+
+
+
+
+name2sizes[balanc_3_de]="80000000"
+name2sizes[balanc_3_sVS_de]="80000000"
+name2sizes[elmhes_10_de]="80000000"
+name2sizes[elmhes_10_sVS_de]="80000000"
+name2sizes[elmhes_11_de]="4000000"
+name2sizes[elmhes_11_sVS_de]="4000000"
+name2sizes[four1_2_me]="80000000"
+name2sizes[hqr_15_se]="50000"
+name2sizes[hqr-sq_12_se]="9024"
+name2sizes[hqr-sq_12_sVS_se]="9024"
+name2sizes[lop_13_de]="13514"
+name2sizes[lop_13_sVS_de]="13514"
+name2sizes[ludcmp-sq_4_se]="9000"
+name2sizes[ludcmp-sq_4_sVS_se]="9000"
+name2sizes[matadd-flb_16_de]="9000"
+name2sizes[matadd-flb_16_sVS_de]="9000"
+name2sizes[mprove_8_me]="13500"
+name2sizes[mprove_8_sVS_me]="13500"
+name2sizes[mprove_9_de]="80000000" 
+name2sizes[mprove_9_sVS_de]="80000000" 
+name2sizes[ptr1_movaps_branch]="4000000"
+name2sizes[realft_4_de]="80000000"
+name2sizes[relax2_26_de]="9002" 
+name2sizes[relax2_26_sVS_de]="9002"
+name2sizes[rstrct_29_de]="27011"
+name2sizes[rstrct_29_sVS_de]="27011"
+name2sizes[s1244_se]="80000001"
+name2sizes[s1244_sVS_se]="80000001"
+name2sizes[s319_se]="80000000"
+name2sizes[s319_sVS_se]="80000000"
+name2sizes[svbksb_3_se]="12000"
+name2sizes[svbksb_3_sVS_se]="12000"
+name2sizes[svdcmp_11_de]="4000000"
+name2sizes[svdcmp_11_sVS_de]="4000000" 
+name2sizes[svdcmp_13_de]="80000000"
+name2sizes[svdcmp_13_sVS_de]="80000000" 
+name2sizes[svdcmp_14_de]="80000000" 
+name2sizes[svdcmp_14_sVS_de]="80000000"
+name2sizes[svdcmp_6_de]="4000000"
+name2sizes[svdcmp_6_sVS_de]="4000000"
+name2sizes[toeplz_1_de]="80000001"
+name2sizes[toeplz_1_sVS_de]="80000001" 
+name2sizes[toeplz_2_de]="80000000"
+name2sizes[toeplz_4_de]="80000000"
+name2sizes[tridag_1_de]="8000000"
+name2sizes[tridag_2_de]="80000000"
+
+
 
 
 

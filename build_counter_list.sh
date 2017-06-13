@@ -99,8 +99,10 @@ topdown_port_counters="UOPS_DISPATCHED_PORT.PORT_0,UOPS_DISPATCHED_PORT.PORT_1,U
 
 #      topdown_fe_lat_counters="ICACHE.IFETCH_STALL,ITLB_MISSES.STLB_HIT,ITLB_MISSES.WALK_DURATION,RS_EVENTS.EMPTY_END,BR_MISP_RETIRED.ALL_BRANCHES_PS,MACHINE_CLEARS.COUNT,BACLEARS.ANY,DSB2MITE_SWITCHES.PENALTY_CYCLES,ILD_STALL.LCP"
 topdown_fe_lat_counters="IDQ.MS_UOPS:e1"
+branch_counters="BR_INST_RETIRED.ALL_BRANCHES,BR_MISP_RETIRED.ALL_BRANCHES"
+lsd_counters="LSD.CYCLES_ACTIVE,LSD.UOPS,IDQ.DSB_UOPS,IDQ.MITE_UOPS,IDQ.MS_UOPS"
 
-topdown_exe_counters="RS_EVENTS.EMPTY_CYCLES,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
+topdown_exe_counters="RS_EVENTS.EMPTY_CYCLES,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE,IDQ_UOPS_NOT_DELIVERED.CORE"
 mem_rowbuff_counters=""
 
 case "$UARCH" in
@@ -217,6 +219,8 @@ append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${egr_bl_life_counters}
 append_counters $ACTIVATE_OTHER_COUNTERS "OtherCounts" ${other_counters}
 append_counters $ACTIVATE_ENERGY_COUNTERS "EnergyCounts" ${energy_counters}
 append_counters $ACTIVATE_UOP_ISSUE_RETIRE_COUNTERS "UopIssueRetireCounts" ${uop_issue_retire_counters}
+append_counters $ACTIVATE_BRANCH_COUNTERS "BranchCounts" ${branch_counters}
+append_counters $ACTIVATE_LSD_COUNTERS "LsdCounts" ${lsd_counters}
 
 #      emon_counters+=",${other_counters}"
 
