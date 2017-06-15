@@ -398,7 +398,7 @@ then
 		    #     dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
 		    #     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 		    # fi
-		    ./set_frequency.sh $frequency -m $frequency -M $frequency
+		    ./set_frequency.sh -c $frequency -m $frequency -M $frequency
 		    res=$?
 		    if [[ "$res" != "0" ]]
 		    then

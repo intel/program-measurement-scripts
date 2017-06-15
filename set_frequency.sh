@@ -82,7 +82,7 @@ then
 		# Adapt to Intel FX
 		actual_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
 		#       actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
-		#echo "Actual frequency: '$actual_frequency'"
+		echo "Actual frequency: '$actual_frequency'"
 		
 		#Potential fix for Silvermont CPI issues?
 	    fi
