@@ -94,7 +94,7 @@ quadratic_sizes="100"
 memory_loads="0"
 #num_cores="1 2 4 8"
 num_cores="1"
-prefetchers="15"
+prefetchers="0 15"
 #frequencies="1200000 2800000"
 #frequencies="2800000"
 frequencies="2500000"
@@ -1831,44 +1831,44 @@ run_codelets=(
 
 run_codelets=(
     balanc_3_de 
-    # balanc_3_sVS_de 
-    # elmhes_10_de elmhes_10_sVS_de 
-    # elmhes_11_de
-    # elmhes_11_sVS_de 
-    # four1_2_me 
-    # hqr_15_se
-    # hqr-sq_12_se
-    # hqr-sq_12_sVS_se
-    # lop_13_de
-    # lop_13_sVS_de
-    # ludcmp-sq_4_se 
-    # ludcmp-sq_4_sVS_se
-    # matadd-flb_16_de matadd-flb_16_sVS_de  
-    # mprove_8_me
-    # mprove_8_sVS_me
-    # mprove_9_de mprove_9_sVS_de
-    # ptr1_movaps_branch
-    # realft_4_de
-    # relax2_26_de 
-    # relax2_26_sVS_de
-    # rstrct_29_de rstrct_29_sVS_de
-    # s1244_se 
-    # s1244_sVS_se 
-    # s319_se
-    # s319_sVS_se
-    # svbksb_3_se
-    # svbksb_3_sVS_se
-    # svdcmp_11_de svdcmp_11_sVS_de 
-    # svdcmp_13_de svdcmp_13_sVS_de 
-    # svdcmp_14_de svdcmp_14_sVS_de
-    # svdcmp_6_de
-    # svdcmp_6_sVS_de
-    # toeplz_1_de
-    # toeplz_1_sVS_de 
-    # toeplz_2_de 
-    # toeplz_4_de
-    # tridag_1_de
-    # tridag_2_de
+    balanc_3_sVS_de 
+    elmhes_10_de elmhes_10_sVS_de 
+    elmhes_11_de
+    elmhes_11_sVS_de 
+    four1_2_me 
+    hqr_15_se
+    hqr-sq_12_se
+    hqr-sq_12_sVS_se
+    lop_13_de
+    lop_13_sVS_de
+    ludcmp-sq_4_se 
+    ludcmp-sq_4_sVS_se
+    matadd-flb_16_de matadd-flb_16_sVS_de  
+    mprove_8_me
+    mprove_8_sVS_me
+    mprove_9_de mprove_9_sVS_de
+    ptr1_movaps_branch
+    realft_4_de
+    relax2_26_de 
+    relax2_26_sVS_de
+    rstrct_29_de rstrct_29_sVS_de
+    s1244_se 
+    s1244_sVS_se 
+    s319_se
+    s319_sVS_se
+    svbksb_3_se
+    svbksb_3_sVS_se
+    svdcmp_11_de svdcmp_11_sVS_de 
+    svdcmp_13_de svdcmp_13_sVS_de 
+    svdcmp_14_de svdcmp_14_sVS_de
+    svdcmp_6_de
+    svdcmp_6_sVS_de
+    toeplz_1_de
+    toeplz_1_sVS_de 
+    toeplz_2_de 
+    toeplz_4_de
+    tridag_1_de
+    tridag_2_de
 )
 
 
