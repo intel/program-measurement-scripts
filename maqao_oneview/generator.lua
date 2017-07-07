@@ -178,13 +178,13 @@ function get_memory_operands (operands)
 		for id in pairs (operands)
 		do
 			operand = operands [id]
-			if (operand ["type"] == MDSAPI.MEMORY)
+			if (operand ["type"] == 1)
 			then
 				values = operand ["value"]
 				for id2 in pairs (values)
 				do
 					value = values [id2]
-					if (value ["type"] == MDSAPI.REGISTER)
+					if (value ["type"] == 0)
 					then
 						reg_name = get_edited_register_name (value ["value"])
 						if (res == "") then res = reg_name else res = res .. "," .. reg_name end
@@ -222,9 +222,9 @@ function get_compute_operands (operands, rw)
 		for id in pairs (operands)
 		do
 			operand = operands [id]
-			if (operand ["type"] == MDSAPI.REGISTER)
+			if (operand ["type"] == 0)
 			then
-				if (operand ["type"] == MDSAPI.REGISTER and operand [rw])
+				if (operand ["type"] == 0 and operand [rw])
 				then
 					reg_name = get_edited_register_name (operand ["value"])
 					if (res == "") then res = reg_name else res = res .. "," .. reg_name end
