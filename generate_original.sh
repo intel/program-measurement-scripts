@@ -20,6 +20,11 @@ mkdir "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
 
 echo "Generating codelet '$binary_folder/$codelet_name'..."
 
+echo "Compiler information using -v flags"
+ifort -v
+icc -v
+icpc -v
+
 build_files=$(find ${binary_folder} -maxdepth 1 -type f -o -type l)
 cp ${build_files} ${build_folder}
 
