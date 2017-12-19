@@ -111,11 +111,12 @@ then
     ((uncore_bits=hi_uncore_bits<<8|lo_uncore_bits))
     uncore_bits=$(printf "0x%x" ${uncore_bits})
     echo "Setting Uncore Frequency: Min=${min_uncore_frequency}, Max=${max_uncore_frequency} => Uncore bits = ${uncore_bits}"
-    if [[ "$UARCH" == "HASWELL" ]]; then
+# Let's assume we can also set uncore for modern processors
+#    if [[ "$UARCH" == "HASWELL" ]]; then
 	emon --write-msr 0x620="$uncore_bits"
-    else
-        echo "Non-HSW system: uncore freq. setting not done"
-    fi
+#    else
+#        echo "Non-HSW system: uncore freq. setting not done"
+#    fi
 elif [[ -z ${min_uncore_frequency} && -z ${max_uncore_frequency} ]]
 then
     echo "Uncore freq unchanged."
