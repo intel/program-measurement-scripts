@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$nb_args" != "5" ]]
 then

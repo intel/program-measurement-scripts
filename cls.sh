@@ -1,7 +1,7 @@
 #!/bin/bash 
 ##!/bin/bash -l
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [ -f /opt/intel/sep/sep_vars.sh ];
 then
@@ -44,11 +44,11 @@ find_num_repetitions_and_iterations () {
 
     if [[ "${variant}" == "ORG" ]]; then
 #	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-	./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
+	$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
     else
 #	echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 #	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-	./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
     fi
     tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
     sed -i '$ d' "$codelet_folder/repetitions_history" 
@@ -58,7 +58,7 @@ find_num_repetitions_and_iterations () {
     
     echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
 #    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
-    loop_info=$( ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+    loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
     res=$?
 
     if [[ "$res" != "0" ]]
@@ -206,8 +206,8 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
-echo ./generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
-./generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
+echo $CLS_FOLDER/generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
+$CLS_FOLDER/generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
 res=$?
 if [[ "$res" != "0" ]]
 then
@@ -229,7 +229,7 @@ echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_d
 try_repetitions=2
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 10 )
 # loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
-loop_info=$( ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
+loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 11 )
 res=$?
 
@@ -275,7 +275,7 @@ then
     echo "Creating DECAN variants..."
     #./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
     #echo ./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
-    ./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+    $CLS_FOLDER/generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
     
     res=$?
     if [[ "$res" != "0" ]]
@@ -287,7 +287,7 @@ then
     then
 	echo
 	echo "Creating dynamic groups..."
-	res_generate=$( ./generate_dynamic_groups.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" )
+	res_generate=$( $CLS_FOLDER/generate_dynamic_groups.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" )
 	res=$?
 	echo "$res_generate"
 	if [[ "$res" != "0" ]]
@@ -302,7 +302,7 @@ then
 
     echo "------------------------------------------------------------"
     echo "Extracting assemblies..."
-    ./assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" "$loop_id"
+    $CLS_FOLDER/assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" "$loop_id"
     res=$?
     if [[ "$res" != "0" ]]
     then
@@ -350,7 +350,7 @@ then
 	    mkdir "$data_path" &> /dev/null
 
 	    echo "Setting highest CPU frequency to adjust codelet parametres..."
-	    ./set_frequency.sh -c $XP_HIGH_FREQ -m $XP_HIGH_FREQ -M $XP_HIGH_FREQ
+	    $CLS_FOLDER/set_frequency.sh -c $XP_HIGH_FREQ -m $XP_HIGH_FREQ -M $XP_HIGH_FREQ
 	    # if [[ "$UARCH" == "HASWELL" ]]; then
 	    # 	dec2hex=$(printf "%02x" $(echo $XP_HIGH_FREQ | sed 's:0::g'))
 	    # 	emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
@@ -398,7 +398,7 @@ then
 		    #     dec2hex=$(printf "%02x" $(echo $frequency | sed 's:0::g'))
 		    #     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 		    # fi
-		    ./set_frequency.sh -c $frequency -m $frequency -M $frequency
+		    $CLS_FOLDER/set_frequency.sh -c $frequency -m $frequency -M $frequency
 		    res=$?
 		    if [[ "$res" != "0" ]]
 		    then
@@ -438,8 +438,8 @@ then
 
 			    #		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 			    ((cnt_codelet_idx++))
-			    echo Executing run_codelet.sh: ./run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
-			    ./run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
+			    echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
+			    $CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
 
 			    res=$?
 			    if [[ "$res" != "0" ]]
@@ -490,8 +490,8 @@ cp ${codelet_folder}/Makefile "${new_cls_folder}"
 
 #echo ./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" "$num_cores" "$prefetchers"
 #./gather_results.sh ${new_cls_folder} "$variants" "$data_sizes" "$memory_loads" "$frequencies" "$num_cores" "$prefetchers"
-echo ./gather_results.sh ${new_cls_folder} 
-./gather_results.sh ${new_cls_folder}
+echo $CLS_FOLDER/gather_results.sh ${new_cls_folder} 
+$CLS_FOLDER/gather_results.sh ${new_cls_folder}
 
 res=$?
 if [[ "$res" != "0" ]]

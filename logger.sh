@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$nb_args" != "2" ]]
 then
@@ -10,6 +10,9 @@ fi
 
 runid="$1"
 msg="$2"
+
+LOG_FILE=${LOG_FOLDER}/log.${HOSTNAME}.txt
+
 
 if [ ! -d ${LOG_FOLDER} ]; then
     mkdir ${LOG_FOLDER}

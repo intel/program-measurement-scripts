@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [ -f /opt/intel/sep/sep_vars.sh ];
 then

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 
-bin="./OoO"
+bin="$CLS_FOLDER/OoO"
 bin_file="$1"
 loop_id="$2"
 

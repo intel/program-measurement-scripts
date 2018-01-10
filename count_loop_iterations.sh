@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 
 if [[ "$nb_args" != "4" ]]
@@ -32,7 +32,9 @@ $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncoun
 $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
 
+
 echo HERE > /tmp/count.out.txt
+echo $DECAN "$DECAN_CONFIGURATION" >> /tmp/count.out.txt
 echo ${LD_LIBRARY_PATH} >> /tmp/count.out.txt
 cat $PWD/$DECAN_REPORT >> /tmp/count.out.txt
 decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source const.sh
+source $CLS_FOLDER/const.sh
 
 # MAX_ROWS=30
 
@@ -14,7 +14,7 @@ then
 fi
 
 # pcr_metrics.sh uses $1
-source pcr_metrics.sh
+source $CLS_FOLDER/pcr_metrics.sh
 
 
 # Get codelet's res folder

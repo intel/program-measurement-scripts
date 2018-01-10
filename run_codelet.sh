@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 if [ -f /opt/intel/sep/sep_vars.sh ];
 then
     source /opt/intel/sep/sep_vars.sh > /dev/null
@@ -107,12 +107,12 @@ do
 	    for cc in ${nc_all_cores}
 	    do
 		echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
-		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} >& /dev/null &
 	    done
 	    
 	fi
 	echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
-	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog} >& /dev/null
     fi
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
     if [ -f $PGM_METRIC_FILE ]; then

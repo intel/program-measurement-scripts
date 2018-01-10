@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$nb_args" != "4" ]]
 then
@@ -46,7 +46,7 @@ rm loops.csv
 #new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
 #echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
-ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/$codelet_name" "$loop_id" )
+ooo_analysis=$( $CLS_FOLDER/ooo_analysis.sh "$bin_folder/$codelet_name" "$loop_id" )
 new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}.stan_full.csv" - -d ${DELIM} )
 echo "$new_csv" > "$bin_folder/${codelet_name}.stan_full.csv"
 
@@ -96,11 +96,11 @@ do
       new_csv=$( echo "$group_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ${DELIM} )
       echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 #	ooo_analysis=$( ./ooo_analysis.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
-      ooo_analysis=$( ./ooo_analysis.sh "${variant_path}" "$lid" )
+      ooo_analysis=$( $CLS_FOLDER/ooo_analysis.sh "${variant_path}" "$lid" )
       new_csv=$( echo "$ooo_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ${DELIM} )
       echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
 #	vect_analysis=$( ./cqa_vectorization.sh "$bin_folder/${codelet_name}_${variant}_cpi" "$lid" )
-      vect_analysis=$( ./cqa_vectorization.sh "${variant_path}" "$lid" )
+      vect_analysis=$( $CLS_FOLDER/cqa_vectorization.sh "${variant_path}" "$lid" )
       new_csv=$( echo "$vect_analysis" | paste "$bin_folder/${codelet_name}_${variant}.stan_full.csv" - -d ${DELIM} )
       echo "$new_csv" > "$bin_folder/${codelet_name}_${variant}.stan_full.csv"
   fi

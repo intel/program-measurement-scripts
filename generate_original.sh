@@ -1,7 +1,7 @@
 #!/bin/bash 
 ##!/bin/bash -l
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$nb_args" != "4" ]]
 then

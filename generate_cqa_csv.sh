@@ -2,7 +2,7 @@
 # By default, CQA always generate ';' separated CSV.  Use this wrapper to invoke CQA to ensure 
 # the right delimiter is used for CSV format.
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$nb_args" < "3" ]]
 then

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 launchIt () {
-    source $(dirname $0)/const.sh
+    source $CLS_FOLDER/const.sh
 
     if [[ "$nb_args" > "3" ]]
 	then
@@ -19,6 +19,9 @@ launchIt () {
 	rundesc="$3"
     fi
 
+#LOG_FOLDER=${CLS_FOLDER}/logs
+export LOG_FOLDER=$(dirname $(readlink -f $0))/logs
+export RUN_FOLDER=${LOG_FOLDER}/runs
 
     (
 	echo "Pending executing ${launch_script} at $(date)..."
@@ -142,6 +145,8 @@ runLoop() {
 #  ls ${codelet_path}
 #  echo "SS: ${sizes}"
       ((count++))
+echo here $(pwd)
+
       echo "Launching CLS on $codelet_path  (${count} of ${#run_codelets[@]}) ...for sizes $sizes"
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
@@ -150,8 +155,8 @@ runLoop() {
     for sz in ${sizes[@]}
       do
 
-       echo Executing CLS: ./cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\"
-      ./cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" | tee "$codelet_path/cls.log"
+       echo Executing CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\"
+      $CLS_FOLDER/cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" | tee "$codelet_path/cls.log"
       res=$?
       if [[ "$res" != "0" ]]
 	  then

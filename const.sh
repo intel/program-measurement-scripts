@@ -53,7 +53,8 @@ REALHOSTNAME=$(hostname)
 
 nb_args="$#"
 
-CLS_FOLDER="$PWD"
+#CLS_FOLDER="$PWD"
+export CLS_FOLDER=$(dirname $BASH_SOURCE)
 
 DECAN_FOLDER="$CLS_FOLDER/sdecan"
 DECAN_CONFIGURATOR="$DECAN_FOLDER/prepare_decan_conf.sh"
@@ -95,9 +96,10 @@ MAQAO="$MAQAO_FOLDER/maqao"
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
+CODELET_LENGTH=10
 #CODELET_LENGTH=50
 #CODELET_LENGTH=200
-CODELET_LENGTH=400
+#CODELET_LENGTH=400
 #MIN_REPETITIONS=100
 #MIN_REPETITIONS=200
 #MIN_REPETITIONS=400
@@ -394,9 +396,6 @@ COUNTER_FNAME="counter_nv"
 # For all
 LOGGER_SH="${CLS_FOLDER}/logger.sh"
 GENERATE_CQA_CSV_SH="${CLS_FOLDER}/generate_cqa_csv.sh"
-LOG_FOLDER=${CLS_FOLDER}/logs
-LOG_FILE=${LOG_FOLDER}/log.${HOSTNAME}.txt
-RUN_FOLDER=${LOG_FOLDER}/runs
 
 # delimiter to use for output data e.g. ',' or ';' or other delimiters
 #DELIM=';'
