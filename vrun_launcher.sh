@@ -19,9 +19,9 @@ launchIt () {
 	rundesc="$3"
     fi
 
-#LOG_FOLDER=${CLS_FOLDER}/logs
-export LOG_FOLDER=$(dirname $(readlink -f $0))/logs
-export RUN_FOLDER=${LOG_FOLDER}/runs
+    #LOG_FOLDER=${CLS_FOLDER}/logs
+    export LOG_FOLDER=$(dirname $(readlink -f $0))/logs
+    export RUN_FOLDER=${LOG_FOLDER}/runs
 
     (
 	echo "Pending executing ${launch_script} at $(date)..."
@@ -38,7 +38,7 @@ export RUN_FOLDER=${LOG_FOLDER}/runs
 	${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
 	${launch_fn} ${START_VRUN_SH}
 	# Combining all run cape data
-	for f in $( find -L ${run_dir} -name *.cape.csv ) 
+	for f in $( find -L ${run_dir} -name *.cape.csv | sort ) 
 	do
 	    cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
 	done
