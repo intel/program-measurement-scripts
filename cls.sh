@@ -229,6 +229,7 @@ echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_d
 try_repetitions=2
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 10 )
 # loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
+echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} 
 loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
 #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" 11 )
 res=$?
@@ -275,7 +276,7 @@ then
     echo "Creating DECAN variants..."
     #./generate_variants.sh "$codelet_folder/$codelet_name" "$function_name" "$loop_id" "$variants"
     #echo ./generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
-    $CLS_FOLDER/generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+#    $CLS_FOLDER/generate_variants.sh "$codelet_exe" "$function_name" "$loop_id" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
     
     res=$?
     if [[ "$res" != "0" ]]

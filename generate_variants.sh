@@ -60,7 +60,8 @@ EOF
 		$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}_emon_api" "$function_name" "$variant_transform" "$UARCH" &> /dev/null
 	    else
 		echo "using non-EMON API binary..."
-		$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "$variant_transform" "$UARCH" &> /dev/null
+		$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "$variant_transform" "$UARCH" 
+		echo $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "${binary_path}" "$function_name" "$variant_transform" "$UARCH"
 	    fi
 	    res=$?
 	    if [[ "$res" != "0" ]]
@@ -68,7 +69,9 @@ EOF
 		echo "Configuration error. Aborting."
 		exit -1
 	    fi
+	    echo Executing binary generating CMD: $DECAN "$DECAN_CONFIGURATION" 
 	    $DECAN "$DECAN_CONFIGURATION" &> /dev/null
+
 
 	    generated_binaries=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
 	    if [[ "$generated_binaries" == "" ]]

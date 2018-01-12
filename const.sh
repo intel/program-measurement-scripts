@@ -54,8 +54,9 @@ REALHOSTNAME=$(hostname)
 nb_args="$#"
 
 #CLS_FOLDER="$PWD"
-export CLS_FOLDER=$(dirname $BASH_SOURCE)
+export CLS_FOLDER=$(dirname $( readlink -f $BASH_SOURCE))
 
+USE_OLD_DECAN=0
 DECAN_FOLDER="$CLS_FOLDER/sdecan"
 DECAN_CONFIGURATOR="$DECAN_FOLDER/prepare_decan_conf.sh"
 DECAN_CONFIGURATION="$DECAN_FOLDER/decan.conf"
@@ -63,6 +64,17 @@ DECAN="$DECAN_FOLDER/sdecan"
 DECAN_LIBLOC="$DECAN_FOLDER/liblocinstru.so"
 DECAN_REPORT="decanmodifs.report"
 export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
+
+if [[ $USE_OLD_DECAN == "1" ]]
+then
+#MAQAO_FOLDER="$CLS_FOLDER/maqao"
+    MAQAO_FOLDER="$CLS_FOLDER/maqao_oneview"
+else
+    MAQAO_FOLDER="$CLS_FOLDER/maqao_new"
+    export LD_LIBRARY_PATH="$MAQA_FOLDER/lib:$DECAN_FOLDER:$LD_LIBRARY_PATH"
+fi
+MAQAO="$MAQAO_FOLDER/maqao"
+
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
 #export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
 #export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
@@ -89,13 +101,11 @@ fi
 
 
 
-#MAQAO_FOLDER="$CLS_FOLDER/maqao"
-MAQAO_FOLDER="$CLS_FOLDER/maqao_oneview"
-MAQAO="$MAQAO_FOLDER/maqao"
 
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
+#CODELET_LENGTH=1
 #CODELET_LENGTH=10
 #CODELET_LENGTH=50
 #CODELET_LENGTH=200
