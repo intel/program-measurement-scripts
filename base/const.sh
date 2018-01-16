@@ -55,9 +55,10 @@ nb_args="$#"
 
 #CLS_FOLDER="$PWD"
 export CLS_FOLDER=$(dirname $( readlink -f $BASH_SOURCE))
+UTILS_FOLDER=${CLS_FOLDER}/../utils
 
 USE_OLD_DECAN=0
-DECAN_FOLDER="$CLS_FOLDER/sdecan"
+DECAN_FOLDER="$UTILS_FOLDER/MAQAO/sdecan"
 DECAN_CONFIGURATOR="$DECAN_FOLDER/prepare_decan_conf.sh"
 DECAN_CONFIGURATION="$DECAN_FOLDER/decan.conf"
 DECAN="$DECAN_FOLDER/sdecan"
@@ -68,10 +69,10 @@ export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
 if [[ $USE_OLD_DECAN == "1" ]]
 then
 #MAQAO_FOLDER="$CLS_FOLDER/maqao"
-    MAQAO_FOLDER="$CLS_FOLDER/maqao_oneview"
+    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_oneview"
 else
-    MAQAO_FOLDER="$CLS_FOLDER/maqao_new"
-    export LD_LIBRARY_PATH="$MAQA_FOLDER/lib:$DECAN_FOLDER:$LD_LIBRARY_PATH"
+    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_new"
+    export LD_LIBRARY_PATH="$MAQAO_FOLDER/lib:$DECAN_FOLDER:$LD_LIBRARY_PATH"
 fi
 MAQAO="$MAQAO_FOLDER/maqao"
 
@@ -311,7 +312,7 @@ XP_NODES+=([fxhaswell-l4]="0")
 XP_NODES+=([fxilab147]="0")
 XP_NODES+=([fxilab148]="1")
 
-MEMLOADER="$CLS_FOLDER/memloader"
+MEMLOADER="$UTILS_FOLDER/memloader/memloader"
 declare -A MEMLOAD_ARGS
 MEMLOAD_ARGS+=([fxe12-cwong2901]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")
 MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --self_pin=6 --ref_freq=2500000")

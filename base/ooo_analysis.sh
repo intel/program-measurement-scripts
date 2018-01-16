@@ -3,7 +3,7 @@
 source $CLS_FOLDER/const.sh
 
 
-bin="$CLS_FOLDER/OoO"
+bin="$UTILS_FOLDER/OoO/OoO"
 bin_file="$1"
 loop_id="$2"
 
