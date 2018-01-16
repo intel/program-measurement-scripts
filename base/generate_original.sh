@@ -41,7 +41,7 @@ else
 	if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
 	    make clean LIBS="measure_emon_api_dca.lib prog_api.lib" LIBPATH="-LIBPATH:../../../../../cape-common/lib -LIBPATH:z:/software/DCA/EMON_DCA_engineering_build_v01/lib64" all
 	else
-	    make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" all
+	    make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" LIBPATH="${PROBE_FOLDER}" all
 	fi
 	if [[ "$?" != "0" ]]
 	    then
@@ -52,7 +52,7 @@ else
 	cp "$codelet_name"_emon_api "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
     fi
     # This will regenerate original binary without EMON API
-    make clean all
+    make LIBPATH="${PROBE_FOLDER}" clean all
 fi
 
 # &> /dev/null

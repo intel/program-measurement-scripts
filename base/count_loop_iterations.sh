@@ -34,7 +34,7 @@ if [[ "$USE_OLD_DECAN" == "0" ]]
 then
 # Filling new MAQAO implementation
 # Get a list of loop id for the codelet
-    loop_ids=$( maqao analyze  -ll   $binary_path  fct=$function_name |sed '/ codelet_/,/^ [^ ]/!d;//d' |sed 's/.*| \([^ ]*\) .*/\1/' )
+    loop_ids=$( $MAQAO analyze  -ll   $binary_path  fct=$function_name |sed '/ codelet_/,/^ [^ ]/!d;//d' |sed 's/.*| \([^ ]*\) .*/\1/' )
 #    echo ${loop_ids[*]}
 else
     $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
@@ -72,7 +72,7 @@ if [[ "$USE_OLD_DECAN" == "0" ]]
 then
     for loop_id in $loop_ids
       do
-      count_values[$loop_id]=$( maqao vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
+      count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
       echo "COUNT: " ${count_values[$loop_id]} 1>&2
       done
 else

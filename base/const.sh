@@ -372,8 +372,8 @@ ENABLE_SEP=0
 MC_RUN=1
 
 # Set the path for the probe library
-NR_FOLDER="~/localdisk/NR/nr-codelets"
-PROBE_FOLDER="$NR_FOLDER/codeletProbe"
+#NR_FOLDER="~/localdisk/NR/nr-codelets"
+PROBE_FOLDER="$UTILS_FOLDER/codeletProbe"
 if [[ "$ENABLE_SEP" == "1" ]]; then
 	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PROBE_FOLDER/for_sep"
 else
