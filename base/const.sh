@@ -212,8 +212,10 @@ then
 	some_res=$( echo "$HOSTNAME" | grep "haswell" )
 	if [[ "$some_res" == "" ]]
 	then
-		UARCH="SANDY_BRIDGE"
-		PRETTY_UARCH="Sandy Bridge"
+#		UARCH="SANDY_BRIDGE"
+#		PRETTY_UARCH="Sandy Bridge"
+		UARCH=$(emon -v |grep "EMON Database" | cut -f4 -d' '|tr -d '\r')
+		PRETTY_UARCH=$(echo $UARCH | sed 's/_/ /g' | awk '{for(i=1;i<=NF;i++){ $i=toupper(substr($i,1,1)) substr($i,2) }}1')
 	else
 		UARCH="HASWELL"
 		PRETTY_UARCH="Haswell"
