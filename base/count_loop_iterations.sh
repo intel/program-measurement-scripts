@@ -73,9 +73,9 @@ if [[ "$USE_OLD_DECAN" == "0" ]]
 then
     for loop_id in $loop_ids
       do
-      $MAQAO vprof lid=$loop_id -- $binary_path  >/tmp/out.$loop_id
-#      count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
-      count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
+#      $MAQAO vprof lid=$loop_id -- $binary_path  >/tmp/out.$loop_id
+#      count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
+      count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
       echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
       echo "COUNT: " ${count_values[$loop_id]} 1>&2
       done
