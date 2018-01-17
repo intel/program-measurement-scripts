@@ -35,7 +35,7 @@ then
 # Filling new MAQAO implementation
 # Get a list of loop id for the codelet
     loop_ids=$( $MAQAO analyze  -ll   $binary_path  fct=$function_name |sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*| \([^ ]*\) .*/\1/' )
-    echo CMD loop_ids="( $MAQAO analyze  -ll   $binary_path  fct=$function_name |sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
+    echo CMD loop_ids="\$( $MAQAO analyze  -ll   $binary_path  fct=$function_name |sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
 #    echo ${loop_ids[*]}
 else
     $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
@@ -74,6 +74,7 @@ then
     for loop_id in $loop_ids
       do
       count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
+      echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
       echo "COUNT: " ${count_values[$loop_id]} 1>&2
       done
 else
