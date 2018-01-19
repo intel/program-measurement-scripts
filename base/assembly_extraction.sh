@@ -17,6 +17,8 @@ local_uarch="SANDY_BRIDGE"
 if [[ "$UARCH" == "HASWELL" ]]
 then
 	local_uarch="$UARCH"
+elif [[ "$UARCH" == "skylake_server" ]]; then
+	local_uarch="SKYLAKE"
 fi
 
 echo "Extracting assemblies from '$bin_folder'..."

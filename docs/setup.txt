@@ -1,57 +1,51 @@
-#Check HT is off
+1	Some pre-steps to take before checking out the packages:
+	A.	Ensure various packages are installed
+		o	sudo apt-get install bc cpufrequtils time numactl
+	B.	Ensure cpufreq-set has SETUID set
+		o	sudo chmod u+s `which cpufreq-set`
+	C.	Install EMON package (with API support) to /opt/intel/sep.  (The script does look for /opt/intel/sep so make sure the package is installed there.  You can use a softlink to point to the real location if desired)
+		•	tar xvf emon_api_linux_alpha2_1.tar.bz2
+		•	sudo cp -R emon_api_linux_alpha2_1 /opt/intel/sep
+		•	cd /opt/intel/sep/sepdk/src
+		•	sudo ./build-driver
+		•	sudo ./ins-mod-sep -g emon-user-group
+D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
 
-bash
+Note that 
+•	for B, you should also change the BIOS of the system so that P-States will be managed by OS.  To double check whether you are in good shape, look at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see whether userspace governor is in the list. E.g.
+	cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+	conservative ondemand userspace powersave performance
+•	for C (EMON installation), the step assumed you created a user group to run EMON and you add those who want to run EMON to this group.  It does not have to be called “emon-user-group”.
+•	For many of our previous experiments, we turn off Hyperthreading.  So if you want to reproduce our previous results, you may want to do that off in BIOS too.  However, for running experiments in general, you can keep it on.
 
-sudo apt-get install bc cpufrequtils time
-# For CLS
-sudo chmod 6755 $( which cpufreq-set )
-# For MAQAO DECAN
-sudo chmod 777 /sys/devices/system/cpu/cpu*/cpufreq/*
+After the above presteps, you should be ready to install the experimental scripts and our NR-codelet set.  Below I am assuming a common directory <home> containing both the experiment script and codelets as follows:
 
-cd
-mkdir /localdisk/vincent && chmod 700 /localdisk/vincent
-cd local_disk
-git clone gitolite@fxeo-cwong2901:cls
-git clone gitolite@fxeo-cwong2901:result-files
-mkdir ecr_codelets
-cd ecr_codelets
-git clone gitolite@fxeo-cwong2901:nr-codelets
-cd ..
-git clone gitolite@fxeo-cwong2901:intel_codelets
+<home>
+•	cape-experiment-scripts
+•	nr-codelets
 
-sudo mkdir /opt/intel/sep
-#cp ~/sep_3.16_linux_347835_private.tar.bz2 .
-cp ~/sep_3.16_linux_343957.tar.bz2 .
-#sudo cp sep_3.16_linux_347835_private.tar.bz2 /opt/intel/sep/
-sudo cp sep_3.16_linux_343957.tar.bz2 /opt/intel/sep/
-cd /opt/intel/sep
-#sudo tar xvjf sep_3.16_linux_347835_private.tar.bz2
-sudo tar xvjf sep_3.16_linux_343957.tar.bz2
-cd sepdk
-sudo ./build-driver -ni
-sudo chmod 777 /dev/pax &> /dev/null
-sudo ./insmod-sep3 -g netdev
-#sudo ./insmod-sep3 -g kap
+2	Checkout/initialization steps
+	E.	Checkout Cape-Experiment-Script
+		•	cd <home>
+		•	git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
 
-#[add configuration line for SQ_MISC_FILL_DROPPED in /opt/intel/sep/config/sampling3/snbep_db.txt:
-#0xF4	0x08	SQ_MISC.FILL_DROPPED	Blabla	0,1,2,3 0,1,2,3,4,5,6,7 100003	0	0	0	0	0	0x53	0	0	0	0	null	0	
-#]
-#[add configuration line for L1_WB (NICE_ND) in /opt/intel/sep/config/sampling3/silvermont_matrix_db.txt:
-#Null	L2_HIT	0x000004	"0,1"	that hit L2
-#]
-#can also simply append the private counters "sep" file
+	F.	Checkout NR-codelets
+		•	cd <home>
+		•	git clone git@gitlab.com:davidwong/nr-codelets.git
 
+	G.	Build probe
+		•	cd <home>/cape-experiment-scripts/utils/codeletProbe
+		•	make
 
-#[copy the tars for icc / ifort]
-cd ~/local_disk/
-tar xvfz l_ccompxe_2011.9.293.tgz
-cd l_ccompxe_2011.9.293/
-sudo ./install.sh
-#T346-955N3J5X
-cd ..
-tar xvfz l_fcompxe_2011.9.293.tgz
-cd l_fcompxe_2011.9.293/
-sudo ./install.sh
-#T346-955N3J5X
-cd ..
+3	Test steps
+Now you should be ready to start running the experiments.  There are many examples under cape-experiment-scripts/vrun.  (Some are outdated though).  To try the experiment script on your system, you can
+	•	cd <home>/cape-experiment-scripts/vrun
+	•	./vrun_fxilab163_FP.sh "test"
+
+Note that the “Test” argument is the description for the experiment.  You can put whatever meaningful to you.  It will be saved under cape-experiment-scripts/vrun/log.*.txt file.  It is useful to look at that file to look for experimental ID when you want to revisit some old runs in the future.  After running the script, if it is successful, you will see something like:
+------------------------------------------------------------
+Cape data saved in: /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv
+./vrun_fxilab163_FP.sh finished in 00:34:19 at Tue Jan 16 14:55:39 CST 2018
+
+Here the data file /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv contains the experimental data.
 
