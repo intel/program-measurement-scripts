@@ -8,9 +8,9 @@ then
     source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
-if [[ "$nb_args" != "11" ]]
+if [[ "$nb_args" != "12" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers, counter list override)."
 	exit -1
 fi
 
@@ -25,6 +25,7 @@ num_codelets="$8"
 cnt_codelet_idx="$9"
 num_cores="${10}"
 prefetchers="${11}"
+counter_list_override="${12}"
 
 # Assume to be successful in the beginning
 loop_detection_success=1
@@ -438,10 +439,10 @@ then
 			    #		    echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 			    echo "$repetitions $data_size" > "${build_folder}/codelet.data"
 
-			    #		    ./run_codelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
+			    #		    ./run_coelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 			    ((cnt_codelet_idx++))
-			    echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
-			    $CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path}
+			    echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} \"${counter_list_override}\"
+			    $CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} "${counter_list_override}"
 
 			    res=$?
 			    if [[ "$res" != "0" ]]

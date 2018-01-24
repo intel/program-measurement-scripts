@@ -2462,7 +2462,7 @@ name2sizes[tridag_2_de]="80000000"
 #name2sizes[ptr_ld_branch]="10000"
 #name2sizes[loads_1Sx4-movsd]="200000"
 
-runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores" "$prefetchers"
+runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores" "$prefetchers" "RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0"
 
 return
 

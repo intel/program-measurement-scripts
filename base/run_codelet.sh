@@ -7,7 +7,7 @@ then
 fi
 
 
-if [[ "$nb_args" != "8" ]]
+if [[ "$nb_args" != "9" ]]
 then
 	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name,  number of iterations, repetitions,...)."
 	exit -1
@@ -28,9 +28,13 @@ start_codelet_loop_time="$5"
 num_codelets="$6"
 cnt_codelet_idx="$7"
 
+
 #num_core="${12}"
 #prefetcher="${13}"
 res_path="$8"
+list_override="$9"
+
+
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 
@@ -161,8 +165,8 @@ then
     echo "Running counters..."
     emon -v > "$res_path/emon_info" 
     #    emon_counters=$( env -i ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
-    echo Build counter list with cmd: ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" 
-    emon_counters=$( ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
+    echo Build counter list with cmd: ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" "$list_override"
+    emon_counters=$( ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" "$list_override")
     echo "COUNTER LIST: " ${emon_counters}
 
 
