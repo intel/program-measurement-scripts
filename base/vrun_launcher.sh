@@ -146,6 +146,10 @@ runLoop() {
     prefetchers_arr=(${prefetchers})
     ((num_codelets*=${#prefetchers_arr[@]}))
 
+    frequencies_arr=(${frequencies})
+    ((num_codelets*=${#frequencies_arr[@]}))
+
+
 
     codelet_id=0
     for codelet in ${run_codelets[@]}
@@ -174,7 +178,7 @@ echo here $(pwd)
 #      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
 	  ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
       fi
-      ((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr[@]})))
+      ((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr[@]}*${#frequencies_arr[@]})))
     done
 
 #      sizes_arr=(${sizes})
