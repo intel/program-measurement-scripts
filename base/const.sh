@@ -92,18 +92,18 @@ for compiler in icc ifort; do
 done
 
 
-if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
-	source ${COMPILER_ROOT}/compilers/intel/12.1/Linux/intel64/load.sh
-elif [[ "$(uname)" != "CYGWIN_NT-6.2" ]]; then
-    # /cygdrive/c/Program\ Files\ \(x86\)/IntelSWTools/compilers_and_libraries/windows/bin/compilervars.bat  intel64 >/dev/null
-#    if ! which ifort &> /dev/null; then
-#	echo ifort not found.  Need to restart Cygwin with set vars script invoked.
-#	exit -1
-#    fi
-#else
-#	source ${COMPILER_ROOT}/compilers/intel/15.0/Linux/intel64/load0.sh
-	source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
-fi
+#if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
+#	source ${COMPILER_ROOT}/compilers/intel/12.1/Linux/intel64/load.sh
+#elif [[ "$(uname)" != "CYGWIN_NT-6.2" ]]; then
+#    # /cygdrive/c/Program\ Files\ \(x86\)/IntelSWTools/compilers_and_libraries/windows/bin/compilervars.bat  intel64 >/dev/null
+##    if ! which ifort &> /dev/null; then
+##	echo ifort not found.  Need to restart Cygwin with set vars script invoked.
+##	exit -1
+##    fi
+##else
+##	source ${COMPILER_ROOT}/compilers/intel/15.0/Linux/intel64/load0.sh
+#	source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
+#fi
 
 
 

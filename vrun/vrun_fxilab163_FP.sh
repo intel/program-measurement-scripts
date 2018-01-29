@@ -3,6 +3,10 @@
 source ../base/const.sh
 source ../base//vrun_launcher.sh
 
+#PUT compiler source stuff here
+source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
+
+
 run() {
     runId=$@
 
