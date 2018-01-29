@@ -14,6 +14,43 @@ combineCapeData() {
 #     done
 }
 
+# This function should automatically add all the code information under the prefix path
+fill_codelet_maps()
+{
+    cnt_prefix="$1"
+    cnt_sizes="$2"
+#    cnt_codelets=($3)
+
+#    echo prefix ${cnt_prefix}
+
+    # include trailing / to exclude files
+    test ! -d ${cnt_prefix} && return     # Return if directory not exist
+    all_codelets=($( ls -d ${cnt_prefix}/*/*/ ))
+    # remove trailing /
+    all_codelets=(${all_codelets[@]/%\//})
+
+#    echo ALL codelets: ${all_codelets[@]}
+
+
+#    cnt_codelets=(${cnt_codelets[@]/#/${cnt_prefix}\/})
+#    echo CNT_codelets ${cnt_codelets[@]}
+
+#    exit
+
+#    for codelet_path in ${cnt_codelets[@]}
+    for codelet_path in ${all_codelets[@]}
+    do
+      codelet_name=$(basename ${codelet_path})
+#       echo CN ${codelet_name}
+#       echo CP ${codelet_path}
+#       echo CS ${cnt_sizes}
+      name2path+=([${codelet_name}]=${codelet_path})
+      name2sizes+=([${codelet_name}]=${cnt_sizes})
+    done
+
+}
+
+
 launchIt () {
     source $CLS_FOLDER/const.sh
 

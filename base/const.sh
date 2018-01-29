@@ -86,6 +86,11 @@ else
   # Austin settings
   COMPILER_ROOT=/nfs/site/proj/openmp
 fi
+# Check compilers
+for compiler in icc ifort; do
+  command -v  $compiler >/dev/null 2>&1 || { echo "Required compiler: $compiler but it's not installed.  Aborting." >&2; exit -1; }
+done
+
 
 if [[ "$HOSTNAME" == "fxtcarilab027" ]]; then
 	source ${COMPILER_ROOT}/compilers/intel/12.1/Linux/intel64/load.sh
