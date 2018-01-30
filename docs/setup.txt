@@ -11,7 +11,7 @@
 		•	sudo ./ins-mod-sep -g emon-user-group
 		•	Later as a regular user to run the script, you need to do the following command to load the enviromental variables to run it:
     		•	source /opt/intel/sep/sep_var.sh
-D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
+    D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
 
 Note that 
 •	for B, you should also change the BIOS of the system so that P-States will be managed by OS.  To double check whether you are in good shape, look at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see whether userspace governor is in the list. E.g.
