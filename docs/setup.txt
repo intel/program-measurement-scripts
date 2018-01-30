@@ -9,6 +9,8 @@
 		•	cd /opt/intel/sep/sepdk/src
 		•	sudo ./build-driver
 		•	sudo ./ins-mod-sep -g emon-user-group
+		•	Later as a regular user to run the script, you need to do the following command to load the enviromental variables to run it:
+    		•	source /opt/intel/sep/sep_var.sh
 D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
 
 Note that 
