@@ -216,18 +216,47 @@ then
 	      # Split events into files
 	      rm -f event.* emon_api.out
 	      emon --dry-run -C"($emon_counters)" | csplit -z --quiet --prefix=event. - '/^\S/' '{*}'
+
+	      uncore_evfiles=($(grep -l Uncore event.*))
+	      core_evfiles=($(grep -L Uncore event.*))  # Note the oppose -L
+	      num_uncore_evfiles=${#uncore_evfiles[@]}
+   	      num_core_evfiles=${#core_evfiles[@]}
+
+	      if [[ ${num_uncore_evfiles} > ${num_core_evfiles} ]]; then
+		  ((diff=num_uncore_evfiles - num_core_evfiles))
+		  core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]:0:$diff})
+	      else
+		  ((diff=num_core_evfiles - num_uncore_evfiles))
+		  uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]:0:$diff})
+	      fi
+
+	      num_uncore_evfiles=${#uncore_evfiles[@]}
+	      num_core_evfiles=${#core_evfiles[@]}
+
+	      if [[ ${num_uncore_evfiles} == ${num_core_evfiles} ]]; then
+		  num_evfiles=${num_uncore_evfiles}
+	      else
+		  echo "Failed to match Uncore/Core event files!"
+		  exit -1
+	      fi
+
 	      # Now run instrumented code for each event set
-	      numRuns=$( ls -l event.* |wc -l )
+	      numRuns=$num_evfiles
+
+
+#	      numRuns=$( ls -l event.* |wc -l )
 	      runCnt=0
-	      for evfile in event.*
-	      do
+#	      for evfile in event.*; do
+	      for ((ei=0; ei<$num_evfiles; ei++)); do
 		((runCnt++))
 		((totalRunCnt++))
 
 		echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); CnterSet: (${runCnt}/${numRuns}); "
 		echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
 
-		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
+		evlist=($(tail -q -n  +2 ${core_evfiles[$ei]} ${uncore_evfiles[$ei]} |tr -d '\r'))
+#		echo EVLIST is ${evlist[*]}
+#		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
 <EMON_CONFIG>
@@ -276,11 +305,13 @@ EOF
 	fi
     fi
 
-		mv emon_api_config_file emon_api_config_file.${evfile}
+#		mv emon_api_config_file emon_api_config_file.${evfile}
+		mv emon_api_config_file emon_api_config_file.${ei}
 		grep -v "Addition" emon_api.out |grep -v "^$" >> "$res_path/emon_report"
 # Uncomment below to print res path
 #echo $res_path
-		mv emon_api.out emon_api.out.${evfile}
+#		mv emon_api.out emon_api.out.${evfile}
+		mv emon_api.out emon_api.out.${ei}
 
 		remainingRunCnt=$(((${META_REPETITIONS}*${numRuns})-${totalRunCnt}))
 		CURRENT_COUNTER_RUN_TIME=$(date +%s)
