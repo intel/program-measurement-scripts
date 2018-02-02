@@ -115,9 +115,10 @@ do
 	    done
 	    
 	fi
-	echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+	echo -n ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog} >& /dev/null
     fi
+    echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
     if [ -f $PGM_METRIC_FILE ]; then
 	pgm_dumped_metric_values=$( tail -n 1 $PGM_METRIC_FILE )$( echo -e "\n$pgm_dumped_metric_values" )
