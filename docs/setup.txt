@@ -3,6 +3,7 @@
 		o	sudo apt-get install bc cpufrequtils time numactl
 	B.	Ensure cpufreq-set has SETUID set
 		o	sudo chmod u+s `which cpufreq-set`
+		o	Ensure OS can fix CPU frequencies via userspace power governor (see below)
 	C.	Install EMON package (with API support) to /opt/intel/sep.  (The script does look for /opt/intel/sep so make sure the package is installed there.  You can use a softlink to point to the real location if desired)
 		•	tar xvf emon_api_linux_alpha2_1.tar.bz2
 		•	sudo cp -R emon_api_linux_alpha2_1 /opt/intel/sep
@@ -14,7 +15,10 @@
     D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
 
 Note that 
-•	for B, you should also change the BIOS of the system so that P-States will be managed by OS.  To double check whether you are in good shape, look at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see whether userspace governor is in the list. E.g.
+•	for B, there are two ways to enable OS to manage CPU frequencies
+    1) Change the BIOS of the system so that P-States will be managed by OS.  The exact menu choice is machine dependent.
+    2) If 1) does not work, disable the intel_pstate driver by adding "intel_pstate=disable" to your kernel boot line.
+    To double check whether you are in good shape, look at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see whether userspace governor is in the list. E.g.
 	cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
 	conservative ondemand userspace powersave performance
 •	for C (EMON installation), the step assumed you created a user group to run EMON and you add those who want to run EMON to this group.  It does not have to be called “emon-user-group”.
