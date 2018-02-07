@@ -1,19 +1,5 @@
 #!/bin/bash -l
 
-combineCapeData() {
-# Combining all run cape data
-    START_VRUN_SH=$1
-    run_dir=$2
-
-    ofiles=($( find -L ${run_dir} -name *.cape.csv| sort ))
-    head -1 ${ofiles[0]} > ${run_dir}/cape_${START_VRUN_SH}.csv
-    tail -n +2 -q ${ofiles[@]:0} >> ${run_dir}/cape_${START_VRUN_SH}.csv
-#     for f in ${ofiles[@]}
-#       do
-#       cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
-#     done
-}
-
 # This function should automatically add all the code information under the prefix path
 fill_codelet_maps()
 {
@@ -90,7 +76,7 @@ launchIt () {
 	${launch_fn} ${START_VRUN_SH}
 
 	# Combining all run cape data
-	combineCapeData ${START_VRUN_SH} ${run_dir}
+	${COMBINE_CAPE_DATA_SH} ${run_dir}
 # 	for f in $( find -L ${run_dir} -name *.cape.csv | sort ) 
 # 	do
 # 	    cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
@@ -137,7 +123,7 @@ launchAll() {
     ${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
     
     ${launch_fn} ${START_VRUN_SH}
-    combineCapeData ${START_VRUN_SH} ${run_dir}
+    ${COMBINE_CAPE_DATA_SH} ${run_dir}
 
     END_VRUN_SH=$(date '+%s')
     ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))

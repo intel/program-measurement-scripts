@@ -417,6 +417,7 @@ COUNTER_FNAME="counter_nv"
 # For all
 LOGGER_SH="${CLS_FOLDER}/logger.sh"
 GENERATE_CQA_CSV_SH="${CLS_FOLDER}/generate_cqa_csv.sh"
+COMBINE_CAPE_DATA_SH="${CLS_FOLDER}/combine_cape_data.sh"
 
 # delimiter to use for output data e.g. ',' or ';' or other delimiters
 #DELIM=';'
