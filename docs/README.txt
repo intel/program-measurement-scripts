@@ -65,6 +65,8 @@ make LIBPATH=/path/to/script-directory/utils/codeletProbe
 Test and run binary 
 cat time.out
 
+There should be a number being the cycle count for executing the loop.
+
 
 The script will generate an input file for the program to read
 “codelet.data”.  The format is a single line with "<repetition> <data>”
@@ -72,32 +74,35 @@ where
 <repetition> is a integer - it will be the number of repetition to be done to run the kernel (f() in this case).  The script will make use of this repetition to ensure the kernel is executed long enough.
 <data> is a string - the program is expected to be able to parse/ignore it to instruct the program about data loading/algorithm choosing/etc.
 
+Below is a typical example of the code 
 
-1)	create a directory structure like the NR-codelets 
-a.	Take a look at codelet.meta and codelet.conf to follow its format 
-2)	Put your code in the codelet directory with instrument like balanc_3_de program.  ( I will include a sample below).
-a.	With the measure_init_(), measure_start_() and measure_end_() around the kernel.
-b.	The main function can read “codelet.data” file with “<repetition> <data>” as the format.
-i.	<repetition> is an integer about repeating the kernel execution
-ii.	<data> specify the input data for the kernels.  For NR codelet, it is an integer specifying array size.  For graph algorithm, it can be data file name.  We can even encode some other things specific to the kernel.
-3)	Have your program built in the same way as balanc_3_de – the script and assume a simple make command to build the code you want to analyze.  
 
-I am including an example below for your information:
-14   int measure_it;  // not used for this code currently
-15   read_infile_from_codelet_data (input_dir, infile_buffer, &repetitions, &measure_it);
-16 
-17   Graph* graph = new Graph();
-18    19   if (!graph->read_file_ggr(infile_buffer, NoEdgeData())) {
-20     std::abort();
-21   }
-22 
-23  …
-25  
-26   measure_init_();
-27   measure_start_();
-28   for (int i = 0; i < repetitions; i++) {
-29     LabelVec* labelVec = new LabelVec(graph->num_nodes, 0);
-30     ccPullTopoSync(*graph, *labelVec, *stats); 
-31   }
-32   measure_stop_();
+
+   // read "codelet.data" file for repetition and data file name
+   read_infile_from_codelet_data (input_dir, infile_buffer, &repetitions, &measure_it);
+ 
+   Graph* graph = new Graph();
+   if (!graph->read_file_ggr(infile_buffer, NoEdgeData())) {
+     std::abort();
+   }
+ 
+  …
+  
+   measure_init_();
+   measure_start_();
+   for (int i = 0; i < repetitions; i++) {
+        f();
+   }
+   measure_stop_();
+
+Update the script so it can locate the code
+Remember the codelet is located under /path/to/source/<codelet_name>
+
+Add, to the script, 
+fill_codelet_maps <prefix> <default datasizes>
+where <prefix> is the path to the parent directory of the codelet directory.  In this example, it would be /path/to.  
+<default datasizes> will be some default data size to run the code.  It can be overriden by setting name2sizes[<codelet_name>]=... .
+
+
+
 
