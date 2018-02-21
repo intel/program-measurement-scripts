@@ -1,7 +1,7 @@
 This document describes how to instrument a new code for analysis.
 
 1) Put the source files to a directory (say /path/to/source/<codelet_name>)
-2) Ensure the code will be compiled successfully by a "make" command, so a Makefile source also be in /path/to/source.
+2) Ensure the code will be compiled successfully by a "make" command, so a Makefile source also be in /path/to/source.  Also the script will do "make clean" to clean up object files.
 3) Suppose the compiled binary is called run_kernel.  Check and see run_kernel can be executed.
 4) The loop to be analyzed should be inside a function f() eventually called by the main program.
 
