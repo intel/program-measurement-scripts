@@ -1,5 +1,32 @@
 This document describes how to instrument a new code for analysis.
 
+1) Put the source files to a directory (say /path/to/source/<codelet_name>)
+2) Ensure the code will be compiled successfully by a "make" command, so a Makefile source also be in /path/to/source.
+3) Suppose the compiled binary is called run_kernel.  Check and see run_kernel can be executed.
+4) The loop to be analyzed should be inside a function f() eventually called by the main program.
+
+Create codelet.meta with 4 lines:
+application name=<App name>
+batch name=<Batch name>
+code name=<Code name>
+codelet name=<codelet_name>
+
+where <Codelet name> is the name of the kernel.  It should be the same as this directory name.  For
+<App name>, <Batch name> and <Code name>, those are hierachical information describing the kernel.
+
+<?xml version="1.0" ?>
+<codelet>
+        <language value=<language of source>/>
+        <label name=<codelet_name>/>
+        <function name=<loop containing function>/>
+        <binary name=<binary>/>
+where 
+<language of source> describe the source language.
+<codelet_name> should be consistent with the path name and the codelet name in codelet.meta.
+<loop containing function> is the function where the loop to analyze is located.  In this example, it will be f.
+<binary> is the executable name built by the Makefile.  In this example, it is run_kernel.
+
+
 1)	create a directory structure like the NR-codelets 
 a.	Take a look at codelet.meta and codelet.conf to follow its format 
 2)	Put your code in the codelet directory with instrument like balanc_3_de program.  ( I will include a sample below).
