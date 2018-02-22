@@ -224,10 +224,16 @@ then
    	      num_core_evfiles=${#core_evfiles[@]}
 
 	      if [[ ${num_uncore_evfiles} > ${num_core_evfiles} ]]; then
-		  ((diff=num_uncore_evfiles - num_core_evfiles))
+		while ((${#core_evfiles[@]}*2<num_uncore_evfiles)); do 
+		    core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]})
+                done
+		  ((diff=num_uncore_evfiles - ${#core_evfiles[@]}))
 		  core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]:0:$diff})
 	      else
-		  ((diff=num_core_evfiles - num_uncore_evfiles))
+		while ((${#uncore_evfiles[@]}*2<num_core_evfiles)); do 
+		    uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]})
+                done
+		  ((diff=num_core_evfiles - ${#uncore_evfiles[@]}))
 		  uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]:0:$diff})
 	      fi
 
@@ -237,7 +243,7 @@ then
 	      if [[ ${num_uncore_evfiles} == ${num_core_evfiles} ]]; then
 		  num_evfiles=${num_uncore_evfiles}
 	      else
-		  echo "Failed to match Uncore/Core event files!"
+		  echo "Failed to match Uncore(${num_uncore_evfiles})/Core(${num_core_evfiles}) event files!"
 		  exit -1
 	      fi
 
@@ -258,6 +264,24 @@ then
 		evlist=($(tail -q -n  +2 ${core_evfiles[$ei]} ${uncore_evfiles[$ei]} |tr -d '\r'))
 #		echo EVLIST is ${evlist[*]}
 #		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
+		if [[ -f /opt/intel/sep/config/emon_api/emon_api_config_file.xml ]]; then
+cat <<EOFBEGIN > emon_api_config_file
+<?xml version="1.0"?>
+<root>
+ <emon_config>
+EOFBEGIN
+for newev in ${evlist[*]}; do
+    echo "        <event>$newev</event>" >> emon_api_config_file
+done
+cat <<EOFEND >> emon_api_config_file
+        <duration>99999999999</duration>
+        <start_paused>0</start_paused>
+        <output_file>emon_api.out</output_file>
+        <print_system_time>0</print_system_time>
+    </emon_config>
+</root>
+EOFEND
+		else
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
 <EMON_CONFIG>
@@ -266,6 +290,7 @@ DURATION=99999999999
 OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
+		fi
 		#	   	emon -stop 2> /dev/null
     if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    		
         echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
