@@ -224,10 +224,16 @@ then
    	      num_core_evfiles=${#core_evfiles[@]}
 
 	      if [[ ${num_uncore_evfiles} > ${num_core_evfiles} ]]; then
-		  ((diff=num_uncore_evfiles - num_core_evfiles))
+		while ((${#core_evfiles[@]}*2<num_uncore_evfiles)); do 
+		    core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]})
+                done
+		  ((diff=num_uncore_evfiles - ${#core_evfiles[@]}))
 		  core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]:0:$diff})
 	      else
-		  ((diff=num_core_evfiles - num_uncore_evfiles))
+		while ((${#uncore_evfiles[@]}*2<num_core_evfiles)); do 
+		    uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]})
+                done
+		  ((diff=num_core_evfiles - ${#uncore_evfiles[@]}))
 		  uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]:0:$diff})
 	      fi
 
@@ -237,7 +243,7 @@ then
 	      if [[ ${num_uncore_evfiles} == ${num_core_evfiles} ]]; then
 		  num_evfiles=${num_uncore_evfiles}
 	      else
-		  echo "Failed to match Uncore/Core event files!"
+		  echo "Failed to match Uncore(${num_uncore_evfiles})/Core(${num_core_evfiles}) event files!"
 		  exit -1
 	      fi
 
