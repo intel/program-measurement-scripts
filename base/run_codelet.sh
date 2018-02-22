@@ -258,6 +258,24 @@ then
 		evlist=($(tail -q -n  +2 ${core_evfiles[$ei]} ${uncore_evfiles[$ei]} |tr -d '\r'))
 #		echo EVLIST is ${evlist[*]}
 #		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
+		if [[ -f /opt/intel/sep/config/emon_api/emon_api_config_file.xml ]]; then
+cat <<EOFBEGIN > emon_api_config_file
+<?xml version="1.0"?>
+<root>
+ <emon_config>
+EOFBEGIN
+for newev in ${evlist[*]}; do
+    echo "        <event>$newev</event>" >> emon_api_config_file
+done
+cat <<EOFEND >> emon_api_config_file
+        <duration>99999999999</duration>
+        <start_paused>0</start_paused>
+        <output_file>emon_api.out</output_file>
+        <print_system_time>0</print_system_time>
+    </emon_config>
+</root>
+EOFEND
+		else
 		evlist=$(IFS=','; echo "${evlist[*]}")
 		cat <<EOF > emon_api_config_file
 <EMON_CONFIG>
@@ -266,6 +284,7 @@ DURATION=99999999999
 OUTPUT_FILE=emon_api.out
 </EMON_CONFIG>
 EOF
+		fi
 		#	   	emon -stop 2> /dev/null
     if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    		
         echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
