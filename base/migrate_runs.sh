@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $# < 5 ]]; then
+if [[ "$#" -lt 5 ]]; then
   echo "Usage: $0 <old cls prefix> <new cls prefix> <old rundir> <new rundir> <run#1> ... <run#n> "
   exit -1
 fi
