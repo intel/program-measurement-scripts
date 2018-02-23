@@ -148,13 +148,31 @@ runLoop() {
 # declare -gA name2sizes
 # declare -ga run_codelets
 
+   cls_run_count_file=$CLS_FOLDER/vrun.cls_run_count
+
+function intHandler() {
+    ${LOGGER_SH} ${START_VRUN_SH} "Experiment interrupted"
+  ${COMBINE_CAPE_DATA_SH} ${run_dir}
+  ${LOGGER_SH} ${START_VRUN_SH} "Partial Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
+  ${LOGGER_SH} ${START_VRUN_SH} "CLS run count saved in $cls_run_count_file (@$(cat $cls_run_count_file))"
+  exit
+}
 
     set -o pipefail # make sure pipe of tee would not reset return code.
     
-    
+    trap intHandler INT
+ 
     echo RUN codelets : ${run_codelets[@]}
 
     count=0
+    cls_run_count=0
+
+    if [[ -f $cls_run_count_file ]]; then
+       skip_to_cls_run_count=$(cat $cls_run_count_file)
+       ${LOGGER_SH} ${START_VRUN_SH} "Experiment interrupted previously: will try to resume @$skipto_cls_run_count"
+    else
+       skip_to_cls_run_count=-1
+    fi
 
     start_codelet_loop_time=$(date '+%s')    
     num_codelets=0
@@ -183,8 +201,6 @@ runLoop() {
 #  ls ${codelet_path}
 #  echo "SS: ${sizes}"
       ((count++))
-echo here $(pwd)
-
       echo "Launching CLS on $codelet_path  (${count} of ${#run_codelets[@]}) ...for sizes $sizes"
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
@@ -192,6 +208,13 @@ echo here $(pwd)
 
     for sz in ${sizes[@]}
       do
+      ((cls_run_count++))
+      if [[ $cls_run_count -lt $skip_to_cls_run_count ]]; then
+          
+         echo Skipping previously finished CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
+         continue
+      fi
+      echo $cls_run_count > $cls_run_count_file
 
        echo Executing CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
       $CLS_FOLDER/cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" "${counter_list_override}"| tee "$codelet_path/cls.log"
@@ -210,5 +233,6 @@ echo here $(pwd)
 #      ((codelet_id*=${#num_cores_arr[@]}))
 #      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
     done
+    rm $cls_run_count_file  # Done
     
 }
