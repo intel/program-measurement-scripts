@@ -41,7 +41,13 @@ chk_dir_exist $old_rundir
 
 if [[ $old_prefix != $new_prefix ]]; then
 # cls_* migration
+# First copy cls_*
+# Check copy was successful (ie. content the same)
+# Update cls links and rm old cls_*.
+
     mkdir -p $new_prefix
+
+# Copy
     for run in $runs; do
 	cnt_run_dir=$old_rundir/$run
 	for cls in $cnt_run_dir/cls*; do
@@ -52,15 +58,61 @@ if [[ $old_prefix != $new_prefix ]]; then
 	    if [[ $real_dir == $real_dir_less_prefix ]]; then
 		# skip this one because prefix not match
 		echo Skipping $real_dir for mismatched old prefix ${old_prefix}
+		exit -1
+		continue
+	    fi 
+
+	    echo "Copying $real_dir_less_prefix::"
+	    echo -e "\t\t$old_prefix => $new_prefix"
+
+	    pushd $old_prefix > /dev/null
+	    cp --parents -R $real_dir_less_prefix $new_prefix
+	    popd > /dev/null
+	done
+    done
+
+# Check    
+    for run in $runs; do
+	cnt_run_dir=$old_rundir/$run
+	for cls in $cnt_run_dir/cls*; do
+	    real_dir=$(readlink $cls)
+	    real_dir_less_prefix=${real_dir#${old_prefix}/}
+	    echo "Checking $cls"
+	    echo -e "\t\t=> $real_dir_less_prefix"
+	    if [[ $real_dir == $real_dir_less_prefix ]]; then
+		# skip this one because prefix not match
+		echo Skipping $real_dir for mismatched old prefix ${old_prefix}
+		exit -1
+		continue
+	    fi 
+
+	    echo "Checking $real_dir_less_prefix::"
+	    echo -e "\t\t$old_prefix => $new_prefix"
+	    diff -r $real_dir $new_prefix/$real_dir_less_prefix
+	    if [[ $? != 0 ]]; then
+		echo "Directory check failed"
+		exit -1
+	    fi
+	done
+    done
+#Check passed
+    for run in $runs; do
+	cnt_run_dir=$old_rundir/$run
+	for cls in $cnt_run_dir/cls*; do
+	    real_dir=$(readlink $cls)
+	    real_dir_less_prefix=${real_dir#${old_prefix}/}
+	    echo "Switching reference of $cls"
+	    echo -e "\t\t=> $real_dir_less_prefix"
+	    if [[ $real_dir == $real_dir_less_prefix ]]; then
+		# skip this one because prefix not match
+		echo Skipping $real_dir for mismatched old prefix ${old_prefix}
+		exit -1
 		continue
 	    fi 
 
 	    echo "$real_dir_less_prefix::"
 	    echo -e "\t\t$old_prefix => $new_prefix"
 
-	    pushd $old_prefix > /dev/null
-	    cp --parents -R $real_dir_less_prefix $new_prefix
-	    popd > /dev/null
 	    rm $cls
 	    ln -s $new_prefix/$real_dir_less_prefix $cls
 	    old_real_dir=$old_prefix/$real_dir_less_prefix
@@ -70,16 +122,37 @@ if [[ $old_prefix != $new_prefix ]]; then
     done
 fi
 
+
+
 if [[ $old_rundir != $new_rundir ]]; then
 # rundir migration
+# Copy, check, then remove
+
+
     mkdir -p $new_rundir
+# Copy
     pushd $old_rundir > /dev/null
     for run in $runs; do
 	cp -R $run $new_rundir/$run
-	if [[ $? == 0 ]]; then
-	    rm -rf $run
+    done
+    popd > /dev/null
+
+# Check
+    pushd $old_rundir > /dev/null
+    for run in $runs; do
+	diff -r $run $new_rundir/$run
+	if [[ $? != 0 ]]; then
+	    echo "Directory check failed"
+	    exit -1
 	fi
+    done
+    popd > /dev/null
+# Deleting old directory
+    pushd $old_rundir > /dev/null
+    for run in $runs; do
+	rm -rf $run
     done
     popd > /dev/null
     rmdir --ignore-fail-on-non-empty -p $old_rundir
 fi
+
