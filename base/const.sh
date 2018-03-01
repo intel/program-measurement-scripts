@@ -384,6 +384,11 @@ MC_RUN=1
 # Set the path for the probe library
 #NR_FOLDER="~/localdisk/NR/nr-codelets"
 PROBE_FOLDER="$UTILS_FOLDER/codeletProbe"
+BASE_PROBE_FOLDER=${PROBE_FOLDER}
+EMON_API_PROBE_FOLDER=${PROBE_FOLDER}/emon_api
+SNIPER_PROBE_FOLDER=${PROBE_FOLDER}/sniper
+
+
 if [[ "$ENABLE_SEP" == "1" ]]; then
 	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PROBE_FOLDER/for_sep"
 else

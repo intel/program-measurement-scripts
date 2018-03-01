@@ -81,7 +81,9 @@ if [[ "${variant}" == "ORG" ]]
     then
 # Run the original program
     run_prog="./${codelet_name}"
-    run_prog_emon_api="./${codelet_name}"_emon_api
+#    run_prog_emon_api="./${codelet_name}"_emon_api
+#  Run the same program but with different LD_LIBRARY_PATH (below)
+    run_prog_emon_api="./${codelet_name}"
 else
 # Run the DECAN generated program
     run_prog="./${codelet_name}_${variant}_hwc"
@@ -110,13 +112,15 @@ do
 	then
 	    for cc in ${nc_all_cores}
 	    do
-		echo $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
-		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} >& /dev/null &
+		cmd=$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
+		echo $cmd
+		bash -c $cmd >& /dev/null &
 	    done
 	    
 	fi
-	echo -n ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
-	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog} >& /dev/null
+	cmd=${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+	echo -n $cmd
+	bash -c $cmd >& /dev/null
     fi
     echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
@@ -274,6 +278,7 @@ OUTPUT_FILE=emon_api.out
 EOF
 		#	   	emon -stop 2> /dev/null
     if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    		
+	## TODO: Need to double check how Cygwin handles shared library.  May break
         echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 	cat emon_api_config_file
 
@@ -292,18 +297,18 @@ EOF
 	    while ps -W|grep -i $(basename ${run_prog}) > /dev/null; do sleep 1; done	    
 	fi
     else
-        echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+#        echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
 
 	if [[ "$MC_RUN" != "0" ]]
 	then 
 	    for cc in ${nc_all_cores}
 	    do
-		$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
+		LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
 	    done
 	fi
 	
-        $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+        LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 	while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
 	
 	if [[ "$MC_RUN" != "0" ]]
@@ -342,18 +347,9 @@ EOF
 		  else
 		      for cc in ${nc_all_cores}
 	  	      do
-			  $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
+			  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
 	  	      done
 		  fi
-		  # 	      $NUMACTL -m $XP_NODE -C 10 ${run_prog} &
-		  # 	      $NUMACTL -m $XP_NODE -C 11 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 12 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 13 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 14 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 15 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 16 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 17 ${run_prog} &
-# 	      $NUMACTL -m $XP_NODE -C 18 ${run_prog} &
 	      fi
 
 
@@ -362,7 +358,7 @@ EOF
 	      echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); "
 	      echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
 
-	      emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+	      LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
 
 	      remainingRunCnt=$(((${META_REPETITIONS}*1)-${totalRunCnt}))
 	      CURRENT_COUNTER_RUN_TIME=$(date +%s)

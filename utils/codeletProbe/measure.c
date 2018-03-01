@@ -11,14 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
-///* ntel's SEP header to perform per region measurement*/
-//#include <sampling.h>
-#ifdef HAS_EMON_API
-#include <emon_api.h>
-#endif
-#ifdef HAS_SNIPER_API
-#include <sim_api.h>
-#endif
+#include "hook.h"
 
 
 // Define rdtscll for x86_64 arch
@@ -44,9 +37,6 @@ static char *copies = "codelet.copy";
 static int  pid = 1;
 static int  *pids = NULL;
 static int  nbClones = 0;
-//#ifdef HAS_EMON_API
-//static char *emon_api_stream = "emon_api.out";
-//#endif
 
 typedef struct {
 	double start;
@@ -57,10 +47,6 @@ TimerData *timer_data;
 static int paused; // collection paused?
 
 
-#ifdef HAS_EMON_API
-static EMON_HANDLE emon_handle;
-static EMON_DATA   emon_data_before, emon_data_after, emon_data_result, emon_data_sum;
-#endif
 
 static __inline__ unsigned long long getticks(void)
 {
@@ -158,12 +144,7 @@ void create_clones()
 
 void measure_init_()
 {
-#ifdef HAS_EMON_API
-           EMONConfig ("emon_api_config_file", &emon_handle);
-
-           EMONStart (&emon_handle);
-	   emon_data_sum = EMON_DATA_NULL;
-#endif
+  init_hook();
 	// Pin the main process
 //	pin_process(0);
 	paused = 0;
@@ -185,23 +166,15 @@ void measure_start_()
 		sched_yield();
 		paused = 0;
 		evaluation_start();
-#ifdef HAS_EMON_API
-		EMONRead (emon_handle, &emon_data_before);
-#endif
-#ifdef HAS_SNIPER_API
-		SimRoiStart();
-#endif
+		measure_start_hook();
 	}
 	return ;
 }
 
-void measure_pause_emon () {
+// pause only if not paused yet
+void measure_may_pause_hook () {
   if (paused) return;
-#ifdef HAS_EMON_API
-		EMONRead (emon_handle, &emon_data_after);
-		EMONDataCalculate (emon_handle, emon_data_before, emon_data_after, &emon_data_result, "SUBTRACTION");
-		EMONDataCalculate (emon_handle, emon_data_result, emon_data_sum, &emon_data_sum, "ADDITION");
-#endif
+  measure_pause_hook();
 }
 
 void measure_pause_()
@@ -209,9 +182,7 @@ void measure_pause_()
   if (paused) return;
 	if( pid != 0) {
 		evaluation_stop();
-#ifdef HAS_EMON_API
-		measure_pause_emon();
-#endif
+		measure_may_pause_hook();
 		paused = 1;
 	}
 	return ;
@@ -226,61 +197,22 @@ void measure_stop_()
 
 	// Stop measurement
 	evaluation_stop();
-#ifdef HAS_EMON_API
-	measure_pause_emon();
-	//	EMONRead (emon_handle, &emon_data_after);
-#endif
+	measure_may_pause_hook();
 
 	// Stop childs
 	for (i=1; i<nbClones; i++) {
 		kill(pids[i], SIGINT);
 	}
 
-#ifdef HAS_EMON_API
-	//	EMONDataCalculate (emon_handle, emon_data_before, emon_data_after, &emon_data_result, "SUBTRACTION");
-#endif
 
 	// Print results
     print_results();
-#ifdef HAS_EMON_API
-	// open file to redirect to
-//	int emon_api_fd = open (emon_api_stream, O_WRONLY | O_CREAT| O_APPEND, S_IRUSR|S_IWUSR);
-//	if (emon_api_fd < 0) {
-//		fprintf(stderr, "Error open file for EMON output!\n");
-//		return;
-//	}
-
-	// redirect stdout to file
-//	int save_stdout = dup (1);
-//	fflush(stdout);
-//	int rst = dup2(emon_api_fd,1);
-//	if (rst < 0) {
-//		fprintf(stderr, "Error redirecting EMON output to stderr!\n");
-//		return;
-//	}
-	
-	EMONDataPrint (emon_data_sum);
-	// redirect back to stdout
-//	fflush(stdout);
-//	rst = dup2(save_stdout, 1);
-//	if (rst < 0) {
-//		fprintf(stderr, "Error redirecting back stdout!\n");
-//		return;
-//	}
-//	close(emon_api_fd);
-#endif
-
+    measure_print_data_hook();
 
 
 	// Close measurement libraries
 	evaluation_close();
-#ifdef HAS_EMON_API
-	EMONStop(&emon_handle);
-#endif
-#ifdef HAS_SNIPER_API
-	SimRoiEnd();
-#endif
-
+	measure_stop_hook();
 
 	return ;
 }

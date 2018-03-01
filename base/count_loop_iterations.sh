@@ -29,6 +29,8 @@ cd $binary_folder
 # Create the datasize file for codelet run
 echo "${repetition} ${data_size}" > ./codelet.data
 
+#Ensure basic probe is used
+LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 
 if [[ "$USE_OLD_DECAN" == "0" ]]
 then
