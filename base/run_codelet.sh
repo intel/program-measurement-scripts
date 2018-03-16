@@ -112,13 +112,13 @@ do
 	then
 	    for cc in ${nc_all_cores}
 	    do
-		cmd=$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
+		cmd="$NUMACTL -m $XP_NODE -C ${cc} ${run_prog}"
 		echo $cmd
 		bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null &
 	    done
 	    
 	fi
-	cmd=${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+	cmd="${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}"
 	echo -n $cmd
 	bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null
     fi
