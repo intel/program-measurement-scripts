@@ -45,7 +45,7 @@ do
 	echo "$current_repetitions $desired_size" > codelet.data
 	saved_repetitions=$current_repetitions
 
-	res=$( /usr/bin/time -f %e ./${binary_name} 2>&1 )
+	res=$(LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} /usr/bin/time -f %e ./${binary_name} 2>&1 )
 	val_res=$?
 
 	if [[ "$val_res" != "0" ]]
