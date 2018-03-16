@@ -114,13 +114,13 @@ do
 	    do
 		cmd=$NUMACTL -m $XP_NODE -C ${cc} ${run_prog} 
 		echo $cmd
-		bash -c $cmd >& /dev/null &
+		bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null &
 	    done
 	    
 	fi
 	cmd=${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
 	echo -n $cmd
-	bash -c $cmd >& /dev/null
+	bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null
     fi
     echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
