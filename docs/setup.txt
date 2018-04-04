@@ -1,57 +1,85 @@
-1	Some pre-steps to take before checking out the packages:
-	A.	Ensure various packages are installed
-		o	sudo apt-get install bc cpufrequtils time numactl
-	B.	Ensure cpufreq-set has SETUID set
-		o	sudo chmod u+s `which cpufreq-set`
-		o	Ensure OS can fix CPU frequencies via userspace power governor (see below)
-	C.	Install EMON package (with API support) to /opt/intel/sep.  (The script does look for /opt/intel/sep so make sure the package is installed there.  You can use a softlink to point to the real location if desired)
-		•	tar xvf emon_api_linux_alpha2_1.tar.bz2
-		•	sudo cp -R emon_api_linux_alpha2_1 /opt/intel/sep
-		•	cd /opt/intel/sep/sepdk/src
-		•	sudo ./build-driver
-		•	sudo ./ins-mod-sep -g emon-user-group
-		•	Later as a regular user to run the script, you need to do the following command to load the enviromental variables to run it:
-    		•	source /opt/intel/sep/sep_var.sh
-    D.	Install Intel C/C++/Fortran compilers and source the corresponding variable setting scripts so the compilers are in your PATH.
+1 Some pre-steps to take before checking out the packages:
+  A.  Ensure various packages are installed
+    o sudo apt-get install bc cpufrequtils time numactl
+  B.  Ensure cpufreq-set has SETUID set
+    o sudo chmod u+s `which cpufreq-set`
+    o Ensure OS can fix CPU frequencies via userspace power governor (see below)
+  C.  Install EMON package (with API support) to /opt/intel/sep. 
+      (The script does look for /opt/intel/sep, so make sure the package is 
+      installed there. You can use a softlink to point to the real 
+      location if desired.)
+    • tar xvf emon_api_linux_alpha2_1.tar.bz2
+    • sudo cp -R emon_api_linux_alpha2_1 /opt/intel/sep
+    • cd /opt/intel/sep/sepdk/src
+    • sudo ./build-driver
+    • sudo ./ins-mod-sep -g emon-user-group
+    • Later as a regular user to run the script, you need to do the following 
+      command to load the enviromental variables to run it:
+        • source /opt/intel/sep/sep_var.sh
+  D.  Install Intel C/C++/Fortran compilers and source the corresponding 
+      variable setting scripts so the compilers are in your PATH.
 
 Note that 
-•	for B, there are two ways to enable OS to manage CPU frequencies
-    1) Change the BIOS of the system so that P-States will be managed by OS.  The exact menu choice is machine dependent.
-    2) If 1) does not work, disable the intel_pstate driver by adding "intel_pstate=disable" to your kernel boot line.
-    To double check whether you are in good shape, look at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see whether userspace governor is in the list. E.g.
-	cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
-	conservative ondemand userspace powersave performance
-•	for C (EMON installation), the step assumed you created a user group to run EMON and you add those who want to run EMON to this group.  It does not have to be called “emon-user-group”.
-•	For many of our previous experiments, we turn off Hyperthreading.  So if you want to reproduce our previous results, you may want to do that off in BIOS too.  However, for running experiments in general, you can keep it on.
+• For B, there are two ways to enable OS to manage CPU frequencies
+    1) Change the BIOS of the system so that P-States will be managed by OS. 
+       The exact menu choice is machine dependent.
+    2) If 1) does not work, disable the intel_pstate driver by adding 
+       "intel_pstate=disable" to your kernel boot line.
+  To double check whether you are in good shape, look 
+  at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see 
+  whether userspace governor is in the list. g.g.
+  cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+  conservative ondemand userspace powersave performance
+• For C (EMON installation), the step assumed you created a user group to 
+  run EMON and you add those who want to run EMON to this group. 
+  (It does not have to be called “emon-user-group”.)
+• For many of our previous experiments, we turn off hyperthreading.  
+  If you want to reproduce our previous results, you may want to do that off in 
+  BIOS too.  However, for running experiments in general, you can keep it on.
 
-After the above presteps, you should be ready to install the experimental scripts and our NR-codelet set.  Below I am assuming a common directory <home> containing both the experiment script and codelets as follows:
+After the above presteps, you should be ready to install the experimental 
+scripts and our NR-codelet set.  Below I assume a common directory <home> 
+containing both the experiment script and codelets as follows:
 
 <home>
-•	cape-experiment-scripts
-•	nr-codelets
+• cape-experiment-scripts
+• nr-codelets
 
-2	Checkout/initialization steps
-	E.	Checkout Cape-Experiment-Script
-		•	cd <home>
-		•	git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
+2 Checkout/initialization steps
+  E.  Checkout Cape-Experiment-Script
+    • cd <home>
+    • git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
 
-	F.	Checkout NR-codelets
-		•	cd <home>
-		•	git clone git@gitlab.com:davidwong/nr-codelets.git
+  F.  Checkout NR-codelets
+    • cd <home>
+    • git clone git@gitlab.com:davidwong/nr-codelets.git
 
-	G.	Build probe
-		•	cd <home>/cape-experiment-scripts/utils/codeletProbe
-		•	make
+  G.  Build probe
+    • cd <home>/cape-experiment-scripts/utils/codeletProbe
+    • make
 
-3	Test steps
-Now you should be ready to start running the experiments.  There are many examples under cape-experiment-scripts/vrun.  (Some are outdated though).  To try the experiment script on your system, you can
-	•	cd <home>/cape-experiment-scripts/vrun
-	•	./vrun_fxilab163_FP.sh "test"
+3 Test steps
+Now you should be ready to start running the experiments.  There are many 
+examples under cape-experiment-scripts/vrun. (Some are outdated.) 
+To try the experiment script on your system, you can run the following command:
+  • cd <home>/cape-experiment-scripts/vrun
+  • ./vrun_fxilab163_FP.sh "test"
 
-Note that the “Test” argument is the description for the experiment.  You can put whatever meaningful to you.  It will be saved under cape-experiment-scripts/vrun/log.*.txt file.  It is useful to look at that file to look for experimental ID when you want to revisit some old runs in the future.  After running the script, if it is successful, you will see something like:
+Note that the “Test” argument is the description for the experiment. 
+You can put whatever meaningful to you. 
+It will be saved under cape-experiment-scripts/vrun/log.*.txt file. 
+It is useful to look at that file to look for experimental ID when you want to 
+revisit some old runs in the future. After running the script, if it is 
+successful, you will see something like the following:
+
 ------------------------------------------------------------
 Cape data saved in: /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv
 ./vrun_fxilab163_FP.sh finished in 00:34:19 at Tue Jan 16 14:55:39 CST 2018
 
-Here the data file /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv contains the experimental data.
+It may be best to make sure that all steps of the script finished successfully 
+as well by checking the output of the script as it runs (data being saved 
+doesn't necessarily mean the run was good).
 
+Here the data file 
+/localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv 
+contains the experimental data.
