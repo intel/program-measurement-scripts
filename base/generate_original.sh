@@ -3,8 +3,7 @@
 
 source $CLS_FOLDER/const.sh
 
-if [[ "$nb_args" != "4" ]]
-then
+if [[ "$nb_args" != "4" ]]; then
 	echo "ERROR! Invalid arguments (need the binary's folder path, the generated binary's name, the function's name and build path)."
 	exit -1
 fi
@@ -32,8 +31,7 @@ cd ${build_folder}
 #cd "$binary_folder"
 
 
-if [[ "$ENABLE_SEP" == "1" ]]
-then
+if [[ "$ENABLE_SEP" == "1" ]]; then
     make clean ENABLE_SEP=sep ${emon_api_flags} all
 else
     # if [[ "$ACTIVATE_EMON_API" == "1" ]]
@@ -51,15 +49,14 @@ else
     # 	mv "$binary_name" "$codelet_name"_emon_api
     # 	cp "$codelet_name"_emon_api "$binary_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
     # fi
-    # This will regenerate original binary without EMON API
+    # The above build steps would be outdated but preserve for reference (esp. for windows verions)
     make LIBPATH="${BASE_PROBE_FOLDER}" clean all
 fi
 
 # &> /dev/null
 res=$?
 
-if [[ "$res" != "0" ]]
-then
+if [[ "$res" != "0" ]]; then
 	echo "ERROR! Make did not succeed."
 	exit -1
 fi
