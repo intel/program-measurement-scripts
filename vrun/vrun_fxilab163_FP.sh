@@ -2377,7 +2377,7 @@ name2sizes[hqr-sq-no-tail_12_sVS_se]="800 1000 1200 1400 1600 1800 2000 2200 240
 
 
 
-name2sizes[balanc_3_de]="8000"
+name2sizes[balanc_3_de]="8000 80000"
 name2sizes[balanc_3_sVS_de]="80000000"
 name2sizes[elmhes_10_de]="80000000"
 name2sizes[elmhes_10_sVS_de]="80000000"
