@@ -60,6 +60,7 @@ launchIt () {
     export LOG_FOLDER=$(dirname $(readlink -f $0))/logs
     export RUN_FOLDER=${LOG_FOLDER}/runs
 
+    touch /tmp/vrun.lock
     (
 	echo "Pending executing ${launch_script} at $(date)..."
 	flock 888 || exit 1;
@@ -90,7 +91,7 @@ launchIt () {
 	
 	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})"     
 	
-    ) 888>/tmp/vrun.${USER}.lock
+    ) 888</tmp/vrun.lock
 }
 
 launchAll() {
