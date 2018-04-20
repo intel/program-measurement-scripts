@@ -66,28 +66,33 @@ then
 	powercfg.exe -SETACTIVE SCHEME_MIN
 	(( actual_frequency=$(wmic cpu get CurrentClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
     else
-		# Adapt to Intel FX
+    # Adapt to Intel FX
 	for ((i=0;i<$(nproc);i++))
 	  do
-	  # Both cpufreq-set and cpupower should have SETUID bit set so SUDO is not needed here.
-	  if [ ! -z $(which cpufreq-set) ]; then 
+	  # check if cpufreq-set exists and use it if it does
+	  which cpufreq-set &> /dev/null
+	  res=$?
+	  
+	  if [ "${res}" == "0" ]; then 
+	      # cpufreq-set should have SETUID bit set so SUDO is not needed here.
 	      cpufreq-set -c $i -g userspace
 	      cpufreq-set -c $i -f $target_frequency
 	  else  
-	      cpupower -c $i frequency-set -g userspace
-	      cpupower -c $i frequency-set -f $target_frequency
+	      # cpupower should have SETUID bit but here for the case it is not possible.
+	      sudo cpupower -c $i frequency-set -g userspace
+	      sudo cpupower -c $i frequency-set -f $target_frequency
 	  fi
-
 	done    
-		#       echo "userspace" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
-		# Adapt to Intel FX
-		#       echo "$target_frequency" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed > /dev/null
-		# Adapt to Intel FX
+	
+	#echo "userspace" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null
+	# Adapt to Intel FX
+	#echo "$target_frequency" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed > /dev/null
+	# Adapt to Intel FX
 	actual_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
-		#       actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
+	#actual_frequency=$( sudo cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
 	echo "Actual frequency: '$actual_frequency'"
 	
-		#Potential fix for Silvermont CPI issues?
+	#Potential fix for Silvermont CPI issues?
     fi
     sleep 1
     
@@ -139,4 +144,3 @@ else
 fi
 
 exit 0
-

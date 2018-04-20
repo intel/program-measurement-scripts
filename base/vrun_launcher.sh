@@ -1,8 +1,7 @@
 #!/bin/bash -l
 
 # This function should automatically add all the code information under the prefix path
-fill_codelet_maps()
-{
+fill_codelet_maps() {
     cnt_prefix="$1"
     cnt_sizes="$2"
 #    cnt_codelets=($3)
@@ -17,15 +16,13 @@ fill_codelet_maps()
 
 #    echo ALL codelets: ${all_codelets[@]}
 
-
 #    cnt_codelets=(${cnt_codelets[@]/#/${cnt_prefix}\/})
 #    echo CNT_codelets ${cnt_codelets[@]}
 
 #    exit
 
 #    for codelet_path in ${cnt_codelets[@]}
-    for codelet_path in ${all_codelets[@]}
-    do
+    for codelet_path in ${all_codelets[@]}; do
       codelet_name=$(basename ${codelet_path})
 #       echo CN ${codelet_name}
 #       echo CP ${codelet_path}
@@ -33,15 +30,12 @@ fill_codelet_maps()
       name2path+=([${codelet_name}]=${codelet_path})
       name2sizes+=([${codelet_name}]=${cnt_sizes})
     done
-
 }
-
 
 launchIt () {
     source $CLS_FOLDER/const.sh
 
-    if [[ "$nb_args" > "3" ]]
-	then
+    if [[ "$nb_args" > "3" ]]; then
 	echo "ERROR! Invalid arguments (need: launch script, launch fn, run description (optional))."
 	exit -1
     fi
@@ -49,8 +43,7 @@ launchIt () {
     launch_script="$1"
     launch_fn="$2"
 
-    if [[ "$nb_args" < "3" ]]
-	then
+    if [[ "$nb_args" < "3" ]]; then
 	read -p "Enter a brief desc for this run: " rundesc
     else
 	rundesc="$3"
@@ -64,7 +57,6 @@ launchIt () {
 	echo "Pending executing ${launch_script} at $(date)..."
 	flock 888 || exit 1;
 	echo "Start executing ${launch_script} at $(date)..."
-
 	START_VRUN_SH=$(date '+%s')
 
 	run_dir=${RUN_FOLDER}/${START_VRUN_SH}
@@ -73,6 +65,7 @@ launchIt () {
 	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} started at $(date --date=@${START_VRUN_SH})"
 	${LOGGER_SH} ${START_VRUN_SH} "Purpose of run: ${rundesc}"
 	${LOGGER_SH} ${START_VRUN_SH} "Hostname: ${HOSTNAME} (${REALHOSTNAME})"
+	# starts run
 	${launch_fn} ${START_VRUN_SH}
 
 	# Combining all run cape data
@@ -84,20 +77,17 @@ launchIt () {
 
 	${LOGGER_SH} ${START_VRUN_SH} "Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
 
-
 	END_VRUN_SH=$(date '+%s')
 	ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
 	
 	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})"     
-	
     ) 888>/tmp/vrun.lock
 }
 
 launchAll() {
     source $(dirname $0)/const.sh
 
-    if [[ "$nb_args" > "3" ]]
-	then
+    if [[ "$nb_args" > "3" ]]; then
 	echo "ERROR! Invalid arguments (need: launch script, launch fn, run description (optional))."
 	exit -1
     fi
@@ -143,24 +133,19 @@ runLoop() {
     local prefetchers="$6"
     local counter_list_override="$7"
 
-# uses global variables assumed below
-# declare -gA name2path
-# declare -gA name2sizes
-# declare -ga run_codelets
-
    cls_run_count_file=$CLS_FOLDER/vrun.cls_run_count
 
-function intHandler() {
+  function intHandler() {
     ${LOGGER_SH} ${START_VRUN_SH} "Experiment interrupted"
-  ${COMBINE_CAPE_DATA_SH} ${run_dir}
-  ${LOGGER_SH} ${START_VRUN_SH} "Partial Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
-  ${LOGGER_SH} ${START_VRUN_SH} "CLS run count saved in $cls_run_count_file (@$(cat $cls_run_count_file))"
-  exit
-}
+    ${COMBINE_CAPE_DATA_SH} ${run_dir}
+    ${LOGGER_SH} ${START_VRUN_SH} "Partial Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
+    ${LOGGER_SH} ${START_VRUN_SH} "CLS run count saved in $cls_run_count_file (@$(cat $cls_run_count_file))"
+    exit
+  }
 
     set -o pipefail # make sure pipe of tee would not reset return code.
     
-    trap intHandler INT
+    trap intHandler INT # setup interrupt handler
  
     echo RUN codelets : ${run_codelets[@]}
 
@@ -176,8 +161,7 @@ function intHandler() {
 
     start_codelet_loop_time=$(date '+%s')    
     num_codelets=0
-    for codelet in ${run_codelets[@]}
-      do
+    for codelet in ${run_codelets[@]}; do
       sizes_arr=(${name2sizes[${codelet}]})
       ((num_codelets+=${#sizes_arr[@]}))
     done
@@ -190,27 +174,24 @@ function intHandler() {
     frequencies_arr=(${frequencies})
     ((num_codelets*=${#frequencies_arr[@]}))
 
-
-
     codelet_id=0
-    for codelet in ${run_codelets[@]}
-      do
+    for codelet in ${run_codelets[@]}; do
       codelet_path=${name2path[${codelet}]}
       sizes=${name2sizes[${codelet}]}
-#  echo ${codelet_path}
-#  ls ${codelet_path}
-#  echo "SS: ${sizes}"
+      #echo ${sizes}
+      #echo ${codelet_path}
+      #ls ${codelet_path}
+      #echo "SS: ${sizes}"
       ((count++))
       echo "Launching CLS on $codelet_path  (${count} of ${#run_codelets[@]}) ...for sizes $sizes"
       
       ${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
       
 
-    for sz in ${sizes[@]}
-      do
+    for sz in ${sizes[@]}; do
       ((cls_run_count++))
+
       if [[ $cls_run_count -lt $skip_to_cls_run_count ]]; then
-          
          echo Skipping previously finished CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
          continue
       fi
@@ -219,20 +200,18 @@ function intHandler() {
        echo Executing CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
       $CLS_FOLDER/cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" "${counter_list_override}"| tee "$codelet_path/cls.log"
       res=$?
-      if [[ "$res" != "0" ]]
-	  then
+      if [[ "$res" != "0" ]]; then
 #      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
 	  ${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
       fi
+
       ((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr[@]}*${#frequencies_arr[@]})))
     done
 
 #      sizes_arr=(${sizes})
-
 #      ((codelet_id+=${#sizes_arr[@]}))
 #      ((codelet_id*=${#num_cores_arr[@]}))
 #      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
     done
     rm $cls_run_count_file  # Done
-    
 }

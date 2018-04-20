@@ -1,8 +1,7 @@
 #!/bin/bash 
 
 source $CLS_FOLDER/const.sh
-if [ -f /opt/intel/sep/sep_vars.sh ];
-then
+if [ -f /opt/intel/sep/sep_vars.sh ]; then
     source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
@@ -15,25 +14,13 @@ fi
 
 codelet_folder=$( readlink -f "$1" )
 codelet_name="$2"
-
-
-#data_size=$3
-#memory_load=$4
-#frequency=$5
-
-#variant="$6"
 iterations="$3"
 repetitions="$4"
 start_codelet_loop_time="$5"
 num_codelets="$6"
 cnt_codelet_idx="$7"
-
-
-#num_core="${12}"
-#prefetcher="${13}"
 res_path="$8"
 list_override="$9"
-
 
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
@@ -59,7 +46,6 @@ START_RUN_CODELETS_SH=$(date '+%s')
 echo "run_codelets.sh started at $(date --date=@${START_RUN_CODELETS_SH})."
 #echo "Xp: foler, ${codelet_folder},'$codelet_name', size '$data_size', memload '$memory_load', num_core '$num_core', prefetcher '$prefetcher', frequency '$frequency', variant '$variant', iterations '$iterations', repetitions '$repetitions'."
 
-
 cd $codelet_folder
 echo "Codelet folder: $codelet_folder"
 #res_path="$codelet_folder/$CLS_RES_FOLDER/data_$data_size/memload_$memory_load/freq_$frequency/variant_$variant/numcores_${num_core}"
@@ -71,18 +57,20 @@ NUMACTL=$( which numactl )
 
 rm -f time.out
 
-
-
 echo "Computing CPI and record program dumped metrics..."
 res=""
 pgm_dumped_metric_values=""
 
-if [[ "${variant}" == "ORG" ]]
-    then
-# Run the original program
+
+
+
+if [[ "${variant}" == "ORG" ]]; then
+    # Run the original program
     run_prog="./${codelet_name}"
-#    run_prog_emon_api="./${codelet_name}"_emon_api
-#  Run the same program but with different LD_LIBRARY_PATH (below)
+
+
+    #run_prog_emon_api="./${codelet_name}"_emon_api
+    # Run the same program but with different LD_LIBRARY_PATH (below)
     run_prog_emon_api="./${codelet_name}"
 else
 # Run the DECAN generated program
@@ -91,37 +79,33 @@ else
     run_prog_emon_api="./${codelet_name}_${variant}_hwc"
 fi
 
-for i in $( seq $META_REPETITIONS )
-do
-	#res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
-#	taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
-#	${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
-    #  echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+for i in $( seq $META_REPETITIONS ); do
+    #res=$( taskset -c $XP_CORE ./${codelet_name}_${variant}_cpi | grep CYCLES -A 1 | tail -n 1 )$( echo -e "\n$res" )
+    #taskset -c $XP_CORE ./${codelet_name}_${variant}_hwc 
+    #${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ./${codelet_name}_${variant}_hwc 
+    #echo ${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}
+
     if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    
-	if [[ "$MC_RUN" != "0" ]]
-	then
-	    
-	    for cc in ${nc_all_cores}
-	    do
+	if [[ "$MC_RUN" != "0" ]]; then
+	    for cc in ${nc_all_cores}; do
 		run_cygwin $cc ${run_prog}
 	    done
 	fi
 	run_cygwin $XP_CORE ${run_prog}
+
     else
-	if [[ "$MC_RUN" != "0" ]]
-	then
-	    for cc in ${nc_all_cores}
-	    do
+	if [[ "$MC_RUN" != "0" ]]; then
+	    for cc in ${nc_all_cores}; do
 		cmd="$NUMACTL -m $XP_NODE -C ${cc} ${run_prog}"
 		echo $cmd
 		bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null &
 	    done
-	    
 	fi
 	cmd="${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}"
 	echo -n $cmd
 	bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null
     fi
+
     echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
     if [ -f $PGM_METRIC_FILE ]; then
@@ -131,14 +115,11 @@ done
 
 rm -f time.out
 
-
 res=$( echo "$res" | sort -k1n,1n )
 let "mean_line = ($META_REPETITIONS / 2) + 1"
 mean=$( echo "$res" | awk "NR==$mean_line" )
 echo MEAN: ${mean}
 echo ITERATION: ${iterations}
-
-
 
 normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 
@@ -164,59 +145,51 @@ echo "RES:"$res_path
 
 #echo "Ld library path: '$LD_LIBRARY_PATH'"
 
-
 if [[ "$ACTIVATE_COUNTERS" != "0" ]]
 then
     echo "Running counters..."
     emon -v > "$res_path/emon_info" 
-    #    emon_counters=$( env -i ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
+    #emon_counters=$( env -i ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" )
     echo Build counter list with cmd: ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" "$list_override"
     emon_counters=$( ${CLS_FOLDER}/build_counter_list.sh "$res_path/emon_info" "$list_override")
     echo "COUNTER LIST: " ${emon_counters}
 
 
-      echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
-#		echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
-		#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+    echo ${emon_counters} > "$res_path/${EMON_COUNTER_NAMES_FILE}"
+    #echo "emon -qu -t0 -C\"($emon_counters)\" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &>> $res_path/emon_report"
+    #emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $TASKSET -c $XP_CORE ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 
     START_COUNTER_RUN_TIME=$(date +%s)
     totalRunCnt=0
     eta="NA"
     eta_all="NA"
 
-    for i in $( seq $META_REPETITIONS )
-      do
-      if [[ "ENABLE_SEP" == "1" ]];then
+    for i in $( seq $META_REPETITIONS ); do
+      if [[ "ENABLE_SEP" == "1" ]]; then
 	  emon_counters_to_run=$(./split_counters.sh $emon_counters)
 	  emon_counters_core=$(echo $emon_counters_to_run | tr '#' '\n' | head -n 1)
 	  emon_counters_uncore=$(echo $emon_counters_to_run | tr '#' '\n' | tail -n 1)
-	  
+
 	  echo $emon_counters_core >  "$res_path/core_events_list"
 	  echo $emon_counters_uncore >  "$res_path/uncore_events_list"
 	  
-	  for events in $(echo $emon_counters_core  | tr ${DELIM} ' ')
-	    do
+	  for events in $(echo $emon_counters_core  | tr ${DELIM} ' '); do
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
-#	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ${run_prog} &> "$res_path/emon_execution_log"
+	    #$NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	    LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ${run_prog} &> "$res_path/emon_execution_log"
 	  done
-	  
-	  for events in $(echo $emon_counters_uncore  | tr ${DELIM} ' ')
-	    do	
+
+	  for events in $(echo $emon_counters_uncore  | tr ${DELIM} ' '); do
 	    events_code=$(echo $events | cut -d':' -f1)
 	    events=$(echo $events | cut -d':' -f2)
-#	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-	    $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ${run_prog} &> "$res_path/emon_execution_log"
+	    #$NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	    LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ${run_prog} &> "$res_path/emon_execution_log"
 	  done
-      else
-#	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-#	  emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
-	  if [[ "$ACTIVATE_EMON_API" != "0" ]]
-	  then 
-
-
-
+      else # enable sep else clause
+	  #emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
+	  #emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+	  if [[ "$ACTIVATE_EMON_API" != "0" ]]; then
 	      # Using advanced control so need to generate the file for counters
 	      # Split events into files
 	      rm -f event.* emon_api.out
@@ -240,7 +213,6 @@ then
 		  ((diff=num_core_evfiles - ${#uncore_evfiles[@]}))
 		  uncore_evfiles=(${uncore_evfiles[@]} ${uncore_evfiles[@]:0:$diff})
 	      fi
-
 	      num_uncore_evfiles=${#uncore_evfiles[@]}
 	      num_core_evfiles=${#core_evfiles[@]}
 
@@ -251,16 +223,17 @@ then
 		  exit -1
 	      fi
 
+
 	      # Now run instrumented code for each event set
 	      numRuns=$num_evfiles
 
-
-#	      numRuns=$( ls -l event.* |wc -l )
+	      #numRuns=$( ls -l event.* |wc -l )
 	      runCnt=0
-#	      for evfile in event.*; do
+	      #for evfile in event.*; do
 	      for ((ei=0; ei<$num_evfiles; ei++)); do
 		((runCnt++))
 		((totalRunCnt++))
+
 
 		echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); CnterSet: (${runCnt}/${numRuns}); "
 		echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
@@ -269,14 +242,17 @@ then
 #		echo EVLIST is ${evlist[*]}
 #		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
 		if [[ -f /opt/intel/sep/config/emon_api/emon_api_config_file.xml ]]; then
+		  # output beginning of emon config file
 cat <<EOFBEGIN > emon_api_config_file
 <?xml version="1.0"?>
 <root>
  <emon_config>
 EOFBEGIN
-for newev in ${evlist[*]}; do
-    echo "        <event>$newev</event>" >> emon_api_config_file
-done
+		# add events to emon config file
+		for newev in ${evlist[*]}; do
+		    echo "        <event>$newev</event>" >> emon_api_config_file
+		done
+		# output the end of the emon config file
 cat <<EOFEND >> emon_api_config_file
         <duration>99999999999</duration>
         <start_paused>0</start_paused>
@@ -296,43 +272,40 @@ OUTPUT_FILE=emon_api.out
 EOF
 		fi
 		#	   	emon -stop 2> /dev/null
+
     if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then    		
 	## TODO: Need to double check how Cygwin handles shared library.  May break
         echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 	cat emon_api_config_file
-
-	if [[ "$MC_RUN" != "0" ]]
-	then 
-	    for cc in ${nc_all_cores}
-	    do
+	if [[ "$MC_RUN" != "0" ]]; then
+	    for cc in ${nc_all_cores}; do
 		run_cygwin ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
 	    done
 	fi
+
 	run_cygwin ${XP_CORE} ${run_prog_emon_api} &>> "$res_path/emon_execution_log.core=${cc}" &
 	while ps -W|grep -i emon.exe > /dev/null; do sleep 1; done
-	
-	if [[ "$MC_RUN" != "0" ]]
-	then
-	    while ps -W|grep -i $(basename ${run_prog}) > /dev/null; do sleep 1; done	    
+	if [[ "$MC_RUN" != "0" ]]; then
+	    while ps -W|grep -i $(basename ${codelet_name}) > /dev/null; do sleep 1; done	    
 	fi
     else
-#        echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
+        #echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
-	if [[ "$MC_RUN" != "0" ]]
-	then 
-	    for cc in ${nc_all_cores}
-	    do
+	if [[ "$MC_RUN" != "0" ]]; then
+	    # without emon probe
+	    for cc in ${nc_all_cores}; do
 		LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
 	    done
 	fi
-	
+
+
+	# with emon probe
         LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 	while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
 	
-	if [[ "$MC_RUN" != "0" ]]
-	then 
-	    while pgrep -x $(basename ${run_prog}) -u $USER > /dev/null; do sleep 1; done;
+	if [[ "$MC_RUN" != "0" ]]; then
+	    while pgrep -x $(basename ${codelet_name}) -u $USER > /dev/null; do sleep 1; done;
 	fi
     fi
 
@@ -351,26 +324,23 @@ EOF
 		remainingCodeletRunCnt=$((${num_codelets}-${cnt_codelet_idx}))
 		eta_all=$(sec_to_ddhhmmss $((((${EST_CURRENT_FINISH_TIME}-${start_codelet_loop_time})*${remainingCodeletRunCnt})/${cnt_codelet_idx} + ${eta})))
 		eta=$(sec_to_ddhhmmss $eta)
-	      done
-	  else
-	      if [[ "$MC_RUN" != "0" ]]
-	      then
+	      done # end event file loop
+	  else # activate emon api else clause (i.e. emon api == 0)
+	      if [[ "$MC_RUN" != "0" ]]; then
 		  if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then		  
-	  	      for cc in ${nc_all_cores}
-	  	      do
+	  	      for cc in ${nc_all_cores}; do
 			  (( hexcc=1<<($cc - 1) ))
 			  hexcc=$(printf "%x" $hexcc)
 			  echo cmd /c start /b /affinity $hexcc ${run_prog}
-			  cmd /c start /b /affinity $hexcc ${run_prog}
+			  # TODO: Need to check how to get LD_LIBRARY_PATH works for Cygwin (e.g. whether below line works). 
+			  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} cmd /c start /b /affinity $hexcc ${run_prog}
 	  	      done
 		  else
-		      for cc in ${nc_all_cores}
-	  	      do
+		      for cc in ${nc_all_cores}; do
 			  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &
 	  	      done
 		  fi
 	      fi
-
 
 	      ((totalRunCnt++))
 
@@ -388,12 +358,12 @@ EOF
 	      eta_all=$(sec_to_ddhhmmss $((((${EST_CURRENT_FINISH_TIME}-${start_codelet_loop_time})*${remainingCodeletRunCnt})/${cnt_codelet_idx} + ${eta})))
 	      eta=$(sec_to_ddhhmmss $eta)
 
-	  fi
-      fi
-    done
+	  fi # activate emon api if end
+      fi # enable sep if end
+    done # meta repetitions done
     echo -ne '\n'
 else
-    echo "Skipping counters (not activated)."l 
+    echo "Skipping counters (not activated)."
 fi
 
 # if [[ "$ACTIVATE_COUNTERS" != "0" ]]
@@ -405,7 +375,5 @@ fi
 END_RUN_CODELETS_SH=$(date '+%s')
 ELAPSED_RUN_CODELETS_SH=$((${END_RUN_CODELETS_SH} - ${START_RUN_CODELETS_SH}))
 echo "run_codelets.sh finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_RUN_CODELETS_SH}) seconds at $(date --date=@${END_RUN_CODELETS_SH})."
-
-
 
 exit 0
