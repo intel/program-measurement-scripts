@@ -90,7 +90,7 @@ launchIt () {
 	
 	${LOGGER_SH} ${START_VRUN_SH} "${launch_script} finished in $(${SEC_TO_DHMS_SH} ${ELAPSED_VRUN_SH}) at $(date --date=@${END_VRUN_SH})"     
 	
-    ) 888>/tmp/vrun.lock
+    ) 888>/tmp/vrun.${USER}.lock
 }
 
 launchAll() {
