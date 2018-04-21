@@ -25,6 +25,20 @@ num_cores="${10}"
 prefetchers="${11}"
 counter_list_override="${12}"
 
+# TO BE DELETED
+#command_line_args="${13}"
+#rep_prefix="${14}"
+#
+#if [[ -n "${command_line_args[@]}" ]]; then
+#  # hack to get rid of extra whitespace
+#  data_sizes=$(echo "${data_sizes}" | awk '$1=$1')
+#  # replace whitespace with :
+#  data_sizes=${data_sizes// /:}
+#  # replace / with _
+#  data_sizes=${data_sizes////_}
+#  #echo ${data_sizes}
+#fi
+
 # Assume to be successful in the beginning
 loop_detection_success=1
 
@@ -44,11 +58,11 @@ find_num_repetitions_and_iterations () {
     echo "Adjusting codelet parameters for the $variant variant ...${codelet_folder}"
 
     if [[ "${variant}" == "ORG" ]]; then
-#	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 	$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 
     else
-#	echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-#	env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	#echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+	#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 	$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
     fi
 
@@ -64,7 +78,7 @@ find_num_repetitions_and_iterations () {
     echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 
     echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
-#    loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+    #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
     echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "|" grep ${DELIM}
     loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
     res=$?
@@ -442,11 +456,12 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 			    # Generate the codelet data file for measurment.  Need to compute iteration count.
 			    #echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 			    echo "$repetitions $data_size" > "${build_folder}/codelet.data"
+			    command_line_args=$(parameter_set_decoding "$build_folder/$codelet_name" "$data_size" "$repetitions" )
 
 			    #./run_coelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 			    ((cnt_codelet_idx++))
-			    echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} \"${counter_list_override}\"
-			    $CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} "${counter_list_override}"
+			    echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} \"${counter_list_override}\" \"${command_line_args}\"
+			    $CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} "${counter_list_override}" "${command_line_args}"
 
 			    res=$?
 			    if [[ "$res" != "0" ]]; then

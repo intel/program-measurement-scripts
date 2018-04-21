@@ -6,9 +6,9 @@ if [ -f /opt/intel/sep/sep_vars.sh ]; then
 fi
 
 
-if [[ "$nb_args" != "9" ]]
+if [[ "$nb_args" != "10" ]]
 then
-	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name,  number of iterations, repetitions,...)."
+	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name,  number of iterations, repetitions, and command line args)."
 	exit -1
 fi
 
@@ -24,6 +24,7 @@ list_override="$9"
 
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
+command_line_args="${10}"
 
 nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 
@@ -61,17 +62,24 @@ echo "Computing CPI and record program dumped metrics..."
 res=""
 pgm_dumped_metric_values=""
 
+# TO BE REMOVED 
+# creating repetition command line argument if necessary
+#if [ -n "${rep_prefix}" ]; then
+#  repappend="${rep_prefix}${repetitions}"
+#else
+#  repappend=""
+#fi
 
 
 
 if [[ "${variant}" == "ORG" ]]; then
     # Run the original program
-    run_prog="./${codelet_name}"
+    run_prog="./${codelet_name} ${command_line_args}"
 
 
     #run_prog_emon_api="./${codelet_name}"_emon_api
     # Run the same program but with different LD_LIBRARY_PATH (below)
-    run_prog_emon_api="./${codelet_name}"
+    run_prog_emon_api="./${codelet_name} ${command_line_args}"
 else
 # Run the DECAN generated program
     run_prog="./${codelet_name}_${variant}_hwc"
@@ -139,6 +147,10 @@ if [ -f $PGM_METRIC_FILE ]; then
     pgm_metric_mean=$( echo "$pgm_dumped_metric_values" | awk "NR==$mean_line" )
     echo $pgm_dumped_metric_names > $res_path/pgm_metrics.csv
     echo $pgm_metric_mean >> $res_path/pgm_metrics.csv
+fi
+
+if [ -f arguments.csv ]; then
+    cp arguments.csv  $res_path/arguments.csv
 fi
 
 echo "RES:"$res_path
@@ -305,7 +317,9 @@ EOF
 	while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
 	
 	if [[ "$MC_RUN" != "0" ]]; then
-	    while pgrep -x $(basename ${codelet_name}) -u $USER > /dev/null; do sleep 1; done;
+	    while pgrep -x $(basename ${codelet_name}) -u $USER > /dev/null; do 
+		sleep 1; 
+	    done
 	fi
     fi
 

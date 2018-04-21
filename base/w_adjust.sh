@@ -36,10 +36,20 @@ do
 	fi
 
 	echo "Trying number of repetitions = $current_repetitions"
-	echo "$current_repetitions $desired_size" > codelet.data
+#	echo "$current_repetitions $desired_size" > codelet.data
+	command_line_args=$(parameter_set_decoding "$binary_path" "$desired_size" "$current_repetitions" )
 	saved_repetitions=$current_repetitions
 
-	res=$(LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} /usr/bin/time -f %e ./${binary_name} 2>&1 )
+  # TO BE DELETED BELOW after confirming parameter_set_decoding works.
+  # create the command line argument (if necessary) for specifying number of 
+  # repetitions
+  #if [ -n "${rep_prefix}" ]; then
+  #  repappend="${rep_prefix}${current_repetitions}"
+  #else
+  #  repappend=""
+  #fi
+
+	res=$(LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} /usr/bin/time -f %e ./${binary_name} ${command_line_args} 2>&1 )
 	val_res=$?
 
 	if [[ "$val_res" != "0" ]]; then

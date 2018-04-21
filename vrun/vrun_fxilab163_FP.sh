@@ -1,11 +1,24 @@
 #!/bin/bash -l
 
 source ../base/const.sh
-source ../base//vrun_launcher.sh
+source ../base/vrun_launcher.sh
 
 #PUT compiler source stuff here
 source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
 
+parameter_set_decoding () {
+  codelet=$1
+  datasize=$2
+  repetition=$3
+  rundir=$4
+ 
+# Create the datasize file for codelet run
+  echo "${repetition} ${datasize}" > ./codelet.data
+  echo -e "arraysize\n${datasize}" > arguments.csv
+  echo ""
+}
+
+export -f parameter_set_decoding
 
 run() {
     runId=$@

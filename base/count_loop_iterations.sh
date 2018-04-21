@@ -17,12 +17,24 @@ set +x
 
 declare -A count_values
 
+
+
 #echo "Generation of splitncount for '$binary_path' ('$function_name')"
 
 cd $binary_folder
 
+command_line_args=$(parameter_set_decoding "$binary_path" "$data_size" "$repetition" )
+
 # Create the datasize file for codelet run
-echo "${repetition} ${data_size}" > ./codelet.data
+#echo "${repetition} ${data_size}" > ./codelet.data
+
+# No need to provide below.  Handled in the parameter_set_decoding function
+# creating string to pass into program for case of passing through command line
+#if [ -n "${rep_prefix}" ]; then
+#    repappend="${rep_prefix}${repetition}"
+#else
+#    repappend=""
+#fi
 
 # Ensure basic probe is used
 LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
@@ -30,11 +42,11 @@ LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 if [[ "$USE_OLD_DECAN" == "0" ]]; then
   # Filling new MAQAO implementation
   # Get a list of loop id for the codelet
-    loop_ids=$( $MAQAO analyze -ll $binary_path  fct=$function_name loop=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*| \([^ ]*\) .*/\1/' )
-    echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path  fct=$function_name | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
+    loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*| \([^ ]*\) .*/\1/' )
+    echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
   #echo ${loop_ids[*]}
 else
-    $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "$function_name" "splitncount" "$UARCH" &>/dev/null
+    $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "${command_line_args}" "$function_name" "splitncount" "$UARCH" &>/dev/null
     $DECAN "$DECAN_CONFIGURATION" &>/dev/null
 
     echo HERE > /tmp/count.out.txt
@@ -65,10 +77,10 @@ fi
 
 if [[ "$USE_OLD_DECAN" == "0" ]]; then
     for loop_id in $loop_ids; do
-      #$MAQAO vprof lid=$loop_id -- $binary_path  >/tmp/out.$loop_id
+      #$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
       #count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
-      count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
-      echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path  |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
+      count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
+      echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
       echo "COUNT: " ${count_values[$loop_id]} 1>&2
       done
 else
