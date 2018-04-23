@@ -18,7 +18,83 @@ parameter_set_decoding () {
   echo ""
 }
 
+build_codelet () {
+  codelet_folder="$1"
+  codelet_name="$2"
+  build_folder="$3"
+
+  # Simple codelet compilation
+  binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+  echo -e "Binary name \t'$binary_name'"
+# ensured it is at the same level as codelet_folder so that relative paths in Makefile is preserved it will be moved to the build_folder 
+# after generating original
+  build_tmp_folder=$(mktemp -d --tmpdir=${codelet_folder}/..)
+  
+  
+  echo "Generating codelet '$codelet_folder/$codelet_name'..."
+  
+  echo "Compiler information using -v flags"
+  ifort -v
+  icc -v
+  icpc -v
+  
+  build_files=$(find ${codelet_folder} -maxdepth 1 -type f -o -type l)
+  cp ${build_files} ${build_tmp_folder}
+  
+  cd ${build_tmp_folder}
+  
+  if [[ "$ENABLE_SEP" == "1" ]]; then
+      make clean ENABLE_SEP=sep ${emon_api_flags} all
+  else
+    # if [[ "$ACTIVATE_EMON_API" == "1" ]]
+    # then
+    # 	if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+    # 	    make clean LIBS="measure_emon_api_dca.lib prog_api.lib" LIBPATH="-LIBPATH:../../../../../cape-common/lib -LIBPATH:z:/software/DCA/EMON_DCA_engineering_build_v01/lib64" all
+    # 	else
+    # 	    make clean LIBS="-lmeasure_emon_api -lprog_api -L/opt/intel/sep/bin64" LIBPATH="${PROBE_FOLDER}" all
+    # 	fi
+    # 	if [[ "$?" != "0" ]]
+    # 	    then
+    # 	    echo "ERROR! Make did not succeed in creating EMON API instrumented codelet."
+    # 	    exit -1
+    # 	fi
+    # 	mv "$binary_name" "$codelet_name"_emon_api
+    # 	cp "$codelet_name"_emon_api "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+    # fi
+    # The above build steps would be outdated but preserve for reference (esp. for windows verions)
+      make LIBPATH="${BASE_PROBE_FOLDER}" clean all
+  fi
+  
+# &> /dev/null
+  res=$?
+  
+  if [[ "$res" != "0" ]]; then
+      echo "ERROR! Make did not succeed."
+      exit -1
+  fi
+  
+  mv "$binary_name" "$codelet_name"
+  res=$?
+  
+  if [[ "$res" != "0" ]]; then
+      echo "ERROR! Move did not succeed."
+      exit -1
+  fi
+  
+  
+  if [[ -e "codelet.o" ]]; then
+      cp "codelet.o" "$codelet_folder/$CLS_RES_FOLDER/"	
+  fi
+  
+# Should be safe because $binary_name was already renamed to $codelet_name
+  make clean &> /dev/null
+  
+  echo "Codelet generation was successful."
+  mv ${build_tmp_folder} "${build_folder}"
+}
+
 export -f parameter_set_decoding
+export -f build_codelet
 
 run() {
     runId=$@
@@ -2390,7 +2466,7 @@ name2sizes[hqr-sq-no-tail_12_sVS_se]="800 1000 1200 1400 1600 1800 2000 2200 240
 
 
 
-name2sizes[balanc_3_de]="8000 80000"
+name2sizes[balanc_3_de]="8000"
 name2sizes[balanc_3_sVS_de]="80000000"
 name2sizes[elmhes_10_de]="80000000"
 name2sizes[elmhes_10_sVS_de]="80000000"

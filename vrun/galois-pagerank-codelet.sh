@@ -3,16 +3,85 @@
 source ../base/const.sh
 source ../base/vrun_launcher.sh
 
-module load atc/1.5
+#module load atc/1.5
+
+parameter_set_decoding () {
+  codelet=$1
+  datasize=$2
+  repetition=$3
+ 
+  # : => ' ' using sed
+  cmdlineargs=$(echo $datasize | sed 's/:/ /g')
+  
+  # output csv of command line arguments
+  printf "" > " ./arguments.csv"
+
+  for label in ${CMDLINELABELS}; do
+      printf "%s," "${label}" >> " ./arguments.csv"
+  done
+  
+  printf "\n" >> " ./arguments.csv"
+
+  for value in ${cmdlineargs}; do
+      printf "%s," "${value}" >> " ./arguments.csv"
+  done
+  
+  echo $cmdlineargs -runs=$repetition
+}
+
+build_codelet () {
+  codelet_folder="$1"
+  codelet_name="$2"
+  build_folder="$3"
+
+# attempts to find BUILD_SCRIPT in conf file (signifies a custom build script)
+  grep "BUILD_SCRIPT" "$codelet_folder/codelet.conf" &> /dev/null
+  BUILD_SCRIPT_FOUND=$?
+  
+  
+  if [ $BUILD_SCRIPT_FOUND == "0" ]; then
+  # codelet has specific build script located in build directory; use it
+      echo "Moving to codelet directory and using codelet-defined build_codelet.sh script"
+      
+  # move to that directory and run
+      pushd ${codelet_folder}
+      ${codelet_folder}/build_codelet.sh ${codelet_folder}/${CLS_RES_FOLDER}
+      popd
+      
+      echo "Moving built codelet to correct directory"
+      
+      echo mkdir ${build_folder}
+      mkdir ${build_folder} &> /dev/null
+      
+  # move binary to correct spot and prep "build folder" as well
+      mv ${codelet_folder}/${codelet_name} ${build_folder}
+      res=$?  
+      if [[ "$res" != "0" ]]; then
+	  echo "ERROR! Move did not succeed."
+	  exit -1
+      fi
+      
+#   echo "Copying binary folder to a build folder"
+#   # copy binary folder to a "build" folder
+#   cp -r $codelet_folder/$CLS_RES_FOLDER/${BINARIES_FOLDER} ${build_folder} 
+#   res=$?  
+#   if [[ "$res" != "0" ]]; then
+#     echo "ERROR! Copy of binary to build8 failed"
+#     exit -1
+#   fi
+  fi
+}
+
+
+export -f parameter_set_decoding
+export -f build_codelet
 
 run() {
   runId=$@
   
   variants="ORG"
-  linear_sizes="10000"
+  linear_sizes="0"
   memory_loads="0"
-  # TODO make this work somehow; technically saying -t=28 means only 28; more
-  # cores without specifying -t is pointless
   num_cores="1"
   prefetchers="0"
   frequencies="2200000"
@@ -31,13 +100,16 @@ run() {
 
   # name2sizes must be specified for correctness/backward compatibility purposes
   # (script only executes if something exists in name2sizes)
-  name2sizes[pagerank_pull_codelet]="CMDLINE"
+#  name2sizes[pagerank_pull_codelet]="-t=28 /net/ohm/export/iss/dist-inputs/transpose/rmat15.tgr;-t=14 /net/ohm/export/iss/dist-inputs/transpose/rmat15.tgr"
+  # Easiest just to have data sizes space delimited following bash convention and bring back command line spacing in parameter_set_decoding()
+  name2sizes[pagerank_pull_codelet]="-t=28:/net/ohm/export/iss/dist-inputs/transpose/rmat15.tgr -t=14:/net/ohm/export/iss/dist-inputs/transpose/rmat15.tgr"
 
-  # specify what to pass into command line
-  USECMDLINE="-t=28 /net/ohm/export/iss/dist-inputs/transpose/rmat15.tgr"
+  # specify that i want to use the command line arguments functionality
+  USECMDLINE="1"
   # specify the prefix to use when specifying repetitions
   REPPREFIX="-runs="
 
+  # lables for the command lines above
   CMDLINELABELS="threads graph_name"
   
   run_codelets=( pagerank_pull_codelet )

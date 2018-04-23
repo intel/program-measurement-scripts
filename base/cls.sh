@@ -186,7 +186,7 @@ ${DECAN} -v
 echo "------------------------------------------------------------"
 echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
-binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 if [[ "$function_name" == "codelet" ]]; then
 	function_name="$function_name"_
@@ -194,7 +194,7 @@ fi
 #function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 
 echo -e "Codelet name \t'$codelet_name'"
-echo -e "Binary name \t'$binary_name'"
+
 echo -e "Function name \t'$function_name'"
 
 ################################################################################
@@ -209,9 +209,12 @@ echo "Recreating results folder..."
 mkdir "$codelet_folder/$CLS_RES_FOLDER" &> /dev/null
 build_folder=$codelet_folder/$CLS_RES_FOLDER/build
 
-# ensured it is at the same level as codelet_folder so that relative paths in Makefile is preserved it will be moved to the build_folder 
-# after generating original
-build_tmp_folder=$(mktemp -d --tmpdir=${codelet_folder}/..)
+# TO DELETE.  Handled in run_codelet.sh
+# move created arguments csv to folder if it exists
+#if [ -a "${codelet_folder}/arguments.csv" ]; then
+#    mv "${codelet_folder}/arguments.csv" "$codelet_folder/$CLS_RES_FOLDER/"
+#fi
+
 
 echo "$codelet_name" > "$codelet_folder/$CLS_RES_FOLDER/codelet_name"
 echo "$META_REPETITIONS" > "$codelet_folder/$CLS_RES_FOLDER/meta_repetitions"
@@ -235,15 +238,15 @@ fi
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
-echo $CLS_FOLDER/generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
-$CLS_FOLDER/generate_original.sh $codelet_folder $binary_name $codelet_name ${build_tmp_folder}
+echo $CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder}
+$CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder}
 res=$?
-if [[ "$res" != "0" ]]
-then
+if [[ "$res" != "0" ]]; then
 	echo "Cancelling CLS."
 	exit -1
 fi
-mv ${build_tmp_folder} "${build_folder}"
+echo "Contents of build folder:"
+ls $build_folder
 
 # codelet.o if exist will be stored under cls_res_folder
 # program executable file is at ${build_folder}/${codelet_name}
