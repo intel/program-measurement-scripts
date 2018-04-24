@@ -37,7 +37,7 @@ do
 
 	echo "Trying number of repetitions = $current_repetitions"
 #	echo "$current_repetitions $desired_size" > codelet.data
-	command_line_args=$(parameter_set_decoding "$binary_path" "$desired_size" "$current_repetitions" )
+	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" )
 	saved_repetitions=$current_repetitions
 
   # TO BE DELETED BELOW after confirming parameter_set_decoding works.

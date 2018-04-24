@@ -1,6 +1,9 @@
 1 Some pre-steps to take before checking out the packages:
   A.  Ensure various packages are installed
     o sudo apt-get install bc cpufrequtils time numactl
+    o sudo apt-get install python-dev python-pip python-setuptools build-essential
+    o sudo -E pip install csvkit
+        o Make sure at least version 1.0.3 is used (e.g. csvjson --version should return 1.0.3)
   B.  Ensure cpufreq-set has SETUID set
     o sudo chmod u+s `which cpufreq-set`
     o Ensure OS can fix CPU frequencies via userspace power governor (see below)
