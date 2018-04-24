@@ -76,7 +76,7 @@ launchIt () {
 # 	    cat $f >> ${run_dir}/cape_${START_VRUN_SH}.csv
 # 	done
 
-	${LOGGER_SH} ${START_VRUN_SH} "Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
+#	${LOGGER_SH} ${START_VRUN_SH} "Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
 
 	END_VRUN_SH=$(date '+%s')
 	ELAPSED_VRUN_SH=$((${END_VRUN_SH} - ${START_VRUN_SH}))
@@ -139,7 +139,7 @@ runLoop() {
   function intHandler() {
     ${LOGGER_SH} ${START_VRUN_SH} "Experiment interrupted"
     ${COMBINE_CAPE_DATA_SH} ${run_dir}
-    ${LOGGER_SH} ${START_VRUN_SH} "Partial Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
+#    ${LOGGER_SH} ${START_VRUN_SH} "Partial Cape data saved in: ${run_dir}/cape_${START_VRUN_SH}.csv"
     ${LOGGER_SH} ${START_VRUN_SH} "CLS run count saved in $cls_run_count_file (@$(cat $cls_run_count_file))"
     exit
   }
