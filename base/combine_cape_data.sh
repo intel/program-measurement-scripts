@@ -29,9 +29,12 @@ combined_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.csv
 # in2csv --format ndjson combined.jsonl >> combined.csv
 touch $combined_raw_json
 for f in ${ofiles[@]}; do
+    csvjson -I --stream $f
     csvjson -I --stream $f >> $combined_raw_json
 done
-in2csv --format ndjson $combined_raw_json > ${combined_raw_ofile}
+in2csv -I --format ndjson $combined_raw_json
+in2csv -I --format ndjson $combined_raw_json > ${combined_raw_ofile}
+
 
 echo "Running post-processing script to summarize raw data..."
 $CLS_FOLDER/report_summary.py -i ${combined_raw_ofile} -o ${combined_summary_ofile}
