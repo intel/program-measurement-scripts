@@ -1,4 +1,4 @@
-This document describes how to instrument a new code for analysis.
+This document describes how to instrument a new code for analysis.  It is assumed steps described in docs/setup.txt have been followed before this document.
 
 1) Put the source files to a directory (say /path/to/source/<codelet_name>)
 2) Ensure the code will be compiled successfully by a "make" command, so a Makefile source also be in /path/to/source.  Also the script will do "make clean" to clean up object files.
@@ -38,6 +38,21 @@ CALL measure_start()
  CALL measure_stop()
  
 For C:
+
+measure_init_ ();
+measure_start_ ();
+ 
+    f (...);
+ 
+measure_stop_ ();
+
+For C++:
+
+extern "C" {
+    void measure_init_ ();
+    void measure_start_ ();
+    void measure_stop_ ();
+}
 
 measure_init_ ();
 measure_start_ ();
