@@ -249,8 +249,8 @@ append_counters ${activateCtrs[RESOURCE]} "resource" ${resource_counters}
 append_counters ${activateCtrs[TLB]} "TLB" ${tlb_counters}
 #append_counters $ACTIVATE_SQ_COUNTERS "SuperQ" ${sq_counters}
 append_counters ${activateCtrs[SQ]} "SuperQ" ${sq_counters}
-#append_counters $ACTIVATE_SQ_HISTORGRAM_COUNTERS "SqHisto" ${sq_histogram_counters}
-append_counters ${activateCtrs[SQ_HISTORGRAM]} "SqHisto" ${sq_histogram_counters}
+#append_counters $ACTIVATE_SQ_HISTOGRAM_COUNTERS "SqHisto" ${sq_histogram_counters}
+append_counters ${activateCtrs[SQ_HISTOGRAM]} "SqHisto" ${sq_histogram_counters}
 
 #append_counters $ACTIVATE_LFB_COUNTERS "Lfb" ${lfb_counters}
 append_counters ${activateCtrs[LFB]} "Lfb" ${lfb_counters}
