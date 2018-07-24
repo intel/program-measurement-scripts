@@ -124,10 +124,10 @@ elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
 
     # Do the counting using sep
     if [[ ${command_line_args} == "" ]]; then
-	echo LD_LIBRARY_PATH=${LD_LIBRARY_PATH} sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts 1>&2
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH} sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts
+	echo sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts 1>&2
+	sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts
     else
-	LD_LIBRARY_PATH=${LD_LIBRARY_PATH} sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -args "${command_line_args}" -out sep_counts
+	sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -args "${command_line_args}" -out sep_counts
     fi
     base_binary_name=$(basename $binary_path)
     for loop_id in $loop_ids; do
