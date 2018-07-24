@@ -264,7 +264,12 @@ echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_d
 #echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
 #echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
 # Get the target loop with low repetition to save time.
-try_repetitions=2
+if [[ ${LOOP_ITER_COUNTER} == "SEP" ]]; then
+    # Need bigger repetition for sep/sampling base counting
+    try_repetitions=100
+else
+    try_repetitions=2
+fi
 echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} 
 loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} )
 res=$?

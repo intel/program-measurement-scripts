@@ -76,6 +76,14 @@ else
 fi
 MAQAO="$MAQAO_FOLDER/maqao"
 
+#Vtune
+VTUNE="$(which amplxe-cl)"
+
+LOOP_ITER_COUNTER="MAQAO"
+#LOOP_ITER_COUNTER="VTUNE"
+#LOOP_ITER_COUNTER="SEP"
+LOOP_ITER_SEP_COUNTER_SAV=40009
+
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
 #export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
 #export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
