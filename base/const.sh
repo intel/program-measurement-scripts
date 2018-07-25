@@ -368,7 +368,9 @@ else
     
     #XP_NODE=${XP_NODES[$HOSTNAME]}
     # All cores at the XP_NODE node
-    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
+#    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
+    XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
+
 fi
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
 #XP_CORE=${XP_CORES[$HOSTNAME]}
