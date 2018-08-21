@@ -119,7 +119,9 @@ void create_clones()
 	// read the number of copies
 	input = fopen(copies, "r");
 	if(input != NULL) {
-		fscanf(input, "%d", &nbClones);
+		if (fscanf(input, "%d", &nbClones) != 1) {
+                  nbClones = 1;  // failed to read, set to default
+                }
 		fclose(input);
 	}else{
 		nbClones = 1;
@@ -228,3 +230,20 @@ void increase_repetitions_(int *value)
 	*value = repetitions;
 }
 
+void measure_sec_spin_(unsigned long sec) {
+  unsigned long t1, t2;
+  if (sec < 1)
+    return; //too short
+  rdtscll(t1);
+  sleep(1);
+  rdtscll(t2);
+  unsigned long freq = t2 - t1;
+  sec --;  // already used 1 sec
+
+  unsigned long tt=sec * freq;
+  unsigned long tick, tick1;
+  rdtscll(tick);
+  do {
+    rdtscll(tick1);
+  } while (tick1 - tick < tt);
+}
