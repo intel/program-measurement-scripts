@@ -15,7 +15,7 @@
     • sudo cp -R emon_api_linux_alpha2_1 /opt/intel/sep
     • cd /opt/intel/sep/sepdk/src
     • sudo ./build-driver
-    • sudo ./ins-mod-sep -g emon-user-group
+    • sudo ./insmod-sep -g emon-user-group
     • Later as a regular user to run the script, you need to do the following 
       command to load the enviromental variables to run it:
         • source /opt/intel/sep/sep_var.sh
