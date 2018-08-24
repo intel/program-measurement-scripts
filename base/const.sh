@@ -119,6 +119,10 @@ done
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
+# Below choice is about whether adjusting repetition based on whole program 
+# or kernel only time.  Kernel only should be used and whole program was old approach.
+W_ADJUST="KERNEL_ONLY"
+#W_ADJUST="WHOLE_PGM"
 #CODELET_LENGTH=1
 #CODELET_LENGTH=10
 #CODELET_LENGTH=50
