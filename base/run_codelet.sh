@@ -212,7 +212,7 @@ then
 	      num_uncore_evfiles=${#uncore_evfiles[@]}
    	      num_core_evfiles=${#core_evfiles[@]}
 
-	      if [[ ${num_uncore_evfiles} > ${num_core_evfiles} ]]; then
+	      if (( ${num_uncore_evfiles} > ${num_core_evfiles} )); then
 		while ((${#core_evfiles[@]}*2<num_uncore_evfiles)); do 
 		    core_evfiles=(${core_evfiles[@]} ${core_evfiles[@]})
                 done

@@ -76,6 +76,14 @@ else
 fi
 MAQAO="$MAQAO_FOLDER/maqao"
 
+#Vtune
+VTUNE="$(which amplxe-cl)"
+
+LOOP_ITER_COUNTER="MAQAO"
+#LOOP_ITER_COUNTER="VTUNE"
+#LOOP_ITER_COUNTER="SEP"
+LOOP_ITER_SEP_COUNTER_SAV=40009
+
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
 #export PATH="/opt/intel/Compiler/12.1/bin/:/opt/intel/composer_xe_2011_sp1/bin/:/opt/intel/composer_xe_2011_sp1.9.293/bin/intel64/:/opt/intel/composer_xe_2011_sp1.11.339/bin/intel64/:$PATH:/opt/intel/bin/:/nfs/fx/proj/openmp/compilers/intel/12.1/Linux/install/composer_xe_2011_sp1/bin"
 #export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
@@ -111,6 +119,10 @@ done
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
+# Below choice is about whether adjusting repetition based on whole program 
+# or kernel only time.  Kernel only should be used and whole program was old approach.
+W_ADJUST="KERNEL_ONLY"
+#W_ADJUST="WHOLE_PGM"
 #CODELET_LENGTH=1
 #CODELET_LENGTH=10
 #CODELET_LENGTH=50
@@ -360,7 +372,9 @@ else
     
     #XP_NODE=${XP_NODES[$HOSTNAME]}
     # All cores at the XP_NODE node
-    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
+#    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
+    XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
+
 fi
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
 #XP_CORE=${XP_CORES[$HOSTNAME]}

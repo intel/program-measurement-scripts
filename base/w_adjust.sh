@@ -27,6 +27,8 @@ res=0
 
 cd $codelet_folder
 
+tsc_freq=$(echo $(emon -v |grep "TSC Freq"|cut -f4 -d' ')*1000000|bc -l)
+
 while [ $res -lt $desired_length  -a $current_repetitions -le ${HARD_MAX_REPETITIONS} -a $current_repetitions -ge 0 ]
 do
   	if [[ $current_repetitions -ge ${MAX_REPETITIONS} ]]; then
@@ -60,11 +62,21 @@ do
 
 	res=$( echo -e "$res" | tail -n 1 )
 
-	#echo "Res time: $res"
-	res=$( echo $res | sed "s/\.//g" )
-	#echo "Res without dot: $res"
-	res=$( echo $res | sed 's/^[0]*//' )
-	#echo "Res without 0s: $res"
+	if [[ "$W_ADJUST" == "KERNEL_ONLY" ]]; then
+	    # Use time.out for kernel only timing
+	    ticks=$(tail -n 1 time.out)
+	    # Compute the hundredth sec
+	    res=$(echo $ticks '/' $tsc_freq '* 100'|bc -l)
+	    # Do rounding by eliminating things after decimal
+	    res=$(echo $res |sed 's/\..*//g')
+	else
+	    # Use /usr/bin/time results for whole app measurement
+	    #echo "Res time: $res"
+	    res=$( echo $res | sed "s/\.//g" )
+	    #echo "Res without dot: $res"
+	    res=$( echo $res | sed 's/^[0]*//' )
+	    #echo "Res without 0s: $res"
+	fi
 	echo "Got: ${res} while targeting to ${desired_length}"
 
 	if [[ "$res" == "" ]]; then
