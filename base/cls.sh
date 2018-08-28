@@ -426,6 +426,8 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 		    #     emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 		    # fi
 		    $CLS_FOLDER/set_frequency.sh -c $frequency -m $frequency -M $frequency
+#                   $CLS_FOLDER/set_frequency.sh -c $frequency -m 100000 -M 100000
+#                   $CLS_FOLDER/set_frequency.sh -c $frequency -m 2100000 -M 2100000
 		    res=$?
 		    if [[ "$res" != "0" ]]; then
 			echo "Cancelling run_codelet.sh."
