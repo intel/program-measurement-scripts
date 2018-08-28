@@ -420,13 +420,14 @@ LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 
 
 
-#For format2cape.sh
+#For format2cape.sh , related to cls.sh (the big loop path name)
 FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 declare -A nameMap=(
 [data]=decan_experimental_configuration.data_size 
 [memload]=decan_experimental_configuration.memory_load 
 [freq]=decan_experimental_configuration.frequency
+[uncfreq]=decan_experimental_configuration.unc_frequency
 [variant]=decan_variant.name
 [numcores]=decan_experimental_configuration.num_core)
 COUNTER_FNAME="counter_nv"
