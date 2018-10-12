@@ -256,7 +256,6 @@ append_counters "${activateCtrs[SQ_HISTOGRAM]}" "SqHisto" ${sq_histogram_counter
 append_counters "${activateCtrs[LFB]}" "Lfb" ${lfb_counters}
 #append_counters $ACTIVATE_LFB_HISTOGRAM_COUNTERS "LfbHisto" ${lfb_histogram_counters}
 append_counters "${activateCtrs[LFB_HISTOGRAM]}" "LfbHisto" ${lfb_histogram_counters}
-echo HERE4
 #append_counters $ACTIVATE_TOPDOWN_COUNTERS "TopDown" ${topdown_counters}
 append_counters "${activateCtrs[TOPDOWN]}" "TopDown" ${topdown_counters}
 #append_counters $ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS "TopDownFp" ${topdown_fp_arith_counters}
