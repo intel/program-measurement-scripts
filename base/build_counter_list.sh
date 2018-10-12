@@ -238,30 +238,31 @@ topdown_counters="${topdown_ms_seq_counters},${topdown_exe_counters},${topdown_m
 
 emon_counters="${basic_counters}"
 #append_counters $ACTIVATE_MEM_TRAFFIC_COUNTERS "traffic" ${mem_traffic_counters}
-append_counters ${activateCtrs[MEM_TRAFFIC]} "traffic" ${mem_traffic_counters}
+append_counters "${activateCtrs[MEM_TRAFFIC]}" "traffic" ${mem_traffic_counters}
 #append_counters $ACTIVATE_MEM_HIT_COUNTERS "memhit" ${mem_hit_counters}
-append_counters ${activateCtrs[MEM_HIT]} "memhit" ${mem_hit_counters}
+append_counters "${activateCtrs[MEM_HIT]}" "memhit" ${mem_hit_counters}
 #append_counters $ACTIVATE_MEM_ROWBUFF_COUNTERS "rowbuff" ${mem_rowbuff_counters}
-append_counters ${activateCtrs[MEM_ROWBUFF]} "rowbuff" ${mem_rowbuff_counters}
+append_counters "${activateCtrs[MEM_ROWBUFF]}" "rowbuff" ${mem_rowbuff_counters}
 #append_counters $ACTIVATE_RESOURCE_COUNTERS "resource" ${resource_counters}
-append_counters ${activateCtrs[RESOURCE]} "resource" ${resource_counters}
+append_counters "${activateCtrs[RESOURCE]}" "resource" ${resource_counters}
 #append_counters $ACTIVATE_TLB_COUNTERS "TLB" ${tlb_counters}
-append_counters ${activateCtrs[TLB]} "TLB" ${tlb_counters}
+append_counters "${activateCtrs[TLB]}" "TLB" ${tlb_counters}
 #append_counters $ACTIVATE_SQ_COUNTERS "SuperQ" ${sq_counters}
-append_counters ${activateCtrs[SQ]} "SuperQ" ${sq_counters}
+append_counters "${activateCtrs[SQ]}" "SuperQ" ${sq_counters}
 #append_counters $ACTIVATE_SQ_HISTOGRAM_COUNTERS "SqHisto" ${sq_histogram_counters}
-append_counters ${activateCtrs[SQ_HISTOGRAM]} "SqHisto" ${sq_histogram_counters}
+append_counters "${activateCtrs[SQ_HISTOGRAM]}" "SqHisto" ${sq_histogram_counters}
 
 #append_counters $ACTIVATE_LFB_COUNTERS "Lfb" ${lfb_counters}
-append_counters ${activateCtrs[LFB]} "Lfb" ${lfb_counters}
+append_counters "${activateCtrs[LFB]}" "Lfb" ${lfb_counters}
 #append_counters $ACTIVATE_LFB_HISTOGRAM_COUNTERS "LfbHisto" ${lfb_histogram_counters}
-append_counters ${activateCtrs[LFB_HISTOGRAM]} "LfbHisto" ${lfb_histogram_counters}
+append_counters "${activateCtrs[LFB_HISTOGRAM]}" "LfbHisto" ${lfb_histogram_counters}
+echo HERE4
 #append_counters $ACTIVATE_TOPDOWN_COUNTERS "TopDown" ${topdown_counters}
-append_counters ${activateCtrs[TOPDOWN]} "TopDown" ${topdown_counters}
+append_counters "${activateCtrs[TOPDOWN]}" "TopDown" ${topdown_counters}
 #append_counters $ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS "TopDownFp" ${topdown_fp_arith_counters}
-append_counters ${activateCtrs[TOPDOWN_FP_ARITH]} "TopDownFp" ${topdown_fp_arith_counters}
+append_counters "${activateCtrs[TOPDOWN_FP_ARITH]}" "TopDownFp" ${topdown_fp_arith_counters}
 #append_counters $ACTIVATE_TOPDOWN_FE_LAT_COUNTERS "TopDownFeLat" ${topdown_fe_lat_counters}
-append_counters ${activateCtrs[TOPDOWN_FE_LAT]} "TopDownFeLat" ${topdown_fe_lat_counters}
+append_counters "${activateCtrs[TOPDOWN_FE_LAT]}" "TopDownFeLat" ${topdown_fe_lat_counters}
 
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${l3_hit_rate_check_counters}
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${irq_life_counters}
@@ -274,16 +275,16 @@ append_counters ${activateCtrs[TOPDOWN_FE_LAT]} "TopDownFeLat" ${topdown_fe_lat_
 # append_counters $ACTIVATE_BRANCH_COUNTERS "BranchCounts" ${branch_counters}
 # append_counters $ACTIVATE_LSD_COUNTERS "LsdCounts" ${lsd_counters}
 
-append_counters ${activateCtrs[LIFE]} "LifeCounts" ${l3_hit_rate_check_counters}
-append_counters ${activateCtrs[LIFE]} "LifeCounts" ${irq_life_counters}
-append_counters ${activateCtrs[LIFE]} "LifeCounts" ${tor_life_counters}
-append_counters ${activateCtrs[LIFE]} "LifeCounts" ${egr_ad_life_counters}
-append_counters ${activateCtrs[LIFE]} "LifeCounts" ${egr_bl_life_counters}
-append_counters ${activateCtrs[OTHER]} "OtherCounts" ${other_counters}
-append_counters ${activateCtrs[ENERGY]} "EnergyCounts" ${energy_counters}
-append_counters ${activateCtrs[UOP_ISSUE_RETIRE]} "UopIssueRetireCounts" ${uop_issue_retire_counters}
-append_counters ${activateCtrs[BRANCH]} "BranchCounts" ${branch_counters}
-append_counters ${activateCtrs[LSD]} "LsdCounts" ${lsd_counters}
+append_counters "${activateCtrs[LIFE]}" "LifeCounts" ${l3_hit_rate_check_counters}
+append_counters "${activateCtrs[LIFE]}" "LifeCounts" ${irq_life_counters}
+append_counters "${activateCtrs[LIFE]}" "LifeCounts" ${tor_life_counters}
+append_counters "${activateCtrs[LIFE]}" "LifeCounts" ${egr_ad_life_counters}
+append_counters "${activateCtrs[LIFE]}" "LifeCounts" ${egr_bl_life_counters}
+append_counters "${activateCtrs[OTHER]}" "OtherCounts" ${other_counters}
+append_counters "${activateCtrs[ENERGY]}" "EnergyCounts" ${energy_counters}
+append_counters "${activateCtrs[UOP_ISSUE_RETIRE]}" "UopIssueRetireCounts" ${uop_issue_retire_counters}
+append_counters "${activateCtrs[BRANCH]}" "BranchCounts" ${branch_counters}
+append_counters "${activateCtrs[LSD]}" "LsdCounts" ${lsd_counters}
 
 
 #      emon_counters+=",${other_counters}"
