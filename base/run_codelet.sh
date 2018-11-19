@@ -28,6 +28,9 @@ command_line_args="${10}"
 #nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
 nc_all_cores=(${picked_cores[@]:1})
+# expend as string
+nc_all_cores=${nc_all_cores[@]}
+echo $nc_all_cores >> /tmp/ncall.txt
 XP_CORE=${picked_cores[0]}
 
 sec_to_ddhhmmss() {
