@@ -23,10 +23,12 @@ res_path="$8"
 list_override="$9"
 
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
-num_core=$(echo $res_path | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 command_line_args="${10}"
 
-nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
+#nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
+picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
+nc_all_cores=(${picked_cores[@]:1})
+XP_CORE=${picked_cores[0]}
 
 sec_to_ddhhmmss() {
     secs="$1"

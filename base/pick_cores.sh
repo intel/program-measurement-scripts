@@ -17,4 +17,7 @@ done
 
 CORES_TO_USE=$(echo ${NC_ALL_CORES[@]} | sed 's/\ /,/g')
 
-echo "Running codelets with $NUM_CORES core(s). Chose core(s): $CORES_TO_USE"
+echo "Running codelets with $NUM_CORES core(s). Chose core(s): $CORES_TO_USE" >&2
+
+# Return the core choice by stdout - in the order of preference (first core should be chosen to run experiments, etc)
+echo ${NC_ALL_CORES[@]}
