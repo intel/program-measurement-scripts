@@ -124,6 +124,12 @@ for i in $( seq $META_REPETITIONS ); do
     if [ -f $PGM_METRIC_FILE ]; then
 	pgm_dumped_metric_values=$( tail -n 1 $PGM_METRIC_FILE )$( echo -e "\n$pgm_dumped_metric_values" )
     fi
+    if [[ "$MC_RUN" != "0" ]]; then
+            while pgrep -x $(basename ${run_prog}) -u $USER > /dev/null; do
+                sleep 1;
+            done
+    fi
+
 done
 
 rm -f time.out
