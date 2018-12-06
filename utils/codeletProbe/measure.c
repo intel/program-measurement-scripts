@@ -157,8 +157,6 @@ void measure_init_()
 	create_clones();
 measure_sec_spin_(6);
 
-measure_sec_spin_(1);
-
 
 	return ;
 }
