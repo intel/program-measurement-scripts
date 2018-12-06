@@ -155,6 +155,7 @@ void measure_init_()
 	evaluation_init();
 	// Create a set of co-running copies of the codelet
 	create_clones();
+measure_sec_spin_(6);
 
 measure_sec_spin_(1);
 
