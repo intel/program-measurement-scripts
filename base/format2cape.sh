@@ -90,7 +90,7 @@ combine_csv() {
     local files="$1"
     local outcsv="$2"
 
-    if [[ $(ls $files 2>/dev/null|wc -l) == "0" ]]; then
+    if [[ ( -z $files ) || ($(ls $files 2>/dev/null|wc -l) == "0") ]]; then
 	# no file, nothing to do, don't generate $outcsv
 	return
     fi
