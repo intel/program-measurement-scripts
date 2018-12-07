@@ -40,8 +40,8 @@ for ua in SANDY_BRIDGE HASWELL IVY_BRIDGE
   "$MAQAO" ${MAQAO_FOLDER}/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
 # Also use E-UFS to generate OoO files
   echo generating OoO file for $ua 1>&2
-  echo CMD: "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file 1>&2
-  "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file 1>&2
+  echo CMD: "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file "|grep Target" 1>&2
+  "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file |grep Target 1>&2
 done
 
 #local_uarch="sandy_bridge"

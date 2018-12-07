@@ -26,7 +26,7 @@ fi
 #"$MAQAO" module=cqa uarch=SANDY_BRIDGE   bin="$bin_path"                 loop="$loop_id" of=csv -ext im=$mode $option_arg
 
 #cmd="$MAQAO" module=cqa uarch="${uarch}" bin="$bin_path" loop="$loop_id" of=csv -ext ${more_args}
-cmd="\"$MAQAO\" module=cqa uarch=\"${uarch}\" bin=\"$bin_path\" loop=\"$loop_id\" of=csv -ext ${more_args}"
+cmd="\"$MAQAO\" module=cqa uarch=\"${uarch}\" bin=\"$bin_path\" loop=\"$loop_id\" of=csv ud=${MAQAO_FOLDER}/csv_ext_ia32_x86_64_userdata.lua -ext ${more_args}"
 echo Loop information collection: Executing CMD: \'$cmd\' 
 bash -c "$cmd"
 # Generated loops.csv
