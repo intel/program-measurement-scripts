@@ -42,8 +42,8 @@ LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 if [[ "$USE_OLD_DECAN" == "0" ]]; then
     # Filling new MAQAO implementation
     # Get a list of loop id for the codelet
-    loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*| \([^ ]*\) .*/\1/' )
-    echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
+    loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )
+    echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )" 1>&2
     #echo ${loop_ids[*]}
 else
     $DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "${command_line_args}" "$function_name" "splitncount" "$UARCH" &>/dev/null
@@ -120,7 +120,7 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
   echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     # Use sep to count iterations
-    maqao_extra_info=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop=innermost )
+    maqao_extra_info=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop-depth=innermost )
 
     # Do the counting using sep
     if [[ ${command_line_args} == "" ]]; then
@@ -157,7 +157,7 @@ else
     # Below two lines are commented out because loop_ids determination is factored out
     #loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop=innermost | grep -E "[0-9]+" | grep -v "${function_name}" | sed 's/.*| \([^ ]*\) .*/\1/' )
     #echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*| \([^ ]*\) .*/\1/' )" 1>&2
-    loop_ids_src_line=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop=innermost | grep -E "[0-9]+" | grep -v "${function_name}" | sed 's/.*:\([^ ]*\)-.*/\1/' )
+    loop_ids_src_line=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop-depth=innermost | grep -E "[0-9]+" | grep -v "${function_name}" | sed 's/.*:\([^ ]*\)-.*/\1/' )
     echo loop_ids: $loop_ids 1>&2
     echo loop_ids_src_line: $loop_ids_src_line 1>&2
     echo Using VTune to get estimation of iteration count 1>&2
