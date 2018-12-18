@@ -140,7 +140,7 @@ end
 
 local function push_mem_insns_breakdown (cqa_results)
    local t = {}
-   for _,v in ipairs ({"32 bits", "64 bits", "128 bits", "256 bits", "MOVH/LPS/D"}) do
+   for _,v in ipairs ({"32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"}) do
       t[v] = { ["loads"] = 0, ["stores"] = 0 }
    end
 
@@ -166,6 +166,8 @@ local function push_mem_insns_breakdown (cqa_results)
                   base = "128 bits";
                elseif (mem_oprnd ["size"] == 256) then
                   base = "256 bits";
+               elseif (mem_oprnd ["size"] == 512) then
+                  base = "512 bits";
                end
             end
          end
@@ -250,7 +252,7 @@ __cqa_user_data = {
       },
 
       ["[ia32_x86_64] memory insns"] = {
-         args = { {"32 bits", "64 bits", "128 bits", "256 bits", "MOVH/LPS/D"},
+         args = { {"32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"},
                   {"loads", "stores"}},
          CSV_header = "Nb %s %s",
          desc = "Memory instructions breakdown",
