@@ -53,14 +53,16 @@ append_counters()
     more_items="$3"
 
 # More checkes for activate because it could be an associate array
-
-    if [[ "${activate}" != "0" ]]
+#echo "ACT ${item_type} is -->${activate}<--"
+    if [[ ! -z "${activate}" && "${activate}" != "0" ]]
 	then
 	if [ -z ${more_items} ]
 	    then
 	    echo "ERROR! ACTIVATED empty ${item_type} counters"
 	    exit -1
 	else
+#	    echo "ADDED: ${more_items}"
+#	    echo "counters: ${emon_counters}"
 	    emon_counters+=",${more_items}"
 	fi
     fi      
@@ -103,9 +105,39 @@ egr_ad_life_counters="UNC_CBO_EGRESS_OCCUPANCY.AD_CORE,UNC_CBO_EGRESS_ALLOCATION
 egr_bl_life_counters="UNC_CBO_EGRESS_OCCUPANCY.BL_CACHE,UNC_CBO_EGRESS_ALLOCATION.BL_CACHE"
 
 
+# Topdown counters.  Initialized with SNB set and update per arch afterwards.  At the end assembled as counter set.
+topdown_FE="IDQ_UOPS_NOT_DELIVERED.CORE"
+topdown_BADS="UOPS_ISSUED.ANY,UOPS_RETIRED.RETIRE_SLOTS,INT_MISC.RECOVERY_CYCLES_ANY"
+topdown_RETR="UOPS_RETIRED.RETIRE_SLOTS"
+topdown_BE="${topdown_FE},${topdown_BADS},${topdown_RETR}"
+
+topdown_FE_LAT="CPU_CLK_UNHALTED.THREAD,IDQ_UOPS_NOT_DELIVERED.CYCLES_0_UOPS_DELIV.CORE"
+topdown_FE_BW="${topdown_FE},${topdown_FE_LAT}"
+
+topdown_BADS_BR="${topdown_BADS},BR_MISP_RETIRED.ALL_BRANCHES,MACHINE_CLEARS.COUNT"
+topdown_BADS_MCLR="${topdown_BADS},${topdown_BADS_BR}"
+
+topdown_aux_Memory_Bound_Fraction="" # Has formula for SNB, BDW but complicated so only define for SKX below (simpler)
+
+topdown_BE_MEM_L1="CYCLE_ACTIVITY.STALLS_MEM_ANY,CYCLE_ACTIVITY.STALLS_L1D_MISS"
+topdown_BE_MEM_L2="" # None for SNB
+topdown_BE_MEM_L3="" # Has formula for SNB, BDW but complicated so only define for SKX below (simpler)
+topdown_BE_MEM_DRAM="" # Has formula for SNB, BDW but complicated so only define for SKX below (simpler)
+topdown_BE_MEM_STOR="RESOURCE_STALLS.SB"
+
+
+topdown_BE_CORE_DIV="ARITH.FPU_DIV_ACTIVE"
+topdown_BE_CORE_PORT="" # Has formula for SNB, BDW but complicated so only define for SKX below (simpler)
+
+# TODO: Add if needed
+#topdown_RETR_BASE=""
+#topdown_RETR_MSEQ=""
+
+
 
 
 # following are top down counters only for IVB.  When the list of other arch is available, we should move the assignment into IVB case statements.
+# (Obsolete)
 topdown_unc_counters="OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD:c6"
 topdown_l3_bound_counters=""
 topdown_mem_bound_counters=""
@@ -177,7 +209,8 @@ case "$emon_db" in
 		energy_counters="UNC_PKG_ENERGY_STATUS,UNC_PP0_ENERGY_STATUS,UNC_PP1_ENERGY_STATUS"
 		;;
 	esac
-
+	topdown_BE_MEM_L2="CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING"
+	topdown_BE_CORE_DIV="ARITH.DIVIDER_UOPS"
       	;;
     "skylake_server")
 	topdown_mem_counters="CYCLE_ACTIVITY.STALLS_MEM_ANY,CYCLE_ACTIVITY.STALLS_L1D_MISS,CYCLE_ACTIVITY.STALLS_L2_MISS,CYCLE_ACTIVITY.STALLS_L3_MISS"
@@ -193,6 +226,23 @@ case "$emon_db" in
 	other_counters="${energy_counters},IDQ_UOPS_NOT_DELIVERED.CORE,INT_MISC.RECOVERY_CYCLES,MEM_LOAD_UOPS_RETIRED.L1_HIT,MEM_LOAD_UOPS_RETIRED.L2_HIT"
 	uop_issue_retire_counters="UOPS_RETIRED.RETIRE_SLOTS,UOPS_ISSUED.ANY,UOPS_RETIRED.ALL"
 	topdown_port_counters+=",UOPS_DISPATCHED_PORT.PORT_6,UOPS_DISPATCHED_PORT.PORT_7"
+
+	topdown_info_mem_Load_Miss_Real_Latency="L1D_PEND_MISS.PENDING,MEM_LOAD_RETIRED.L1_MISS,MEM_LOAD_RETIRED.FB_HIT"
+	topdown_BE_MEM_L1_FB="${topdown_info_mem_Load_Miss_Real_Latency},L1D_PEND_MISS.FB_FULL:c1"
+	topdown_aux_load_l1_miss="MEM_LOAD_RETIRED.L2_HIT,MEM_LOAD_RETIRED.L3_HIT,MEM_LOAD_L3_HIT_RETIRED.XSNP_HIT,MEM_LOAD_L3_HIT_RETIRED.XSNP_HITM,MEM_LOAD_L3_HIT_RETIRED.XSNP_MISS"
+	topdown_aux_load_l1_miss_net="${topdown_aux_load_l1_miss},MEM_LOAD_RETIRED.L3_MISS"
+	topdown_aux_load_l2_hit="MEM_LOAD_RETIRED.L2_HIT,MEM_LOAD_RETIRED.FB_HIT,${topdown_aux_load_l1_miss_net}"
+	topdown_aux_L2_Bound_Ratio="CYCLE_ACTIVITY.STALLS_L1D_MISS,CYCLE_ACTIVITY.STALLS_L2_MISS"
+	topdown_BE_MEM_L2="${topdown_BE_MEM_L1_FB},${topdown_aux_load_l2_hit},L1D_PEND_MISS.FB_FULL:c1,${topdown_aux_L2_Bound_Ratio}"
+	topdown_BE_MEM_L3="CYCLE_ACTIVITY.STALLS_L2_MISS,CYCLE_ACTIVITY.STALLS_L3_MISS"
+	topdown_aux_Mem_Bound_Ratio="CYCLE_ACTIVITY.STALLS_L3_MISS,${topdown_aux_L2_Bound_Ratio},${topdown_BE_MEM_L2}"
+	topdown_BE_MEM_DRAM="${topdown_aux_Mem_Bound_Ratio}"
+	topdown_BE_MEM_STOR="EXE_ACTIVITY.BOUND_ON_STORES"
+	topdown_aux_Few_Uops_Executed_Threshold="EXE_ACTIVITY.2_PORTS_UTIL"
+	topdown_aux_Backend_Bound_Cycles="EXE_ACTIVITY.EXE_BOUND_0_PORTS,EXE_ACTIVITY.1_PORTS_UTIL,${topdown_aux_Few_Uops_Executed_Threshold},CYCLE_ACTIVITY.STALLS_MEM_ANY,EXE_ACTIVITY.BOUND_ON_STORES"
+	topdown_aux_Memory_Bound_Fraction="CYCLE_ACTIVITY.STALLS_MEM_ANY,EXE_ACTIVITY.BOUND_ON_STORES,${topdown_aux_Backend_Bound_Cycles}"
+	topdown_BE_CORE_DIV="ARITH.DIVIDER_ACTIVE"
+	topdown_BE_CORE_PORT="${topdown_aux_Backend_Bound_Cycles},CYCLE_ACTIVITY.STALLS_MEM_ANY,EXE_ACTIVITY.BOUND_ON_STORES,ARITH.DIVIDER_ACTIVE,EXE_ACTIVITY.EXE_BOUND_0_PORTS"
         ;;
 
 # Below need to first upgrade EMON to v10.0.0 to work
@@ -205,6 +255,7 @@ case "$emon_db" in
 	other_counters="L2_RQSTS.PF_MISS,IDQ_UOPS_NOT_DELIVERED.CORE,INT_MISC.RECOVERY_CYCLES,OFFCORE_RESPONSE.STREAMING_STORES.ANY_RESPONSE_0"
 	uop_issue_retire_counters="UOPS_RETIRED.RETIRE_SLOTS,UOPS_ISSUED.ANY,UOPS_RETIRED.ALL"
 	energy_counters="UNC_PACKAGE_ENERGY_STATUS"
+	topdown_BE_MEM_L2="CYCLE_ACTIVITY.STALLS_L1D_PENDING,CYCLE_ACTIVITY.STALLS_L2_PENDING"
       	;;
 
     *)
@@ -235,6 +286,18 @@ topdown_port_util_counters="${topdown_port_counters},ARITH.FPU_DIV_ACTIVE"
 topdown_counters="${topdown_ms_seq_counters},${topdown_exe_counters},${topdown_mem_counters},${topdown_unc_counters},${topdown_port_util_counters}"
 
 
+topdown_BE_MEM="${topdown_BE},${topdown_aux_Memory_Bound_Fraction}"
+
+topdown_BE_CORE="${topdown_BE},${topdown_BE_MEM}"
+
+topdown_set="${topdown_FE},${topdown_BADS},${topdown_BE},${topdown_RETR}"
+topdown_FE_set="${topdown_FE_LAT},${topdown_FE_BW}"
+topdown_BADS_set="${topdown_BADS_BR},${topdown_BADS_MCLR}"
+topdown_BE_set="${topdown_BE_MEM},${topdown_BE_CORE}"
+topdown_BE_MEM_set="${topdown_MEM_L1},${topdown_MEM_L2},${topdown_MEM_L3},${topdown_MEM_DRAM},${topdown_MEM_STOR}"
+topdown_BE_CORE_set="${topdown_CORE_DIV},${topdown_CORE_PORT}"
+topdown_RETR_set="${topdown_RETR_BASE},${topdown_RETR_MSEQ}"
+
 
 emon_counters="${basic_counters}"
 #append_counters $ACTIVATE_MEM_TRAFFIC_COUNTERS "traffic" ${mem_traffic_counters}
@@ -256,12 +319,21 @@ append_counters "${activateCtrs[SQ_HISTOGRAM]}" "SqHisto" ${sq_histogram_counter
 append_counters "${activateCtrs[LFB]}" "Lfb" ${lfb_counters}
 #append_counters $ACTIVATE_LFB_HISTOGRAM_COUNTERS "LfbHisto" ${lfb_histogram_counters}
 append_counters "${activateCtrs[LFB_HISTOGRAM]}" "LfbHisto" ${lfb_histogram_counters}
+
 #append_counters $ACTIVATE_TOPDOWN_COUNTERS "TopDown" ${topdown_counters}
 append_counters "${activateCtrs[TOPDOWN]}" "TopDown" ${topdown_counters}
 #append_counters $ACTIVATE_TOPDOWN_FP_ARITH_COUNTERS "TopDownFp" ${topdown_fp_arith_counters}
 append_counters "${activateCtrs[TOPDOWN_FP_ARITH]}" "TopDownFp" ${topdown_fp_arith_counters}
 #append_counters $ACTIVATE_TOPDOWN_FE_LAT_COUNTERS "TopDownFeLat" ${topdown_fe_lat_counters}
 append_counters "${activateCtrs[TOPDOWN_FE_LAT]}" "TopDownFeLat" ${topdown_fe_lat_counters}
+
+append_counters "${activateCtrs[TOPDOWN_SET]}" "TopDownSet" ${topdown_set}
+append_counters "${activateCtrs[TOPDOWN_FE_SET]}" "TopDownFeSet" ${topdown_FE_set}
+append_counters "${activateCtrs[TOPDOWN_BADS_SET]}" "TopDownBadsSet" ${topdown_BADS_set}
+append_counters "${activateCtrs[TOPDOWN_BE_SET]}" "TopDownBeSet" ${topdown_BE_set}
+append_counters "${activateCtrs[TOPDOWN_BE_MEM_SET]}" "TopDownBeMemSet" ${topdown_BE_MEM_set}
+append_counters "${activateCtrs[TOPDOWN_BE_CORE_SET]}" "TopDownBeCoreSet" ${topdown_BE_CORE_set}
+
 
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${l3_hit_rate_check_counters}
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${irq_life_counters}
@@ -310,6 +382,7 @@ then
 fi
 
 # output emon counter and remove redundant ones
-echo ${emon_counters}|sed 's/,/\n/g' |sort|uniq|sed -z 's/\n/,/g'|sed 's/,$//g'
+#echo "FINAL COUNTERS: ${emon_counters}"
+echo ${emon_counters}|sed 's/,/\n/g' |sort|uniq|sed -z 's/^\n//g'|sed -z 's/\n/,/g'|sed 's/,$//g'
 #echo ${emon_counters}
 
