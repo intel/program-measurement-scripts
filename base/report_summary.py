@@ -3,6 +3,10 @@
 import re
 import sys, getopt
 import csv
+import traceback
+
+global num_cores
+num_cores = 1 # TODO get actual number of cores
 
 def output_fields():
   field_names = ['codelet.name', 'Time (s)',
@@ -12,7 +16,9 @@ def output_fields():
                  'Total DRAM Energy (J)', 'Total DRAM Power (W)',
                  'E(DRAM)/O', 'C/E(DRAM)', 'CO/E(DRAM)',
                  'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
-                 'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)']
+                 'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)',
+                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
+                 'GFLOPS']
   return field_names
 
 def insert_codelet_name(out_row, in_row):
@@ -90,6 +96,65 @@ def print_num_ops_formula(formula_file):
   formula_file.write('O(Giga instructions) = (INST_RETIRED_ANY *' +
                      ' iterations_per_rep) / 1E9\n')
 
+def getter(in_row, *argv):
+  for arg in argv:
+    if (arg in in_row):
+      return float(in_row[arg])
+  raise IndexError(", ".join(map(str, argv)))
+
+def calculate_mem_rates(in_row, iterations_per_rep, time_per_rep):
+  global num_cores
+  L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * num_cores
+  L1_wb_per_it  = getter(in_row, 'Bytes_stored') * num_cores
+  L2_rc_per_it  = getter(in_row, 'L1D_REPLACEMENT', 'L1D_REPLACEMENT_ND')
+  L2_wc_per_it  = getter(in_row, 'L2_TRANS_L1D_WB', 'L2_TRANS_L1D_WB_ND')
+  L3_rc_per_it  = getter(in_row, 'L2_RQSTS_MISS', 'L2_RQSTS_MISS_ND')
+  L3_wc_per_it  = getter(in_row, 'L2_TRANS_L2_WB', 'L2_TRANS_L2_WB_ND')
+  ram_rc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_RD', 'UNC_IMC_DRAM_DATA_READS')
+  ram_wc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_WR', 'UNC_IMC_DRAM_DATA_WRITES')
+  L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
+  L2_rwb_per_it  = (L2_rc_per_it  + L2_wc_per_it) * 64
+  L3_rwb_per_it  = (L3_rc_per_it  + L3_wc_per_it) * 64
+  ram_rwb_per_it = (ram_rc_per_it + ram_wc_per_it) * 64
+  L1_GB_s  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+  L2_GB_s  = (L2_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+  L3_GB_s  = (L3_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+  ram_GB_s = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
+  return (L1_GB_s, L2_GB_s, L3_GB_s, ram_GB_s)
+
+def calculate_load_store_rate(in_row, iterations_per_rep, time_per_rep):
+  try:
+    load_per_it  = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
+    store_per_it = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
+  except:
+    load_per_it  = in_row['Nb_32_bits_loads'] + in_row['Nb_64_bits_loads'] + in_row['Nb_128_bits_loads'] \
+                    + in_row['Nb_256_bits_loads'] + in_row['Nb_MOVH_LPS_D_loads']
+    store_per_it = in_row['Nb_32_bits_stores'] + in_row['Nb_64_bits_stores'] + in_row['Nb_128_bits_stores'] \
+                    + in_row['Nb_256_bits_stores'] + in_row['Nb_MOVH_LPS_D_stores']
+  return ((load_per_it + store_per_it) * iterations_per_rep) / (1E9 * time_per_rep)
+
+def calculate_gflops(in_row, iters_per_rep, time_per_rep):
+  flops = 0.5 * getter(in_row, 'Nb_insn_ADD/SUBSS') + 2 * getter(in_row, 'Nb_insn_ADD/SUBPS_XMM') + 4 * getter(in_row, 'Nb_insn_ADD/SUBPS_YMM') + 8 * getter(in_row, 'Nb_insn_ADD/SUBPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_ADD/SUBSD') + 2 * getter(in_row, 'Nb_insn_ADD/SUBPD_XMM') + 4 * getter(in_row, 'Nb_insn_ADD/SUBPD_YMM') + 8 * getter(in_row, 'Nb_insn_ADD/SUBPD_ZMM') + \
+          0.5 * getter(in_row, 'Nb_insn_DIVSS') + 2 * getter(in_row, 'Nb_insn_DIVPS_XMM') + 4 * getter(in_row, 'Nb_insn_DIVPS_YMM') + 8 * getter(in_row, 'Nb_insn_DIVPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_DIVSD') + 2 * getter(in_row, 'Nb_insn_DIVPD_XMM') + 4 * getter(in_row, 'Nb_insn_DIVPD_YMM') + 8 * getter(in_row, 'Nb_insn_DIVPD_ZMM') + \
+          0.5 * getter(in_row, 'Nb_insn_MULSS') + 2 * getter(in_row, 'Nb_insn_MULPS_XMM') + 4 * getter(in_row, 'Nb_insn_MULPS_YMM') + 8 * getter(in_row, 'Nb_insn_MULPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_MULSD') + 2 * getter(in_row, 'Nb_insn_MULPD_XMM') + 4 * getter(in_row, 'Nb_insn_MULPD_YMM') + 8 * getter(in_row, 'Nb_insn_MULPD_ZMM') + \
+          0.5 * getter(in_row, 'Nb_insn_SQRTSS') + 2 * getter(in_row, 'Nb_insn_SQRTPS_XMM') + 4 * getter(in_row, 'Nb_insn_SQRTPS_YMM') + 8 * getter(in_row, 'Nb_insn_SQRTPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_SQRTSD') + 2 * getter(in_row, 'Nb_insn_SQRTPD_XMM') + 4 * getter(in_row, 'Nb_insn_SQRTPD_YMM') + 8 * getter(in_row, 'Nb_insn_SQRTPD_ZMM') + \
+          0.5 * getter(in_row, 'Nb_insn_RSQRTSS') + 2 * getter(in_row, 'Nb_insn_RSQRTPS_XMM') + 4 * getter(in_row, 'Nb_insn_RSQRTPS_YMM') + 8 * getter(in_row, 'Nb_insn_RSQRTPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_RSQRTSD') + 2 * getter(in_row, 'Nb_insn_RSQRTPD_XMM') + 4 * getter(in_row, 'Nb_insn_RSQRTPD_YMM') + 8 * getter(in_row, 'Nb_insn_RSQRTPD_ZMM') + \
+          0.5 * getter(in_row, 'Nb_insn_RCPSS') + 2 * getter(in_row, 'Nb_insn_RCPPS_XMM') + 4 * getter(in_row, 'Nb_insn_RCPPS_YMM') + 8 * getter(in_row, 'Nb_insn_RCPPS_ZMM') + \
+          1 * getter(in_row, 'Nb_insn_RCPSD') + 2 * getter(in_row, 'Nb_insn_RCPPD_XMM') + 4 * getter(in_row, 'Nb_insn_RCPPD_YMM') + 8 * getter(in_row, 'Nb_insn_RCPPD_ZMM')
+  try:
+    # try to add the FMA counts
+    flops += 1 * getter(in_row, 'Nb_insn_FMASS') + 4 * getter(in_row, 'Nb_insn_FMAPS_XMM') + 8 * getter(in_row, 'Nb_insn_FMAPS_YMM') + 16 * getter(in_row, 'Nb_insn_FMAPS_ZMM') + \
+             2 * getter(in_row, 'Nb_insn_FMASD') + 4 * getter(in_row, 'Nb_insn_FMAPD_XMM') + 8 * getter(in_row, 'Nb_insn_FMAPD_YMM') + 16 * getter(in_row, 'Nb_insn_FMAPD_ZMM')
+  except:
+    pass
+  global num_cores
+  return (flops * num_cores * iters_per_rep) / (1E9 * time_per_rep)
+
 def build_row_output(in_row):
   out_row = {}
   insert_codelet_name(out_row, in_row)
@@ -134,6 +199,21 @@ def build_row_output(in_row):
     out_row['E(PKG+DRAM)/O'] = 'N/A'
     out_row['C/E(PKG+DRAM)'] = 'N/A'
     out_row['CO/E(PKG+DRAM)'] = 'N/A'
+  try:
+    out_row['L1 Rate (GB/s)'], out_row['L2 Rate (GB/s)'], out_row['L3 Rate (GB/s)'], out_row['RAM Rate (GB/s)'] = \
+      calculate_mem_rates(in_row, iterations_per_rep, time)
+    out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
+  except:
+    out_row['L1 Rate (GB/s)'] = 'N/A'
+    out_row['L2 Rate (GB/s)'] = 'N/A'
+    out_row['L3 Rate (GB/s)'] = 'N/A'
+    out_row['RAM Rate (GB/s)'] = 'N/A'
+    out_row['Load+Store Rate (GIPS)'] = 'N/A'
+    print "WARNING: Could not compute MHU rates!"
+  try:
+    out_row['GFLOPS'] = calculate_gflops(in_row, iterations_per_rep, time)
+  except:
+    out_row['GFLOPS'] = 'N/A'
   return out_row
 
 def print_formulas(formula_file):
@@ -164,8 +244,14 @@ def summary_report(inputfile, outputfile):
       csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields())
       csvwriter.writeheader()
       for input_row in csvreader:
-        output_row = build_row_output(input_row)
-        csvwriter.writerow(output_row)
+        try:
+          output_row = build_row_output(input_row)
+          csvwriter.writerow(output_row)
+        except:
+          # skip failures to generate partial reports
+          print "WARNING: Unexpected error!"
+          traceback.print_exc()
+          continue
 
 def summary_formulas(formula_file_name):
   with open (formula_file_name, 'w') as formula_file:
