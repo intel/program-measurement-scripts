@@ -5,9 +5,6 @@ import sys, getopt
 import csv
 import traceback
 
-global num_cores
-num_cores = 1 # TODO get actual number of cores
-
 def output_fields():
   field_names = ['codelet.name', 'Time (s)',
                  'O (Giga instructions)', 'C=GIPS',
@@ -103,9 +100,8 @@ def getter(in_row, *argv):
   raise IndexError(", ".join(map(str, argv)))
 
 def calculate_mem_rates(in_row, iterations_per_rep, time_per_rep):
-  global num_cores
-  L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * num_cores
-  L1_wb_per_it  = getter(in_row, 'Bytes_stored') * num_cores
+  L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * getter(in_row, 'decan_experimental_configuration.num_core')
+  L1_wb_per_it  = getter(in_row, 'Bytes_stored') * getter(in_row, 'decan_experimental_configuration.num_core')
   L2_rc_per_it  = getter(in_row, 'L1D_REPLACEMENT', 'L1D_REPLACEMENT_ND')
   L2_wc_per_it  = getter(in_row, 'L2_TRANS_L1D_WB', 'L2_TRANS_L1D_WB_ND')
   L3_rc_per_it  = getter(in_row, 'L2_RQSTS_MISS', 'L2_RQSTS_MISS_ND')
@@ -152,8 +148,7 @@ def calculate_gflops(in_row, iters_per_rep, time_per_rep):
              2 * getter(in_row, 'Nb_insn_FMASD') + 4 * getter(in_row, 'Nb_insn_FMAPD_XMM') + 8 * getter(in_row, 'Nb_insn_FMAPD_YMM') + 16 * getter(in_row, 'Nb_insn_FMAPD_ZMM')
   except:
     pass
-  global num_cores
-  return (flops * num_cores * iters_per_rep) / (1E9 * time_per_rep)
+  return (flops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
 
 def build_row_output(in_row):
   out_row = {}
