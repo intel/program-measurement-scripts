@@ -234,6 +234,10 @@ else
     echo $energy_units > "$codelet_folder/$CLS_RES_FOLDER/energy_units"
 fi
 
+nominal_freq_kHz=$(printf "%.0f\n" $(echo $(emon -v |grep "TSC Freq.*MHz"|cut -f4 -d' ')*1000|bc -l))
+echo $nominal_freq_kHz > "$codelet_folder/$CLS_RES_FOLDER/nominal_freq_kHz"
+
+
 ################################################################################
 # Building of codelet
 ################################################################################
