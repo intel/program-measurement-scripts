@@ -106,6 +106,16 @@ for i in $( seq $META_REPETITIONS ); do
 	fi
 	run_cygwin $XP_CORE ${run_prog}
 
+  else
+    if [[ "$IF_PARALLEL" != "0" ]]; then
+      export OMP_NUM_THREADS=${NUM_CORES}
+      export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
+      export KMP_AFFINITY=scatter
+      #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+      cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog}"
+      #cmd="${run_prog}"
+      echo -n $cmd
+      bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
     else
 	if [[ "$MC_RUN" != "0" ]]; then
 	    for cc in ${nc_all_cores}; do
@@ -315,6 +325,15 @@ EOF
 
         #echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
+            if [[ "$IF_PARALLEL" != "0" ]]; then
+              export OMP_NUM_THREADS=${NUM_CORES}
+              export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
+              export KMP_AFFINITY=scatter
+              #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+              cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog_emon_api}"
+              LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} ${cmd} &>>"$res_path/emon_execution_log"
+              while pgrep -x emon -u $USER >/dev/null; do sleep 1; done
+            else
 	if [[ "$MC_RUN" != "0" ]]; then
 	    # without emon probe
 	    for cc in ${nc_all_cores}; do
@@ -372,7 +391,13 @@ EOF
 	      echo -ne "CodeletDS: (${cnt_codelet_idx}/${num_codelets}); Meta: (${i}/${META_REPETITIONS}); "
 	      echo -ne "ETA codelet:${eta}; ETA All:${eta_all}                      \r"
 
-	      LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+		if [[ "$IF_PARALLEL" == "0" ]]; then
+		  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
+        else
+		  #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+          cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog}"
+          LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" ${cmd} &>"$res_path/emon_execution_log"
+        fi
 
 	      remainingRunCnt=$(((${META_REPETITIONS}*1)-${totalRunCnt}))
 	      CURRENT_COUNTER_RUN_TIME=$(date +%s)
