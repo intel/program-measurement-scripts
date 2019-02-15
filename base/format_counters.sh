@@ -33,7 +33,11 @@ fc_echo() {
 
 #source $(dirname $0)/pick_cores.sh $res_path
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
-nc_all_cores=(${picked_cores[@]:1})
+if [[ "$IF_PARALLEL" != "0" ]]; then
+	nc_all_cores=("${picked_cores[@]}")
+else
+	nc_all_cores=("${picked_cores[@]:1}")
+fi
 XP_CORE=${picked_cores[0]}
 
 if [[ "$ENABLE_SEP" == "1" ]]; then

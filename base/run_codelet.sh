@@ -21,14 +21,20 @@ num_codelets="$6"
 cnt_codelet_idx="$7"
 res_path="$8"
 list_override="$9"
+num_cores=$(echo "$1" | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 command_line_args="${10}"
 
 #nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
-nc_all_cores=(${picked_cores[@]:1})
+if [[ "$IF_PARALLEL" != "0" ]]; then
+	nc_all_cores=${picked_cores[@]}
+else
+	nc_all_cores=${picked_cores[@]:1}
+fi
 # expend as string
+cores_to_use=$(echo ${nc_all_cores[@]} | sed 's/\ /,/g')
 nc_all_cores=${nc_all_cores[@]}
 echo $nc_all_cores >> /tmp/ncall.txt
 XP_CORE=${picked_cores[0]}
@@ -108,26 +114,26 @@ for i in $( seq $META_REPETITIONS ); do
 
   else
     if [[ "$IF_PARALLEL" != "0" ]]; then
-      export OMP_NUM_THREADS=${NUM_CORES}
+      export OMP_NUM_THREADS=${num_cores}
       export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
       export KMP_AFFINITY=scatter
-      #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
-      cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog}"
+      #cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+      cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
       #cmd="${run_prog}"
       echo -n $cmd
       bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
-    else
-	if [[ "$MC_RUN" != "0" ]]; then
+    elif [[ "$MC_RUN" != "0" ]]; then
 	    for cc in ${nc_all_cores}; do
 		cmd="$NUMACTL -m $XP_NODE -C ${cc} ${run_prog}"
 		echo $cmd
 		bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null &
 	    done
-	fi
+	else
 	cmd="${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}"
 	echo -n $cmd
 	bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null
     fi
+  fi
 
     echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
@@ -326,15 +332,14 @@ EOF
         #echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
             if [[ "$IF_PARALLEL" != "0" ]]; then
-              export OMP_NUM_THREADS=${NUM_CORES}
+			export OMP_NUM_THREADS=${num_cores}
               export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
               export KMP_AFFINITY=scatter
-              #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
-              cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog_emon_api}"
+			#cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+			cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog_emon_api}"
               LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} ${cmd} &>>"$res_path/emon_execution_log"
               while pgrep -x emon -u $USER >/dev/null; do sleep 1; done
-            else
-	if [[ "$MC_RUN" != "0" ]]; then
+		elif [[ "$MC_RUN" != "0" ]]; then
 	    # without emon probe
 	    for cc in ${nc_all_cores}; do
 		LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
@@ -394,8 +399,8 @@ EOF
 		if [[ "$IF_PARALLEL" == "0" ]]; then
 		  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
         else
-		  #CORES_TO_USE=$(echo ${nc_all_cores} | sed 's/\ /,/g')
-          cmd="$NUMACTL --localalloc -C ${CORES_TO_USE} ${run_prog}"
+		  #cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
+          cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
           LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" ${cmd} &>"$res_path/emon_execution_log"
         fi
 
