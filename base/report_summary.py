@@ -192,14 +192,17 @@ def build_row_output(in_row):
   try:
     out_row['L1 Rate (GB/s)'], out_row['L2 Rate (GB/s)'], out_row['L3 Rate (GB/s)'], out_row['RAM Rate (GB/s)'] = \
       calculate_mem_rates(in_row, iterations_per_rep, time)
-    out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
   except:
     out_row['L1 Rate (GB/s)'] = 'N/A'
     out_row['L2 Rate (GB/s)'] = 'N/A'
     out_row['L3 Rate (GB/s)'] = 'N/A'
     out_row['RAM Rate (GB/s)'] = 'N/A'
-    out_row['Load+Store Rate (GIPS)'] = 'N/A'
     print "WARNING: Could not compute MHU rates!"
+  try:
+    out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
+  except:
+    out_row['Load+Store Rate (GIPS)'] = 'N/A'
+    print "WARNING: Could not compute L/S rates!"
   try:
     out_row['GFLOPS'] = calculate_gflops(in_row, iterations_per_rep, time)
   except:
