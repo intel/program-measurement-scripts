@@ -2,8 +2,8 @@
 
 source $CLS_FOLDER/const.sh
 
-if [[ "$nb_args" != "4" ]]; then
-	echo "ERROR! Invalid arguments (need the binary's path, the function's name, the data size and repetition)."
+if [[ "$nb_args" -lt "4" ]]; then
+	echo "ERROR! Invalid arguments (need the binary's path, function's name,data size, number of repetitions, and (optionally) number of cores)."
 	exit -1
 fi
 
@@ -13,12 +13,14 @@ binary_folder=$( dirname "$binary_path" )
 function_name="$2"
 data_size="$3"
 repetition="$4"
+num_cores="$5"
 set +x
 
 declare -A count_values
 
-
-
+if [[ -z "$num_cores" ]]; then
+  num_cores="1"
+fi
 #echo "Generation of splitncount for '$binary_path' ('$function_name')"
 
 cd $binary_folder
@@ -96,28 +98,9 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
   fi
 
   # Got all counts saved in ${count_values[*]}
-  cd $CLS_FOLDER
-
-  final_res=""
-
-  if [[ "$USE_OLD_DECAN" == "0" ]]; then
-      for loop_id in $loop_ids; do
-        tmp_iter=$( echo "${count_values[$loop_id]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-      final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-      done
-  else
-      for decan_variant in $decan_variants; do
-        tmp_iter=$( echo "${count_values[$decan_variant]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-      loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
-      final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-      done
+  if [[ "$USE_OLD_DECAN" != "0" ]]; then
+    loop_ids=( "$decan_variants" )
   fi
-
-  echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     # Use sep to count iterations
     maqao_extra_info=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop-depth=innermost )
@@ -139,17 +122,6 @@ elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     done
 
     # Got all counts saved in ${count_values[*]}
-    cd $CLS_FOLDER
-
-    final_res=""
-    for loop_id in $loop_ids; do
-        tmp_iter=$( echo "${count_values[$loop_id]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-	    final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-    done
-    echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
-
 else
   if [[ "$VTUNE" != "" ]]; then
     #first get loop ids
@@ -197,9 +169,27 @@ else
     echo "Exiting ..." 1>&2
     exit 1
   fi
-  cd $CLS_FOLDER
-  final_res=""
-  final_res=$( echo -e "$vtune_loop_id"${DELIM}"${count_values[$vtune_loop_id]}"${DELIM}"\n$final_res" )
-  echo "$final_res"
+  loop_ids=( vtune_loop_id )
 fi
+
+cd $CLS_FOLDER
+final_res=""
+# For each loop in loop_ids
+for loop_id in $loop_ids; do
+  # Grab the corresponding iteration count
+  tmp_iter=$( echo "${count_values[$loop_id]}" )
+  # Convert old DECAN variants to loop ids
+  if [[ "$USE_OLD_DECAN" != "0" ]]; then
+    loop_id=$( echo "$loop_id" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
+  fi
+  # Divide the number of iterations by the number of cores for true parallel runs
+  if [[ "$IF_PARALLEL" == "1" ]]; then
+    tmp_iter=$(($tmp_iter / $num_cores))
+  fi
+  # If the iterations count is non-empty, append it to final_res
+  if [[ "$tmp_iter" != "" ]]; then
+    final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
+  fi
+done
+echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 exit 0
