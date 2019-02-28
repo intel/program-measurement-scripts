@@ -70,7 +70,7 @@ NUMCORE_COL=5
 
 cpu_generation="$(cat $cls_res_folder/uarch)"
 energy_unit="$(cat $cls_res_folder/energy_units)"
-
+cpu_nominal_freq_kHz="$(cat $cls_res_folder/nominal_freq_kHz)"
 
 gen_codelet_mach_info () {
     local nr="$1"
@@ -82,8 +82,8 @@ gen_codelet_mach_info () {
 gen_filler_info() {
    local nr="$1"
    local of="$2"
-   echo "decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"energy.unit"${DELIM}"Expr Timestamp"${DELIM}"TS#"${DELIM}"Expr TS#" > $of
-   yes $(echo "$instance_id"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$energy_unit"${DELIM}"$ExprTimestamp"${DELIM}"$cls_timestamp_val"${DELIM}"$run_timestamp_val") | head -n $nr >> $of
+   echo "decan_experimental_configuration.instance_id"${DELIM}"decan_experimental_configuration.nb_threads"${DELIM}"Timestamp"${DELIM}"cpu.generation"${DELIM}"cpu.nominal_frequency"${DELIM}"energy.unit"${DELIM}"Expr Timestamp"${DELIM}"TS#"${DELIM}"Expr TS#" > $of
+   yes $(echo "$instance_id"${DELIM}"$nb_threads"${DELIM}"$ClsTimestamp"${DELIM}"$cpu_generation"${DELIM}"$cpu_nominal_freq_kHz"${DELIM}"$energy_unit"${DELIM}"$ExprTimestamp"${DELIM}"$cls_timestamp_val"${DELIM}"$run_timestamp_val") | head -n $nr >> $of
 }
 
 combine_csv() {

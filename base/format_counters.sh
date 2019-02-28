@@ -53,7 +53,7 @@ for counter in $counters
   do
   counter_list+=( $counter )
   case "$counter" in
-      "UNC_M_CAS_COUNT_RD" | "UNC_M_CAS_COUNT_WR" | "UNC_M_ACT_COUNT_RD" |"UNC_M_ACT_COUNT_WR" | "UNC_M_PRE_COUNT_PAGE_MISS" | "UNC_M_PRE_COUNT_WR" | "UNC_M_PRE_COUNT_RD")
+      "UNC_M_CAS_COUNT_RD" | "UNC_M_CAS_COUNT_WR" | "UNC_M_ACT_COUNT_RD" |"UNC_M_ACT_COUNT_WR" | "UNC_M_PRE_COUNT_PAGE_MISS" | "UNC_M_PRE_COUNT_WR" | "UNC_M_PRE_COUNT_RD" | "FREERUN_PKG_ENERGY_STATUS")
       fc_echo "Special treatment for server uncore '$counter'"
       # Add all columns
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3- -d${DELIM} | sed 's/ //g' )
@@ -81,7 +81,8 @@ for counter in $counters
       counter_list+=(${split_counters[@]})
       ;;
       
-      "FREERUN_PKG_ENERGY_STATUS" | "FREERUN_CORE_ENERGY_STATUS" | "FREERUN_DRAM_ENERGY_STATUS" )
+#      "FREERUN_PKG_ENERGY_STATUS" | "FREERUN_CORE_ENERGY_STATUS" | "FREERUN_DRAM_ENERGY_STATUS" )
+      "FREERUN_CORE_ENERGY_STATUS" | "FREERUN_DRAM_ENERGY_STATUS" )
       fc_echo "Special treatment for in-CPU energy '$counter'"
       values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f3,4 -d${DELIM} | sed 's/ //g' )
       for value in $values

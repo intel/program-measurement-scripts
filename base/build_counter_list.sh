@@ -104,6 +104,9 @@ tor_life_counters="UNC_CBO_TOR_OCCUPANCY.DRD_VALID,UNC_CBO_TOR_ALLOCATION.DRD"
 egr_ad_life_counters="UNC_CBO_EGRESS_OCCUPANCY.AD_CORE,UNC_CBO_EGRESS_ALLOCATION.AD_CORE"
 egr_bl_life_counters="UNC_CBO_EGRESS_OCCUPANCY.BL_CACHE,UNC_CBO_EGRESS_ALLOCATION.BL_CACHE"
 
+# Divide counter.  Initialized with SNB and update per arch afterwards.
+divide_counter="ARITH.FPU_DIV_ACTIVE"
+flop_counters=""  # None for SNB
 
 # Topdown counters.  Initialized with SNB set and update per arch afterwards.  At the end assembled as counter set.
 topdown_FE="IDQ_UOPS_NOT_DELIVERED.CORE"
@@ -129,9 +132,8 @@ topdown_BE_MEM_STOR="RESOURCE_STALLS.SB"
 topdown_BE_CORE_DIV="ARITH.FPU_DIV_ACTIVE"
 topdown_BE_CORE_PORT="" # Has formula for SNB, BDW but complicated so only define for SKX below (simpler)
 
-# TODO: Add if needed
-#topdown_RETR_BASE=""
-#topdown_RETR_MSEQ=""
+topdown_RETR_BASE=${topdown_RETR_MSEQ}   # need retiring but assumed to be collected in lvl1 set
+topdown_RETR_MSEQ="IDQ.MS_UOPS"          # Need Retire_Uop_Fraction which is collected in lvl1 set
 
 
 
@@ -191,6 +193,7 @@ case "$emon_db" in
 	other_counters="${energy_counters},IDQ_UOPS_NOT_DELIVERED.CORE,INT_MISC.RECOVERY_CYCLES,MEM_LOAD_UOPS_RETIRED.L1_HIT,MEM_LOAD_UOPS_RETIRED.L2_HIT"
 	uop_issue_retire_counters="UOPS_RETIRED.RETIRE_SLOTS,UOPS_ISSUED.ANY,UOPS_RETIRED.ALL"
 	topdown_port_counters+=",UOPS_DISPATCHED_PORT.PORT_6,UOPS_DISPATCHED_PORT.PORT_7"
+        divide_counter="ARITH.DIVIDER_UOPS"
 
 	case "$emon_db" in
 	    haswell_server)
@@ -243,6 +246,9 @@ case "$emon_db" in
 	topdown_aux_Memory_Bound_Fraction="CYCLE_ACTIVITY.STALLS_MEM_ANY,EXE_ACTIVITY.BOUND_ON_STORES,${topdown_aux_Backend_Bound_Cycles}"
 	topdown_BE_CORE_DIV="ARITH.DIVIDER_ACTIVE"
 	topdown_BE_CORE_PORT="${topdown_aux_Backend_Bound_Cycles},CYCLE_ACTIVITY.STALLS_MEM_ANY,EXE_ACTIVITY.BOUND_ON_STORES,ARITH.DIVIDER_ACTIVE,EXE_ACTIVITY.EXE_BOUND_0_PORTS"
+        divide_counter="ARITH.DIVIDER_ACTIVE"
+	flop_counters="FP_ARITH_INST_RETIRED.SCALAR_DOUBLE,FP_ARITH_INST_RETIRED.SCALAR_SINGLE,FP_ARITH_INST_RETIRED.SCALAR,FP_ARITH_INST_RETIRED.128B_PACKED_DOUBLE,FP_ARITH_INST_RETIRED.128B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.256B_PACKED_DOUBLE,FP_ARITH_INST_RETIRED.256B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.VECTOR,FP_ARITH_INST_RETIRED.512B_PACKED_DOUBLE,FP_ARITH_INST_RETIRED.512B_PACKED_SINGLE"
+
         ;;
 
 # Below need to first upgrade EMON to v10.0.0 to work
@@ -286,7 +292,7 @@ topdown_port_util_counters="${topdown_port_counters},ARITH.FPU_DIV_ACTIVE"
 topdown_counters="${topdown_ms_seq_counters},${topdown_exe_counters},${topdown_mem_counters},${topdown_unc_counters},${topdown_port_util_counters}"
 
 
-topdown_BE_MEM="${topdown_BE},${topdown_aux_Memory_Bound_Fraction}"
+topdown_BE_MEM="${topdown_BE},${topdown_aux_Memory_Bound_Fraction}"  
 
 topdown_BE_CORE="${topdown_BE},${topdown_BE_MEM}"
 
@@ -294,8 +300,8 @@ topdown_set="${topdown_FE},${topdown_BADS},${topdown_BE},${topdown_RETR}"
 topdown_FE_set="${topdown_FE_LAT},${topdown_FE_BW}"
 topdown_BADS_set="${topdown_BADS_BR},${topdown_BADS_MCLR}"
 topdown_BE_set="${topdown_BE_MEM},${topdown_BE_CORE}"
-topdown_BE_MEM_set="${topdown_MEM_L1},${topdown_MEM_L2},${topdown_MEM_L3},${topdown_MEM_DRAM},${topdown_MEM_STOR}"
-topdown_BE_CORE_set="${topdown_CORE_DIV},${topdown_CORE_PORT}"
+topdown_BE_MEM_set="${topdown_BE_MEM_L1},${topdown_BE_MEM_L2},${topdown_BE_MEM_L3},${topdown_BE_MEM_DRAM},${topdown_BE_MEM_STOR}"
+topdown_BE_CORE_set="${topdown_BE_CORE_DIV},${topdown_BE_CORE_PORT}"
 topdown_RETR_set="${topdown_RETR_BASE},${topdown_RETR_MSEQ}"
 
 
@@ -331,9 +337,11 @@ append_counters "${activateCtrs[TOPDOWN_SET]}" "TopDownSet" ${topdown_set}
 append_counters "${activateCtrs[TOPDOWN_FE_SET]}" "TopDownFeSet" ${topdown_FE_set}
 append_counters "${activateCtrs[TOPDOWN_BADS_SET]}" "TopDownBadsSet" ${topdown_BADS_set}
 append_counters "${activateCtrs[TOPDOWN_BE_SET]}" "TopDownBeSet" ${topdown_BE_set}
+append_counters "${activateCtrs[TOPDOWN_RETR_SET]}" "TopDownRetrSet" ${topdown_RETR_set}
 append_counters "${activateCtrs[TOPDOWN_BE_MEM_SET]}" "TopDownBeMemSet" ${topdown_BE_MEM_set}
 append_counters "${activateCtrs[TOPDOWN_BE_CORE_SET]}" "TopDownBeCoreSet" ${topdown_BE_CORE_set}
-
+append_counters "${activateCtrs[DIVIDE]}" "Divide" ${divide_counter}
+append_counters "${activateCtrs[FLOP]}" "Flop" ${flop_counters}
 
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${l3_hit_rate_check_counters}
 # append_counters $ACTIVATE_LIFE_COUNTERS "LifeCounts" ${irq_life_counters}
