@@ -21,8 +21,8 @@ num_codelets="$6"
 cnt_codelet_idx="$7"
 res_path="$8"
 list_override="$9"
-num_cores=$(echo "$1" | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 
+num_cores=$(echo "$res_path" | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 command_line_args="${10}"
 
