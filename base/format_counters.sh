@@ -33,7 +33,6 @@ fc_echo() {
 
 #source $(dirname $0)/pick_cores.sh $res_path
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
-nc_all_cores=("${picked_cores[@]}")
 XP_CORE=${picked_cores[0]}
 
 if [[ "$ENABLE_SEP" == "1" ]]; then
@@ -143,19 +142,11 @@ for counter in $counters
       
       *)
       fc_echo "Regular treatment for '$counter'"
-    unset all_values; declare -A all_values
-    for i in ${!nc_all_cores[@]}; do
-      cc=${nc_all_cores[$i]}
-      let "target_field = $cc + 3"
-      values=($(grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g'))
-      for j in ${!values[@]}; do
-        value=${values[$j]}
-        all_values[$j]="${value}_${all_values[$j]}"
-      done
-    done
-    for values in ${all_values[@]}; do
-      sum=$(echo "$values" | sed 's/_/ /g' | awk -v RS=' ' '{sum+=$1} END{print sum}')
-      echo "$counter||$sum" >>$res_path/likwid_report
+#      let "target_field = $XP_CORE + 3"
+	  target_field=$(echo ${picked_cores[@]} | awk  '{for (i=1;i<=NF;i++) print $i+3}' |tr '\n' ','|sed 's/,$//g')
+      values=$( grep "$counter" $res_path/emon_report.trim | sed 's/\t/'${DELIM}'/g' | grep "$counter"${DELIM} | cut -f$target_field -d${DELIM} | sed 's/ //g' |awk -F${DELIM} '{for(i=1;i<=NF;i++) sum+=$i; print sum; sum=0}' )
+      for value in $values; do
+		echo "$counter||$value" >> $res_path/likwid_report
       done
   esac
 done
