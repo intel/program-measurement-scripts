@@ -27,14 +27,12 @@ variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
 command_line_args="${10}"
 
 #nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
+# picked_cores contains all cores to run (including the core to run through EMON/EMON API)
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
-if [[ "$IF_PARALLEL" != "0" ]]; then
-	nc_all_cores=${picked_cores[@]}
-else
-	nc_all_cores=${picked_cores[@]:1}
-fi
+# nc_all_cores contains all cores to run excluding the core to run through EMON/EMON API
+nc_all_cores=(${picked_cores[@]:1})
 # expend as string
-cores_to_use=$(echo ${nc_all_cores[@]} | sed 's/\ /,/g')
+cores_to_use=$(echo ${picked_cores[@]} | sed 's/\ /,/g')
 nc_all_cores=${nc_all_cores[@]}
 echo $nc_all_cores >> /tmp/ncall.txt
 XP_CORE=${picked_cores[0]}
@@ -112,28 +110,29 @@ for i in $( seq $META_REPETITIONS ); do
 	fi
 	run_cygwin $XP_CORE ${run_prog}
 
-  else
+    else
+
     if [[ "$IF_PARALLEL" != "0" ]]; then
       export OMP_NUM_THREADS=${num_cores}
       export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
       export KMP_AFFINITY=scatter
-      #cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
       cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
       #cmd="${run_prog}"
       echo -n $cmd
       bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
-    elif [[ "$MC_RUN" != "0" ]]; then
+    else
+	if [[ "$MC_RUN" != "0" ]]; then
 	    for cc in ${nc_all_cores}; do
 		cmd="$NUMACTL -m $XP_NODE -C ${cc} ${run_prog}"
 		echo $cmd
 		bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null &
 	    done
-	else
+	fi
 	cmd="${NUMACTL} -m ${XP_NODE} -C ${XP_CORE} ${run_prog}"
 	echo -n $cmd
 	bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >& /dev/null
     fi
-  fi
+    fi
 
     echo ", time.out :: " $(tail -1 time.out)
     res=$( tail -n 1 time.out | cut -d'.' -f1 )$( echo -e "\n$res" )
@@ -335,11 +334,11 @@ EOF
 			export OMP_NUM_THREADS=${num_cores}
               export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
               export KMP_AFFINITY=scatter
-			#cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
 			cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog_emon_api}"
               LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} ${cmd} &>>"$res_path/emon_execution_log"
               while pgrep -x emon -u $USER >/dev/null; do sleep 1; done
-		elif [[ "$MC_RUN" != "0" ]]; then
+		else
+	if [[ "$MC_RUN" != "0" ]]; then
 	    # without emon probe
 	    for cc in ${nc_all_cores}; do
 		LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C ${cc} ${run_prog} &>> "$res_path/emon_execution_log.core=${cc}" &
@@ -349,6 +348,7 @@ EOF
 
 	# with emon probe
         LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+	fi
 	while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
 	
 	if [[ "$MC_RUN" != "0" ]]; then
@@ -399,7 +399,6 @@ EOF
 		if [[ "$IF_PARALLEL" == "0" ]]; then
 		  LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
         else
-		  #cores_to_use=$(echo ${nc_all_cores} | sed 's/\ /,/g')
           cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
           LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" ${cmd} &>"$res_path/emon_execution_log"
         fi
