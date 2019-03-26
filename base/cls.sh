@@ -53,6 +53,7 @@ find_num_repetitions_and_iterations () {
     local repetitions_history_file="$7"
     local iteration_file="$8"
     local iterations_for_file="$9"
+    local num_core=${10}
 
   echo "history file"
   echo ${repetitions_history_file}
@@ -80,8 +81,8 @@ find_num_repetitions_and_iterations () {
 
     echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
     #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
-    echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_cores}" "|" grep ${DELIM}
-    loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_cores}" | grep ${DELIM})
+    echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM}
+    loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" | grep ${DELIM})
     res=$?
 
     if [[ "$res" != "0" ]]; then
@@ -276,8 +277,9 @@ if [[ ${LOOP_ITER_COUNTER} == "SEP" ]]; then
 else
     try_repetitions=2
 fi
-echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} "${num_cores}" 
-loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} "${num_cores}" )
+try_num_core=1
+echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core}
+loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
 res=$?
 
 if [[ "$res" != "0" || "X${loop_info}" == "X" ]]; then
@@ -400,12 +402,12 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 	    # 	emon --write-msr 0x620="0x${dec2hex}${dec2hex}"
 	    # fi
 
-	    if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
-		for variant in $variants; do
-		    #find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
-		    find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "${data_path}/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
-		done
-	    fi
+#	    if [[ "${REPETITION_PER_DATASIZE}" != "0" ]]; then
+#		for variant in $variants; do
+#		    #find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$codelet_folder/repetitions_history_${variant}"  "$codelet_folder/$CLS_RES_FOLDER/data_$data_size/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+#		    find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "${data_path}/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
+#		done
+#	    fi
 	    
 	    for memory_load in $memory_loads; do
 		memory_load_path="${data_path}/memload_$memory_load"
@@ -462,7 +464,7 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 				    #"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
 				    find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 					"${res_path}/repetitions_history_${variant}" \
-					"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
+					"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}" ${num_core}
 				    repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 				    loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2) 
 				else
