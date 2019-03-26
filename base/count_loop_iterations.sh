@@ -1,9 +1,25 @@
 #!/bin/bash 
 
+# This script will find out the average iterations per core for all loops executed by a function provided on number of cores
+# There are three cases:
+# 1) For sequential runs, only one core is running a program, so 
+#   a) we just run the program on one core
+#   b) determine the number of iterations executed by individual loop
+# 2) For throughput runs (MC_RUNS=1), we normally run the same program on $num_cores.  We expect all cores will execute the 
+#    same number of iterations.  The ave iterations per core will be ($num_cores* <iteration executed by 1 core>/$num_cores), so
+#    it will be simply <iteration executed by 1 core>.  To speedup/simplify process, we just neeed to
+#   a) run the program on one core
+#   b) determine the number of iterations executed by individual loop
+#   So essentially the same as 1)
+# 3) For true prallel runs (IF_PARALLEL=1), we have to run the program in parallel mode.  The data collection (MAQAO/SEP/VTUNE) 
+#   is expected to collect all iterations from all cores, so
+#   a) we run the program in parallel mode.
+#   b) determine the number of iterations executed by individual all cores
+#   c) divide the counts by $num_cores.
 source $CLS_FOLDER/const.sh
 
-if [[ "$nb_args" != "4" ]]; then
-	echo "ERROR! Invalid arguments (need the binary's path, the function's name, the data size and repetition)."
+if [[ "$nb_args" -lt "4" ]]; then
+	echo "ERROR! Invalid arguments (need the binary's path, function's name,data size, number of repetitions, and (optionally) number of cores)."
 	exit -1
 fi
 
@@ -13,12 +29,14 @@ binary_folder=$( dirname "$binary_path" )
 function_name="$2"
 data_size="$3"
 repetition="$4"
+num_cores="$5"
 set +x
 
 declare -A count_values
 
-
-
+if [[ -z "$num_cores" ]]; then
+  num_cores="1"
+fi
 #echo "Generation of splitncount for '$binary_path' ('$function_name')"
 
 cd $binary_folder
@@ -63,7 +81,7 @@ else
     fi
     rm -f $PWD/$DECAN_REPORT
     echo DONE >> /tmp/count.out.txt
-    # Not really used
+    # This *is* used at the end in iterating to compute final_res
     loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
     
     #echo "$decan_variants" &>blabla
@@ -81,6 +99,7 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
         #$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
         #count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
         echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
+# TODO: DO true parallel run
         count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
         echo "COUNT: " ${count_values[$loop_id]} 1>&2
         done
@@ -88,36 +107,16 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
       for decan_variant in $decan_variants; do
     #"./$decan_variant"
         "./$decan_variant" &> "$decan_variant.dprof"
-        count_values[$decan_variant]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
+# TODO: DO true parallel run
+		loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
+        count_values[$loop_id]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
         cat "$decan_variant.dprof" 1>&2
-        echo "COUNT: " ${count_values[$decan_variant]} 1>&2
+        echo "COUNT: " ${count_values[$loop_id]} 1>&2
         rm -f "$decan_variant" "$decan_variant.dprof"
       done
   fi
 
   # Got all counts saved in ${count_values[*]}
-  cd $CLS_FOLDER
-
-  final_res=""
-
-  if [[ "$USE_OLD_DECAN" == "0" ]]; then
-      for loop_id in $loop_ids; do
-        tmp_iter=$( echo "${count_values[$loop_id]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-      final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-      done
-  else
-      for decan_variant in $decan_variants; do
-        tmp_iter=$( echo "${count_values[$decan_variant]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-      loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
-      final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-      done
-  fi
-
-  echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     # Use sep to count iterations
     maqao_extra_info=$( $MAQAO analyze -ll --show-extra-info $binary_path "${command_line_args}"  fct=$function_name loop-depth=innermost )
@@ -126,8 +125,10 @@ elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     if [[ ${command_line_args} == "" ]]; then
 	echo sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts 1>&2
 	sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -out sep_counts
+# TODO: DO true parallel run
     else
 	sep -start -ec BR_INST_RETIRED.ALL_BRANCHES_PS:sa=${LOOP_ITER_SEP_COUNTER_SAV} -app $binary_path -args "${command_line_args}" -out sep_counts
+# TODO: DO true parallel run
     fi
     base_binary_name=$(basename $binary_path)
     for loop_id in $loop_ids; do
@@ -139,17 +140,6 @@ elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
     done
 
     # Got all counts saved in ${count_values[*]}
-    cd $CLS_FOLDER
-
-    final_res=""
-    for loop_id in $loop_ids; do
-        tmp_iter=$( echo "${count_values[$loop_id]}" )
-        if [[ "$tmp_iter" != "" ]]; then
-	    final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
-        fi
-    done
-    echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
-
 else
   if [[ "$VTUNE" != "" ]]; then
     #first get loop ids
@@ -164,6 +154,8 @@ else
     #cd ../..
     make count >/dev/null
     echo $VTUNE -loop-mode=loop-only -collect advanced-hotspots -data-limit=8192 -k sampling-interval=0.1 -k collection-detail=stack-call-and-tripcount -k analyze-openmp=true -- ./convf32_count 1>&2
+# TODO: Hardcoded run of ./convf32_count here!! VTUNE counting does not work for other code!
+# TODO: DO true parallel run
     $VTUNE -loop-mode=loop-only -collect advanced-hotspots -data-limit=8192 -k sampling-interval=0.1 -k collection-detail=stack-call-and-tripcount -k analyze-openmp=true -- ./convf32_count >/dev/null
     echo $VTUNE -report hw-events -group-by source-function -r r000ah -report-output tmp_vtune.csv -format csv -csv-delimiter comma 1>&2
     $VTUNE -report hw-events -group-by source-function -r r000ah -report-output tmp_vtune.csv -format csv -csv-delimiter comma >/dev/null
@@ -197,9 +189,23 @@ else
     echo "Exiting ..." 1>&2
     exit 1
   fi
-  cd $CLS_FOLDER
-  final_res=""
-  final_res=$( echo -e "$vtune_loop_id"${DELIM}"${count_values[$vtune_loop_id]}"${DELIM}"\n$final_res" )
-  echo "$final_res"
+  loop_ids=( $vtune_loop_id )
 fi
+
+cd $CLS_FOLDER
+final_res=""
+# For each loop in loop_ids
+for loop_id in $loop_ids; do
+  # Grab the corresponding iteration count
+  tmp_iter=$( echo "${count_values[$loop_id]}" )
+  # Divide the number of iterations by the number of cores for true parallel runs
+  if [[ "$IF_PARALLEL" == "1" ]]; then
+    tmp_iter=$(($tmp_iter / $num_cores))
+  fi
+  # If the iterations count is non-empty, append it to final_res
+  if [[ "$tmp_iter" != "" ]]; then
+    final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )
+  fi
+done
+echo "$final_res" | sort -k2nr,2nr -t ${DELIM}
 exit 0

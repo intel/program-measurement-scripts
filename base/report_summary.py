@@ -41,14 +41,9 @@ def print_iterations_per_rep_formula(formula_file):
   formula_file.write('iterations_per_rep = Iterations / Repetitions\n')
 
 def calculate_time(in_row, iterations_per_rep):
-  if (not in_row.has_key('CPU_CLK_UNHALTED_THREAD')):
-    print 'ERROR: Input CSV file does not have field \"CPU_CLK_UNHALTED_THREAD\"\n'
-    sys.exit()
-  if (not in_row.has_key('decan_experimental_configuration.frequency')):
-    print 'ERROR: Input CSV file does not have field \"decan_experimental_configuration.frequency\"\n'
-    sys.exit()
-  return (((float)(in_row['CPU_CLK_UNHALTED_THREAD']) * iterations_per_rep) /
-          ((float)(in_row['decan_experimental_configuration.frequency']) * 1e3))
+  return ((getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') * iterations_per_rep) /
+          (getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3 *
+           getter(in_row, 'decan_experimental_configuration.num_core')))
 
 def print_time_formula(formula_file):
   formula_file.write('Time (s) = (CPU_CLK_UNHALTED_THREAD * iterations_per_rep) /' + 
@@ -197,14 +192,17 @@ def build_row_output(in_row):
   try:
     out_row['L1 Rate (GB/s)'], out_row['L2 Rate (GB/s)'], out_row['L3 Rate (GB/s)'], out_row['RAM Rate (GB/s)'] = \
       calculate_mem_rates(in_row, iterations_per_rep, time)
-    out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
   except:
     out_row['L1 Rate (GB/s)'] = 'N/A'
     out_row['L2 Rate (GB/s)'] = 'N/A'
     out_row['L3 Rate (GB/s)'] = 'N/A'
     out_row['RAM Rate (GB/s)'] = 'N/A'
-    out_row['Load+Store Rate (GIPS)'] = 'N/A'
     print "WARNING: Could not compute MHU rates!"
+  try:
+    out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
+  except:
+    out_row['Load+Store Rate (GIPS)'] = 'N/A'
+    print "WARNING: Could not compute L/S rates!"
   try:
     out_row['GFLOPS'] = calculate_gflops(in_row, iterations_per_rep, time)
   except:

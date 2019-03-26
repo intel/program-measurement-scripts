@@ -33,7 +33,6 @@ fc_echo() {
 
 #source $(dirname $0)/pick_cores.sh $res_path
 picked_cores=($($CLS_FOLDER/pick_cores.sh $res_path))
-nc_all_cores=(${picked_cores[@]:1})
 XP_CORE=${picked_cores[0]}
 
 if [[ "$ENABLE_SEP" == "1" ]]; then
