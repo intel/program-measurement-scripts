@@ -99,6 +99,7 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
         #$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
         #count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
         echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
+# TODO: DO true parallel run
         count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
         echo "COUNT: " ${count_values[$loop_id]} 1>&2
         done
@@ -106,6 +107,7 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
       for decan_variant in $decan_variants; do
     #"./$decan_variant"
         "./$decan_variant" &> "$decan_variant.dprof"
+# TODO: DO true parallel run
 		loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
         count_values[$loop_id]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
         cat "$decan_variant.dprof" 1>&2
