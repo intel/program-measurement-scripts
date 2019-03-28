@@ -9,39 +9,39 @@ loop_id="$2"
 
 set_arch_names()
 {
-    uarch_input="$1"
-    case "$uarch_input" in
-	"SANDY_BRIDGE")
-           local_uarch="sandy_bridge"
-	   uarch_suffix="snb"
-	   ;;
-	 "HASWELL")
-  	   local_uarch="haswell"
-	   uarch_suffix="hsw"
-	   ;;
-    
-	 "IVY_BRIDGE")
-	   local_uarch="ivy_bridge"
-	   uarch_suffix="ivb"
-	   ;;
-	 *)
-	   exit -1
-	   ;;
-    esac
-    loop_file="$bin_file".$uarch_suffix.ooo
-    eufs_loop_file="$bin_file".$uarch_suffix.eufs.ooo
+	uarch_input="$1"
+	case "$uarch_input" in
+		"SANDY_BRIDGE")
+			local_uarch="sandy_bridge"
+			uarch_suffix="snb"
+			;;
+		"HASWELL")
+			local_uarch="haswell"
+			uarch_suffix="hsw"
+			;;
+
+		"IVY_BRIDGE")
+			local_uarch="ivy_bridge"
+			uarch_suffix="ivb"
+			;;
+		*)
+			exit -1
+			;;
+	esac
+	loop_file="$bin_file".$uarch_suffix.ooo
+	eufs_loop_file="$bin_file".$uarch_suffix.eufs.ooo
 }
 
 # Generate files for all archs
 for ua in SANDY_BRIDGE HASWELL IVY_BRIDGE
-  do
-  set_arch_names ${ua}
-#  "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
-  "$MAQAO" ${MAQAO_FOLDER}/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
-# Also use E-UFS to generate OoO files
-  echo generating OoO file for $ua 1>&2
-  echo CMD: "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file "|grep Target" 1>&2
-  "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file |grep Target 1>&2
+do
+	set_arch_names ${ua}
+	#  "$MAQAO" ./maqao/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+	"$MAQAO" ${MAQAO_FOLDER}/generator.lua binary="$bin_file" loop_id="$loop_id" uarch="$local_uarch" > "$loop_file"
+	# Also use E-UFS to generate OoO files
+	echo generating OoO file for $ua 1>&2
+	echo CMD: "$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file "|grep Target" 1>&2
+	"$MAQAO"  cqa  uo="enable=yes,mode=dump,ooo_filepath=$eufs_loop_file" uarch="$ua" loop="$loop_id" $bin_file |grep Target 1>&2
 done
 
 #local_uarch="sandy_bridge"

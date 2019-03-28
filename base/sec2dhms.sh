@@ -25,7 +25,7 @@ secs=$((${sec_remainder} % ${secs_per_min}))
 
 if [[ "${days}" -gt "0" ]]
 then
-    printf "%02d days %02d:%02d:%02d\n" ${days} ${hours} ${mins} ${secs}
+	printf "%02d days %02d:%02d:%02d\n" ${days} ${hours} ${mins} ${secs}
 else
-    printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
+	printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
 fi

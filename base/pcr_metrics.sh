@@ -208,18 +208,18 @@ function convert_metric {
 	fi
 
 	echo "$converted_result"	|
-		sed 's/ /_/g'		|
-		sed 's/,//g'		|
-		sed 's/\[/(/g'		|
-		sed 's/\]/)/g'		|
-		sed 's/-/_/g'		|
-		sed 's/\.//g'		|
-		sed 's/:/_/g'		|
-		sed 's/__/_/g'		|
-		sed 's/__/_/g'		|
-		sed 's/__/_/g'		|
-		sed 's/__/_/g'		|
-		sed 's/__/_/g'
+	sed 's/ /_/g'		|
+	sed 's/,//g'		|
+	sed 's/\[/(/g'		|
+	sed 's/\]/)/g'		|
+	sed 's/-/_/g'		|
+	sed 's/\.//g'		|
+	sed 's/:/_/g'		|
+	sed 's/__/_/g'		|
+	sed 's/__/_/g'		|
+	sed 's/__/_/g'		|
+	sed 's/__/_/g'		|
+	sed 's/__/_/g'
 }
 
 #convert_metric "$1"

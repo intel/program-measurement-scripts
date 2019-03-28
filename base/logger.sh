@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 source $CLS_FOLDER/const.sh
 
@@ -15,7 +15,7 @@ LOG_FILE=${LOG_FOLDER}/log.${HOSTNAME}.txt
 
 
 if [ ! -d ${LOG_FOLDER} ]; then
-    mkdir ${LOG_FOLDER}
+	mkdir ${LOG_FOLDER}
 fi
 
 echo ${msg}

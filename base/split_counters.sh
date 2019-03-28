@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 source ./const.sh
 
@@ -16,16 +16,16 @@ event_sets_names=($(echo $event_sets | tr ' ' '\n' | grep Event))
 event_sets_idx=($(echo $event_sets | tr ' ' '\n' | nl |  grep Event | sed 's:\s\+\(.*\)\s\+:\1 :' | cut -d' ' -f1))
 event_sets_idx=( $(echo ${event_sets_idx[@]}) $(( $(echo $event_sets | tr ' ' '\n' | wc -l) + 1 )) )
 
-#Build the list of all supported core and uncore events 
+#Build the list of all supported core and uncore events
 event_set_counters=""
 for ((i=0; i<${#event_sets_names[@]}; i++))
 do
 	begin=$((${event_sets_idx[$i]} + 1))
 	end=$((${event_sets_idx[(($i +1))]} - 1 ))
 
-	new_set=$(echo $event_sets | tr ' ' '\n' | sed -n "$begin,$end p" | tr '\n' ',' | sed 's:,$::')	
+	new_set=$(echo $event_sets | tr ' ' '\n' | sed -n "$begin,$end p" | tr '\n' ',' | sed 's:,$::')
 	new_set="${event_sets_names[$i]}:$new_set"
-#	echo $new_set
+	#	echo $new_set
 	event_set_counters=$event_set_counters${DELIM}$new_set
 done
 event_set_counters=$(echo $event_set_counters | sed 's:^'${DELIM}'::')
@@ -43,7 +43,7 @@ fuse_uncore_events=""
 for s in $uncore_sets
 do
 	myset=$(echo $uncore_events | tr ${DELIM} '\n' | grep $s | cut -d':' -f2 | tr '\n' ',')
-    myset=$(echo $myset | sed 's:,$::')	
+	myset=$(echo $myset | sed 's:,$::')
 	fuse_uncore_events="$fuse_uncore_events"${DELIM}"Uncore_$s:$myset"
 done
 fuse_uncore_events=$(echo $fuse_uncore_events | sed 's:^'${DELIM}'::')

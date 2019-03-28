@@ -11,7 +11,7 @@ mega_content=""
 for mode in MEM_VEC FULLY_VEC VECTOR_ISET FP FP_ARITH
 do
 	for option in none force_sse
-#	for option in force_sse
+	#	for option in force_sse
 	do
 		if [[ "$option" != "none" ]]
 		then

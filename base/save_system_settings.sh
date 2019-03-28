@@ -15,7 +15,7 @@ source $(dirname $0)/const.sh
 old_prefetcher_bits=($(emon --read-msr 0x1a4 | grep MSR | cut -f2 -d=|uniq ))
 if [[ "${#old_prefetcher_bits[@]}" -gt "1" ]]
 then
-# Different settings among processor - not supported.
+	# Different settings among processor - not supported.
 	echo "Processors with different original prefetcher settings.  Cancelling CLS." >& 2
 	exit -1
 fi
@@ -23,21 +23,21 @@ fi
 #Saving old uncore settings
 old_uncore_bits=($(emon --read-msr 0x620 | grep MSR | cut -f2 -d=|uniq|tr -d "\r" ))
 
- ((hi_bits=old_uncore_bits>>8))
- ((lo_bits=old_uncore_bits&0xff))
+((hi_bits=old_uncore_bits>>8))
+((lo_bits=old_uncore_bits&0xff))
 # In same units as Core freq.
- ((min_uncore_freq=hi_bits*100000))
- ((max_uncore_freq=lo_bits*100000))
+((min_uncore_freq=hi_bits*100000))
+((max_uncore_freq=lo_bits*100000))
 
 
 # save orignal THP setting first
- if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
-     old_thp_setting="NA"
-     (( old_frequency=$(wmic cpu get CurrentClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
- else
-     old_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
-     old_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
- fi
+if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+	old_thp_setting="NA"
+	(( old_frequency=$(wmic cpu get CurrentClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
+else
+	old_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
+	old_frequency=$( cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed | head -n 1 )
+fi
 
 #echo $old_prefetcher_bits  $old_thp_setting $old_frequency $old_uncore_bits
 echo $old_prefetcher_bits  $old_thp_setting $old_frequency $min_uncore_freq $max_uncore_freq

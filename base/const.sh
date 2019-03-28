@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 # A bit ugly HOSTNAME -> UARCH detection but will keep it for the time being
 # TODO: Use more robust method.
@@ -28,24 +28,24 @@
 # fi
 
 case $(echo "$HOSTNAME" | tr "[:upper:]" "[:lower:]" )  in
-    fxe32lin04.fx.intel.com)
-	export HOSTNAME="fxe32lin04"
-	;;
-    fxatom*)
-	export HOSTNAME="fxsilvermont"
-	;;
-    fxilab10*)
-	export HOSTNAME="fxhaswell-desktop"
-	;;
-    fxilab11*)
-	export HOSTNAME="fxhaswell"
-	;;
-    fxilab149*|fxilab15[0-2]*)
-	export HOSTNAME="fxhaswell-l4"
-	;;
-    fxilab16[0-7]*)
-	export HOSTNAME="fxhaswell-server"
-	;;
+	fxe32lin04.fx.intel.com)
+		export HOSTNAME="fxe32lin04"
+		;;
+	fxatom*)
+		export HOSTNAME="fxsilvermont"
+		;;
+	fxilab10*)
+		export HOSTNAME="fxhaswell-desktop"
+		;;
+	fxilab11*)
+		export HOSTNAME="fxhaswell"
+		;;
+	fxilab149*|fxilab15[0-2]*)
+		export HOSTNAME="fxhaswell-l4"
+		;;
+	fxilab16[0-7]*)
+		export HOSTNAME="fxhaswell-server"
+		;;
 esac
 
 
@@ -68,12 +68,12 @@ export LD_LIBRARY_PATH="$DECAN_FOLDER:$LD_LIBRARY_PATH"
 
 if [[ $USE_OLD_DECAN == "1" ]]
 then
-#MAQAO_FOLDER="$CLS_FOLDER/maqao"
-    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_oneview"
+	#MAQAO_FOLDER="$CLS_FOLDER/maqao"
+	MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_oneview"
 else
-#    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_new"
-    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_new_2018"
-    export LD_LIBRARY_PATH="$MAQAO_FOLDER/lib:$DECAN_FOLDER:$LD_LIBRARY_PATH"
+	#    MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_new"
+	MAQAO_FOLDER="$UTILS_FOLDER/MAQAO/maqao_new_2018"
+	export LD_LIBRARY_PATH="$MAQAO_FOLDER/lib:$DECAN_FOLDER:$LD_LIBRARY_PATH"
 fi
 MAQAO="$MAQAO_FOLDER/maqao"
 
@@ -90,14 +90,14 @@ LOOP_ITER_SEP_COUNTER_SAV=40009
 #export PATH="$PATH:/nfs/fx/proj/openmp/compilers/intel/15.0/Linux/pkgs/update0/composer_xe_2015.0.090/bin/intel64/"
 
 if [ -d /nfs/fx/proj/openmp ]; then
-  COMPILER_ROOT=/nfs/fx/proj/openmp
+	COMPILER_ROOT=/nfs/fx/proj/openmp
 else
-  # Austin settings
-  COMPILER_ROOT=/nfs/site/proj/openmp
+	# Austin settings
+	COMPILER_ROOT=/nfs/site/proj/openmp
 fi
 # Check compilers
 for compiler in icc ifort; do
-  command -v  $compiler >/dev/null 2>&1 || { echo "Required compiler: $compiler but it's not installed.  Aborting." >&2; exit -1; }
+	command -v  $compiler >/dev/null 2>&1 || { echo "Required compiler: $compiler but it's not installed.  Aborting." >&2; exit -1; }
 done
 
 
@@ -120,7 +120,7 @@ done
 CLS_RES_FOLDER="cls_res_${HOSTNAME}"
 
 # For w_adjust.sh use
-# Below choice is about whether adjusting repetition based on whole program 
+# Below choice is about whether adjusting repetition based on whole program
 # or kernel only time.  Kernel only should be used and whole program was old approach.
 W_ADJUST="KERNEL_ONLY"
 #W_ADJUST="WHOLE_PGM"
@@ -167,9 +167,9 @@ declare -A activateCtrs
 activateCtrs[MEM_TRAFFIC]=1
 activateCtrs[MEM_HIT]=1
 if [ $HOSTNAME == "fxhaswell-server" ]; then
-    activateCtrs[MEM_ROWBUFF]=1
+	activateCtrs[MEM_ROWBUFF]=1
 else
-    activateCtrs[MEM_ROWBUFF]=0
+	activateCtrs[MEM_ROWBUFF]=0
 fi
 activateCtrs[RESOURCE]=${ACTIVATE_FOR_MLM}
 #activateCtrs[RESOURCE]=0
@@ -349,36 +349,36 @@ MEMLOAD_ARGS+=([fxtcarilab027]="--core=6 --core=7 --core=8 --core=9 --core=10 --
 if [[ "$HOSTNAME" == "fxilab147" ]] ; then
 	XP_HIGH_FREQ="2500000"
 elif [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
-        (( XP_HIGH_FREQ=$(wmic cpu get MaxClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
+	(( XP_HIGH_FREQ=$(wmic cpu get MaxClockSpeed|sed "s/[^0-9]*//g" |head -2|tail -1|tr -d '\n')*1000 ))
 else
 	XP_HIGH_FREQS=( $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies) )
 	if [ "$(cat /proc/cpuinfo | grep 'ida')" == "" ]; then
-   		XP_HIGH_FREQ=${XP_HIGH_FREQS[0]}
+		XP_HIGH_FREQ=${XP_HIGH_FREQS[0]}
 	else
-   		XP_HIGH_FREQ=${XP_HIGH_FREQS[1]}
+		XP_HIGH_FREQ=${XP_HIGH_FREQS[1]}
 	fi
 fi
 
 if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
-    # Use EMON to get topology and pick the max of second col which is package
-    XP_NODE=$(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2|awk '$2>=max {max=$2}; END {print max}')
-    XP_ALL_CORES=( $(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2 |awk '$2 ~ /'${XP_NODE}'/ {print $1}'))
+	# Use EMON to get topology and pick the max of second col which is package
+	XP_NODE=$(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2|awk '$2>=max {max=$2}; END {print max}')
+	XP_ALL_CORES=( $(emon -v |sed -n '/-----/,/-----/{//!p}'|tail +2 |awk '$2 ~ /'${XP_NODE}'/ {print $1}'))
 
 else
-    # expected output from numactl -H
-    NUMACTL=$( which numactl )
-    # node 0 cpus: 0 1 2 3 4 5 6 7 8 9
-    XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
-    if [[ "$HOSTNAME" == "fxilab147" ]]
-    then
-	# NODE 1 is bad, hardcoded to select first node
-	XP_NODE=0
-    fi
-    
-    #XP_NODE=${XP_NODES[$HOSTNAME]}
-    # All cores at the XP_NODE node
-#    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
-    XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
+	# expected output from numactl -H
+	NUMACTL=$( which numactl )
+	# node 0 cpus: 0 1 2 3 4 5 6 7 8 9
+	XP_NODE=$(${NUMACTL} -H | awk '/cpus/ && $2>=max {max=$2}; END{print max}')
+	if [[ "$HOSTNAME" == "fxilab147" ]]
+	then
+		# NODE 1 is bad, hardcoded to select first node
+		XP_NODE=0
+	fi
+
+	#XP_NODE=${XP_NODES[$HOSTNAME]}
+	# All cores at the XP_NODE node
+	#    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
+	XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
 
 fi
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
@@ -418,7 +418,7 @@ fi
 # For gather_results.sh
 CPIS_FOLDER="cpis"
 COUNTERS_FOLDER="counters"
-# Counter list data file name 
+# Counter list data file name
 EMON_COUNTER_NAMES_FILE="emon_counters.txt"
 # Loop iteration count file name
 LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
@@ -430,11 +430,11 @@ LOOP_ITERATION_COUNT_FILE="loop_iterations.txt"
 FORMAT_2_CAPE_SH="${CLS_FOLDER}/format2cape.sh"
 STAN_METRICS_FILE="${CLS_FOLDER}/metrics_data/STAN"
 declare -A nameMap=(
-[data]=decan_experimental_configuration.data_size 
-[memload]=decan_experimental_configuration.memory_load 
-[freq]=decan_experimental_configuration.frequency
-[uncfreq]=decan_experimental_configuration.unc_frequency
-[variant]=decan_variant.name
+	[data]=decan_experimental_configuration.data_size
+	[memload]=decan_experimental_configuration.memory_load
+	[freq]=decan_experimental_configuration.frequency
+	[uncfreq]=decan_experimental_configuration.unc_frequency
+	[variant]=decan_variant.name
 [numcores]=decan_experimental_configuration.num_core)
 COUNTER_FNAME="counter_nv"
 
@@ -454,41 +454,41 @@ CONFLICT_DELIM='_'
 # delimiter used by MAQAO
 M_DELIM=';'
 
-#For cls.sh and gather_results.sh 
+#For cls.sh and gather_results.sh
 #control how the repetition is determined (one per data size vs one per all settings)
 REPETITION_PER_DATASIZE="0"
 MSR_POWER_UNIT="0x606"
 
 set_prefetcher_bits() {
-    bits="$1"
-    hex_prefetcher_bits=$(printf "0x%x" ${bits})
-    echo "Writing ${hex_prefetcher_bits} to MSR 0x1a4 to change prefetcher settings."
-    emon --write-msr 0x1a4=${hex_prefetcher_bits}
+	bits="$1"
+	hex_prefetcher_bits=$(printf "0x%x" ${bits})
+	echo "Writing ${hex_prefetcher_bits} to MSR 0x1a4 to change prefetcher settings."
+	emon --write-msr 0x1a4=${hex_prefetcher_bits}
 }
 
 set_thp() {
-    setting="$1"
-    if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
-	echo "SET_THP disabled for Cygwin"
-	return;
-    fi
-    # NOTE: setuid bit of hugeadm assumed to be set by root.
-    echo "Huge page setting ==> ${THP_SETTING}"
-
-    cur_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
-    if [[ "${cur_thp_setting}" != "${THP_SETTING}" ]]; then
-	hugeadm --thp-${THP_SETTING}
-# Sleep to wait for system state updated.
-	sleep 5
-	new_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
-	if [[ "${new_thp_setting}" != "${setting}" ]]
-	    then
-# Failed to set THP for experiment.  Quit.
-	    echo "Failed to set THP (Huge page) from ${setting} to ${new_thp_setting}.  Cancelling CLS."
-	    exit -1
+	setting="$1"
+	if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
+		echo "SET_THP disabled for Cygwin"
+		return;
 	fi
-    else
-	echo "Current THP setting is already ${cur_thp_setting}."
-    fi
+	# NOTE: setuid bit of hugeadm assumed to be set by root.
+	echo "Huge page setting ==> ${THP_SETTING}"
+
+	cur_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
+	if [[ "${cur_thp_setting}" != "${THP_SETTING}" ]]; then
+		hugeadm --thp-${THP_SETTING}
+		# Sleep to wait for system state updated.
+		sleep 5
+		new_thp_setting=$( cat /sys/kernel/mm/transparent_hugepage/enabled | sed -n 's/.*\[\(.*\)\].*/\1/p;' )
+		if [[ "${new_thp_setting}" != "${setting}" ]]
+		then
+			# Failed to set THP for experiment.  Quit.
+			echo "Failed to set THP (Huge page) from ${setting} to ${new_thp_setting}.  Cancelling CLS."
+			exit -1
+		fi
+	else
+		echo "Current THP setting is already ${cur_thp_setting}."
+	fi
 }
 

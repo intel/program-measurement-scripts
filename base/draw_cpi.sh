@@ -45,7 +45,7 @@ plot=$(	awk -F ${DELIM} '
 				printf "\n";
 			}
 		}
-		' "$cpi_file" )
+' "$cpi_file" )
 
 #echo "Plot: '$plot'"
 
@@ -73,7 +73,7 @@ t=$( echo -e	"
 
 
 		$plot
-		" ) 
+" )
 
 echo -e "$t" | gnuplot &> /dev/null
 

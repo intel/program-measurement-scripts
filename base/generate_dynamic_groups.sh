@@ -35,7 +35,7 @@ then
 fi
 
 echo "Generating combinatorics..."
-combinatorics=$( $COMBINATORICS_SH $nb_groups ) 
+combinatorics=$( $COMBINATORICS_SH $nb_groups )
 #echo "Combinatorics: '$combinatorics'"
 
 

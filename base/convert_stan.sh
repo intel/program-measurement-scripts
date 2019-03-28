@@ -29,11 +29,11 @@ echo "*******************************************************"
 
 awk ' /Processing loop '$loop_id'/ {flag=1;next} /End/{flag=0} flag { print }' $file | sed "s/:/"${DELIM}"/g" | tail -n +7 | awk '/General loop properties/,0' | grep P0 -A 2 | sed s/\\tP0/spaceholder\\tP0/g > tabz
 
-cols=`head -n 1 tabz | wc -w` 
+cols=`head -n 1 tabz | wc -w`
 for (( i=1; i <= $cols; i++))
 do
-  awk '{printf ("%s%s", tab, $'$i'); tab="\t"} END {print ""}' tabz
-#done | sed "s/spaceholder//g" | sed "s/\tuops/        uops/g" | sed "s/\t/    /g" | sed "s/ cycles/cycles/g"
+	awk '{printf ("%s%s", tab, $'$i'); tab="\t"} END {print ""}' tabz
+	#done | sed "s/spaceholder//g" | sed "s/\tuops/        uops/g" | sed "s/\t/    /g" | sed "s/ cycles/cycles/g"
 done | sed "s/spaceholder//g" | sed "s/\t/"${DELIM}"/g"
 echo
 

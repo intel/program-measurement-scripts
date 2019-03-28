@@ -1,5 +1,5 @@
 #!/bin/bash
-# By default, CQA always generate ';' separated CSV.  Use this wrapper to invoke CQA to ensure 
+# By default, CQA always generate ';' separated CSV.  Use this wrapper to invoke CQA to ensure
 # the right delimiter is used for CSV format.
 
 source $CLS_FOLDER/const.sh
@@ -15,9 +15,9 @@ bin_path="$2"
 loop_id="$3"
 if [[ "$nb_args" < "4" ]]
 then
-    more_args=""
+	more_args=""
 else
-    more_args="$4"
+	more_args="$4"
 fi
 
 # Some previous use cases:
@@ -27,7 +27,7 @@ fi
 
 #cmd="$MAQAO" module=cqa uarch="${uarch}" bin="$bin_path" loop="$loop_id" of=csv -ext ${more_args}
 cmd="\"$MAQAO\" module=cqa uarch=\"${uarch}\" bin=\"$bin_path\" loop=\"$loop_id\" of=csv ud=${MAQAO_FOLDER}/csv_ext_ia32_x86_64_userdata.lua -ext ${more_args}"
-echo Loop information collection: Executing CMD: \'$cmd\' 
+echo Loop information collection: Executing CMD: \'$cmd\'
 bash -c "$cmd"
 # Generated loops.csv
 
@@ -35,12 +35,12 @@ bash -c "$cmd"
 
 if [[ ${DELIM} != ';' ]]
 then
-    # Only need to do if the desired delimiter is not ';
-    # Replace the ${DELIM} by ${CONFLICT_DELIM} first and then replace ';' by ${DELIM}
-#    cat loops.csv | tr ',' '#' | tr ';' ','
-    tmpfile=$(mktemp)
-    cat loops.csv | tr ${DELIM} ${CONFLICT_DELIM} | tr ';' ${DELIM} > ${tmpfile}
-    mv ${tmpfile} loops.csv
+	# Only need to do if the desired delimiter is not ';
+	# Replace the ${DELIM} by ${CONFLICT_DELIM} first and then replace ';' by ${DELIM}
+	#    cat loops.csv | tr ',' '#' | tr ';' ','
+	tmpfile=$(mktemp)
+	cat loops.csv | tr ${DELIM} ${CONFLICT_DELIM} | tr ';' ${DELIM} > ${tmpfile}
+	mv ${tmpfile} loops.csv
 fi
 
 

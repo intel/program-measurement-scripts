@@ -11,9 +11,9 @@ fi
 
 if [[ "$nb_args" < "1" ]]
 then
-    read -p "Enter a brief desc for this run: " rundesc
+	read -p "Enter a brief desc for this run: " rundesc
 else
-    rundesc="$1"
+	rundesc="$1"
 fi
 
 

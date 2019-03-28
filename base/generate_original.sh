@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 ##!/bin/bash -l
 
 source $CLS_FOLDER/const.sh
@@ -21,10 +21,10 @@ build_codelet ${codelet_folder} ${codelet_name} ${build_folder}
 # The contract of this function is: In all cases, $codelet_name is under ${build_folder}
 
 cp ${build_folder}/"$codelet_name" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
-res=$?  
+res=$?
 if [[ "$res" != "0" ]]; then
-    echo "ERROR! Copy of binary to binary folder failed"
-    exit -1
+	echo "ERROR! Copy of binary to binary folder failed"
+	exit -1
 fi
 
 exit 0

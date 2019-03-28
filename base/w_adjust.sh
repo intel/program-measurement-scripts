@@ -3,7 +3,7 @@
 source $CLS_FOLDER/const.sh
 
 if [ -f /opt/intel/sep/sep_vars.sh ]; then
-    source /opt/intel/sep/sep_vars.sh > /dev/null
+	source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
 if [[ "$nb_args" != "6" ]]; then
@@ -31,25 +31,25 @@ tsc_freq=$(echo $(emon -v |grep "TSC Freq"|cut -f4 -d' ')*1000000|bc -l)
 
 while [ $res -lt $desired_length  -a $current_repetitions -le ${HARD_MAX_REPETITIONS} -a $current_repetitions -ge 0 ]
 do
-  	if [[ $current_repetitions -ge ${MAX_REPETITIONS} ]]; then
-	    echo "max repetitions reached, setting repetition to ${MAX_REPETITIONS}"
-	    saved_repetitions=${MAX_REPETITIONS}
-	    break
+	if [[ $current_repetitions -ge ${MAX_REPETITIONS} ]]; then
+		echo "max repetitions reached, setting repetition to ${MAX_REPETITIONS}"
+		saved_repetitions=${MAX_REPETITIONS}
+		break
 	fi
 
 	echo "Trying number of repetitions = $current_repetitions"
-#	echo "$current_repetitions $desired_size" > codelet.data
+	#	echo "$current_repetitions $desired_size" > codelet.data
 	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" )
 	saved_repetitions=$current_repetitions
 
-  # TO BE DELETED BELOW after confirming parameter_set_decoding works.
-  # create the command line argument (if necessary) for specifying number of 
-  # repetitions
-  #if [ -n "${rep_prefix}" ]; then
-  #  repappend="${rep_prefix}${current_repetitions}"
-  #else
-  #  repappend=""
-  #fi
+	# TO BE DELETED BELOW after confirming parameter_set_decoding works.
+	# create the command line argument (if necessary) for specifying number of
+	# repetitions
+	#if [ -n "${rep_prefix}" ]; then
+	#  repappend="${rep_prefix}${current_repetitions}"
+	#else
+	#  repappend=""
+	#fi
 
 	res=$(LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} /usr/bin/time -f %e ./${binary_name} ${command_line_args} 2>&1 )
 	val_res=$?
@@ -63,19 +63,19 @@ do
 	res=$( echo -e "$res" | tail -n 1 )
 
 	if [[ "$W_ADJUST" == "KERNEL_ONLY" ]]; then
-	    # Use time.out for kernel only timing
-	    ticks=$(tail -n 1 time.out)
-	    # Compute the hundredth sec
-	    res=$(echo $ticks '/' $tsc_freq '* 100'|bc -l)
-	    # Do rounding by eliminating things after decimal
-	    res=$(echo $res |sed 's/\..*//g')
+		# Use time.out for kernel only timing
+		ticks=$(tail -n 1 time.out)
+		# Compute the hundredth sec
+		res=$(echo $ticks '/' $tsc_freq '* 100'|bc -l)
+		# Do rounding by eliminating things after decimal
+		res=$(echo $res |sed 's/\..*//g')
 	else
-	    # Use /usr/bin/time results for whole app measurement
-	    #echo "Res time: $res"
-	    res=$( echo $res | sed "s/\.//g" )
-	    #echo "Res without dot: $res"
-	    res=$( echo $res | sed 's/^[0]*//' )
-	    #echo "Res without 0s: $res"
+		# Use /usr/bin/time results for whole app measurement
+		#echo "Res time: $res"
+		res=$( echo $res | sed "s/\.//g" )
+		#echo "Res without dot: $res"
+		res=$( echo $res | sed 's/^[0]*//' )
+		#echo "Res without 0s: $res"
 	fi
 	echo "Got: ${res} while targeting to ${desired_length}"
 
@@ -86,9 +86,9 @@ do
 		res=0
 	else
 		if [ $res -lt $desired_length  ]; then
-#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
-#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
-                        current_repetitions=$(echo ${current_repetitions} ${res} ${desired_length} |awk '{x=$1*(($3/$2)); print (x-int(x) > 0)?int(x)+1:int(x)}')
+			#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
+			#			let "current_repetitions = $current_repetitions * (($desired_length  / $res) + 1)"
+			current_repetitions=$(echo ${current_repetitions} ${res} ${desired_length} |awk '{x=$1*(($3/$2)); print (x-int(x) > 0)?int(x)+1:int(x)}')
 			#echo "Deduced repetitions = $current_repetitions"
 		fi
 	fi

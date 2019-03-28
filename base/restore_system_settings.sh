@@ -11,8 +11,8 @@ source $(dirname $0)/const.sh
 
 if [[ "$nb_args" != "5" ]]
 then
-        echo "ERROR! Invalid arguments (need prefetcher bits, thp setting, freq, uncore bit)."
-        exit -1
+	echo "ERROR! Invalid arguments (need prefetcher bits, thp setting, freq, uncore bit)."
+	exit -1
 fi
 
 old_prefetcher_bits="$1"
@@ -28,13 +28,13 @@ echo "Writing ${old_prefetcher_bits} to MSR 0x1a4 to restore prefetcher settings
 set_prefetcher_bits ${old_prefetcher_bits}
 # restore thp setting
 if [[ "$(uname)" == "CYGWIN_NT-6.2" ]]; then
-    if [[ "${old_thp_setting}" == "NA" ]]; then
-	echo "Skipping THP restore for Windows"
-    else
-	echo "Error: unexpected old THP settings for Windows"
-    fi
+	if [[ "${old_thp_setting}" == "NA" ]]; then
+		echo "Skipping THP restore for Windows"
+	else
+		echo "Error: unexpected old THP settings for Windows"
+	fi
 else
-    set_thp ${old_thp_setting}
+	set_thp ${old_thp_setting}
 fi
 
 $(dirname $0)/set_frequency.sh -c ${old_frequency} -m ${min_uncore_frequency} -M ${max_uncore_frequency}
