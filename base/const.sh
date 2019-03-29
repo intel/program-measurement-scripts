@@ -4,27 +4,27 @@
 # TODO: Use more robust method.
 # if [[ "$HOSTNAME" == "fxe32lin04.fx.intel.com" ]]
 # then
-# 	export HOSTNAME="fxe32lin04"
+#		export HOSTNAME="fxe32lin04"
 # else
-# 	if echo "$HOSTNAME" | grep "fxatom"
-# 	then
-# 		export HOSTNAME="fxsilvermont"
-# 	else
-# 		if echo "$HOSTNAME" | grep "fxilab10"
-# 		then
-# 			export HOSTNAME="fxhaswell-desktop"
-# 		else
-# 			if echo "$HOSTNAME" | grep "fxilab11"
-# 			then
-# 				export HOSTNAME="fxhaswell"
-# 			else
-# 				if [[ "$HOSTNAME" == "fxilab150" || "$HOSTNAME" == "fxilab151" || "$HOSTNAME" == "fxilab152" ]]
-# 				then
-# 					export HOSTNAME="fxhaswell-l4"
-# 				fi
-# 			fi
-# 		fi
-# 	fi
+#		if echo "$HOSTNAME" | grep "fxatom"
+#		then
+#			export HOSTNAME="fxsilvermont"
+#		else
+#			if echo "$HOSTNAME" | grep "fxilab10"
+#			then
+#				export HOSTNAME="fxhaswell-desktop"
+#			else
+#				if echo "$HOSTNAME" | grep "fxilab11"
+#				then
+#					export HOSTNAME="fxhaswell"
+#				else
+#					if [[ "$HOSTNAME" == "fxilab150" || "$HOSTNAME" == "fxilab151" || "$HOSTNAME" == "fxilab152" ]]
+#					then
+#						export HOSTNAME="fxhaswell-l4"
+#					fi
+#				fi
+#			fi
+#		fi
 # fi
 
 case $(echo "$HOSTNAME" | tr "[:upper:]" "[:lower:]" )  in
@@ -213,7 +213,7 @@ DISABLE_L2_HW_PREFETCHER=$ALL_DISABLE
 DISABLE_ADJ_CACHE_LINE_PREFETCHER=$ALL_DISABLE
 DISABLE_DCU_PREFETCHER=$ALL_DISABLE
 DISABLE_DCU_IP_PREFETCHER=$ALL_DISABLE
-PREFETCHER_DISABLE_BITS=$(((${DISABLE_DCU_IP_PREFETCHER}<<3)|(${DISABLE_DCU_PREFETCHER}<<2)|(${DISABLE_ADJ_CACHE_LINE_PREFETCHER}<<1)|(${DISABLE_L2_HW_PREFETCHER})))
+((PREFETCHER_DISABLE_BITS="(DISABLE_DCU_IP_PREFETCHER<<3)|(DISABLE_DCU_PREFETCHER<<2)|(DISABLE_ADJ_CACHE_LINE_PREFETCHER<<1)|(DISABLE_L2_HW_PREFETCHER)"))
 
 # Hugh page settings (always, madvise, never)
 THP_SETTING="always"
@@ -237,8 +237,8 @@ then
 	some_res=$( echo "$HOSTNAME" | grep "haswell" )
 	if [[ "$some_res" == "" ]]
 	then
-#		UARCH="SANDY_BRIDGE"
-#		PRETTY_UARCH="Sandy Bridge"
+		#		UARCH="SANDY_BRIDGE"
+		#		PRETTY_UARCH="Sandy Bridge"
 		UARCH=$(emon -v |grep "EMON Database" | cut -f4 -d' '|tr -d '\r')
 		PRETTY_UARCH=$(echo $UARCH | sed 's/_/ /g' | awk '{for(i=1;i<=NF;i++){ $i=toupper(substr($i,1,1)) substr($i,2) }}1')
 	else
@@ -491,4 +491,3 @@ set_thp() {
 		echo "Current THP setting is already ${cur_thp_setting}."
 	fi
 }
-

@@ -64,36 +64,35 @@ do
 	let "lc = (($i + 1) * 2) - 1"
 	let "i = $i + 1"
 
-	plot=$( echo -e "$plot \
-			\"$counters_file\" using ${counter_columns[$counter]}:xticlabels(2) lw 2 lt $lt lc $lc with linespoints" )
-		if [[ "$counter" != "$last_counter" ]]
-		then
-			plot=$( echo -e "$plot," )
-		fi
-		plot=$( echo -e "$plot\n" )
+	plot=$( echo -e "$plot \"$counters_file\" using ${counter_columns[$counter]}:xticlabels(2) lw 2 lt $lt lc $lc with linespoints" )
+	if [[ "$counter" != "$last_counter" ]]
+	then
+		plot=$( echo -e "$plot," )
+	fi
+	plot=$( echo -e "$plot\n" )
 
-	done
+done
 
-	#echo  "plot: '$plot'"
+#echo  "plot: '$plot'"
 
 
-	#plot=$(	awk -F ${DELIM} '
-	#		END{
-	#			FS="'${DELIM}'";
-	#
-	#			printf "plot ";
-	#			for (i = 0; i < (NF - 5); i++)
-	#			{
-	#				printf "\"'$cpi_file'\" using " (5 + i) ":xticlabels(2) lw 2 lt "(i + 1)" lc "(i + 1)*2-1" with linespoints";
-	#				if (i != (NF - 6)){ printf ", \\" }
-	#				printf "\n";
-	#			}
-	#		}
-	#		' "$cpi_file" )
+#plot=$(	awk -F ${DELIM} '
+#		END{
+#			FS="'${DELIM}'";
+#
+#			printf "plot ";
+#			for (i = 0; i < (NF - 5); i++)
+#			{
+#				printf "\"'$cpi_file'\" using " (5 + i) ":xticlabels(2) lw 2 lt "(i + 1)" lc "(i + 1)*2-1" with linespoints";
+#				if (i != (NF - 6)){ printf ", \\" }
+#				printf "\n";
+#			}
+#		}
+#		' "$cpi_file" )
 
-	#echo "Plot: '$plot'"
+#echo "Plot: '$plot'"
 
-	t=$( echo -e	"
+t=$( echo -e	"
 		#!/usr/bin/gnuplot
 
 		set datafile separator \""${DELIM}"\"
@@ -117,8 +116,8 @@ do
 
 
 		$plot
-	" )
+" )
 
-	echo -e "$t" | gnuplot &> /dev/null
+echo -e "$t" | gnuplot &> /dev/null
 
-	exit $?
+exit $?
