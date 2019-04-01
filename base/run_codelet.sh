@@ -284,7 +284,7 @@ then
 						cat <<- EOFBEGIN > emon_api_config_file
 						<?xml version="1.0"?>
 						<root>
-						 <emon_config>
+						  <emon_config>
 						EOFBEGIN
 						# add events to emon config file
 						for newev in ${evlist[*]}; do
@@ -292,11 +292,11 @@ then
 						done
 						# output the end of the emon config file
 						cat <<- EOFEND >> emon_api_config_file
-										<duration>99999999999</duration>
-										<start_paused>0</start_paused>
-										<output_file>emon_api.out</output_file>
-										<print_system_time>0</print_system_time>
-								</emon_config>
+						  <duration>99999999999</duration>
+						  <start_paused>0</start_paused>
+						  <output_file>emon_api.out</output_file>
+						  <print_system_time>0</print_system_time>
+						  </emon_config>
 						</root>
 						EOFEND
 					else
