@@ -124,8 +124,25 @@ A. DEFAULT USAGE
         <default datasizes> will be some default data size to run the code.  It can be overriden by setting name2sizes[<codelet_name>]=... .
 
 
-B. CUSTOMIZATION
+B. CUSTOMIZATION of BUILDING (III) and RUNNING (IV) of code
 
+    I. CUSTOMIZATION of Code BUILDING
+        This is done by modifying build_codelet() function inside the topmost script.  The default implementation used make to
+        build the code.  This could be changed to abitrarily complicated build process.  On the other hand, the 
+        contract of this function is simply: $codelet_name is under ${build_folder} on return of the function.
+
+        Note that it is assumed the code to be built will be dynamically linked to the base probe library pointed 
+        by ${BASE_PROBE_FOLDER} variable.  When the code is executed, a different probe library (e.g. EMON probe) would be used 
+        instead by choosing different ${LD_LIBRARY_PATH}.  The code to built should be able to handle this.
+        
+    II. CUSTOMIZATION of Code RUNNING
+        This is done by modifying parameter_set_decoding() function inside the topmost script.  As described above, 
+        codelet.data is generate by default.  For program that requires command line argument, the argument should be 
+        returned by this function via the echo statement at the end of this function.  For example, if the code expects command line
+        arguments of the form "-numnodes <M> -numedges <N> -input_file <filename> -rep <R>", then the arguments should be done by doing
+        echo "-numnodes $M -numedges $N -input_file $filename -rep $repetition" where the variables $M, $N, and $filename are 
+        parsed from the input variable $datasize.  They could be encoded as <M>:<N>:<filename> which was stored in name2sizes[] map.
+        Also, we expect repetition is a mandatory argument to be passed to the code.
 
 
 
