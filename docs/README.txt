@@ -30,42 +30,42 @@ A. DEFAULT USAGE
         <binary> is the executable name built by the Makefile.  In this example, it is run_kernel.
 
     II. INSTRUMENTATION of Code
-    Probe insertion just before and after the kernel call:
+        Probe insertion just before and after the kernel call:
 
-    For Fortran:
+        For Fortran:
 
-    CALL measure_init()
-    CALL measure_start()
-    
-            CALL f (...)
-    
-    CALL measure_stop()
-    
-    For C:
+        CALL measure_init()
+        CALL measure_start()
+        
+                CALL f (...)
+        
+        CALL measure_stop()
+        
+        For C:
 
-    measure_init_ ();
-    measure_start_ ();
-    
-        f (...);
-    
-    measure_stop_ ();
+        measure_init_ ();
+        measure_start_ ();
+        
+            f (...);
+        
+        measure_stop_ ();
 
-    For C++:
+        For C++:
 
-    extern "C" {
-        void measure_init_ ();
-        void measure_start_ ();
-        void measure_stop_ ();
-    }
+        extern "C" {
+            void measure_init_ ();
+            void measure_start_ ();
+            void measure_stop_ ();
+        }
 
-    measure_init_ ();
-    measure_start_ ();
-    
-        f (...);
-    
-    measure_stop_ ();
+        measure_init_ ();
+        measure_start_ ();
+        
+            f (...);
+        
+        measure_stop_ ();
 
-    Note for C, the probe function names has trailing underscores ("_").
+        Note for C, the probe function names has trailing underscores ("_").
 
     III. BUILDING of Code
         Update the Makefile to provide hook for script to link probe library by 
