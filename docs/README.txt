@@ -136,13 +136,33 @@ B. CUSTOMIZATION of BUILDING (III) and RUNNING (IV) of code
         instead by choosing different ${LD_LIBRARY_PATH}.  The code to built should be able to handle this.
         
     II. CUSTOMIZATION of Code RUNNING
-        This is done by modifying parameter_set_decoding() function inside the topmost script.  As described above, 
-        codelet.data is generate by default.  For program that requires command line argument, the argument should be 
-        returned by this function via the echo statement at the end of this function.  For example, if the code expects command line
-        arguments of the form "-numnodes <M> -numedges <N> -input_file <filename> -rep <R>", then the arguments should be done by doing
-        echo "-numnodes $M -numedges $N -input_file $filename -rep $repetition" where the variables $M, $N, and $filename are 
-        parsed from the input variable $datasize.  They could be encoded as <M>:<N>:<filename> which was stored in name2sizes[] map.
-        Also, we expect repetition is a mandatory argument to be passed to the code.
-
+        This is done by modifying parameter_set_decoding(codelet, datasize, repetition, rundir) function 
+        inside the topmost script.  Note that we expect $repetition is a mandatory argument to be passed to the code to 
+        execute the kernel repeatedly.  As described above, $datasize and $repetition are written to 
+        codelet.data by default expecting the program will read that file for these two paramters.  
+        
+        For program that requires command line argument, the argument should be returned by this function via the echo 
+        at the end of this function.  For example, if the code expects command line arguments of the form 
+            "-numnodes <M> -numedges <N> -input_file <filename> -rep <R>", 
+        then the arguments should be done by doing
+            echo "-numnodes $M -numedges $N -input_file $filename -rep $repetition" 
+        where the variables $M, $N, and $filename are parsed from the input variable $datasize.  
+        They could be encoded as <M>:<N>:<filename> which was stored in name2sizes[] map.
+        
+        Also, the user can use different methods to pass input arguments for different program by checking the $codelet variable.
+        For example,
+            if [[ $codelet == 'foo' ]]; then
+                ...
+                echo "-np $NP -n $N -rep $repetition"
+            elif [[ $codelet == 'bar ]]; then
+                ...
+                echo "-matrixsize $N -rep $repetition"
+            else
+                echo ${repetition} ${datasize}" > ./codelet.data
+                echo ""
+            fi
+        So codelet 'foo' will receive $NP, $N and $repetition as command line argument inputs; 
+        'bar' will receive $N and $repetition as command line inputs; 
+        and for other codelets, the $repetition and $datasize inputs will be stored in ./codelet.data file.
 
 
