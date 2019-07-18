@@ -151,10 +151,10 @@ B. CUSTOMIZATION of BUILDING (III) and RUNNING (IV) of code
         
         Also, the user can use different methods to pass input arguments for different program by checking the $codelet variable.
         For example,
-            if [[ $codelet == 'foo' ]]; then
+            if [[ $(basename $codelet) == 'foo' ]]; then
                 ...
                 echo "-np $NP -n $N -rep $repetition"
-            elif [[ $codelet == 'bar ]]; then
+            elif [[ $(basename $codelet) == 'bar ]]; then
                 ...
                 echo "-matrixsize $N -rep $repetition"
             else
