@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 if [[ "$1" == "" ]]
 then

@@ -80,9 +80,9 @@ MAQAO="$MAQAO_FOLDER/maqao"
 #Vtune
 VTUNE="$(which amplxe-cl)"
 
-#LOOP_ITER_COUNTER="MAQAO"
+LOOP_ITER_COUNTER="MAQAO"
 #LOOP_ITER_COUNTER="VTUNE"
-LOOP_ITER_COUNTER="SEP"
+#LOOP_ITER_COUNTER="SEP"
 LOOP_ITER_SEP_COUNTER_SAV=40009
 
 #source /nfs/fx/proj/openmp/compilers/intel/12.1/Linux/intel64/load.sh &> /dev/null
