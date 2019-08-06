@@ -7,8 +7,8 @@ if [ -f /opt/intel/sep/sep_vars.sh ]; then
 	source /opt/intel/sep/sep_vars.sh > /dev/null
 fi
 
-if [[ "$nb_args" != "13" ]]; then
-	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, unc_frequncies, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers, counter list override)."
+if [[ "$nb_args" != "14" ]]; then
+	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, unc_frequncies, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers, counter list override), current compiler."
 	exit -1
 fi
 
@@ -25,7 +25,7 @@ cnt_codelet_idx="${10}"
 num_cores="${11}"
 prefetchers="${12}"
 counter_list_override="${13}"
-
+curr_compiler="${14}"
 
 # Assume to be successful in the beginning
 loop_detection_success=1
@@ -232,8 +232,8 @@ echo $nominal_freq_kHz > "$codelet_folder/$CLS_RES_FOLDER/nominal_freq_kHz"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
-echo $CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder}
-$CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder}
+echo $CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder} ${curr_compiler}
+$CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder} ${curr_compiler}
 res=$?
 if [[ "$res" != "0" ]]; then
 	echo "Cancelling CLS."

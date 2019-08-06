@@ -180,6 +180,10 @@ if [ -f arguments.csv ]; then
 	cp arguments.csv  $res_path/arguments.csv
 fi
 
+if [ -f compiler.csv ]; then
+	cp compiler.csv  $res_path/compiler.csv
+fi
+
 echo "RES:"$res_path
 
 #echo "Ld library path: '$LD_LIBRARY_PATH'"
