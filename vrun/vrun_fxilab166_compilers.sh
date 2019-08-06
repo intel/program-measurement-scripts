@@ -215,6 +215,7 @@ run() {
 	galois_lonestar_prefix="${galois_prefix}/lonestar"
 
 	# SR runs (including some original)
+	declare -gA name2path
 	declare -gA name2sizes
 	declare -ga run_codelets
 
