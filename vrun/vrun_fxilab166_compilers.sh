@@ -29,11 +29,11 @@ get_compilers () {
 	# Checking codelet source language
 	codelet_lang=$( grep "language value" "$( readlink -f "$codelet_path" )/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 	echo "Codelet Language: ${codelet_lang}" >&2
-	if [[ $codelet_lang == "Fortran" ]]; then
+	if [ $codelet_lang == "Fortran" ] || [ $codelet_lang == "2" ]; then
 		compilers="Intel GNU"
 	elif [[ $codelet_lang == "CPP" ]]; then
 		compilers="Intel GNU LLVM"
-	elif [[ $codelet_lang == "C" ]]; then
+	elif [ $codelet_lang == "C" ] || [ $codelet_lang == "1" ]; then
 		compilers="Intel GNU LLVM"
 	else
 		echo "Error: .conf file has invalid language value" >&2
@@ -77,7 +77,7 @@ build_codelet () {
 	CPP_flags[LLVM]="-g -O3"
 
 	codelet_lang=$( grep "language value" "$( readlink -f "$codelet_folder" )/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
-	if [[ $codelet_lang == "Fortran" ]]; then
+	if [ $codelet_lang == "Fortran" ] || [ $codelet_lang == "2" ]; then
 		curr_compiler_driver=${fortran_compiler[${curr_compiler}]}
 		for flag in ${fortran_flags[${curr_compiler}]}; do
 			curr_compiler_flags+=${flag}
@@ -91,7 +91,7 @@ build_codelet () {
 			curr_compiler_flags+=" "
 		done
 		make_vars="CXX=${curr_compiler_driver} CXXFLAGS=\"${curr_compiler_flags}\""
-	elif [[ $codelet_lang == "C" ]]; then
+	elif [ $codelet_lang == "C" ] || [ $codelet_lang == "1" ]; then
 		curr_compiler_driver=${C_compiler[${curr_compiler}]}
 		for flag in ${C_flags[${curr_compiler}]}; do
 			curr_compiler_flags+=${flag}
@@ -327,7 +327,7 @@ run() {
 		tridag_2_de
 	)
 
-	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0" runLoop
+	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=1,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0" runLoop
 
 	return
 }
