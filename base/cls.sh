@@ -277,7 +277,6 @@ if [[ "$res" != "0" || "X${loop_info}" == "X" ]]; then
 		loop_detection_success=0
 	fi
 fi
-echo "LOOP_INFO: $loop_info"
 if [[ "$loop_detection_success" == "1" ]]; then
 	#    echo env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions}
 	#    echo $loop_info > /tmp/case1.txt
