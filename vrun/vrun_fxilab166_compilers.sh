@@ -66,7 +66,7 @@ build_codelet () {
 	CPP_compiler[LLVM]="clang++"
 
 	fortran_flags[Intel]="-g -O3 -align array64byte"
-	fortran_flags[GNU]="-g -O3 -align array64byte"
+	fortran_flags[GNU]="-g -O3"
 
 	C_flags[Intel]="-g -O3 -xHOST"
 	C_flags[GNU]="-g -O3"
