@@ -445,7 +445,7 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 								if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
 									#find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 										#"${res_path}/repetitions_history_${variant}" \
-										#"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_$data_size}"
+										#"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
 									find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 										"${res_path}/repetitions_history_${variant}" \
 										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_str}" ${num_core}
