@@ -65,8 +65,8 @@ build_codelet () {
 	CPP_compiler[GNU]="g++"
 	CPP_compiler[LLVM]="clang++"
 
-	fortran_flags[Intel]="-g -O3 -xHOST"
-	fortran_flags[GNU]="-g -O3"
+	fortran_flags[Intel]="-g -O3 -align array64byte"
+	fortran_flags[GNU]="-g -O3 -align array64byte"
 
 	C_flags[Intel]="-g -O3 -xHOST"
 	C_flags[GNU]="-g -O3"
@@ -83,21 +83,21 @@ build_codelet () {
 			curr_compiler_flags+=${flag}
 			curr_compiler_flags+=" "
 		done
-		make_vars="FC=${curr_compiler_driver} FFLAGS=\"${curr_compiler_flags}\""
+		make_vars=(CF=${curr_compiler_driver} FFLAGS="${curr_compiler_flags}")
 	elif [[ $codelet_lang == "CPP" ]]; then
 		curr_compiler_driver=${CPP_compiler[${curr_compiler}]}
 		for flag in ${CPP_flags[${curr_compiler}]}; do
 			curr_compiler_flags+=${flag}
 			curr_compiler_flags+=" "
 		done
-		make_vars="CXX=${curr_compiler_driver} CXXFLAGS=\"${curr_compiler_flags}\""
+		make_vars=(CXX=${curr_compiler_driver} CXXFLAGS="${curr_compiler_flags}")
 	elif [ $codelet_lang == "C" ] || [ $codelet_lang == "1" ]; then
 		curr_compiler_driver=${C_compiler[${curr_compiler}]}
 		for flag in ${C_flags[${curr_compiler}]}; do
 			curr_compiler_flags+=${flag}
 			curr_compiler_flags+=" "
 		done
-		make_vars="CC=${curr_compiler_driver} CFLAGS=\"${curr_compiler_flags}\""
+		make_vars=(CC=${curr_compiler_driver} CFLAGS="${curr_compiler_flags}")
 	else
 		echo "Error: Cannot find compiler (${curr_compiler}) for the specified language (${codelet_lang})"
 		exit -1
@@ -125,13 +125,12 @@ build_codelet () {
   cp ${build_files} ${build_tmp_folder}
 
   cd ${build_tmp_folder}
-
   if [[ "$ENABLE_SEP" == "1" ]]; then
-    echo make ${make_vars} clean ENABLE_SEP=sep ${emon_api_flags} all
-    make "${make_vars}" clean ENABLE_SEP=sep ${emon_api_flags} all
+    echo make "${make_vars[@]}" clean ENABLE_SEP=sep ${emon_api_flags} all
+    make "${make_vars[@]}" clean ENABLE_SEP=sep ${emon_api_flags} all
   else
-	  echo make ${make_vars} LIBPATH="${BASE_PROBE_FOLDER}" clean all
-	  make "${make_vars}" LIBPATH="${BASE_PROBE_FOLDER}" clean all
+	  echo make "${make_vars[@]}" LIBPATH="${BASE_PROBE_FOLDER}" clean all
+	  make "${make_vars[@]}" LIBPATH="${BASE_PROBE_FOLDER}" clean all
   fi
 
   # &> /dev/null
@@ -279,50 +278,50 @@ run() {
 	name2sizes[tridag_2_de]="200000"
 
 	run_codelets=(
-		balanc_3_de
-		balanc_3_sVS_de
-		elmhes_10_de
-		elmhes_10_sVS_de
-		elmhes_11_de
-		elmhes_11_sVS_de
-		four1_2_me
-		hqr_15_se
-		hqr-sq_12_se
-		hqr-sq_12_sVS_se
-		lop_13_de
-		lop_13_sVS_de
-		ludcmp-sq_4_se
-		ludcmp-sq_4_sVS_se
-		matadd-flb_16_de
-		matadd-flb_16_sVS_de
-		mprove_8_me
-		mprove_8_sVS_me
-		mprove_9_de
-		mprove_9_sVS_de
-		ptr1_vmovaps_branch
-		realft_4_de
-		relax2_26_de
-		relax2_26_sVS_de
-		rstrct_29_de
-		rstrct_29_sVS_de
-		s1244_se
-		s1244_sVS_se
-		s319_se
-		s319_sVS_se
-		svbksb_3_se
-		svbksb_3_sVS_se
-		svdcmp_11_de
-		svdcmp_11_sVS_de
-		svdcmp_13_de
-		svdcmp_13_sVS_de
-		svdcmp_14_de
-		svdcmp_14_sVS_de
-		svdcmp_6_de
-		svdcmp_6_sVS_de
-		toeplz_1_de
-		toeplz_1_sVS_de
-		toeplz_2_de
-		toeplz_4_de
+#		balanc_3_de
+#		balanc_3_sVS_de
+#		elmhes_10_de
+#		elmhes_10_sVS_de
+#		elmhes_11_de
+#		elmhes_11_sVS_de
+#		four1_2_me
+#		hqr_15_se
+#		hqr-sq_12_se
+#		hqr-sq_12_sVS_se
+#		lop_13_de
+#		lop_13_sVS_de
+#		ludcmp-sq_4_se
+#		ludcmp-sq_4_sVS_se
+#		matadd-flb_16_de
+#		matadd-flb_16_sVS_de
+#		mprove_8_me
+#		mprove_8_sVS_me
+#		mprove_9_de
+#		mprove_9_sVS_de
+#		ptr1_vmovaps_branch
+#		realft_4_de
+#		relax2_26_de
+#		relax2_26_sVS_de
+#		rstrct_29_de
+#		rstrct_29_sVS_de
+#		s1244_se
+#		s1244_sVS_se
+#		s319_se
+#		s319_sVS_se
+#		svbksb_3_se
+#		svbksb_3_sVS_se
+#		svdcmp_11_de
+#		svdcmp_11_sVS_de
+#		svdcmp_13_de
+#		svdcmp_13_sVS_de
+#		svdcmp_14_de
+#		svdcmp_14_sVS_de
+#		svdcmp_6_de
+#		svdcmp_6_sVS_de
+#		toeplz_1_de
+#		toeplz_1_sVS_de
+#		toeplz_2_de
+#		toeplz_4_de
 		tridag_1_de
 		tridag_2_de
 	)
