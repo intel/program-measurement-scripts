@@ -1,1 +1,0 @@
-../../opencv-4.1.0+contrib/codelets/sample_cape.sh
