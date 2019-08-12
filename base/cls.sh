@@ -366,7 +366,6 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 
 	# Change Huge page settings
 	set_thp ${THP_SETTING}
-	echo PREFETCHER:"$prefetchers"
 	for prefetcher in $prefetchers; do
 		# Change prefetcher settings
 		#	set_prefetcher_bits ${PREFETCHER_DISABLE_BITS}
@@ -375,13 +374,11 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 		mkdir "$prefetcher_path" &> /dev/null
 		# TODO: Currently vrun launcher passes data in 1 at a time but may change in future for folder reuse
 		# anyways?
-		echo DATA_SIZE:"$data_size"
-		declare -i data_size_counter=1
 		for data_size in $data_sizes; do
 			echo
 			echo
-			data_path="$prefetcher_path/data_$data_size_counter"
-			data_size_counter=$((data_size_counter+1))
+			data_size_str=${data_size//[![:alnum:]]/}
+			data_path="$prefetcher_path/data_$data_size_str"
 			mkdir "$data_path" &> /dev/null
 
 			echo "Setting highest CPU frequency to adjust codelet parameters..."
@@ -398,7 +395,6 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 			#		    find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} "$build_folder/repetitions_history_${variant}"  "${data_path}/${LOOP_ITERATION_COUNT_FILE}" "$codelet_folder/$CLS_RES_FOLDER/iterations_for_${data_size}"
 			#		done
 			#	    fi
-			echo MEM_LOAD:"$memory_loads"
 			for memory_load in $memory_loads; do
 				memory_load_path="${data_path}/memload_$memory_load"
 				mkdir "$memory_load_path" &> /dev/null
@@ -420,11 +416,9 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 				else
 					echo "No memory load."
 				fi
-				echo UNC_FREQ:"$unc_frequencies"
 				for unc_frequency in $unc_frequencies; do
 					unc_frequency_path="$memory_load_path/uncfreq_$unc_frequency"
 					mkdir "$unc_frequency_path" &> /dev/null
-					echo FREQ:"$frequencies"
 					for frequency in $frequencies; do
 						frequency_path="$unc_frequency_path/freq_$frequency"
 						mkdir "$frequency_path" &> /dev/null
@@ -441,30 +435,27 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 							exit -1
 						fi
 
-						echo VARIANTS:"$variants" 
 						for variant in $variants; do
 							variant_path="$frequency_path/variant_$variant"
 							mkdir ${variant_path} &> /dev/null
 
-							echo NUM_CORE:"$num_cores"
 							for num_core in $num_cores; do
 								res_path="$variant_path/numcores_$num_core"
 								mkdir ${res_path} &> /dev/null
 
-								echo REPETITION_PER_DATASIZE:"${REPETITION_PER_DATASIZE}"
 								if [[ "${REPETITION_PER_DATASIZE}" == "0" ]]; then
 									#find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 										#"${res_path}/repetitions_history_${variant}" \
-										#"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_counter}"
+										#"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_$data_size}"
 									find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 										"${res_path}/repetitions_history_${variant}" \
-										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_counter}" ${num_core}
+										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_str}" ${num_core}
 									repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 									loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
 								else
 									#			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 									repetitions=$(cat "$build_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-									loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size_counter/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
+									loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size_str/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
 								fi
 
 								# Generate the codelet data file for measurment.  Need to compute iteration count.

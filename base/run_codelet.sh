@@ -13,7 +13,6 @@ then
 fi
 
 codelet_folder=$( readlink -f "$1" )
-build_folder=$1
 codelet_name="$2"
 iterations="$3"
 repetitions="$4"
@@ -84,7 +83,7 @@ pgm_dumped_metric_values=""
 
 if [[ "${variant}" == "ORG" ]]; then
 	# Run the original program
-	run_prog="${build_folder}/${codelet_name} ${command_line_args}"
+	run_prog="./${codelet_name} ${command_line_args}"
 
 
 	#run_prog_emon_api="./${codelet_name}"_emon_api
@@ -92,7 +91,7 @@ if [[ "${variant}" == "ORG" ]]; then
 	run_prog_emon_api="./${codelet_name} ${command_line_args}"
 else
 	# Run the DECAN generated program
-	run_prog="${build_folder}/${codelet_name}_${variant}_hwc"
+	run_prog="./${codelet_name}_${variant}_hwc"
 	# See generate_variants.sh to see emon_api binary is used to generate this binary
 	run_prog_emon_api="./${codelet_name}_${variant}_hwc"
 fi
@@ -209,8 +208,7 @@ then
 
 	for i in $( seq $META_REPETITIONS ); do
 		if [[ "$ENABLE_SEP" == "1" ]]; then
-			echo "Counter Collection: SEP enabled mode -> "
-			emon_counters_to_run=$($CLS_FOLDER/split_counters.sh $emon_counters)
+			emon_counters_to_run=$(./split_counters.sh $emon_counters)
 			emon_counters_core=$(echo $emon_counters_to_run | tr '#' '\n' | head -n 1)
 			emon_counters_uncore=$(echo $emon_counters_to_run | tr '#' '\n' | tail -n 1)
 
@@ -221,7 +219,6 @@ then
 				events_code=$(echo $events | cut -d':' -f1)
 				events=$(echo $events | cut -d':' -f2)
 				#$NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-				echo "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path/sep_report_$events_code_$i -ec $events -count -app ${run_prog} &> $res_path/emon_execution_log"
 				LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -count -app ${run_prog} &> "$res_path/emon_execution_log"
 			done
 
@@ -229,11 +226,9 @@ then
 				events_code=$(echo $events | cut -d':' -f1)
 				events=$(echo $events | cut -d':' -f2)
 				#$NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
-				echo "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path/sep_report_$events_code_$i -ec $events -app ${run_prog} &> $res_path/emon_execution_log"
 				LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE sep -start -sp -out $res_path"/sep_report_"$events_code"_"$i -ec "$events" -app ${run_prog} &> "$res_path/emon_execution_log"
 			done
 		else # enable sep else clause
-			echo "Counter Collection: EMON enabled mode -> "
 			#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ./${codelet_name}_${variant}_hwc &> "$res_path/emon_execution_log"
 			#emon -F "$res_path/emon_report" -qu -t0 -C"($emon_counters)" $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog} &> "$res_path/emon_execution_log"
 			if [[ "$ACTIVATE_EMON_API" != "0" ]]; then
