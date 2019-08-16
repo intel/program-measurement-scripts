@@ -179,6 +179,10 @@ if [ -f arguments.csv ]; then
 	cp arguments.csv  $res_path/arguments.csv
 fi
 
+if [ -f compiler.csv ]; then
+	cp compiler.csv  $res_path/compiler.csv
+fi
+
 echo "RES:"$res_path
 
 #echo "Ld library path: '$LD_LIBRARY_PATH'"
@@ -203,7 +207,7 @@ then
 	eta_all="NA"
 
 	for i in $( seq $META_REPETITIONS ); do
-		if [[ "ENABLE_SEP" == "1" ]]; then
+		if [[ "$ENABLE_SEP" == "1" ]]; then
 			emon_counters_to_run=$(./split_counters.sh $emon_counters)
 			emon_counters_core=$(echo $emon_counters_to_run | tr '#' '\n' | head -n 1)
 			emon_counters_uncore=$(echo $emon_counters_to_run | tr '#' '\n' | tail -n 1)
