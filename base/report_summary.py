@@ -118,9 +118,11 @@ def calculate_load_store_rate(in_row, iterations_per_rep, time_per_rep):
     load_per_it  = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
     store_per_it = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
   except:
-    load_per_it  = in_row['Nb_32_bits_loads'] + in_row['Nb_64_bits_loads'] + in_row['Nb_128_bits_loads'] \
+    load_per_it  = in_row['Nb_8_bits_loads'] + in_row['Nb_16_bits_loads'] \
+										+ in_row['Nb_32_bits_loads'] + in_row['Nb_64_bits_loads'] + in_row['Nb_128_bits_loads'] \
                     + in_row['Nb_256_bits_loads'] + in_row['Nb_MOVH_LPS_D_loads']
-    store_per_it = in_row['Nb_32_bits_stores'] + in_row['Nb_64_bits_stores'] + in_row['Nb_128_bits_stores'] \
+    store_per_it = in_row['Nb_8_bits_stores'] + in_row['Nb_16_bits_stores'] \
+										+ in_row['Nb_32_bits_stores'] + in_row['Nb_64_bits_stores'] + in_row['Nb_128_bits_stores'] \
                     + in_row['Nb_256_bits_stores'] + in_row['Nb_MOVH_LPS_D_stores']
   return ((load_per_it + store_per_it) * iterations_per_rep) / (1E9 * time_per_rep)
 
