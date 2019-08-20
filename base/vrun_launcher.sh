@@ -208,6 +208,9 @@ runLoop() {
 		else
 			local compilers="default"
 		fi
+		compilers_arr=(${compilers})
+		((num_codelets*=${#compilers_arr[@]}))
+
 		for curr_compiler in ${compilers}; do
 			for sz in ${sizes[@]}; do
 				((cls_run_count++))
