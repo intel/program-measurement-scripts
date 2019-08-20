@@ -140,7 +140,7 @@ end
 
 local function push_mem_insns_breakdown (cqa_results)
    local t = {}
-   for _,v in ipairs ({"32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"}) do
+   for _,v in ipairs ({"8 bits", "16 bits", "32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"}) do
       t[v] = { ["loads"] = 0, ["stores"] = 0 }
    end
 
@@ -158,7 +158,11 @@ local function push_mem_insns_breakdown (cqa_results)
             mem_oprnd = insn:get_first_mem_oprnd();
 
             if (mem_oprnd ~= nil) then
-               if     (mem_oprnd ["size"] ==  32) then
+               if     (mem_oprnd ["size"] ==  8) then
+                  base = "8 bits";
+               elseif (mem_oprnd ["size"] ==  16) then
+                  base = "16 bits";
+               elseif (mem_oprnd ["size"] ==  32) then
                   base = "32 bits";
                elseif (mem_oprnd ["size"] ==  64) then
                   base = "64 bits";
@@ -252,7 +256,7 @@ __cqa_user_data = {
       },
 
       ["[ia32_x86_64] memory insns"] = {
-         args = { {"32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"},
+         args = { {"8 bits", "16 bits", "32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"},
                   {"loads", "stores"}},
          CSV_header = "Nb %s %s",
          desc = "Memory instructions breakdown",
