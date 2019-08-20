@@ -176,6 +176,12 @@ runLoop() {
 	for codelet in ${run_codelets[@]}; do
 		sizes_arr=(${name2sizes[${codelet}]})
 		((num_codelets+=${#sizes_arr[@]}))
+		if [ "$(type -t get_compilers)" = 'function' ]; then
+			codelet_path=${name2path[${codelet}]}
+			compilers=$(get_compilers "${codelet_path}")
+			compilers_arr=($compilers)
+			((num_codelets+=${#compilers_arr[@]}))
+		fi
 	done
 	num_cores_arr=(${num_cores})
 	((num_codelets*=${#num_cores_arr[@]}))
@@ -208,8 +214,6 @@ runLoop() {
 		else
 			local compilers="default"
 		fi
-		compilers_arr=(${compilers})
-		((num_codelets*=${#compilers_arr[@]}))
 
 		for curr_compiler in ${compilers}; do
 			for sz in ${sizes[@]}; do
