@@ -180,7 +180,7 @@ runLoop() {
 			codelet_path=${name2path[${codelet}]}
 			compilers=$(get_compilers "${codelet_path}")
 			compilers_arr=($compilers)
-			((num_codelets+=${#compilers_arr[@]}))
+			((num_codelets+=${#compilers_arr[@]}-1))
 		fi
 	done
 	num_cores_arr=(${num_cores})
