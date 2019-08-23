@@ -1,5 +1,5 @@
 ---
---  Copyright (C) 2004 - 2018 Université de Versailles Saint-Quentin-en-Yvelines (UVSQ)
+--  Copyright (C) 2004 - 2019 UniversitÃ© de Versailles Saint-Quentin-en-Yvelines (UVSQ)
 --
 -- This file is part of MAQAO.
 --
@@ -91,11 +91,86 @@ local function get_wasted_bytes (insns, rank)
    return 0;
 end
 
-local function push_arith_insns_breakdown (cqa_results)
+-- TODO: use/update families
+local function get_SIMD_INT_arith_op (insn_name)
+   local find = string.find
+
+   for _,op in ipairs ({"ADD", "SUB", "CMP", "MUL", "SAD"}) do
+      if (find (insn_name, "^V?P"..op) ~= nil) then
+         return op
+      end
+   end
+
+   if (find (insn_name, "^V?PHADD") ~= nil) then return "ADD" end
+   if (find (insn_name, "^V?PHSUB") ~= nil) then return "SUB" end
+   if (find (insn_name, "^V?PMAD") ~= nil) then return "FMA" end
+
+   for _,op in ipairs ({"MIN", "MAX", "ABS", "SIGN"}) do
+      if (find (insn_name, "^V?P"..op) ~= nil) then
+         return "OTHER"
+      end
+   end
+
+   return nil
+end
+
+local function push_SIMD_INT_arith_insns_breakdown (cqa_results)
    local t = {}
-   for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"}) do
+   for _,op in ipairs ({"ADD", "SUB", "CMP", "MUL", "FMA", "SAD", "OTHER"}) do
       t[op] = {}
-      for _,suffix in ipairs ({"SS", "SD", "PS", "PD", "PS-XMM", "PS-YMM", "PS-ZMM", "PD-XMM", "PD-YMM", "PD-ZMM"}) do
+      for _,suffix in ipairs ({"XMM", "YMM", "ZMM"}) do
+         t[op][suffix] = 0;
+      end
+   end
+
+   for _,insn in ipairs (cqa_results.insns) do
+      local insn_name = string.upper (insn:get_name())
+
+      local op = get_SIMD_INT_arith_op (insn_name)
+      if (op ~= nil) then
+         local suffix
+         if     (insn:uses_XMM()) then suffix = "XMM"
+         elseif (insn:uses_YMM()) then suffix = "YMM"
+         elseif (insn:uses_ZMM()) then suffix = "ZMM"
+         end
+
+         t[op][suffix] = t[op][suffix] + 1
+      end
+   end
+
+   t["ADD/SUB"] = {}
+   for _,suffix in ipairs ({"XMM", "YMM", "ZMM"}) do
+      t["ADD/SUB"][suffix] = t["ADD"][suffix] + t["SUB"][suffix]
+
+      t["ADD"][suffix] = nil
+      t["SUB"][suffix] = nil
+   end
+   t["ADD"] = nil
+   t["SUB"] = nil
+
+   cqa_results ["SIMD INT arith insns"] = t
+end
+
+-- TODO: use/update families
+local function get_SIMD_INT_logic_op (insn_name)
+   local find = string.find
+
+   for _,op in ipairs ({"TEST", "AND", "ANDN", "XOR", "OR"}) do
+      if (find (insn_name, "^V?P"..op) ~= nil) then
+         return op
+      end
+   end
+
+   if (find (insn_name, "^V?PS[LR]") ~= nil) then return "SHIFT" end
+
+   return nil
+end
+
+local function push_SIMD_INT_logic_insns_breakdown (cqa_results)
+   local t = {}
+   for _,op in ipairs ({"TEST", "AND", "ANDN", "XOR", "OR", "SHIFT"}) do
+      t[op] = {}
+      for _,suffix in ipairs ({"XMM", "YMM", "ZMM"}) do
          t[op][suffix] = 0;
       end
    end
@@ -105,7 +180,65 @@ local function push_arith_insns_breakdown (cqa_results)
    for _,insn in ipairs (cqa_results.insns) do
       local insn_name = string.upper (insn:get_name())
 
-      for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"}) do
+      local op = get_SIMD_INT_logic_op (insn_name)
+      if (op ~= nil) then
+         local suffix
+         if     (insn:uses_XMM()) then suffix = "XMM"
+         elseif (insn:uses_YMM()) then suffix = "YMM"
+         elseif (insn:uses_ZMM()) then suffix = "ZMM"
+         end
+
+         t[op][suffix] = t[op][suffix] + 1
+      end
+   end
+
+   cqa_results ["SIMD INT logic insns"] = t
+end
+
+local function push_SIMD_INT_other_insns_breakdown (cqa_results)
+   local t = {}
+   for _,suffix in ipairs ({"XMM", "YMM", "ZMM"}) do
+      t[suffix] = 0;
+   end
+
+   local find = string.find
+
+   for _,insn in ipairs (cqa_results.insns) do
+      local insn_name = string.upper (insn:get_name())
+
+      local op = get_SIMD_INT_arith_op (insn_name) or
+         get_SIMD_INT_logic_op (insn_name)
+      if (op ~= nil) then
+         local suffix
+         if     (insn:uses_XMM()) then suffix = "XMM"
+         elseif (insn:uses_YMM()) then suffix = "YMM"
+         elseif (insn:uses_ZMM()) then suffix = "ZMM"
+         end
+
+         t[suffix] = t[suffix] + 1
+      end
+   end
+
+   cqa_results ["SIMD INT other insns"] = t
+end
+
+local function push_FP_arith_insns_breakdown (cqa_results)
+   local t = {}
+   for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT"}) do
+      t[op] = {}
+      for _,suffix in ipairs ({"SS", "SD", "PS", "PD",
+                               "PS-XMM", "PS-YMM", "PS-ZMM",
+                               "PD-XMM", "PD-YMM", "PD-ZMM"}) do
+         t[op][suffix] = 0;
+      end
+   end
+
+   local find = string.find
+
+   for _,insn in ipairs (cqa_results.insns) do
+      local insn_name = string.upper (insn:get_name())
+
+      for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT"}) do
          for _,suffix in ipairs ({"SS", "SD", "PS", "PD"}) do
 
             -- TODO: try to hoist this block
@@ -126,7 +259,9 @@ local function push_arith_insns_breakdown (cqa_results)
    end
 
    t["ADD/SUB"] = {}
-   for _,suffix in ipairs ({"SS", "SD", "PS", "PD", "PS-XMM", "PS-YMM", "PS-ZMM", "PD-XMM", "PD-YMM", "PD-ZMM"}) do
+   for _,suffix in ipairs ({"SS", "SD", "PS", "PD",
+                            "PS-XMM", "PS-YMM", "PS-ZMM",
+                            "PD-XMM", "PD-YMM", "PD-ZMM"}) do
       t["ADD/SUB"][suffix] = t["ADD"][suffix] + t["SUB"][suffix]
 
       t["ADD"][suffix] = nil
@@ -135,12 +270,12 @@ local function push_arith_insns_breakdown (cqa_results)
    t["ADD"] = nil
    t["SUB"] = nil
 
-   cqa_results ["arith insns"] = t
+   cqa_results ["FP arith insns"] = t
 end
 
 local function push_mem_insns_breakdown (cqa_results)
    local t = {}
-   for _,v in ipairs ({"8 bits", "16 bits", "32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D"}) do
+   for _,v in ipairs ({"8 bits", "16 bits", "32 bits", "64 bits", "128 bits", "256 bits", "512 bits", "MOVH/LPS/D", "Unknown", "Other size"}) do
       t[v] = { ["loads"] = 0, ["stores"] = 0 }
    end
 
@@ -158,7 +293,7 @@ local function push_mem_insns_breakdown (cqa_results)
             mem_oprnd = insn:get_first_mem_oprnd();
 
             if (mem_oprnd ~= nil) then
-               if     (mem_oprnd ["size"] ==  8) then
+               if     (mem_oprnd ["size"] ==   8) then
                   base = "8 bits";
                elseif (mem_oprnd ["size"] ==  16) then
                   base = "16 bits";
@@ -172,6 +307,8 @@ local function push_mem_insns_breakdown (cqa_results)
                   base = "256 bits";
                elseif (mem_oprnd ["size"] == 512) then
                   base = "512 bits";
+               elseif (type (mem_oprnd ["size"]) == "number") then
+                  base = "Other size";
                end
             end
          end
@@ -189,6 +326,49 @@ local function push_mem_insns_breakdown (cqa_results)
    cqa_results ["memory insns"] = t
 end
 
+local function push_SPDP_cvt_insns_breakdown (cqa_results)
+   local t = {}
+   for _,v in ipairs ({"SS2SD", "PS2PD-XMM", "PS2PD-YMM", "PS2PD-ZMM",
+                       "SD2SS", "PD2PS-XMM", "PD2PS-YMM", "PD2PS-ZMM"}) do
+      t[v] = 0
+   end
+
+   local find = string.find
+
+   for _,insn in ipairs (cqa_results.insns) do
+      local name = insn:get_name();
+
+      if (find (name, "^V?CVT") ~= nil) then
+         if (find (name, "SS2SD") ~= nil) then
+            t ["SS2SD"] = t ["SS2SD"] + 1;
+
+         elseif (find (name, "SD2SS") ~= nil) then
+            t ["SD2SS"] = t ["SD2SS"] + 1;
+
+         elseif (find (name, "PS2PD") ~= nil) then
+            if (insn:uses_ZMM()) then
+               t ["PS2PD-ZMM"] = t ["PS2PD-ZMM"] + 1;
+            elseif (insn:uses_YMM()) then
+               t ["PS2PD-YMM"] = t ["PS2PD-YMM"] + 1;
+            elseif (insn:uses_XMM()) then
+               t ["PS2PD-XMM"] = t ["PS2PD-XMM"] + 1;
+            end
+
+         elseif (find (name, "PD2PS") ~= nil) then
+            if (insn:uses_ZMM()) then
+               t ["PD2PS-ZMM"] = t ["PD2PS-ZMM"] + 1;
+            elseif (insn:uses_YMM()) then
+               t ["PD2PS-YMM"] = t ["PD2PS-YMM"] + 1;
+            elseif (insn:uses_XMM()) then
+               t ["PD2PS-XMM"] = t ["PD2PS-XMM"] + 1;
+            end
+         end
+      end
+   end
+
+   cqa_results ["SP/DP conversion instructions"] = t
+end
+
 local ia32_x86_64 = { "ia32", "x86_64" }
 
 __cqa_user_data = {
@@ -196,12 +376,15 @@ __cqa_user_data = {
       "function name", "addr", "src file", "src line min-max",
       "id", "can be analyzed", "nb paths",
       "unroll info", "unroll confidence level",
-      "is main/unrolled", "unroll factor", "path ID",
+      "is main/unrolled", "unroll factor", "path ID", "repetitions",
       "extra_unroll_factor",
       "nb instructions", "nb uops", "loop length", "used x86 registers", "used mmx registers",
       "used xmm registers", "used ymm registers", "nb stack references", "pattern string",
-      "[ia32_x86_64] pattern", "[ia32_x86_64] arith insns", "[ia32_x86_64] memory insns",
+      "[ia32_x86_64] pattern", "[ia32_x86_64] SIMD INT arith insns",
+      "[ia32_x86_64] SIMD INT logic insns", "[ia32_x86_64] SIMD INT other insns",
+      "[ia32_x86_64] FP arith insns", "[ia32_x86_64] memory insns",
       "ADD-SUB / MUL ratio", "fit in cache", "assumed macro fusion",
+      "SIMD INT ops", "nb total SIMD INT operations",
       "FP ops", "nb total FP operations",
       "nb pure loads", "nb impl loads", "nb stores",
       "bytes prefetched", "bytes loaded", "bytes stored",
@@ -213,12 +396,13 @@ __cqa_user_data = {
       "cycles dispatch", "RecMII",
       "packed ratio INT", "packed ratio FP", "packed ratio",
       "vec eff ratio INT", "vec eff ratio FP", "vec eff ratio",
-      "[ia32_x86_64] cycles", "FP operations per cycle", "instructions per cycle",
+      "[ia32_x86_64] cycles", "SIMD INT operations per cycle",
+      "FP operations per cycle", "instructions per cycle",
       "bytes prefetched per cycle", "bytes loaded per cycle",
       "bytes stored per cycle", "bytes loaded or stored per cycle",
       "cycles L1 if fully vectorized", "cycles L1 if nomem vectorized",
       "cycles L1 if FP arith vectorized", "cycles if clean",
-      "cycles if only FP", "cycles if only FP arith",
+      "cycles if only FP", "cycles if only FP arith", "SP/DP conversion instructions"
    },
 
    path_metrics = {
@@ -245,14 +429,43 @@ __cqa_user_data = {
          end
       },
 
-      ["[ia32_x86_64] arith insns"] = {
-         args = { {"ADD/SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"},
-                  {"SS", "SD", "PS-XMM", "PS-YMM", "PS-ZMM", "PD-XMM", "PD-YMM", "PD-ZMM"} },
-         CSV_header = "Nb insn: %s%s",
-         desc = "Arithmetic instructions breakdown",
+      ["[ia32_x86_64] SIMD INT arith insns"] = {
+         args = { {"ADD/SUB", "CMP", "MUL", "FMA", "SAD", "OTHER"},
+                  {"XMM", "YMM", "ZMM"} },
+         CSV_header = "Nb INT arith insn: %s-%s",
+         desc = "Integer arithmetic SIMD instructions breakdown",
          lua_type = "table",
          arch = ia32_x86_64,
-         compute = push_arith_insns_breakdown
+         compute = push_SIMD_INT_arith_insns_breakdown
+      },
+
+      ["[ia32_x86_64] SIMD INT logic insns"] = {
+         args = { {"TEST", "AND", "ANDN", "XOR", "OR", "SHIFT"},
+                  {"XMM", "YMM", "ZMM"} },
+         CSV_header = "Nb INT logic insn: %s-%s",
+         desc = "Integer logic SIMD instructions breakdown",
+         lua_type = "table",
+         arch = ia32_x86_64,
+         compute = push_SIMD_INT_logic_insns_breakdown
+      },
+
+      ["[ia32_x86_64] SIMD INT other insns"] = {
+         args = { {"XMM", "YMM", "ZMM"} },
+         CSV_header = "Nb INT other insn: %s",
+         desc = "Integer other SIMD instructions breakdown",
+         lua_type = "number",
+         arch = ia32_x86_64,
+         compute = push_SIMD_INT_other_insns_breakdown
+      },
+
+      ["[ia32_x86_64] FP arith insns"] = {
+         args = { {"ADD/SUB", "MUL", "FMA", "DIV", "SQRT"},
+                  {"SS", "SD", "PS-XMM", "PS-YMM", "PS-ZMM", "PD-XMM", "PD-YMM", "PD-ZMM"} },
+         CSV_header = "Nb FP insn: %s%s",
+         desc = "FP arithmetic instructions breakdown",
+         lua_type = "table",
+         arch = ia32_x86_64,
+         compute = push_FP_arith_insns_breakdown
       },
 
       ["[ia32_x86_64] memory insns"] = {
@@ -263,6 +476,15 @@ __cqa_user_data = {
          lua_type = "table",
          arch = ia32_x86_64,
          compute = push_mem_insns_breakdown
+      },
+
+      ["SP/DP conversion instructions"] = {
+         args = { {"SS2SD", "PS2PD-XMM", "PS2PD-YMM", "PS2PD-ZMM",
+                   "SD2SS", "PD2PS-XMM", "PD2PS-YMM", "PD2PS-ZMM" } },
+         CSV_header = "Nb insn: %s",
+         desc = "SP/DP Conversion instructions breakdown",
+         lua_type = "table",
+         compute = push_SPDP_cvt_insns_breakdown
       },
    }
 }
