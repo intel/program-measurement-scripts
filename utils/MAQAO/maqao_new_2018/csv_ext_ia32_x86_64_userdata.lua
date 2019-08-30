@@ -224,7 +224,7 @@ end
 
 local function push_FP_arith_insns_breakdown (cqa_results)
    local t = {}
-   for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT"}) do
+   for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"}) do
       t[op] = {}
       for _,suffix in ipairs ({"SS", "SD", "PS", "PD",
                                "PS-XMM", "PS-YMM", "PS-ZMM",
@@ -238,7 +238,7 @@ local function push_FP_arith_insns_breakdown (cqa_results)
    for _,insn in ipairs (cqa_results.insns) do
       local insn_name = string.upper (insn:get_name())
 
-      for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT"}) do
+      for _,op in ipairs ({"ADD", "SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"}) do
          for _,suffix in ipairs ({"SS", "SD", "PS", "PD"}) do
 
             -- TODO: try to hoist this block
@@ -459,7 +459,7 @@ __cqa_user_data = {
       },
 
       ["[ia32_x86_64] FP arith insns"] = {
-         args = { {"ADD/SUB", "MUL", "FMA", "DIV", "SQRT"},
+         args = { {"ADD/SUB", "MUL", "FMA", "DIV", "SQRT", "RCP", "RSQRT"},
                   {"SS", "SD", "PS-XMM", "PS-YMM", "PS-ZMM", "PD-XMM", "PD-YMM", "PD-ZMM"} },
          CSV_header = "Nb FP insn: %s%s",
          desc = "FP arithmetic instructions breakdown",
