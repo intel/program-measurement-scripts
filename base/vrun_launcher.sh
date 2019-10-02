@@ -135,7 +135,6 @@ runLoop() {
 	local counter_list_override="$counter_list_override"
 	local unc_frequencies=${unc_frequencies:-${XP_HIGH_FREQ}}
 
-
 	# local runId="$1"
 	# local variants="$2"
 	# local memory_loads="$3"
@@ -203,31 +202,37 @@ runLoop() {
 
 		${LOGGER_SH} ${runId} "Launching CLS on '$codelet_path'..."
 
+		if [ "$(type -t get_compilers)" = 'function' ]; then
+			echo "Running multi-compiler mode."
+			local compilers=$(get_compilers "${codelet_path}")
+		else
+			local compilers="default"
+		fi
+		for curr_compiler in ${compilers}; do
+			for sz in ${sizes[@]}; do
+				((cls_run_count++))
 
-		for sz in ${sizes[@]}; do
-			((cls_run_count++))
+				if [[ $cls_run_count -lt $skip_to_cls_run_count ]]; then
+					echo Skipping previously finished CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$unc_frequencies"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
+					continue
+				fi
+				echo $cls_run_count > $cls_run_count_file
 
-			if [[ $cls_run_count -lt $skip_to_cls_run_count ]]; then
-				echo Skipping previously finished CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$unc_frequencies"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
-				continue
-			fi
-			echo $cls_run_count > $cls_run_count_file
+				echo Executing CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$unc_frequencies"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\" \"${curr_compiler}\"
+				$CLS_FOLDER/cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$unc_frequencies" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" "${counter_list_override}" "${curr_compiler}"| tee "$codelet_path/cls.log"
+				res=$?
+				if [[ "$res" != "0" ]]; then
+					#      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
+					${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
+				fi
 
-			echo Executing CLS: $CLS_FOLDER/cls.sh \""$codelet_path"\" \""$variants"\" \""${sz}"\" \""$memory_loads"\" \""$unc_frequencies"\" \""$frequencies"\"  \""${runId}"\" \""${start_codelet_loop_time}"\" \""${num_codelets}"\" \""${codelet_id}"\" \""${num_cores}"\" \""${prefetchers}"\" \"${counter_list_override}\"
-			$CLS_FOLDER/cls.sh "$codelet_path" "$variants" "${sz}" "$memory_loads" "$unc_frequencies" "$frequencies"  "${runId}" "${start_codelet_loop_time}" "${num_codelets}" "${codelet_id}" "${num_cores}" "${prefetchers}" "${counter_list_override}"| tee "$codelet_path/cls.log"
-			res=$?
-			if [[ "$res" != "0" ]]; then
-				#      echo -e "\tAn error occured! Check '$codelet_path/cls.log' for more information."
-				${LOGGER_SH} ${runId} "FAILED: Check '${codelet_path}/cls.log' for more information."
-			fi
-
-			((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr[@]}*${#unc_frequencies_arr[@]}*${#frequencies_arr[@]})))
-		done
-
+				((codelet_id+=(${#num_cores_arr[@]}*${#prefetchers_arr[@]}*${#unc_frequencies_arr[@]}*${#frequencies_arr[@]})))
+			done # for sizes
+		done # for compilers
 		#      sizes_arr=(${sizes})
 		#      ((codelet_id+=${#sizes_arr[@]}))
 		#      ((codelet_id*=${#num_cores_arr[@]}))
 		#      ((codelet_id+=${#sizes_arr[@]}*${#num_cores_arr[@]}))
-	done
+	done # for codelets
 	rm $cls_run_count_file  # Done
 }

@@ -125,6 +125,9 @@ combine_csv "$cpi_iteration_rep_nv_files" $tmprep/cpi_iteration_rep.csv
 arguments_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/arguments/g')
 combine_csv "$arguments_files" $tmprep/arguments.csv
 
+compiler_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/compiler/g')
+combine_csv "$compiler_files" $tmprep/compiler.csv
+
 pgm_metrics_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/pgm_metrics/g')
 combine_csv "$pgm_metrics_files" $tmprep/pgm.csv
 
@@ -195,7 +198,7 @@ fi
 # format is pretty much:
 #   <same repeated machine/filler info> <per run setting obtained from run_info> <counters> <stan data>
 # Collect all csv files skipping non-existing files
-all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv 2>/dev/null)
+all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv 2>/dev/null)
 paste -d${DELIM} $all_csv_files > $cape_file
 
 echo Deleting TMPDIR $tmprep
