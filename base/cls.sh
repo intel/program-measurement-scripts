@@ -42,45 +42,45 @@ find_num_repetitions_and_iterations () {
 	local iterations_for_file="$9"
 	local num_core=${10}
 
-	echo "history file"
-	echo ${repetitions_history_file}
-	echo "Adjusting codelet parameters for the $variant variant ...${codelet_folder}"
+	echo "history file" 1>&2
+	echo ${repetitions_history_file} 1>&2
+	echo "Adjusting codelet parameters for the $variant variant ...${codelet_folder}" 1>&2
 
 	if [[ "${variant}" == "ORG" ]]; then
 		#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 1>&2
 	else
 		#echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 		#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
+		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 1>&2
 	fi
 
-	echo "history file"
-	echo ${repetitions_history_file}
+	echo "history file" 1>&2
+	echo ${repetitions_history_file} 1>&2
 
 	tail -n 1 "$codelet_folder/repetitions_history" >> "${repetitions_history_file}"
 	sed -i '$ d' "$codelet_folder/repetitions_history"
 
 	repetitions=$(cat "${repetitions_history_file}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-	echo "Repetitions is "
-	echo $repetitions
+	echo "Repetitions is " 1>&2
+	echo $repetitions 1>&2
 	echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 
-	echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..."
+	echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..." 1>&2
 	#loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
-	echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM}
+	echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM} 1>&2
 	loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" | grep ${DELIM})
 	res=$?
 
 	if [[ "$res" != "0" ]]; then
 		if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]; then
-			echo "Cancelling CLS."
+			echo "Cancelling CLS." 1>&2
 			exit -1
 		else
 			loop_detection_success=0
 		fi
 	fi
-
+	all_loop_info="$loop_info"
 	echo $loop_info > /tmp/loop_info.txt
 
 	if [[ "$loop_detection_success" == "1" ]]; then
@@ -93,17 +93,17 @@ find_num_repetitions_and_iterations () {
 			echo "Loop mismatch!"
 			tmp_id=$( echo "$wanted_loop_info" | cut -f1 -d${DELIM} )
 			tmp_loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
-			echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations."
+			echo "Wanted loop info: $tmp_id, $tmp_loop_iterations iterations." 1>&2
 
 			tmp_id=$( echo "$most_important_loop" | cut -f1 -d${DELIM} )
 			tmp_loop_iterations=$( echo "$most_important_loop" | cut -f2 -d${DELIM} )
-			echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations."
+			echo "Most important loop info: $tmp_id, $tmp_loop_iterations iterations." 1>&2
 
 			if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]; then
-				echo "Cancelling CLS."
+				echo "Cancelling CLS." 1>&2
 				exit -1
 			else
-				echo "LOOP MISMATCH ERROR IGNORED"
+				echo "LOOP MISMATCH ERROR IGNORED" 1>&2
 				loop_detection_success=0
 			fi
 		fi
@@ -122,17 +122,17 @@ find_num_repetitions_and_iterations () {
 		then
 			if [[ "$num_loop_exe" != "1" ]]
 			then
-				echo "Multiple loops executed. Cancelling CLS."
+				echo "Multiple loops executed. Cancelling CLS." 1>&2
 				exit -1
 			else
-				echo "Single loop executed. Acceptable for strict runs."
+				echo "Single loop executed. Acceptable for strict runs." 1>&2
 			fi
 		else
 			if [[ "$num_loop_exe" != "1" ]]
 			then
-				echo "Multiple loops executed but proceed for non-strict runs"
+				echo "Multiple loops executed but proceed for non-strict runs" 1>&2
 			else
-				echo "Single loop executed."
+				echo "Single loop executed." 1>&2
 			fi
 		fi
 		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
@@ -143,8 +143,9 @@ find_num_repetitions_and_iterations () {
 		echo "$variant:$loop_id"${DELIM}${repetitions}${DELIM} >> "${iterations_for_file}"
 		loop_iterations=${repetitions}
 	fi
-	echo -e "Iterations \t'$loop_iterations'"
+	echo -e "Iterations \t'$loop_iterations'" 1>&2
 	echo "$variant"${DELIM}"${loop_iterations}" >> ${iteration_file}
+	echo "$all_loop_info"
 }
 
 
@@ -266,10 +267,10 @@ else
 fi
 try_num_core=1
 echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core}
-loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
+all_loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
 res=$?
 
-if [[ "$res" != "0" || "X${loop_info}" == "X" ]]; then
+if [[ "$res" != "0" || "X${all_loop_info}" == "X" ]]; then
 	if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]; then
 		echo "Cancelling CLS."
 		exit -1
@@ -277,12 +278,15 @@ if [[ "$res" != "0" || "X${loop_info}" == "X" ]]; then
 		loop_detection_success=0
 	fi
 fi
+
 if [[ "$loop_detection_success" == "1" ]]; then
 	#    echo env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions}
-	#    echo $loop_info > /tmp/case1.txt
-	loop_info=$( echo -e "$loop_info" | grep ${DELIM} | head -n 1 )
+	loop_info=$( echo -e "$all_loop_info" | grep ${DELIM} | head -n 1 )
 	loop_id=$( echo "$loop_info" | cut -f1 -d${DELIM} )
-	loop_iterations=$( echo "$loop_info" | cut -f2 -d${DELIM} )
+	all_loop_ids=$( echo -e "$all_loop_info" | cut -f1 -d${DELIM} )
+	all_loop_iterations=$( echo -e "$all_loop_info" | cut -f2 -d${DELIM} )
+	#	loop_iterations=$( echo "$loop_info" | cut -f2 -d${DELIM} )
+	loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
 	if [[ "$loop_iterations" == "0" ]]; then
 		# Just make it a failed case
 		loop_detection_success=0
@@ -333,7 +337,10 @@ if [[ "$loop_detection_success" == "1" ]]; then
 
 	echo "------------------------------------------------------------"
 	echo "Extracting assemblies..."
-	$CLS_FOLDER/assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" "$loop_id"
+	echo CMD : $CLS_FOLDER/assembly_extraction.sh \""$codelet_name"\" \""$variants"\" \""$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"\" \
+		\""$loop_id"\" \""$all_loop_ids"\" \""$all_loop_iterations"\"
+	$CLS_FOLDER/assembly_extraction.sh "$codelet_name" "$variants" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" \
+		"$loop_id" "$all_loop_ids" "$all_loop_iterations"
 	res=$?
 	if [[ "$res" != "0" ]]; then
 		echo "Cancelling CLS."
@@ -446,12 +453,22 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 									#find_num_repetitions_and_iterations ${codelet_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
 										#"${res_path}/repetitions_history_${variant}" \
 										#"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size}"
-									find_num_repetitions_and_iterations ${build_folder} ${codelet_name} ${data_size} ${variant} ${function_name} ${loop_id} \
+									all_loop_info=$(find_num_repetitions_and_iterations ${build_folder} ${codelet_name} \
+										${data_size} ${variant} ${function_name} ${loop_id} \
 										"${res_path}/repetitions_history_${variant}" \
-										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_str}" ${num_core}
+										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_str}" ${num_core})
+
+									all_loop_ids=$( echo -e "$all_loop_info" | cut -f1 -d${DELIM}  | tr '\n' ';' | sed 's/;$//g')
+									all_loop_iterations=$( echo -e "$all_loop_info" | cut -f2 -d${DELIM} )
+									loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
+									all_loop_iterations=$( echo "$all_loop_iterations" | tr '\n' ';' | sed 's/;$//g')
+
 									repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-									loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
-								else
+									# loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
+
+else
+									echo "Not supported currently"
+									exit -1
 									#			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 									repetitions=$(cat "$build_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
 									loop_iterations=$(cat $codelet_folder/$CLS_RES_FOLDER/data_$data_size_str/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
@@ -467,8 +484,8 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 
 								#./run_coelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
 								((cnt_codelet_idx++))
-								echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} \"${counter_list_override}\" \"${command_line_args}\"
-								$CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} "${counter_list_override}" "${command_line_args}"
+								echo Executing run_codelet.sh: $CLS_FOLDER/run_codelet.sh \"$build_folder\" \"$codelet_name\" \"$loop_iterations\" \"$repetitions\" "$all_loop_ids" "$all_loop_iterations" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} \"${counter_list_override}\" \"${command_line_args}\"
+								$CLS_FOLDER/run_codelet.sh "$build_folder" "$codelet_name" "$loop_iterations" "$repetitions" "$all_loop_ids" "$all_loop_iterations" ${start_codelet_loop_time} ${num_codelets} ${cnt_codelet_idx} ${res_path} "${counter_list_override}" "${command_line_args}"
 
 								res=$?
 								if [[ "$res" != "0" ]]; then
