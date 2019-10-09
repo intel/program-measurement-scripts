@@ -135,7 +135,10 @@ find_num_repetitions_and_iterations () {
 				echo "Single loop executed." 1>&2
 			fi
 		fi
-		loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
+		# Old calculation based on wanted loop below (commented out)
+		# loop_iterations=$( echo "$wanted_loop_info" | cut -f2 -d${DELIM} )
+		all_loop_iterations=$( echo -e "$all_loop_info" | cut -f2 -d${DELIM} )
+		loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
 	else
 		loop_info=""
 		loop_id=-1
@@ -459,14 +462,11 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 										"${res_path}/${LOOP_ITERATION_COUNT_FILE}" "${res_path}/iterations_for_${data_size_str}" ${num_core})
 
 									all_loop_ids=$( echo -e "$all_loop_info" | cut -f1 -d${DELIM}  | tr '\n' ';' | sed 's/;$//g')
-									all_loop_iterations=$( echo -e "$all_loop_info" | cut -f2 -d${DELIM} )
-									loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
-									all_loop_iterations=$( echo "$all_loop_iterations" | tr '\n' ';' | sed 's/;$//g')
-
+									all_loop_iterations=$( echo -e "$all_loop_info" | cut -f2 -d${DELIM} | tr '\n' ';' | sed 's/;$//g')
+									#									loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
 									repetitions=$(cat "${res_path}/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
-									# loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
-
-else
+									loop_iterations=$(cat ${res_path}/${LOOP_ITERATION_COUNT_FILE} | grep $variant | cut -d${DELIM} -f2)
+								else
 									echo "Not supported currently"
 									exit -1
 									#			repetitions=$(cat "$codelet_folder/repetitions_history_${variant}" | grep "^$data_size" | tail -n 1 | cut -d' ' -f2)
