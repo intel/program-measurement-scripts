@@ -10,7 +10,9 @@ fill_codelet_maps() {
 
 	# include trailing / to exclude files
 	test ! -d ${cnt_prefix} && return     # Return if directory not exist
-	all_codelets=($( ls -d ${cnt_prefix}/*/*/ ))
+
+	all_codelets=($( find ${cnt_prefix} -name codelet.conf|grep -v cls_res |sed 's/codelet.conf$//g' ))
+	# all_codelets=($( ls -d ${cnt_prefix}/*/*/ ))
 	# remove trailing /
 	all_codelets=(${all_codelets[@]/%\//})
 
