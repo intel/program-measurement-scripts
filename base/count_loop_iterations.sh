@@ -93,7 +93,6 @@ fi
 
 if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
 	# Get the count for each loop id
-
 	if [[ "$USE_OLD_DECAN" == "0" ]]; then
 		for loop_id in $loop_ids; do
 			#$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id

@@ -57,7 +57,7 @@ launchIt () {
 	(
 		echo "Pending executing ${launch_script} at $(date)..."
 		flock 888 || exit 1;
-		echo "Start executing ${launch_script} at $(date)..."
+ 		echo "Start executing ${launch_script} at $(date)..."
 		START_VRUN_SH=$(date '+%s')
 
 		run_dir=${RUN_FOLDER}/${START_VRUN_SH}
@@ -176,6 +176,12 @@ runLoop() {
 	for codelet in ${run_codelets[@]}; do
 		sizes_arr=(${name2sizes[${codelet}]})
 		((num_codelets+=${#sizes_arr[@]}))
+		if [ "$(type -t get_compilers)" = 'function' ]; then
+			codelet_path=${name2path[${codelet}]}
+			compilers=$(get_compilers "${codelet_path}")
+			compilers_arr=($compilers)
+			((num_codelets+=${#compilers_arr[@]}-1))
+		fi
 	done
 	num_cores_arr=(${num_cores})
 	((num_codelets*=${#num_cores_arr[@]}))
@@ -208,6 +214,7 @@ runLoop() {
 		else
 			local compilers="default"
 		fi
+
 		for curr_compiler in ${compilers}; do
 			for sz in ${sizes[@]}; do
 				((cls_run_count++))

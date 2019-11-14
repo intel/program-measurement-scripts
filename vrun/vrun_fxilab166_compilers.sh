@@ -68,13 +68,33 @@ build_codelet () {
 	fortran_flags[Intel]="-g -O3 -align array64byte"
 	fortran_flags[GNU]="-g -O3"
 
-	C_flags[Intel]="-g -O3 -xHOST"
-	C_flags[GNU]="-g -O3"
-	C_flags[LLVM]="-g -O3"
+	C_flags[Intel]="-c -g -std=c99 -O3"
+	C_flags[GNU]="-c -g -std=c99 -O3"
+	C_flags[LLVM]="-c -g -std=c99 -O3"
 
-	CPP_flags[Intel]="-g -O3 -xHOST"
-	CPP_flags[GNU]="-g -O3"
-	CPP_flags[LLVM]="-g -O3"
+	CPP_flags[Intel]="-c -g -std=c++11 -O3"
+	CPP_flags[GNU]="-c -g -std=c++11 -O3"
+	CPP_flags[LLVM]="-c -g -std=c++11 -O3"
+
+	if [[ $codelet_name == *"sVS"* ]]; then
+				 fortran_flags[Intel]+=" -no-vec"
+				 fortran_flags[GNU]+=" -fno-tree-vectorize"
+				 C_flags[Intel]+=" -no-vec"
+				 C_flags[GNU]+=" -fno-tree-vectorize"
+				 C_flags[LLVM]+=" -fno-vectorize -fno-slp-vectorize"
+				 CPP_flags[Intel]+=" -no-vec"
+				 CPP_flags[GNU]+=" -fno-tree-vectorize"
+				 CPP_flags[LLVM]+=" -fno-vectorize -fno-slp-vectorize"
+	elif [[ $codelet_name == *"se" ]]; then
+				 fortran_flags[Intel]+=" -xSSE4.2"
+				 fortran_flags[GNU]+=" -msse4.2"
+				 C_flags[Intel]+=" -xSSE4.2"
+				 C_flags[GNU]+=" -msse4.2"
+				 C_flags[LLVM]+=" -msse4.2"
+				 CPP_flags[Intel]+=" -xSSE4.2"
+				 CPP_flags[GNU]+=" -msse4.2"
+				 CPP_flags[LLVM]+=" -msse4.2"
+	fi
 
 	codelet_lang=$( grep "language value" "$( readlink -f "$codelet_folder" )/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 	if [ $codelet_lang == "Fortran" ] || [ $codelet_lang == "2" ]; then
@@ -186,7 +206,7 @@ run() {
 	quadratic_sizes="100"
 	memory_loads="0"
 	num_cores="1"
-	prefetchers="0"
+	prefetchers="0 15"
 	frequencies="2400000"
 
 	linear_codelets=""
@@ -278,14 +298,14 @@ run() {
 	name2sizes[tridag_2_de]="200000"
 
 	run_codelets=(
-#		balanc_3_de
-#		balanc_3_sVS_de
+		balanc_3_de
+#	 	balanc_3_sVS_de
 #		elmhes_10_de
 #		elmhes_10_sVS_de
 #		elmhes_11_de
 #		elmhes_11_sVS_de
 #		four1_2_me
-#		hqr_15_se
+#	 	hqr_15_se
 #		hqr-sq_12_se
 #		hqr-sq_12_sVS_se
 #		lop_13_de
@@ -322,8 +342,8 @@ run() {
 #		toeplz_1_sVS_de
 #		toeplz_2_de
 #		toeplz_4_de
-		tridag_1_de
-		tridag_2_de
+#		tridag_1_de
+#		tridag_2_de
 	)
 
 	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=1,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0" runLoop
