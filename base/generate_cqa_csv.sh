@@ -15,7 +15,7 @@ bin_path="$2"
 loop_id="$3"
 if [[ "$nb_args" < "4" ]]
 then
-	more_args=""
+	more_args="-max_paths=50"
 else
 	more_args="$4"
 fi
@@ -31,8 +31,6 @@ echo Loop information collection: Executing CMD: \'$cmd\'
 bash -c "$cmd"
 # Generated loops.csv
 
-
-
 if [[ ${DELIM} != ';' ]]
 then
 	# Only need to do if the desired delimiter is not ';
@@ -43,6 +41,11 @@ then
 	mv ${tmpfile} loops.csv
 fi
 
-
-
+# if more than one path, then average all the paths
+loops_paths=$(wc -l loops.csv | cut -f1 -d' ')
+if (( "$((loops_paths))" > "2" )); then
+	echo "Averaging multiple path stats from CQA"
+	$CLS_FOLDER/cqa_multipath_combine.py
+	mv loops_avg.csv loops.csv
+fi
 

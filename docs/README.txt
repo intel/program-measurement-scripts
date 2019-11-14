@@ -165,4 +165,171 @@ B. CUSTOMIZATION of BUILDING (III) and RUNNING (IV) of code
         'bar' will receive $N and $repetition as command line inputs; 
         and for other codelets, the $repetition and $datasize inputs will be stored in ./codelet.data file.
 
+C. Running Multi-Compiler mode
+		I. Define get_compilers() function
+				In the script, define a get_compilers() function which returns a array of codenames for the compilers. Ex:
+				get_compilers () {
+					codelet_path="$1"
+					# Checking codelet source language
+					codelet_lang=$( grep "language value" "$( readlink -f "$codelet_path" )/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+					echo "Codelet Language: ${codelet_lang}" >&2
+					if [ $codelet_lang == "Fortran" ] || [ $codelet_lang == "2" ]; then
+						compilers="Intel GNU"
+					elif [[ $codelet_lang == "CPP" ]]; then
+						compilers="Intel GNU LLVM"
+					elif [ $codelet_lang == "C" ] || [ $codelet_lang == "1" ]; then
+						compilers="Intel GNU LLVM"
+					else
+						echo "Error: .conf file has invalid language value" >&2
+						compilers="default"
+					fi
+					echo $compilers
+				}
+	II. Define a build_codelet() function
+				Add compiler driver and compiler flag options based on the compiler codename. Also put compiler and its flags into compiler.csv file. Ex:
+				build_codelet () {
+					codelet_folder=$( readlink -f "$1" )
+					codelet_name="$2"
+					build_folder=$( readlink -f "$3" )
+					curr_compiler="$4"
+					declare -gA fortran_compiler
+					declare -gA C_compiler
+					declare -gA CPP_compiler
+					declare -gA fortran_flags
+					declare -gA C_flags
+					declare -gA CPP_flags
 
+					fortran_compiler[Intel]="ifort"
+					fortran_compiler[GNU]="gfortran"
+
+					C_compiler[Intel]="icc"
+					C_compiler[GNU]="gcc"
+					C_compiler[LLVM]="clang"
+
+					CPP_compiler[Intel]="icpc"
+					CPP_compiler[GNU]="g++"
+					CPP_compiler[LLVM]="clang++"
+
+					fortran_flags[Intel]="-g -O3 -align array64byte"
+					fortran_flags[GNU]="-g -O3"
+
+					C_flags[Intel]="-c -g -std=c99 -O3"
+					C_flags[GNU]="-c -g -std=c99 -O3"
+					C_flags[LLVM]="-c -g -std=c99 -O3"
+
+					CPP_flags[Intel]="-c -g -std=c++11 -O3"
+					CPP_flags[GNU]="-c -g -std=c++11 -O3"
+					CPP_flags[LLVM]="-c -g -std=c++11 -O3"
+
+					if [[ $codelet_name == *"sVS"* ]]; then
+								 fortran_flags[Intel]+=" -no-vec"
+								 fortran_flags[GNU]+=" -fno-tree-vectorize"
+								 C_flags[Intel]+=" -no-vec"
+								 C_flags[GNU]+=" -fno-tree-vectorize"
+								 C_flags[LLVM]+=" -fno-vectorize -fno-slp-vectorize"
+								 CPP_flags[Intel]+=" -no-vec"
+								 CPP_flags[GNU]+=" -fno-tree-vectorize"
+								 CPP_flags[LLVM]+=" -fno-vectorize -fno-slp-vectorize"
+					elif [[ $codelet_name == *"se" ]]; then
+								 fortran_flags[Intel]+=" -xSSE4.2"
+								 fortran_flags[GNU]+=" -msse4.2"
+								 C_flags[Intel]+=" -xSSE4.2"
+								 C_flags[GNU]+=" -msse4.2"
+								 C_flags[LLVM]+=" -msse4.2"
+								 CPP_flags[Intel]+=" -xSSE4.2"
+								 CPP_flags[GNU]+=" -msse4.2"
+								 CPP_flags[LLVM]+=" -msse4.2"
+					fi
+
+					codelet_lang=$( grep "language value" "$( readlink -f "$codelet_folder" )/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+					if [ $codelet_lang == "Fortran" ] || [ $codelet_lang == "2" ]; then
+						curr_compiler_driver=${fortran_compiler[${curr_compiler}]}
+						for flag in ${fortran_flags[${curr_compiler}]}; do
+							curr_compiler_flags+=${flag}
+							curr_compiler_flags+=" "
+						done
+						make_vars=(CF=${curr_compiler_driver} FFLAGS="${curr_compiler_flags}")
+					elif [[ $codelet_lang == "CPP" ]]; then
+						curr_compiler_driver=${CPP_compiler[${curr_compiler}]}
+						for flag in ${CPP_flags[${curr_compiler}]}; do
+							curr_compiler_flags+=${flag}
+							curr_compiler_flags+=" "
+						done
+						make_vars=(CXX=${curr_compiler_driver} CXXFLAGS="${curr_compiler_flags}")
+					elif [ $codelet_lang == "C" ] || [ $codelet_lang == "1" ]; then
+						curr_compiler_driver=${C_compiler[${curr_compiler}]}
+						for flag in ${C_flags[${curr_compiler}]}; do
+							curr_compiler_flags+=${flag}
+							curr_compiler_flags+=" "
+						done
+						make_vars=(CC=${curr_compiler_driver} CFLAGS="${curr_compiler_flags}")
+					else
+						echo "Error: Cannot find compiler (${curr_compiler}) for the specified language (${codelet_lang})"
+						exit -1
+					fi
+					echo MAKE CONFIG: ${make_vars}
+
+					echo mkdir "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+					mkdir "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
+
+					# Simple codelet compilation
+					binary_name=$( grep "binary name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+					echo -e "Binary name \t'$binary_name'"
+					# ensured it is at the same level as codelet_folder so that relative paths in Makefile is preserved it will be moved to the build_folder
+					# after generating original
+					build_tmp_folder=$(mktemp -d --tmpdir=${codelet_folder}/..)
+
+
+					echo "Generating codelet '$codelet_folder/$codelet_name'..."
+
+					echo "Compiler information using -v flags"
+					${curr_compiler_driver} -v
+
+					build_files=$(find ${codelet_folder} -maxdepth 1 -type f -o -type l)
+					cp ${build_files} ${build_tmp_folder}
+
+					cd ${build_tmp_folder}
+					if [[ "$ENABLE_SEP" == "1" ]]; then
+						echo make "${make_vars[@]}" clean ENABLE_SEP=sep ${emon_api_flags} all
+						make "${make_vars[@]}" clean ENABLE_SEP=sep ${emon_api_flags} all
+					else
+						echo make "${make_vars[@]}" LIBPATH="${BASE_PROBE_FOLDER}" clean all
+						make "${make_vars[@]}" LIBPATH="${BASE_PROBE_FOLDER}" clean all
+					fi
+
+					# &> /dev/null
+					res=$?
+
+					if [[ "$res" != "0" ]]; then
+						echo "ERROR! Make did not succeed."
+						exit -1
+					fi
+
+					mv "$binary_name" "$codelet_name"
+					res=$?
+
+					if [[ "$res" != "0" ]]; then
+						echo "ERROR! Move did not succeed."
+						exit -1
+					fi
+
+					if [[ -e "codelet.o" ]]; then
+						cp "codelet.o" "$codelet_folder/$CLS_RES_FOLDER/"
+					fi
+
+					# Should be safe because $binary_name was already renamed to $codelet_name
+					make clean &> /dev/null
+
+					#add Compiler to compiler.csv
+					echo -e "compiler,compiler_flags\n${curr_compiler_driver},${curr_compiler_flags}" > ${build_tmp_folder}/compiler.csv
+
+					echo "Codelet generation was successful."
+					mv ${build_tmp_folder} "${build_folder}"
+
+					cp ${build_folder}/"$codelet_name" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+					res=$?
+					if [[ "$res" != "0" ]]; then
+						echo "ERROR! Copy of binary to binary folder failed"
+						exit -1
+					fi
+				}
