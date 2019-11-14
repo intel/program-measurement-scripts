@@ -98,9 +98,9 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
 		for loop_id in $loop_ids; do
 			#$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
 			#count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
-			echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
+			echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
 			# TODO: DO true parallel run
-			count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path "${command_line_args}" |grep Total|cut -f3 -d'|' |tr -d [:blank:] )
+			count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path ${command_line_args} |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] )
 			echo "COUNT: " ${count_values[$loop_id]} 1>&2
 		done
 	else
