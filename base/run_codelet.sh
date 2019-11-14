@@ -6,7 +6,7 @@ if [ -f /opt/intel/sep/sep_vars.sh ]; then
 fi
 
 
-if [[ "$nb_args" != "10" ]]
+if [[ "$nb_args" != "12" ]]
 then
 	echo "ERROR! Invalid arguments (need: codelet's folder, codelet's name,  number of iterations, repetitions, and command line args)."
 	exit -1
@@ -16,15 +16,17 @@ codelet_folder=$( readlink -f "$1" )
 codelet_name="$2"
 iterations="$3"
 repetitions="$4"
-start_codelet_loop_time="$5"
-num_codelets="$6"
-cnt_codelet_idx="$7"
-res_path="$8"
-list_override="$9"
+all_loop_ids="$5"
+all_loop_iterations="$6"
+start_codelet_loop_time="$7"
+num_codelets="$8"
+cnt_codelet_idx="$9"
+res_path="${10}"
+list_override="${11}"
 
 num_cores=$(echo "$res_path" | sed "s|.*/numcores_\([^/]*\).*|\1|g")
 variant=$(echo $res_path | sed "s|.*/variant_\([^/]*\).*|\1|g")
-command_line_args="${10}"
+command_line_args="${12}"
 
 #nc_all_cores=${XP_ALL_CORES[@]:0:(${num_core}-1)}
 # picked_cores contains all cores to run (including the core to run through EMON/EMON API)
@@ -160,8 +162,8 @@ normalized_mean=$( echo $mean | awk '{print $1 / '$iterations';}' )
 echo -e "CPI \t'$normalized_mean'"
 # Here the order of field is assumed by gather_results.sh
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$num_core"${DELIM}"$iterations"${DELIM}"$repetitions"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
-echo "Iterations"${DELIM}"Repetitions"${DELIM}"CPI" > "$res_path/cpi_nv.csv"
-echo "$iterations"${DELIM}"$repetitions"${DELIM}"$normalized_mean" >> "$res_path/cpi_nv.csv"
+echo "Iterations"${DELIM}"Repetitions"${DELIM}"AllLoopIDs"${DELIM}"AllIterations"${DELIM}"CPI" > "$res_path/cpi_nv.csv"
+echo "$iterations"${DELIM}"$repetitions"${DELIM}"$all_loop_ids"${DELIM}"$all_loop_iterations"${DELIM}"$normalized_mean" >> "$res_path/cpi_nv.csv"
 #echo "$codelet_name"${DELIM}"$data_size"${DELIM}"$memory_load"${DELIM}"$frequency"${DELIM}"$variant"${DELIM}"$normalized_mean" > "$res_path/cpi.csv"
 
 if [ -f $PGM_METRIC_FILE ]; then

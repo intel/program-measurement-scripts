@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./const.sh
+source $CLS_FOLDER/const.sh
 
 bin_path="$1"
 loop_id="$2"
@@ -23,7 +23,7 @@ do
 		#echo "Mode: $mode, option arg: $option_arg"
 		#echo "\"$MAQAO\" module=cqa bin=\"$bin_path\" loop=\"$loop_id\" uarch=SANDY_BRIDGE of=csv -ext im=$mode $option_arg"
 		#"$MAQAO" module=cqa bin="$bin_path" loop="$loop_id" uarch=SANDY_BRIDGE of=csv -ext im=$mode $option_arg
-		${GENERATE_CQA_CSV_SH} SANDY_BRIDGE "$bin_path" "$loop_id" "im=$mode $option_arg"
+		${GENERATE_CQA_CSV_SH} SANDY_BRIDGE "$bin_path" "$loop_id" "im=$mode $option_arg" 1>&2
 		header=$( head -n 1 loops.csv | sed 's/'${DELIM}'$//g' | sed "s/${DELIM}/${DELIM}V($mode)($option)_/g" | sed "s/^/V($mode)($option)_/g" )
 		content=$( tail -n 1 loops.csv | sed 's/'${DELIM}'$//g' )
 

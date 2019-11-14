@@ -210,7 +210,7 @@ run() {
 
 
 	#prefix="/nfs/fx/home/cwong29/working/NR-scripts"
-	prefix=$(readlink -f ../..)
+	prefix=$(readlink -f ../../..)
 	#ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
 	ubmkprefix="${prefix}/nr-codelets/bws"
 	nr_prefix="${prefix}/nr-codelets/numerical_recipes"

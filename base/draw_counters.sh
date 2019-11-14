@@ -64,7 +64,8 @@ do
 	let "lc = (($i + 1) * 2) - 1"
 	let "i = $i + 1"
 
-	plot=$( echo -e "$plot \"$counters_file\" using ${counter_columns[$counter]}:xticlabels(2) lw 2 lt $lt lc $lc with linespoints" )
+	plot=$( echo -e "$plot \
+			\"$counters_file\" using ${counter_columns[$counter]}:xticlabels(2) lw 2 lt $lt lc $lc with linespoints" )
 	if [[ "$counter" != "$last_counter" ]]
 	then
 		plot=$( echo -e "$plot," )
