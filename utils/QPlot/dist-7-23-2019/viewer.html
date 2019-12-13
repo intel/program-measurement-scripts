@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+
+<!--
+Copyright 2018 Intel Corporation.
+This software and the related documents are Intel copyrighted materials, and your use of them
+is governed by the express license under which they were provided to you (License). Unless the
+License provides otherwise, you may not use, modify, copy, publish, distribute, disclose or
+transmit this software or the related documents without Intel's prior written permission.
+This software and the related documents are provided as is, with no express or implied warranties,
+other than those that are expressly stated in the License.
+-->
+<html lang='en'>
+
+<head>
+	<meta charset='utf-8' />
+	<title>QPlot</title>
+</head>
+
+<body>
+	<div id='viewer'>
+		<div id='titleBar'>
+			<div id='title'>
+				QPlot 7.23.2019
+			</div>
+			<md-button id='newFile' class='title-button' @click='_openFile()' title='Open a new file'>
+				Open File
+			</md-button>
+			<input id='fileOpen' style='display: none' multiple type='file' @change='_onFileLoad($event)'>
+		</div>
+		<input multiple type='file' id='addResult' style='display: none'>
+		<div v-if='showProgress'>
+			<h4>Loading Data...</h4>
+			<md-progress-bar md-mode="indeterminate"></md-progress-bar>
+		</div>
+		<md-steppers v-if='dataLoaded' :md-active-step.sync='currStep' @md-changed='onStepChanged'>
+			<md-step id="first" md-label="Filter Workloads">
+				<split-pane @resize='resize' :default-percent='20' split='vertical' style='height: 100vh;'>
+					<template slot="paneL">
+						<split-pane :default-percent='50' split='horizontal' v-if='dataLoaded'>
+							<template slot="paneL">
+								<md-field>
+									<md-select v-model='workloadCategory' name='workloadCategory' id='workloadCategory'
+										@md-selected='_onWorkloadCategoryChanged'>
+										<md-option v-for='name in workloadCategories' :value='name'>
+											{{name}}</md-option>
+									</md-select>
+								</md-field>
+								<md-field>
+									<md-select v-model='workloadSubcategory' name='workloadSubcategory'
+										id='workloadSubcategory' @md-selected='_onWorkloadSubcategoryChanged'>
+										<md-option v-for='name in workloadSubcategories[workloadCategory]' :value='name'>
+											{{name}}</md-option>
+									</md-select>
+								</md-field>
+								<uwt-checkbox-tree :data='workloadTree' :on-check-completed='onWorkloadViewUpdate'>
+								</uwt-checkbox-tree>
+							</template>
+							<template slot="paneR">
+								<uwt-checkbox-tree v-for='analysis in workloadAnalyses' :data='analysis.tree'
+									:on-check-completed='onWorkloadViewUpdate'>
+								</uwt-checkbox-tree>
+							</template>
+					</template>
+					<template slot="paneR">
+						<div v-if='dataLoaded' id='dataView'>
+							<uwt-chart ref='workloadChart' :chart-def='workloadChart' :color-manager='colorManager'
+								:render-options='workloadChartOptions'></uwt-chart>
+							<!--<div id='gridDiv'>
+								<uwt-grid id='grid' ref='grid' :grid-def='gridData'></uwt-grid>
+							</div>-->
+						</div>
+					</template>
+				</split-pane>
+			</md-step>
+			<md-step id="second" md-label="Filter Codelets">
+				<split-pane @resize='resize' :default-percent='20' split='vertical' style='height: 100vh;'>
+					<template slot="paneL">
+						<split-pane :default-percent='50' split='horizontal' v-if='dataLoaded'>
+							<template slot="paneL">
+								<md-field>
+									<md-select v-model='codeletCategory' name='codeletCategory' id='dataCategory'
+										@md-selected='_onCodeletCategoryChanged'>
+										<md-option v-for='name in codeletCategories' :value='name'>
+											{{name}}</md-option>
+									</md-select>
+								</md-field>
+								<md-field>
+									<md-select v-model='codeletSubcategory' name='codeletSubcategory'
+										id='codeletSubcategory' @md-selected='_onCodeletSubcategoryChanged'>
+										<md-option v-for='name in codeletSubcategories[codeletCategory]' :value='name'>
+											{{name}}</md-option>
+									</md-select>
+								</md-field>
+								<uwt-checkbox-tree :data='codeletTree' :on-check-completed='onCodeletViewUpdate'>
+								</uwt-checkbox-tree>
+							</template>
+							<template slot="paneR">
+								<uwt-checkbox-tree v-for='analysis in codeletAnalyses' :data='analysis.tree'
+									:on-check-completed='onCodeletViewUpdate'>
+								</uwt-checkbox-tree>
+							</template>
+					</template>
+					<template slot="paneR">
+						<div v-if='dataLoaded' id='dataView'>
+							<uwt-chart ref='codeletChart' :chart-def='codeletChart' :color-manager='colorManager'
+								:render-options='codeletChartOptions'></uwt-chart>
+							<div id='gridDiv'>
+								<uwt-grid id='grid' ref='grid' :grid-def='gridData'></uwt-grid>
+							</div>
+						</div>
+					</template>
+				</split-pane>
+			</md-step>
+		</md-steppers>
+
+		<drop id='helpScreen' v-if='!dataLoaded && !showProgress' @drop='_onFileDrop'>
+			<ol>
+				Drag and drop your file here.
+			</ol>
+		</drop>
+		<!-- <div id='fileList' class='footer'>
+					<template v-for='dataSet in dataSets'>
+						<div id='collectionInfo'>{{dataSet.file}} | {{dataSet.date}}</div>
+						<div id='collectorName'>{{dataSet.source}}</div>
+					</template>
+				</div> -->
+	</div>
+
+	<script src='./data.js'></script>
+	<script src='./viewer.js'></script>
+</body>
+
+</html>
