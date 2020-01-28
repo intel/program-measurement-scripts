@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 
 import matplotlib.pyplot as plt
+from adjustText import adjust_text
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -35,32 +36,42 @@ def plot_data(title, filename, xs, ys):
         (0, 20, -15, 30, 10),
         (1, 30, 0, 15, 10),
         (0, 40, 15, 15, 10),
+        (0, 40, 15, 15, 10),
+        (0, 40, 15, 15, 10),
         (1, 20, 30, 60, 10))
     
     fig, ax = plt.subplots()
+
+    xmax=max(xs)*2
+    ymax=max(ys)*2  
+    ax.set_xlim((0, xmax))
+    ax.set_ylim((0, ymax))
     
     (x, y) = zip(*DATA)
     ax.scatter(x, y, marker='o')
 
     ns = [1,2,4,8]
 
-    ctxs = draw_contours(ax, max(x), ns)
+    ctxs = draw_contours(ax, xmax, ns)
     #     ctxLabels=list(map(lambda x: "n={}".format(x), ns))
     #     print(ctxLabels)
+    text_strs=[str(DATA[i]) for i in range(len(DATA))]
+    print(text_strs)
     
-    for i in range(len(DATA)):
-        (x, y) = DATA[i]
-        (dd, dl, r, dr, dp) = dash_style[i]
-        t = ax.text(x, y, str((x, y)), withdash=True,
-                    dashdirection=dd,
-                    dashlength=dl,
-                    rotation=r,
-                    dashrotation=dr,
-                    dashpush=dp,
-                    )
+    #     for i in range(len(DATA)):
+    #         (x, y) = DATA[i]
+    #         (dd, dl, r, dr, dp) = dash_style[i]
+    #         t = ax.text(x, y, str((x, y)), withdash=True,
+    #                     dashdirection=dd,
+    #                     dashlength=dl,
+    #                     rotation=r,
+    #                     dashrotation=dr,
+    #                     dashpush=dp,
+    #                     )
+    texts = [plt.text(xs[i], ys[i], text_strs[i], ha='center', va='center') for i in range(len(DATA))]
+    #adjust_text(texts)
+    adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
 
-    ax.set_xlim((0, 5))
-    ax.set_ylim((0, 5))
     ax.set(title=title, xlabel=r'$I$', ylabel=r'$S$')
     ax.legend(loc="upper right")
 
@@ -70,10 +81,10 @@ def plot_data(title, filename, xs, ys):
         plt.show()
 
 
-xs=[1,2,3,4]
-ys=[3,4,1,2]
+xs=[1,2,3,4,5,2.5,3,3.5,3.75,3.77]
+ys=[3,4,1,2,5,2.5,2,2,2,2]
 
 filename='/tmp/myfig.png' # Set to [] for GUI output
-filename=[]
+#filename=[]
 plot_data("Sample plot", filename, xs, ys)
 
