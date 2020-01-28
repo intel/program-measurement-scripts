@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 import sys
-
+import csv
 import warnings
 import numpy as np
 
@@ -80,11 +80,20 @@ def plot_data(title, filename, xs, ys):
     else:
         plt.show()
 
+inputfile="/tmp/input.csv"
+xs=[]
+ys=[]
+with open (inputfile, 'rU') as input_csvfile:
+    csvreader = csv.DictReader(input_csvfile, delimiter=',')
+    for input_row in csvreader:
+        print(input_row['x'], input_row['y'])
+        xs.append(float(input_row['x']))
+        ys.append(float(input_row['y']))
+#xs=[1,2,3,4,5,2.5,3,3.5,3.75,3.77]
+#ys=[3,4,1,2,5,2.5,2,2,2,2]
 
-xs=[1,2,3,4,5,2.5,3,3.5,3.75,3.77]
-ys=[3,4,1,2,5,2.5,2,2,2,2]
-
+print(xs)
 filename='/tmp/myfig.png' # Set to [] for GUI output
-#filename=[]
+filename=[]
 plot_data("Sample plot", filename, xs, ys)
 
