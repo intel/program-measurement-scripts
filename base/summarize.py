@@ -48,7 +48,7 @@ def print_total_pkg_energy_formula(formula_file):
                                          ' iterations_per_rep\n')
 
 def calculate_total_dram_energy(in_row, iterations_per_rep):
-    dram_energy = getter(in_row, 'UNC_DDR_ENERGY_STATUS', 'FREERUN_DRAM_ENERGY_STATUS')
+    dram_energy = getter(in_row, 'UNC_DDR_ENERGY_STATUS', 'FREERUN_DRAM_ENERGY_STATUS', default=-1)
     return (dram_energy * getter(in_row, 'energy.unit') * iterations_per_rep)
 
 def print_total_dram_energy_formula(formula_file):
@@ -172,13 +172,16 @@ def build_row_output(in_row):
     out_row['O (Giga instructions)'] = num_ops
     ops_per_sec = num_ops / time
     out_row['C=GIPS'] = ops_per_sec
-    total_pkg_energy = calculate_total_pkg_energy(in_row, iterations_per_rep)
-    out_row['Total PKG Energy (J)'] = total_pkg_energy
-    out_row['Total PKG Power (W)'] = total_pkg_energy / time
-    out_row['E(PKG)/O'] = total_pkg_energy / num_ops
-    out_row['C/E(PKG)'] = ops_per_sec / total_pkg_energy
-    out_row['CO/E(PKG)'] = (ops_per_sec * num_ops) / total_pkg_energy
-    total_dram_energy = calculate_total_dram_energy(in_row, iterations_per_rep)
+    if not args.skip_energy:
+        total_pkg_energy = calculate_total_pkg_energy(in_row, iterations_per_rep)
+        out_row['Total PKG Energy (J)'] = total_pkg_energy
+        out_row['Total PKG Power (W)'] = total_pkg_energy / time
+        out_row['E(PKG)/O'] = total_pkg_energy / num_ops
+        out_row['C/E(PKG)'] = ops_per_sec / total_pkg_energy
+        out_row['CO/E(PKG)'] = (ops_per_sec * num_ops) / total_pkg_energy
+        total_dram_energy = calculate_total_dram_energy(in_row, iterations_per_rep)
+    else:
+        total_dram_energy = -1.0
     if (total_dram_energy >=  0.0):
         out_row['Total DRAM Energy (J)'] = total_dram_energy
         out_row['Total DRAM Power (W)'] = total_dram_energy / time
@@ -212,11 +215,12 @@ def build_row_output(in_row):
     except:
         pass
     try:
-        stalls = calculate_stall_percentages(in_row)
-        out_row.update(stalls)
-        for field in stalls:
-            if field not in field_names:
-                field_names.append(field)
+        if not args.skip_stalls:
+            stalls = calculate_stall_percentages(in_row)
+            out_row.update(stalls)
+            for field in stalls:
+                if field not in field_names:
+                    field_names.append(field)
     except:
         pass
     return out_row
@@ -247,6 +251,9 @@ def field_has_values(rows):
         return not all(field not in row for row in rows)
     return tmp_
 
+def enforce(d, field_names):
+    return { x : d.get(x, None) for x in field_names }
+
 def summary_report(inputfile, outputfile):
     print('Inputfile: ', inputfile)
     print('Outputfile: ', outputfile)
@@ -258,7 +265,7 @@ def summary_report(inputfile, outputfile):
             csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
             csvwriter.writeheader()
             for output_row in output_rows:
-                csvwriter.writerow(output_row)
+                csvwriter.writerow(enforce(output_row, output_fields))
 
 def summary_formulas(formula_file_name):
     with open (formula_file_name, 'w') as formula_file:
@@ -277,6 +284,8 @@ parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.
 parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
 parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
 parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
+parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
+parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
 args = parser.parse_args()
 
 if args.name_file:
