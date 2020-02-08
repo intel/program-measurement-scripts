@@ -1,8 +1,8 @@
 #!/usr/bin/python3
-import re
-import sys, getopt
-import csv
+import csv, re
 import traceback
+
+from argparse import ArgumentParser
 
 def output_fields():
     field_names = [ 'codelet.name', 'Time (s)',
@@ -18,81 +18,56 @@ def output_fields():
     return field_names
 
 def insert_codelet_name(out_row, in_row):
-    if ('application.name' not in in_row):
-        print('ERROR: Input CSV file does not have field \'application.name\'\n')
-        sys.exit()
-    if ('codelet.name' not in in_row):
-        print('ERROR: Input CSV file does not have field \'codelet.name\'\n')
-        sys.exit()
-    out_row['codelet.name'] = in_row['application.name'] + ': '
-    out_row['codelet.name'] += in_row['codelet.name']
+    out_row['codelet.name'] = '{0}: {1}'.format(
+        getter(in_row, 'application.name', type=str),
+        getter(in_row, 'codelet.name', type=str))
 
 def calculate_iterations_per_rep(in_row):
-    if ('Iterations' not in in_row):
-        print('ERROR: Input CSV file does not have field \'Iterations\'\n')
-        sys.exit()
-    if ('Repetitions' not in in_row):
-        print('ERROR: Input CSV file does not have field \'Repetitions\'\n')
-        sys.exit()
-    return ((float)(in_row['Iterations']) / (float)(in_row['Repetitions']))
+    return getter(in_row, 'Iterations') / getter(in_row, 'Repetitions')
 
 def print_iterations_per_rep_formula(formula_file):
     formula_file.write('iterations_per_rep = Iterations / Repetitions\n')
 
 def calculate_time(in_row, iterations_per_rep):
     return ((getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') * iterations_per_rep) /
-                    (getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3 *
-                     getter(in_row, 'decan_experimental_configuration.num_core')))
+            (getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3 *
+             getter(in_row, 'decan_experimental_configuration.num_core')))
 
 def print_time_formula(formula_file):
     formula_file.write('Time (s) = (CPU_CLK_UNHALTED_THREAD * iterations_per_rep) /' +
                                          ' (decan_experimental_configuration.frequency * 1E3)\n')
 
 def calculate_total_pkg_energy(in_row, iterations_per_rep):
-    if 'UNC_PKG_ENERGY_STATUS' in in_row:
-        package_energy = (float)(in_row['UNC_PKG_ENERGY_STATUS'])
-    elif 'FREERUN_PKG_ENERGY_STATUS' in in_row:
-        package_energy = (float)(in_row['FREERUN_PKG_ENERGY_STATUS'])
-    else:
-        print('ERROR: Input CSV file does not have field \'UNC_PKG_ENERGY_STATUS\' or \'FREERUN_PKG_ENERGY_STATUS\'\n')
-        sys.exit()
-    return (package_energy * (float)(in_row['energy.unit']) * iterations_per_rep)
+    package_energy = getter(in_row, 'UNC_PKG_ENERGY_STATUS', 'FREERUN_PKG_ENERGY_STATUS')
+    return (package_energy * getter(in_row, 'energy.unit') * iterations_per_rep)
 
 def print_total_pkg_energy_formula(formula_file):
     formula_file.write('Total PKG Energy (J) = (UNC_PKG_ENERGY_STATUS or FREERUN_PKG_ENERGY_STATUS) * energy.unit *' +
                                          ' iterations_per_rep\n')
 
 def calculate_total_dram_energy(in_row, iterations_per_rep):
-    if 'UNC_DDR_ENERGY_STATUS' in in_row:
-        dram_energy = (float)(in_row['UNC_DDR_ENERGY_STATUS'])
-    elif 'FREERUN_DRAM_ENERGY_STATUS' in in_row:
-        dram_energy = (float)(in_row['FREERUN_DRAM_ENERGY_STATUS'])
-    else:
-        print('WARNING: Input CSV file does not have field \'UNC_DDR_ENERGY_STATUS\' or \'FREERUN_DRAM_ENERGY_STATUS\'\n')
-        print('DRAM energy could not be calculated! Only Package energy will be reported\n')
-        return (-1.0)
-    return (dram_energy * (float)(in_row['energy.unit']) * iterations_per_rep)
+    dram_energy = getter(in_row, 'UNC_DDR_ENERGY_STATUS', 'FREERUN_DRAM_ENERGY_STATUS')
+    return (dram_energy * getter(in_row, 'energy.unit') * iterations_per_rep)
 
 def print_total_dram_energy_formula(formula_file):
     formula_file.write('Total DRAM Energy (J) = (UNC_DDR_ENERGY_STATUS or FREERUN_DRAM_ENERGY_STATUS) * energy.unit *' +
                                          ' iterations_per_rep\n')
 
 def calculate_num_ops(in_row, iterations_per_rep):
-    if ('INST_RETIRED_ANY' not in in_row):
-        print('ERROR: Input CSV file does not have field \'INST_RETIRED_ANY\'\n')
-        sys.exit()
-    return (((float)(in_row['INST_RETIRED_ANY']) * iterations_per_rep) / (1e9))
+    return ((getter(in_row, 'INST_RETIRED_ANY') * iterations_per_rep) / (1e9))
 
 def print_num_ops_formula(formula_file):
-    formula_file.write('O(Giga instructions) = (INST_RETIRED_ANY *' +
-                                         ' iterations_per_rep) / 1E9\n')
+    formula_file.write( \
+        'O(Giga instructions) = (INST_RETIRED_ANY * iterations_per_rep) / 1E9\n')
 
-def getter(in_row, *argv):
+def getter(in_row, *argv, **kwargs):
+    type_ = kwargs.pop('type', float)
+    default_ = kwargs.pop('default', 0)
     for arg in argv:
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            return float(in_row[arg]) if in_row[arg] else 0
+            return type_(in_row[arg] if in_row[arg] else default_)
     raise IndexError(', '.join(map(str, argv)))
 
 def calculate_mem_rates(in_row, iterations_per_rep, time_per_rep):
@@ -120,11 +95,11 @@ def calculate_load_store_rate(in_row, iterations_per_rep, time_per_rep):
         store_per_it = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
     except:
         load_per_it  = in_row['Nb_8_bits_loads'] + in_row['Nb_16_bits_loads'] \
-                                        + in_row['Nb_32_bits_loads'] + in_row['Nb_64_bits_loads'] + in_row['Nb_128_bits_loads'] \
-                                        + in_row['Nb_256_bits_loads'] + in_row['Nb_MOVH_LPS_D_loads']
+                     + in_row['Nb_32_bits_loads'] + in_row['Nb_64_bits_loads'] + in_row['Nb_128_bits_loads'] \
+                     + in_row['Nb_256_bits_loads'] + in_row['Nb_MOVH_LPS_D_loads']
         store_per_it = in_row['Nb_8_bits_stores'] + in_row['Nb_16_bits_stores'] \
-                                        + in_row['Nb_32_bits_stores'] + in_row['Nb_64_bits_stores'] + in_row['Nb_128_bits_stores'] \
-                                        + in_row['Nb_256_bits_stores'] + in_row['Nb_MOVH_LPS_D_stores']
+                     + in_row['Nb_32_bits_stores'] + in_row['Nb_64_bits_stores'] + in_row['Nb_128_bits_stores'] \
+                     + in_row['Nb_256_bits_stores'] + in_row['Nb_MOVH_LPS_D_stores']
     return ((load_per_it + store_per_it) * iterations_per_rep) / (1E9 * time_per_rep)
 
 def calculate_gflops(in_row, iters_per_rep, time_per_rep):
@@ -234,6 +209,8 @@ def print_formulas(formula_file):
     formula_file.write('CO/E(PKG+DRAM) = (C(GIPS) * O(Giga instructions)) / Total PKG+DRAM Energy(J)\n')
 
 def summary_report(inputfile, outputfile):
+    print('Inputfile: ', inputfile)
+    print('Outputfile: ', outputfile)
     with open (inputfile, 'r') as input_csvfile:
         csvreader = csv.DictReader(input_csvfile, delimiter=',')
         with open (outputfile, 'w', newline='') as output_csvfile:
@@ -253,46 +230,11 @@ def summary_formulas(formula_file_name):
     with open (formula_file_name, 'w') as formula_file:
         print_formulas(formula_file)
 
-def main(argv):
-        if len(argv) != 4 and len(argv) != 2:
-                print('\nERROR: Wrong number of arguments!\n')
-                print('Usage:\n  summarize.py  -i <inputfile> (optionally) -o <outputfile>')
-                sys.exit(2)
-        inputfile = []
-        outputfile = []
-        try:
-                opts, args = getopt.getopt(argv, 'hi:o:')
-        except getopt.GetoptError:
-                print('\nERROR: Wrong argument(s)!\n')
-                print('Usage:\n  summarize.py  -i <inputfile> (optionally) -o <outputfile>')
-                sys.exit(2)
-        if len(args) != 0:
-                print('\nERROR: Wrong argument(s)!\n')
-                print('Usage:\n  summarize.py  -i <inputfile> (optionally) -o <outputfile>')
-                sys.exit(2)
-        for opt, arg in opts:
-                if opt == '-h':
-                        print('Usage:\n  summarize.py  -i <inputfile> (optionally) -o <outputfile>')
-                        sys.exit()
-                elif opt == '-i':
-                        inputfile.append(arg)
-                        matchobj = re.search(r'(.+?)\.csv', arg)
-                        if not matchobj:
-                            print('inputfile should be a *.csv file')
-                            sys.exit()
-                        if matchobj and len(argv) == 2:
-                            outputfile.append(str(matchobj.group(1)) + '_summary.csv')
-                elif opt == '-o':
-                        outputfile.append(arg)
-                        matchobj = re.search(r'(.+?)\.csv', arg)
-                        if not matchobj:
-                            print('outputfile should be a *.csv file')
-                            sys.exit()
-        print('Inputfile: ', inputfile[0])
-        print('Outputfile: ', outputfile[0])
-        summary_report(inputfile[0], outputfile[0])
-        formula_file_name = 'Formulas_used.txt'
-        summary_formulas(formula_file_name)
+parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
+parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
+parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
+args = parser.parse_args()
 
-if __name__ == '__main__':
-        main(sys.argv[1:])
+summary_report(args.in_file, args.out_file)
+formula_file_name = 'Formulas_used.txt'
+summary_formulas(formula_file_name)
