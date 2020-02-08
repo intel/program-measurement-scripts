@@ -39,7 +39,7 @@ in2csv -I --format ndjson $combined_raw_json > ${combined_raw_ofile}
 
 
 echo "Running post-processing script to summarize raw data..."
-$CLS_FOLDER/report_summary.py -i ${combined_raw_ofile} -o ${combined_summary_ofile}
+$CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_summary_ofile}
 echo "Running Qplot generator to generate QPlot HTML ..."
 $CLS_FOLDER/qplot_data_generation.py -i ${combined_raw_ofile} -o ${combined_qplot_ofile} -q ${combined_qplot_html}
 ${LOGGER_SH} ${START_VRUN_SH} "Cape raw data saved in: ${combined_raw_ofile}"
