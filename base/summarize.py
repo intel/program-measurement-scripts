@@ -2,23 +2,25 @@
 import csv, re
 import traceback
 
+from collections import OrderedDict
 from argparse import ArgumentParser
 
-def output_fields():
-    field_names = [ 'codelet.name', 'Time (s)',
-                    'O (Giga instructions)', 'C=GIPS',
-                    'Total PKG Energy (J)', 'Total PKG Power (W)',
-                    'E(PKG)/O', 'C/E(PKG)', 'CO/E(PKG)',
-                    'Total DRAM Energy (J)', 'Total DRAM Power (W)',
-                    'E(DRAM)/O', 'C/E(DRAM)', 'CO/E(DRAM)',
-                    'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
-                    'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)',
-                    'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
-                    'GFLOPS' ]
-    return field_names
+args = None
+variants = {}
+short_names = {}
+field_names = [ 'Name', 'Short Name', 'Variant', 'Time (s)',
+                'O (Giga instructions)', 'C=GIPS',
+                'Total PKG Energy (J)', 'Total PKG Power (W)',
+                'E(PKG)/O', 'C/E(PKG)', 'CO/E(PKG)',
+                'Total DRAM Energy (J)', 'Total DRAM Power (W)',
+                'E(DRAM)/O', 'C/E(DRAM)', 'CO/E(DRAM)',
+                'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
+                'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)', 'Register BW (GB/s)',
+                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
+                'GFLOPS' ]
 
-def insert_codelet_name(out_row, in_row):
-    out_row['codelet.name'] = '{0}: {1}'.format(
+def calculate_codelet_name(out_row, in_row):
+    return '{0}: {1}'.format(
         getter(in_row, 'application.name', type=str),
         getter(in_row, 'codelet.name', type=str))
 
@@ -89,6 +91,14 @@ def calculate_mem_rates(in_row, iterations_per_rep, time_per_rep):
     ram_GB_s = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
     return (L1_GB_s, L2_GB_s, L3_GB_s, ram_GB_s)
 
+def calculate_register_bandwidth(in_row, iterations_per_rep, time_per_rep):
+    num_cores = getter(in_row, 'decan_experimental_configuration.num_core')
+    reg_gp_addr_rw = getter(in_row, 'Bytes_GP_addr_read') + getter(in_row, 'Bytes_GP_addr_write')
+    reg_gp_data_rw = getter(in_row, 'Bytes_GP_data_read') + getter(in_row, 'Bytes_GP_data_write')
+    reg_simd_rw = getter(in_row, 'Bytes_SIMD_read') + getter(in_row, 'Bytes_SIMD_write')
+    return (num_cores * iterations_per_rep * \
+            (reg_gp_addr_rw + reg_gp_data_rw + reg_simd_rw)) / (1E9 * time_per_rep)
+
 def calculate_load_store_rate(in_row, iterations_per_rep, time_per_rep):
     try:
         load_per_it  = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
@@ -123,12 +133,41 @@ def calculate_gflops(in_row, iters_per_rep, time_per_rep):
         pass
     return (flops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
 
+
+def shorten_stall_counter(field):
+    field = field[(len('RESOURCE_STALLS') + 1):]
+    if field == '_ALL_PRF_CONTROL':
+        return '%PRF'
+    elif field == '_PHT_FULL':
+        return '%PHT'
+    elif field == 'LOAD_MATRIX':
+        return '%LM'
+    else:
+        return '%' + field.upper()
+
+def calculate_stall_percentages(row):
+    res = OrderedDict()
+    unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
+    for col in row:
+        if col == 'RESOURCE_STALLS_FPCW_OR_MXCSR' or \
+            col == 'RESOURCE_STALLS_LB_SB':
+            continue
+        if col.startswith('RESOURCE_STALLS'):
+            res[shorten_stall_counter(col)] = \
+                getter(row, col) / unhlt
+    res['%FrontEnd'] = getter(row, 'Front_end_(cycles)') / unhlt
+    return res
+
 def build_row_output(in_row):
     out_row = {}
-    insert_codelet_name(out_row, in_row)
+    out_row['Name'] = calculate_codelet_name(out_row, in_row)
+    if out_row['Name'] in short_names:
+        out_row['Short Name'] = short_names[out_row['Name']]
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(in_row, iterations_per_rep)
     out_row['Time (s)'] = time
+    out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
+        else getter(in_row, 'decan_variant.name', type=str)
     num_ops = calculate_num_ops(in_row, iterations_per_rep)
     out_row['O (Giga instructions)'] = num_ops
     ops_per_sec = num_ops / time
@@ -144,10 +183,7 @@ def build_row_output(in_row):
         out_row['Total DRAM Energy (J)'] = total_dram_energy
         out_row['Total DRAM Power (W)'] = total_dram_energy / time
         out_row['E(DRAM)/O'] = total_dram_energy / num_ops
-        if (total_dram_energy == 0.0):
-            out_row['C/E(DRAM)'] = 'N/A'
-            out_row['CO/E(DRAM)'] = 'N/A'
-        else:
+        if total_dram_energy:
             out_row['C/E(DRAM)'] = ops_per_sec / total_dram_energy
             out_row['CO/E(DRAM)'] = (ops_per_sec * num_ops) / total_dram_energy
         total_energy = total_pkg_energy + total_dram_energy
@@ -157,34 +193,32 @@ def build_row_output(in_row):
         out_row['C/E(PKG+DRAM)'] = ops_per_sec / total_energy
         out_row['CO/E(PKG+DRAM)'] = (ops_per_sec * num_ops) / total_energy
     else:
-        out_row['Total DRAM Energy (J)'] = 'N/A'
-        out_row['Total DRAM Power (W)'] = 'N/A'
-        out_row['E(DRAM)/O'] = 'N/A'
-        out_row['C/E(DRAM)'] = 'N/A'
-        out_row['CO/E(DRAM)'] = 'N/A'
-        out_row['Total PKG+DRAM Energy (J)'] = 'N/A'
-        out_row['Total PKG+DRAM Power (W)'] = 'N/A'
-        out_row['E(PKG+DRAM)/O'] = 'N/A'
-        out_row['C/E(PKG+DRAM)'] = 'N/A'
-        out_row['CO/E(PKG+DRAM)'] = 'N/A'
+        pass
     try:
         out_row['L1 Rate (GB/s)'], out_row['L2 Rate (GB/s)'], out_row['L3 Rate (GB/s)'], out_row['RAM Rate (GB/s)'] = \
             calculate_mem_rates(in_row, iterations_per_rep, time)
     except:
-        out_row['L1 Rate (GB/s)'] = 'N/A'
-        out_row['L2 Rate (GB/s)'] = 'N/A'
-        out_row['L3 Rate (GB/s)'] = 'N/A'
-        out_row['RAM Rate (GB/s)'] = 'N/A'
-        print('WARNING: Could not compute MHU rates!')
+        pass
     try:
         out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate(in_row, iterations_per_rep, time)
     except:
-        out_row['Load+Store Rate (GIPS)'] = 'N/A'
-        print('WARNING: Could not compute L/S rates!')
+        pass
+    try:
+        out_row['Register BW (GB/s)'] = calculate_register_bandwidth(in_row, iterations_per_rep, time)
+    except:
+        pass
     try:
         out_row['GFLOPS'] = calculate_gflops(in_row, iterations_per_rep, time)
     except:
-        out_row['GFLOPS'] = 'N/A'
+        pass
+    try:
+        stalls = calculate_stall_percentages(in_row)
+        out_row.update(stalls)
+        for field in stalls:
+            if field not in field_names:
+                field_names.append(field)
+    except:
+        pass
     return out_row
 
 def print_formulas(formula_file):
@@ -208,32 +242,45 @@ def print_formulas(formula_file):
     formula_file.write('C/E(PKG+DRAM) = C(GIPS) / Total PKG+DRAM Energy(J)\n')
     formula_file.write('CO/E(PKG+DRAM) = (C(GIPS) * O(Giga instructions)) / Total PKG+DRAM Energy(J)\n')
 
+def field_has_values(rows):
+    def tmp_(field):
+        return not all(field not in row for row in rows)
+    return tmp_
+
 def summary_report(inputfile, outputfile):
     print('Inputfile: ', inputfile)
     print('Outputfile: ', outputfile)
     with open (inputfile, 'r') as input_csvfile:
         csvreader = csv.DictReader(input_csvfile, delimiter=',')
         with open (outputfile, 'w', newline='') as output_csvfile:
-            csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields())
+            output_rows = list(map(build_row_output, csvreader))
+            output_fields = list(filter(field_has_values(output_rows), field_names))
+            csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
             csvwriter.writeheader()
-            for input_row in csvreader:
-                try:
-                    output_row = build_row_output(input_row)
-                    csvwriter.writerow(output_row)
-                except:
-                    # skip failures to generate partial reports
-                    print('WARNING: Unexpected error!')
-                    traceback.print_exc()
-                    continue
+            for output_row in output_rows:
+                csvwriter.writerow(output_row)
 
 def summary_formulas(formula_file_name):
     with open (formula_file_name, 'w') as formula_file:
         print_formulas(formula_file)
 
+def read_short_names(filename):
+    with open(filename, 'r') as infile:
+        rows = list(csv.DictReader(infile, delimiter=','))
+        for row in rows:
+            if 'short_name' in row:
+                short_names[row['name']] = row['short_name']
+            if 'variant' in row:
+                variants[row['name']] = row['variant']
+
 parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
 parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
 parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
+parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
 args = parser.parse_args()
+
+if args.name_file:
+    read_short_names(args.name_file)
 
 summary_report(args.in_file, args.out_file)
 formula_file_name = 'Formulas_used.txt'
