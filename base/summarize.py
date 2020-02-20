@@ -15,7 +15,8 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Time (s)',
                 'Total DRAM Energy (J)', 'Total DRAM Power (W)',
                 'E(DRAM)/O', 'C/E(DRAM)', 'CO/E(DRAM)',
                 'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
-                'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)', 'Register BW (GB/s)',
+                'E(PKG+DRAM)/O', 'C/E(PKG+DRAM)', 'CO/E(PKG+DRAM)',
+                'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
                 'GFLOPS' ]
 
@@ -96,8 +97,10 @@ def calculate_register_bandwidth(in_row, iterations_per_rep, time_per_rep):
     reg_gp_addr_rw = getter(in_row, 'Bytes_GP_addr_read') + getter(in_row, 'Bytes_GP_addr_write')
     reg_gp_data_rw = getter(in_row, 'Bytes_GP_data_read') + getter(in_row, 'Bytes_GP_data_write')
     reg_simd_rw = getter(in_row, 'Bytes_SIMD_read') + getter(in_row, 'Bytes_SIMD_write')
-    return (num_cores * iterations_per_rep * \
-            (reg_gp_addr_rw + reg_gp_data_rw + reg_simd_rw)) / (1E9 * time_per_rep)
+    rates = [ num_cores * iterations_per_rep * x / (1E9 * time_per_rep) for x in [ \
+        reg_gp_addr_rw, reg_gp_data_rw, reg_simd_rw \
+    ]]
+    return rates + [ sum(rates) ]
 
 def calculate_load_store_rate(in_row, iterations_per_rep, time_per_rep):
     try:
@@ -207,7 +210,9 @@ def build_row_output(in_row):
     except:
         pass
     try:
-        out_row['Register BW (GB/s)'] = calculate_register_bandwidth(in_row, iterations_per_rep, time)
+        out_row['Register ADDR Rate (GB/s)'], out_row['Register DATA Rate (GB/s)'], \
+        out_row['Register SIMD Rate (GB/s)'], out_row['Register Rate (GB/s)'], = \
+            calculate_register_bandwidth(in_row, iterations_per_rep, time)
     except:
         pass
     try:
