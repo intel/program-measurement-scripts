@@ -20,6 +20,15 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Time (s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
                 'GFLOPS' ]
 
+def succinctify(value):
+    def helper(x):
+        x = x[:x.index('(')] if '(' in x else x
+        return x.lower().strip().replace(' ', '_')
+    if isinstance(value, str):
+        return helper(value)
+    else:
+        return list(map(helper,value))
+
 def calculate_codelet_name(out_row, in_row):
     return '{0}: {1}'.format(
         getter(in_row, 'application.name', type=str),
@@ -228,6 +237,8 @@ def build_row_output(in_row):
                     field_names.append(field)
     except:
         pass
+    if args.succinct:
+        out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
 
 def print_formulas(formula_file):
@@ -266,7 +277,8 @@ def summary_report(inputfile, outputfile):
         csvreader = csv.DictReader(input_csvfile, delimiter=',')
         with open (outputfile, 'w', newline='') as output_csvfile:
             output_rows = list(map(build_row_output, csvreader))
-            output_fields = list(filter(field_has_values(output_rows), field_names))
+            output_fields = succinctify(field_names) if args.succinct else field_names
+            output_fields = list(filter(field_has_values(output_rows), output_fields))
             csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
             csvwriter.writeheader()
             for output_row in output_rows:
@@ -291,6 +303,7 @@ parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv fil
 parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
 parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
 parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
+parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
 args = parser.parse_args()
 
 if args.name_file:
