@@ -30,6 +30,7 @@ cmd="\"$MAQAO\" module=cqa uarch=\"${uarch}\" bin=\"$bin_path\" loop=\"$loop_id\
 echo Loop information collection: Executing CMD: \'$cmd\'
 bash -c "$cmd"
 # Generated loops.csv
+cp loops.csv /tmp
 
 if [[ ${DELIM} != ';' ]]
 then

@@ -163,11 +163,16 @@ combine_csv "$stan_infiles" $tmprep/stan.csv
 if [ -f $tmprep/stan.csv ]; then
 	# Below only fix the first line which is the header
 	#stan_names=$(echo $stan_names |sed "s/[ :-]/_/g"|sed "s/_\+/_/g"|sed "s/\[/(/g"|sed "s/\]/)/g") # Also converted various naming of stan metrics to follow final format
-	sed -i "1 s/[ :-]/_/g; 1 s/_\+/_/g; 1 s/\[/(/g; 1 s/\]/)/g" $tmprep/stan.csv # Converted various naming of stan metrics to follow final format
-
+	sed -i "1 s/[ :-]/_/g; 1 s/_\+/_/g; 1 s/\[/(/g; 1 s/\]/)/g; 1 s|ADD/SUB|ADD_SUB|g" $tmprep/stan.csv # Converted various naming of stan metrics to follow final format
+	# Some renaming of metrics due to difference in CQA output and Oneview outputs
+	sed 's/Bytes_if_\([a-zA-Z_]*\)_vectorized_prefetch/Bytes_prefetched_if_\1_vectorized/g' -i $tmprep/stan.csv
+	sed 's/Bytes_if_\([a-zA-Z_]*\)_vectorized_load/Bytes_loaded_if_\1_vectorized/g' -i $tmprep/stan.csv
+	sed 's/Bytes_if_\([a-zA-Z_]*\)_vectorized_store/Bytes_stored_if_\1_vectorized/g' -i $tmprep/stan.csv
+	cp $tmprep/stan.csv /tmp
 
 	echo Extracting stan columns only specified in stan metric file: ${STAN_METRICS_FILE}
-	IFS=$'\n' need_stan_cols=($(cat ${STAN_METRICS_FILE}|sed "s/,/\n/g"))
+	# IFS=$'\n' need_stan_cols=($(cat ${STAN_METRICS_FILE}|sed "s/,/\n/g"))
+	IFS=$'\n' need_stan_cols=($(cat ${STAN_METRICS_FILE}))
 	IFS=$'\n' stan_cols_in_file=($(head -1 $tmprep/stan.csv|sed "s/,/\n/g")) # Also converted various naming of stan metrics to follow final format
 	declare -A stan_col_index
 	si=0
