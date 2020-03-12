@@ -6,6 +6,7 @@ import traceback
 import pandas as pd
 import numpy as np
 import warnings
+from capelib import succinctify
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -22,16 +23,20 @@ CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP'}
 
 # For node using derived metrics (e.g. FrontEnd), make sure the depended metrics are computed
 capacity_formula= {
-	'L1': (lambda df : df['l1_rate']),
-	'L2': (lambda df : df['l2_rate']),
-	'L3': (lambda df : df['l3_rate']),
-	'FLOP': (lambda df : df['gflops']),
+	'L1': (lambda df : df['l1_rate_gb/s']),
+	'L2': (lambda df : df['l2_rate_gb/s']),
+	'L3': (lambda df : df['l3_rate_gb/s']),
+	'FLOP': (lambda df : df['flop_rate_gflop/s']),
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
 def parse_ip(inputfile,outputfile):
 #	inputfile="/tmp/input.csv"
 	df = pd.read_csv(inputfile)
+	# Normalize the column names
+	df.columns = succinctify(df.columns)
+
+
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	for variant, group in grouped:
