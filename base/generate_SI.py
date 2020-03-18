@@ -39,6 +39,8 @@ def parse_ip(inputfile,outputfile, norm, title, chosen_node_set):
 	df = pd.read_csv(inputfile)
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
+
+
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
@@ -82,7 +84,6 @@ def compute_saturation(df, chosen_node_set):
 	#df['Saturation'].to_csv('export_dataframe.csv', index = False, header=True)
 	#df.to_csv(export_dataframe.csv', index=False)
 	print(df['Saturation'])
-
 
 
 def compute_intensity(df, chosen_node_set):
@@ -187,9 +188,7 @@ def plot_data(title, filename, xs, ys, indices, speedups, floprates):
 	ns = [1,2,3,4,8]
 
 	ctxs = draw_contours(ax, xmax, ns)
-
 	mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(DATA))]    
-
 	texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
 	#adjust_text(texts)
 	adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
@@ -228,7 +227,7 @@ def main(argv):
 	except getopt.GetoptError:
 		usage('Wrong argument opts(s)')
 	if len(args) != 0:
-		usage('Wrong argument(s)')
+		usage('Wrong argument(s)')		
 	for opt, arg in opts:
 		if opt == '-h':
 			usage([])
@@ -255,6 +254,7 @@ def main(argv):
 			outputfile.append(arg)
 	if matchobj and len(outputfile) == 0:
 		outputfile.append(str(matchobj.group(1))) # Use input file basename as output prefix if user did not provide info
+	
 	print ('Inputfile: ', inputfile[0])
 	print ('Outputfile: ', outputfile[0])
 	print ('Norm: ', norm)
