@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.6
 import sys, getopt
 import csv
 import re
@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import warnings
 import datetime
+from capelib import succinctify
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -20,88 +21,82 @@ BUFFER_NODE_SET={'FrontEnd'}
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FrontEnd'}
 # For L1, L2, L3, FLOP 4 node runs
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'SIMD'}
-CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP'}
+DEFAULT_CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP'}
 
 # For node using derived metrics (e.g. FrontEnd), make sure the depended metrics are computed
 capacity_formula= {
-	'L1': (lambda df : df['l1_rate']/8),
-	'L2': (lambda df : df['l2_rate']/8),
-	'L3': (lambda df : df['l3_rate']/8),
-	'FLOP': (lambda df : df['gflops']),
-	'SIMD': (lambda df : df['reg_simd_rate']/8),
-	'RAM': (lambda df : df['ram_rate']/8),
+	'L1': (lambda df : df['l1_rate_gb/s']/8),
+	'L2': (lambda df : df['l2_rate_gb/s']/8),
+	'L3': (lambda df : df['l3_rate_gb/s']/8),
+	'FLOP': (lambda df : df['flop_rate_gflop/s']),
+	'SIMD': (lambda df : df['register_simd_rate_gb/s']/8),
+	'RAM': (lambda df : df['ram_rate_gb/s']/8),
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-# For node using derived metrics (e.g. FrontEnd), make sure the depended metrics are computed
-b_capacity_formula= {
-	'L1': (lambda df : df['l1_rate']/8),
-	'L2': (lambda df : df['l2_rate']/8),
-	'L3': (lambda df : df['l3_rate']/8),
-	'FLOP': (lambda df : df['gflops']),
-	'SIMD': (lambda df : df['reg_simd_rate']/8),
-	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
-	}
-
-def parse_ip(inputfile,outputfile, norm):
+def parse_ip(inputfile,outputfile, norm, title, chosen_node_set):
 #	inputfile="/tmp/input.csv"
 	df = pd.read_csv(inputfile)
+	# Normalize the column names
+	df.columns = succinctify(df.columns)
+
+
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, norm)
-	compute_and_plot('ORIG', df[mask], outputfile, norm)
+	compute_and_plot('XFORM', df[~mask], outputfile, norm, title, chosen_node_set)
+	compute_and_plot('ORIG', df[mask], outputfile, norm, title, chosen_node_set)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
-def compute_capacity(df, norm):
+def compute_capacity(df, norm, chosen_node_set):
 	print("The node list are as follows :")
-	print(CHOSEN_NODE_SET)
-	for node in BASIC_NODE_SET & CHOSEN_NODE_SET:
+	print(chosen_node_set)
+	chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
+	for node in chosen_basic_node_set:
 		print ("The current node : ", node)
 		formula=capacity_formula[node]
 		df['C_{}'.format(node)]=formula(df)
 	if norm == 'row':
 		print ("<=====Running Row Norm======>")
-		df['C_max']=df[list(map(lambda n: "C_{}".format(n), BASIC_NODE_SET & CHOSEN_NODE_SET))].max(axis=1)
+		df['C_max']=df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1)
 	else:
 		print ("<=====Running Matrix Norm======>")
-		df['C_max']=max(df[list(map(lambda n: "C_{}".format(n), BASIC_NODE_SET & CHOSEN_NODE_SET))].max(axis=1))
+		df['C_max']=max(df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1))
 	print ("<=====compute_capacity======>")
 	print(df['C_max'])
 	print ("<=====compute_L1======>")
 	print(df['C_L1'])
 
-	for node in BUFFER_NODE_SET & CHOSEN_NODE_SET:
+	for node in BUFFER_NODE_SET & chosen_node_set:
 		formula=capacity_formula[node]
 		df['C_{}'.format(node)]=formula(df)
 
 
 
-def compute_saturation(df):
-	nodeMax=df[list(map(lambda n: "C_{}".format(n), CHOSEN_NODE_SET))].max(axis=0)
+def compute_saturation(df, chosen_node_set):
+	nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
 	print ("<=====compute_saturation======>")
 	print(nodeMax)
-	for node in CHOSEN_NODE_SET:
+	for node in chosen_node_set:
 		df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-	df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), CHOSEN_NODE_SET))].sum(axis=1)
+	df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)		
 	#df['Saturation'].to_csv('export_dataframe.csv', index = False, header=True)
 	#df.to_csv(export_dataframe.csv', index=False)
 	print(df['Saturation'])
 
 
-
-def compute_intensity(df):
-	node_cnt = len(CHOSEN_NODE_SET)
-	csum=df[list(map(lambda n: "C_{}".format(n), CHOSEN_NODE_SET))].sum(axis=1)
+def compute_intensity(df, chosen_node_set):
+	node_cnt = len(chosen_node_set)
+	csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
 	df['Intensity']=node_cnt*df['C_max'] / csum
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, norm):
-	compute_capacity(df, norm)
-	compute_saturation(df)
-	compute_intensity(df)
+def compute_and_plot(variant, df,outputfile_prefix, norm, title, chosen_node_set):
+	compute_capacity(df, norm, chosen_node_set)
+	compute_saturation(df, chosen_node_set)
+	compute_intensity(df, chosen_node_set)
 	df[['name', 'variant','Saturation', 'Intensity']].to_csv(variant+'_export_dataframe.csv', index = False, header=True)
 	
 # 	xs=[]
@@ -130,15 +125,17 @@ def compute_and_plot(variant, df,outputfile_prefix, norm):
 	df['SI']=df['Saturation'] * df['Intensity'] 
 	k = df['SI']
 	df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
-	speedups = df['C_FLOP'].round(decimals=2) # Currently set to the flop rate
+	speedups = df['Speedup']
+	floprate = df['C_FLOP']
 	print (speedups)
 	#plot_data("Saturation plot", 'saturation.png', x, y)
 	#plot_data("Intensity plot", 'Intensity.png', x, z)
 #	outputfile='SI.png'
 	today = datetime.date.today()
 	outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-	plot_data("{} \n N = {}{}, \nvariant={}, norm={}".format(TITLE.upper(), len(CHOSEN_NODE_SET), str(CHOSEN_NODE_SET), variant, norm),
-						outputfile, list(z), list(y),	list(indices), list(speedups))
+	plot_data("{} \n N = {}{}, \nvariant={}, norm={}".format(title, len(chosen_node_set), 
+						str(sorted(list(chosen_node_set))), variant, norm),
+						outputfile, list(z), list(y),	list(indices), list(speedups), list(floprate))
 
 	#plt.plot(x,y, label='Saturation !')
 	#plt.title('Saturation Chart')
@@ -160,7 +157,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, speedups):
+def plot_data(title, filename, xs, ys, indices, speedups, floprates):
 	DATA =tuple(zip(xs,ys))
 	#     DATA = ((1, 3),
 	#             (2, 4),
@@ -191,9 +188,7 @@ def plot_data(title, filename, xs, ys, indices, speedups):
 	ns = [1,2,3,4,8]
 
 	ctxs = draw_contours(ax, xmax, ns)
-
-	mytext= [str('({0}, {1})'.format( indices[i], speedups[i] ))  for i in range(len(DATA))]    
-
+	mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(DATA))]    
 	texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
 	#adjust_text(texts)
 	adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
@@ -212,17 +207,19 @@ def usage(reason):
 	if reason:
 		print ('\nERROR: {}!\n'.format(reason))
 		error_code = 2
-	print ('Usage:\n  generate_SI.py  -i <inputfile> -o <outputfile prefix> -n norm (row,matrix)-l <nodes> (optionally)>')
+	print ('Usage:\n  generate_SI.py  -i <inputfile> -o <outputfile prefix> -n norm (row,matrix) -l <nodes> (optionally)>')
 	print ('Example:\n  generate_SI.py  -i input.csv -o out.csv -n row -l L1,L2,L3,FLOP,SIMD')
 	sys.exit(error_code)
 	
 def main(argv):
-	#if len(argv) != 6 and len(argv) != 4 and len(argv) != 2 and len(argv) != 1:
-	#	usage('Wrong number of arguments')
+	if len(argv) != 8 and len(argv) != 6 and len(argv) != 4 and len(argv) != 2 and len(argv) != 1:
+		usage('Wrong number of arguments')
 	inputfile = []
 	outputfile = []
 	node_list = []
 	norm = 'matrix'
+	title=""
+	chosen_node_set = DEFAULT_CHOSEN_NODE_SET
 	try:
 		opts, args = getopt.getopt(argv, "hi:o:n:l:")
 		print (opts)
@@ -230,7 +227,7 @@ def main(argv):
 	except getopt.GetoptError:
 		usage('Wrong argument opts(s)')
 	if len(args) != 0:
-		usage('Wrong argument(s)')
+		usage('Wrong argument(s)')		
 	for opt, arg in opts:
 		if opt == '-h':
 			usage([])
@@ -244,27 +241,25 @@ def main(argv):
 		elif opt == '-l':
 			node_list = arg.split(',')
 			print (node_list)
-			global CHOSEN_NODE_SET
-			CHOSEN_NODE_SET = {node_list[i] for i in range(0, len(node_list))}
-			print ({node_list[i] for i in range(0, len(node_list))})
-			#CHOSEN_NODE_SET = node_list.split(',')
+			chosen_node_set = set(node_list)
+			print (chosen_node_set)
 		elif opt == '-i':
 			inputfile.append(arg)
 			matchobj = re.search(r'(.+?)\.csv', arg)
-			outputfile.append(str(matchobj.group(1)) + '_summary.csv')
-			titleobj = str(matchobj.group(1))
-			global TITLE
-			TITLE = titleobj
+			title = str(matchobj.group(1))
 			if not matchobj:
 				print ('inputfile should be a *.csv file')
 				sys.exit()
 		elif opt == '-o':
 			outputfile.append(arg)
+	if matchobj and len(outputfile) == 0:
+		outputfile.append(str(matchobj.group(1))) # Use input file basename as output prefix if user did not provide info
+	
 	print ('Inputfile: ', inputfile[0])
 	print ('Outputfile: ', outputfile[0])
 	print ('Norm: ', norm)
 	print ('Node List: ', node_list)
-	parse_ip(inputfile[0],outputfile[0], norm)
+	parse_ip(inputfile[0],outputfile[0], norm, title.upper(), chosen_node_set)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
