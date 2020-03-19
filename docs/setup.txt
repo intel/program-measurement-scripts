@@ -39,6 +39,8 @@ Note that
 • For many of our previous experiments, we turn off hyperthreading.  
   If you want to reproduce our previous results, you may want to do that off in 
   BIOS too.  However, for running experiments in general, you can keep it on.
+• If there are multiple versions of Python installed, please make sure the 
+  default version points to the latest version at least Python 3.6   .
 
 After the above presteps, you should be ready to install the experimental 
 scripts and our NR-codelet set.  Below I assume a common directory <home> 
