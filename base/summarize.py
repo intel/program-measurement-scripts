@@ -20,7 +20,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Time (s)',
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -33,12 +33,12 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Time (s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 
-L2R_TrafficDict={'SKX': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
-L2W_TrafficDict={'SKX': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
-L3R_TrafficDict={'SKX': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FILL_DROPPED'], 'IVB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'], 'SNB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'] }
-L3W_TrafficDict={'SKX': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
+L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
+L2W_TrafficDict={'SKL': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
+L3R_TrafficDict={'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FILL_DROPPED'], 'IVB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'], 'SNB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'] }
+L3W_TrafficDict={'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
 
-StallDict={'SKX': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
+StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
            'HSW': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
@@ -77,7 +77,10 @@ def calculate_codelet_name(out_row, in_row):
     out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
         else getter(in_row, 'decan_variant.name', type=str)
 
-
+def calculate_expr_settings(out_row, in_row):
+    out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
+    out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
+    out_row['prefetchers']=getter(in_row, 'prefetchers')
 
 def calculate_iterations_per_rep(in_row):
     try:
@@ -118,9 +121,14 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
 
     try:
         out_row['FLOP Rate (GFLOP/s)'] = calculate_gflops(in_row, iterations_per_rep, time)
+    except:
+        pass
+
+    try:
         out_row['IOP Rate (GIOP/s)'] = calculate_giops(in_row, iterations_per_rep, time)
     except:
         pass
+    
 
     return (insts_per_rep, ops_per_sec)
 
@@ -139,6 +147,7 @@ def getter(in_row, *argv, **kwargs):
     raise IndexError(', '.join(map(str, argv)))
 
 def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
+
     def calculate_load_store_rate():
         try:
             load_per_it  = getter(in_row, 'MEM_INST_RETIRED_ALL_LOADS', 'MEM_UOPS_RETIRED_ALL_LOADS')
@@ -166,7 +175,17 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
     try:
         L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * getter(in_row, 'decan_experimental_configuration.num_core')
         L1_wb_per_it  = getter(in_row, 'Bytes_stored') * getter(in_row, 'decan_experimental_configuration.num_core')
+        L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
+        out_row['L1 Rate (GB/s)']  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+    except:
+        L1_rb_per_it = None
+        L1_wb_per_it = None
+        L1_rwb_per_it = None
+        out_row['L1 Rate (GB/s)']  = None
+
+    try:
         arch = arch_helper(in_row)
+
         L2_rc_per_it  = counter_sum(in_row, L2R_TrafficDict[arch])
         L2_wc_per_it  = counter_sum(in_row, L2W_TrafficDict[arch])
         L3_rc_per_it  = counter_sum(in_row, L3R_TrafficDict[arch])
@@ -174,11 +193,12 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
 
         ram_rc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_RD', 'UNC_IMC_DRAM_DATA_READS')
         ram_wc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_WR', 'UNC_IMC_DRAM_DATA_WRITES')
-        L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
+
+
         L2_rwb_per_it  = (L2_rc_per_it  + L2_wc_per_it) * 64
         L3_rwb_per_it  = (L3_rc_per_it  + L3_wc_per_it) * 64
         ram_rwb_per_it = (ram_rc_per_it + ram_wc_per_it) * 64
-        out_row['L1 Rate (GB/s)']  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+
         out_row['L2 Rate (GB/s)']  = (L2_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
         out_row['L3 Rate (GB/s)']  = (L3_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
         out_row['RAM Rate (GB/s)'] = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
@@ -251,6 +271,7 @@ def calculate_stall_percentages(res, row):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
+        print('HERE', getter(row, StallDict[arch]['RS']))
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'FrontEnd']:
             res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
     except:
@@ -292,10 +313,12 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 def build_row_output(in_row):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
+    calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(out_row, in_row, iterations_per_rep)
     num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec)
+
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
     calculate_stall_percentages(out_row, in_row)
     if args.succinct:
@@ -331,6 +354,9 @@ def field_has_values(rows):
 def enforce(d, field_names):
     return { x : d.get(x, None) for x in field_names }
 
+def unify_column_names(colnames):
+    return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
+    
 def summary_report(inputfile, outputfile, input_format):
     print('Inputfile Format: ', input_format)
     print('Inputfile: ', inputfile)
@@ -343,8 +369,9 @@ def summary_report(inputfile, outputfile, input_format):
         # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
         input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
         df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
-    for index, row in df.iterrows():
-        print(getter(row,'L1D_REPLACEMENT'))
+#    for index, row in df.iterrows():
+#        print(getter(row,'L1D_REPLACEMENT'))
+    df.columns = unify_column_names(df.columns)
     output_rows = list(df.apply(build_row_output, axis=1))
 
     if (outputfile == '-'):
