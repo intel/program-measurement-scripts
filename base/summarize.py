@@ -13,6 +13,7 @@ from enum import Enum
 import tempfile
 import os
 import pandas as pd
+import warnings
 
 # At least Python version 3.6 is required
 assert sys.version_info >= (3,6)
@@ -29,7 +30,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
                 'E[PKG+DRAM]/O (J/GI)', 'C/E[PKG+DRAM] (GI/Js)', 'CO/E[PKG+DRAM] (GI2/Js)',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
-                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GIPS)',
+                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/S)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 
@@ -171,18 +172,6 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
                                                                                    ]]
         return rates + [ sum(rates) ]
 
-
-    try:
-        L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * getter(in_row, 'decan_experimental_configuration.num_core')
-        L1_wb_per_it  = getter(in_row, 'Bytes_stored') * getter(in_row, 'decan_experimental_configuration.num_core')
-        L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
-        out_row['L1 Rate (GB/s)']  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
-    except:
-        L1_rb_per_it = None
-        L1_wb_per_it = None
-        L1_rwb_per_it = None
-        out_row['L1 Rate (GB/s)']  = None
-
     try:
         arch = arch_helper(in_row)
 
@@ -202,9 +191,21 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
         out_row['L2 Rate (GB/s)']  = (L2_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
         out_row['L3 Rate (GB/s)']  = (L3_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
         out_row['RAM Rate (GB/s)'] = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
-        out_row['Load+Store Rate (GIPS)'] = calculate_load_store_rate()
+        out_row['Load+Store Rate (GI/S)'] = calculate_load_store_rate()
     except:
         pass
+
+    try:
+        L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * getter(in_row, 'decan_experimental_configuration.num_core')
+        L1_wb_per_it  = getter(in_row, 'Bytes_stored') * getter(in_row, 'decan_experimental_configuration.num_core')
+        L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
+        out_row['L1 Rate (GB/s)']  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+    except:
+        # This is just estimation an load if fetching 8B (64 bit)
+        warnings.warn("No CQA L1 metrics, use LS instruction rate instead.")
+        out_row['L1 Rate (GB/s)']  = out_row['Load+Store Rate (GI/S)'] * 8
+
+    
     try:
         out_row['Register ADDR Rate (GB/s)'], out_row['Register DATA Rate (GB/s)'], \
         out_row['Register SIMD Rate (GB/s)'], out_row['Register Rate (GB/s)'] = calculate_register_bandwidth()
@@ -239,17 +240,31 @@ def calculate_giops(in_row, iters_per_rep, time_per_rep):
 
 def calculate_gflops(in_row, iters_per_rep, time_per_rep):
     flops = 0
-    itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
-    for itype in itypes:
-        flops += (0.5 * getter(in_row, 'Nb_FP_insn_{}SS'.format(itype)) + 1 * getter(in_row, 'Nb_FP_insn_{}SD'.format(itype)))
-        flops += (2 * getter(in_row, 'Nb_FP_insn_{}PS_XMM'.format(itype)) + 2 * getter(in_row, 'Nb_FP_insn_{}PD_XMM'.format(itype)))
-        flops += (4 * getter(in_row, 'Nb_FP_insn_{}PS_YMM'.format(itype)) + 4 * getter(in_row, 'Nb_FP_insn_{}PD_YMM'.format(itype)))
-        flops += (8 * getter(in_row, 'Nb_FP_insn_{}PS_ZMM'.format(itype)) + 8 * getter(in_row, 'Nb_FP_insn_{}PD_ZMM'.format(itype)))
+    try:
+        # try to use counters if collected.  The count should already be across all cores.
+        flops = ((0.5 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_SINGLE') + \
+                  1 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_DOUBLE') + \
+                  2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_SINGLE') + \
+                  2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_DOUBLE') + \
+                  4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_SINGLE') + \
+                  4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_DOUBLE') + \
+                  8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_SINGLE') + \
+                  8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_DOUBLE')))
+    except:
+        itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
+        for itype in itypes:
+            flops += (0.5 * getter(in_row, 'Nb_FP_insn_{}SS'.format(itype)) + 1 * getter(in_row, 'Nb_FP_insn_{}SD'.format(itype)))
+            flops += (2 * getter(in_row, 'Nb_FP_insn_{}PS_XMM'.format(itype)) + 2 * getter(in_row, 'Nb_FP_insn_{}PD_XMM'.format(itype)))
+            flops += (4 * getter(in_row, 'Nb_FP_insn_{}PS_YMM'.format(itype)) + 4 * getter(in_row, 'Nb_FP_insn_{}PD_YMM'.format(itype)))
+            flops += (8 * getter(in_row, 'Nb_FP_insn_{}PS_ZMM'.format(itype)) + 8 * getter(in_row, 'Nb_FP_insn_{}PD_ZMM'.format(itype)))
 
-    # try to add the FMA counts
-    flops += 1 * getter(in_row, 'Nb_FP_insn_FMASS') + 4 * getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPS_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + \
-             2 * getter(in_row, 'Nb_FP_insn_FMASD') + 4 * getter(in_row, 'Nb_FP_insn_FMAPD_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPD_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPD_ZMM')
-    return (flops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
+        # try to add the FMA counts
+        flops += 1 * getter(in_row, 'Nb_FP_insn_FMASS') + 4 * getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPS_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + \
+                 2 * getter(in_row, 'Nb_FP_insn_FMASD') + 4 * getter(in_row, 'Nb_FP_insn_FMAPD_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPD_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPD_ZMM')
+        # Multiple to get count for all cores
+        flops = flops * getter(in_row, 'decan_experimental_configuration.num_core')
+    
+    return (flops * iters_per_rep) / (1E9 * time_per_rep)
 
 
 # def shorten_stall_counter(field):
@@ -271,7 +286,6 @@ def calculate_stall_percentages(res, row):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
-        print('HERE', getter(row, StallDict[arch]['RS']))
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'FrontEnd']:
             res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
     except:
@@ -357,20 +371,29 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfile, outputfile, input_format):
+def summary_report(inputfiles, outputfile, input_format):
     print('Inputfile Format: ', input_format)
-    print('Inputfile: ', inputfile)
+    print('Inputfiles: ', inputfiles)
     print('Outputfile: ', outputfile)
+    df = pd.DataFrame()  # empty df as start and keep appending in loop next
+    for inputfile in inputfiles:
+        print(inputfile)
+        if (input_format == 'csv'):
+            input_data_source = sys.stdin if (inputfile == '-') else inputfile
+            cur_df = pd.read_csv(input_data_source, delimiter=',')
+        else:
+            # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
+            input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
+            cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
+        df = df.append(cur_df, ignore_index=True)
+    df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
 
-    if (input_format == 'csv'):
-        input_data_source = sys.stdin if (inputfile == '-') else inputfile
-        df = pd.read_csv(input_data_source, delimiter=',')
-    else:
-        # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
-        input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
-        df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
+
 #    for index, row in df.iterrows():
 #        print(getter(row,'L1D_REPLACEMENT'))
+
+
+
     df.columns = unify_column_names(df.columns)
     output_rows = list(df.apply(build_row_output, axis=1))
 
@@ -402,7 +425,7 @@ def read_short_names(filename):
                 variants[row['name']] = row['variant']
 
 parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
-parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
+parser.add_argument('-i', nargs='+', help='the input csv file', required=True, dest='in_files')
 parser.add_argument('-f', nargs='?', default='csv', help='format of input file (default csv can change to xlsx)', choices=['csv', 'xlsx'], dest='in_file_format')
 parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
 parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
@@ -413,6 +436,6 @@ args = parser.parse_args()
 
 if args.name_file:
     read_short_names(args.name_file)
-summary_report(args.in_file, args.out_file, args.in_file_format)
+summary_report(args.in_files, args.out_file, args.in_file_format)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
