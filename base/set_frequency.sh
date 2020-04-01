@@ -78,9 +78,16 @@ then
 				cpufreq-set -c $i -g userspace
 				cpufreq-set -c $i -f $target_frequency
 			else
-				# cpupower should have SETUID bit but here for the case it is not possible.
-				sudo cpupower -c $i frequency-set -g userspace
-				sudo cpupower -c $i frequency-set -f $target_frequency
+
+				if [ -u $(which cpupower) ]; then
+				  # cpupower having SETUID bit
+					cpupower -c $i frequency-set -g userspace
+					cpupower -c $i frequency-set -f $target_frequency
+				else
+				  # cpupower should have SETUID bit but here for the case it is not possible.
+					sudo cpupower -c $i frequency-set -g userspace
+					sudo cpupower -c $i frequency-set -f $target_frequency
+				fi
 			fi
 		done
 
