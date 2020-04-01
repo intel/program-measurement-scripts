@@ -342,7 +342,7 @@ then
 							export KMP_AFFINITY=scatter
 							cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog_emon_api}"
 							LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} ${cmd} &>>"$res_path/emon_execution_log"
-							while pgrep -x emon -u $USER >/dev/null; do sleep 1; done
+							prog_emon_api_ret_code=$?
 						else
 							if [[ "$MC_RUN" != "0" ]]; then
 								# without emon probe
@@ -354,8 +354,14 @@ then
 
 							# with emon probe
 							LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
+							prog_emon_api_ret_code=$?
 						fi
-						while pgrep -x emon -u $USER > /dev/null; do sleep 1; done;
+						# return code: 139 = segfault; 135 = bus error, app may failed to stop emon measurement
+						if [[ $prog_emon_api_ret_code == 139 || $prog_emon_api_ret_code == 135 ]]; then
+								emon -stop
+						fi
+						while pgrep -x emon -u $USER > /dev/null; do sleep 1; done
+
 
 						if [[ "$MC_RUN" != "0" ]]; then
 							while pgrep -x $(basename ${codelet_name}) -u $USER > /dev/null; do
