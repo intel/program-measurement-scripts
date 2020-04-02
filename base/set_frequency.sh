@@ -78,9 +78,10 @@ then
 				cpufreq-set -c $i -g userspace
 				cpufreq-set -c $i -f $target_frequency
 			else
-
-				if [ -u $(which cpupower) ]; then
-				  # cpupower having SETUID bit
+	
+				CPUPOWER_VERSION=$(cpupower -v | grep cpupower | sed -e 's/.* \([0-9]*\)\.\([0-9]*\).*/\1.\2/g' )
+				if [[ -u $(which cpupower) && $(echo ${CPUPOWER_VERSION} >= 3.19|bc -l) == 1 ]]; then
+				  # cpupower having SETUID bit and cpupower 3.19 fixed a bit to use it correctly
 					cpupower -c $i frequency-set -g userspace
 					cpupower -c $i frequency-set -f $target_frequency
 				else

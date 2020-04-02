@@ -2,9 +2,9 @@
 
 source $CLS_FOLDER/const.sh
 
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
 
 if [[ "$nb_args" != "6" ]]; then
 	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, max number of repetition, desired length)."

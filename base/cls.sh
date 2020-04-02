@@ -3,9 +3,9 @@
 
 source $CLS_FOLDER/const.sh
 
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
 
 if [[ "$nb_args" != "14" ]]; then
 	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, unc_frequncies, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers, counter list override), current compiler."

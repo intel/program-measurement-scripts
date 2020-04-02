@@ -73,7 +73,9 @@ do
 				# per socket counts, assuming numbers are contiguously put together for each socket
 				# Uncomment below to print command
 				# echo 'echo '$value' |awk -v RS='${DELIM}' -v BATCH='${ndata_per_pkg}' -v counter='${counter}" 'BEGIN{i=0}{s+=\$1} NR%BATCH==0 {print counter"'"_"i"||"'"s;s=0;i++}' >> "${tmp_file}
-				echo $value |awk -v RS=${DELIM} -v BATCH=${ndata_per_pkg} -v counter=${counter} 'BEGIN{i=0}{s+=$1} NR%BATCH==0 {print counter"_"i"||"s;s=0;i++}' >> ${tmp_file}
+				# echo $value |awk -v RS=${DELIM} -v BATCH=${ndata_per_pkg} -v counter=${counter} 'BEGIN{i=0}{s+=$1} NR%BATCH==0 {print counter"_"i"||"s;s=0;i++}' >> ${tmp_file}
+				# Simply just print the valule with its index
+				echo $value |awk -v RS=${DELIM} -v counter=${counter} '{print counter"_"(NR-1)"||"$1}' >> ${tmp_file}
 			done
 			cat ${tmp_file} >> $res_path/likwid_report
 			readarray -t split_counters < <(cut -f1 -d'|' ${tmp_file} |sort |uniq)

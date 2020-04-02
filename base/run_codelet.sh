@@ -1,9 +1,9 @@
 #!/bin/bash
 
 source $CLS_FOLDER/const.sh
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
 
 
 if [[ "$nb_args" != "12" ]]
