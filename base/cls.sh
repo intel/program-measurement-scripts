@@ -479,7 +479,7 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 								echo "$repetitions $data_size" > "${build_folder}/codelet.data"
 								pushd $build_folder
 								# Run this at the build folder
-								command_line_args=$(parameter_set_decoding "$build_folder/$codelet_name" "$data_size" "$repetitions" )
+								command_line_args=$(parameter_set_decoding "$build_folder/$codelet_name" "$data_size" "$repetitions" "$res_path" "$num_core" )
 								popd
 
 								#./run_coelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"
