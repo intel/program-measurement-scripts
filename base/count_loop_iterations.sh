@@ -41,7 +41,8 @@ fi
 
 cd $binary_folder
 
-command_line_args=$(parameter_set_decoding "$binary_path" "$data_size" "$repetition" )
+command_line_args=$(parameter_set_decoding "$binary_path" "$data_size" "$repetition" "$binary_folder" "$num_cores" )
+
 
 # Create the datasize file for codelet run
 #echo "${repetition} ${data_size}" > ./codelet.data

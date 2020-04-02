@@ -6,7 +6,7 @@ source ../base/vrun_launcher.sh
 #PUT compiler source stuff here
 source ${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
 
-BIN_DIR=/localdisk/cwong29/working/NR-scripts/galois/cls-build5/lonestar/experimental/lagraph/apps
+BIN_DIR=/localdisk/cwong29/working/NR-scripts/galois/cls-build6/lonestar/experimental/lagraph/apps
 
 #export GRAPH_DIR=/nfs/site/proj/alac/data/graph-algorithms-data/Galois/GaloisBLAS/Galois.clean.version/lonestar/graphBLASwrapper/test_inputs
 export GRAPH_DIR=/nfs/site/proj/alac/data/graph-algorithms-data/graphblas-inputs
@@ -22,13 +22,20 @@ parameter_set_decoding () {
 	num_cores=$5
 
 	# Create the datasize file for codelet run
-	sn=$(cat ${GRAPH_DIR}/${datasize}.source)
+	gd=${GRAPH_DIR}/${datasize}
+	sn=$(cat ${gd}/${datasize}.source)
 	echo "${repetition} ${datasize}" > ./codelet.data
 	echo -e "arraysize\n${datasize}" > arguments.csv
-	if [[ $(basename $codelet) == 'grbBFS_cape' ]]; then
-			echo "${GRAPH_DIR}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition}"
+	if [[ $(basename $codelet) == 'grbBFS' || $(basename $codelet) == 'grbBF' ]]; then
+			echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition}"
+	elif [[ $(basename $codelet) == 'grbKTruss' ]]; then
+			if [[ ${datasize} == 'road-USA-W' || ${datasize} == 'road-USA' ]]; then
+					echo "${gd}/${datasize}.cgr -k=4 -t=${num_cores} -rep=${repetition}"
+			else
+					echo "${gd}/${datasize}.cgr -k=7 -t=${num_cores} -rep=${repetition}"
+			fi
 	else
-			echo "${GRAPH_DIR}/${datasize}.cgr  -t=${num_cores} -rep=${repetition}"
+			echo "${gd}/${datasize}.cgr  -t=${num_cores} -rep=${repetition}"
 	fi
 }
 
@@ -99,17 +106,30 @@ run() {
 
 	# Get rid of peel
 	name2sizes[balanc_3_de]="8000"
-	name2sizes[grbBFS_cape]="livejournal indochina-2004 rmat24 road-USA twitter40"
-	name2sizes[grbBFS_cape]="livejournal"
-	name2sizes[grbPR_cape]="livejournal indochina-2004 rmat24 road-USA twitter40"
-#	name2sizes[grbPR_cape]="livejournal"
-	name2sizes[grbTri_cape]="livejournal indochina-2004 rmat24 road-USA twitter40"
-#	name2sizes[grbTri_cape]="twitter40"
+	name2sizes[grbBFS]="livejournal indochina-2004 rmat24 road-USA twitter40"
+	name2sizes[grbBFS]="livejournal"
+
+	name2sizes[grbPR]="livejournal indochina-2004 rmat24 road-USA twitter40"
+#	name2sizes[grbPR]="livejournal"
+	name2sizes[grbTri]="livejournal indochina-2004 rmat24 road-USA twitter40"
+#	name2sizes[grbTri]="twitter40"
+	name2sizes[grbTri]="road-USA"
+
+	name2sizes[grbBFS]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+	name2sizes[grbPRorig]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+	name2sizes[grbTri]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+	name2sizes[grbKTruss]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+	name2sizes[grbBF]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+	name2sizes[grbTri]="rmat20 indochina-2004 rmat26 road-USA twitter40 friendster"
+
 
 	run_codelets=(
-			grbBFS_cape
-#			grbPR_cape
-#			grbTri_cape
+#			grbBFS
+			grbPRorig
+#			grbCC
+#			grbTri
+#			grbKTruss
+#			grbBF
 	)
 
 	for codelet_name in ${run_codelets[@]}; do
@@ -147,6 +167,7 @@ run() {
 
 #runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0" runLoop
 	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0,FLOP=1" runLoop
+#	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0,FLOP=0" runLoop
 
 
 
