@@ -21,7 +21,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'Vec. Type', 'Time (s)',
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -29,8 +29,9 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'E[DRAM]/O (J/GI)', 'C/E[DRAM] (GI/Js)', 'CO/E[DRAM] (GI2/Js)',
                 'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
                 'E[PKG+DRAM]/O (J/GI)', 'C/E[PKG+DRAM] (GI/Js)', 'CO/E[PKG+DRAM] (GI2/Js)',
+                '%Misp. Branches', 'Issued/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
-                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/S)',
+                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 
@@ -47,6 +48,26 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
+
+def find_vector_ext(row):
+    def is_vt_insn(field, ext):
+        return field.endswith(ext) and \
+            (field.startswith("Nb_FP_insn") or field.startswith('Nb_insn'))
+    xmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'XMM'))
+    ymm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'YMM'))
+    zmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'ZMM'))
+    fma_vec = getter(row, 'Nb_FLOP_fma') if 'Nb_FLOP_fma' in row.keys() else None
+    if zmm_vec:
+        return 'AVX512'
+    elif ymm_vec and fma_vec:
+        return 'AVX2'
+    elif ymm_vec:
+        return 'AVX'
+    elif xmm_vec:
+        return 'SSE'
+    else:
+        return 'SC'
+
 
 
 def counter_sum(row, cols):
@@ -82,6 +103,8 @@ def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
     out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
     out_row['prefetchers']=getter(in_row, 'prefetchers')
+    out_row['Repetitions']=getter(in_row, 'Repetitions')
+    out_row['Vec. Type']=find_vector_ext(in_row)
 
 def calculate_iterations_per_rep(in_row):
     try:
@@ -113,6 +136,19 @@ def print_total_pkg_energy_formula(formula_file):
 def print_total_dram_energy_formula(formula_file):
     formula_file.write('Total DRAM Energy (J) = (UNC_DDR_ENERGY_STATUS or FREERUN_DRAM_ENERGY_STATUS) * energy.unit *' +
                                          ' iterations_per_rep\n')
+
+def user_op_to_rate_column_name(user_op_column):
+    matchobj = re.search(r'(.+?) \((.+?)\)', user_op_column)
+    op_name=matchobj.group(1)
+    unit_name=matchobj.group(2)
+    return "{} Rate (G{}/s)".format(op_name, unit_name)
+        
+    
+def calculate_user_op_rate(out_row, in_row, time_per_rep, user_op_column_name_dict):
+    for user_op_column, rate_column_name in user_op_column_name_dict.items():
+        ops_per_rep = in_row[user_op_column]
+        out_row[rate_column_name]=ops_per_rep/time_per_rep/1e9
+
 
 def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     insts_per_rep = ((getter(in_row, 'INST_RETIRED_ANY') * iterations_per_rep) / (1e9))
@@ -286,8 +322,14 @@ def calculate_stall_percentages(res, row):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
-        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'FrontEnd']:
+        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM']:
             res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
+        try:
+            res['%FrontEnd'] = getter(row, StallDict[arch]['FrontEnd']) / unhlt
+        except:
+            warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
+            res['%FrontEnd'] = (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
+            
     except:
         pass
 
@@ -323,14 +365,23 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
     total_energy = total_pkg_energy + total_dram_energy
     calculate_derived_metrics('PKG+DRAM', total_energy)
 
+def calculate_speculation_ratios(out_row, in_row):
+    try:
+        out_row['%Misp. Branches']=getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
+        out_row['Issued/Retired Uops']=getter(in_row, 'UOPS_ISSUED_ANY') / getter(in_row, 'UOPS_RETIRED_ALL')
+    except:
+        return
 
-def build_row_output(in_row):
+
+def build_row_output(in_row, user_op_column_name_dict):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(out_row, in_row, iterations_per_rep)
     num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
+    calculate_speculation_ratios (out_row, in_row)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec)
 
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
@@ -371,10 +422,12 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfiles, outputfile, input_format):
+def summary_report(inputfiles, outputfile, input_format, user_op_file):
     print('Inputfile Format: ', input_format)
     print('Inputfiles: ', inputfiles)
     print('Outputfile: ', outputfile)
+    print('User Op file: ', user_op_file)
+
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
         print(inputfile)
@@ -386,16 +439,22 @@ def summary_report(inputfiles, outputfile, input_format):
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
         df = df.append(cur_df, ignore_index=True)
-    df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
+    df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
 
+    if user_op_file:
+        key_columns=['codelet.name', 'decan_experimental_configuration.data_size']
+        user_op_df = pd.read_csv(user_op_file, delimiter=',')
+        user_op_columns = [col for col in user_op_df.columns if col not in key_columns]
+        df = pd.merge(df, user_op_df, on=key_columns, how='left')
+    else:
+        user_op_columns = []
 
-#    for index, row in df.iterrows():
-#        print(getter(row,'L1D_REPLACEMENT'))
-
-
+    user_op_col_name_dict={op_name: user_op_to_rate_column_name(op_name) for op_name in user_op_columns}
+    field_names.extend(user_op_col_name_dict.values())
+    print(field_names)
 
     df.columns = unify_column_names(df.columns)
-    output_rows = list(df.apply(build_row_output, axis=1))
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, axis=1))
 
     if (outputfile == '-'):
         output_csvfile = sys.stdout
@@ -429,6 +488,7 @@ parser.add_argument('-i', nargs='+', help='the input csv file', required=True, d
 parser.add_argument('-f', nargs='?', default='csv', help='format of input file (default csv can change to xlsx)', choices=['csv', 'xlsx'], dest='in_file_format')
 parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
 parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
+parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
 parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
 parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
 parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
@@ -436,6 +496,7 @@ args = parser.parse_args()
 
 if args.name_file:
     read_short_names(args.name_file)
-summary_report(args.in_files, args.out_file, args.in_file_format)
+
+summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
