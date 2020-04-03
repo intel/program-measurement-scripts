@@ -57,13 +57,14 @@ def find_vector_ext(row):
     ymm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'YMM'))
     zmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'ZMM'))
     fma_vec = getter(row, 'Nb_FLOP_fma') if 'Nb_FLOP_fma' in row.keys() else None
-    if zmm_vec:
+    # For conditons below, need to check against 0 explicitlty to handle nan's correctly
+    if zmm_vec > 0:
         return 'AVX512'
-    elif ymm_vec and fma_vec:
+    elif ymm_vec >0 and fma_vec > 0:
         return 'AVX2'
-    elif ymm_vec:
+    elif ymm_vec > 0:
         return 'AVX'
-    elif xmm_vec:
+    elif xmm_vec > 0:
         return 'SSE'
     else:
         return 'SC'
