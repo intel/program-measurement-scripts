@@ -2,9 +2,9 @@
 
 source $CLS_FOLDER/const.sh
 
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
 
 if [[ "$nb_args" != "6" ]]; then
 	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, max number of repetition, desired length)."
@@ -39,7 +39,9 @@ do
 
 	echo "Trying number of repetitions = $current_repetitions"
 	#	echo "$current_repetitions $desired_size" > codelet.data
-	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" )
+	# Last argument number of core = 1, single core runs for this adjustment
+	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" "$codelet_folder" 1 )
+
 	saved_repetitions=$current_repetitions
 
 	# TO BE DELETED BELOW after confirming parameter_set_decoding works.

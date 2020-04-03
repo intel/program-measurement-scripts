@@ -3,9 +3,9 @@
 
 source $CLS_FOLDER/const.sh
 
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
 
 if [[ "$nb_args" != "14" ]]; then
 	echo "ERROR! Invalid arguments (need: codelet's folder, variants, data sizes, memory loads, unc_frequncies, frequencies, run id, start codelet loop run time, num codelet, current codelet run index, num cores, prefetchers, counter list override), current compiler."
@@ -479,7 +479,7 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 								echo "$repetitions $data_size" > "${build_folder}/codelet.data"
 								pushd $build_folder
 								# Run this at the build folder
-								command_line_args=$(parameter_set_decoding "$build_folder/$codelet_name" "$data_size" "$repetitions" )
+								command_line_args=$(parameter_set_decoding "$build_folder/$codelet_name" "$data_size" "$repetitions" "$res_path" "$num_core" )
 								popd
 
 								#./run_coelet.sh "$codelet_folder" "$codelet_name" $data_size $memory_load $frequency "$variant" "$loop_iterations" "$repetitions"

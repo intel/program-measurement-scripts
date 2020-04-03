@@ -79,7 +79,7 @@ fi
 MAQAO="$MAQAO_FOLDER/maqao"
 
 #Vtune
-VTUNE="$(which amplxe-cl)"
+VTUNE="$(which amplxe-cl 2>/dev/null)"
 
 LOOP_ITER_COUNTER="MAQAO"
 #LOOP_ITER_COUNTER="VTUNE"
