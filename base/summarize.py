@@ -21,7 +21,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'Vec. Type', 'Time (s)',
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -29,8 +29,9 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'E[DRAM]/O (J/GI)', 'C/E[DRAM] (GI/Js)', 'CO/E[DRAM] (GI2/Js)',
                 'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
                 'E[PKG+DRAM]/O (J/GI)', 'C/E[PKG+DRAM] (GI/Js)', 'CO/E[PKG+DRAM] (GI2/Js)',
+                '%Misp. Branches', 'Issued/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
-                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/S)',
+                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 
@@ -47,6 +48,27 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
+
+def find_vector_ext(row):
+    def is_vt_insn(field, ext):
+        return field.endswith(ext) and \
+            (field.startswith("Nb_FP_insn") or field.startswith('Nb_insn'))
+    xmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'XMM'))
+    ymm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'YMM'))
+    zmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'ZMM'))
+    fma_vec = getter(row, 'Nb_FLOP_fma') if 'Nb_FLOP_fma' in row.keys() else None
+    # For conditons below, need to check against 0 explicitlty to handle nan's correctly
+    if zmm_vec > 0:
+        return 'AVX512'
+    elif ymm_vec >0 and fma_vec > 0:
+        return 'AVX2'
+    elif ymm_vec > 0:
+        return 'AVX'
+    elif xmm_vec > 0:
+        return 'SSE'
+    else:
+        return 'SC'
+
 
 
 def counter_sum(row, cols):
@@ -82,6 +104,8 @@ def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
     out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
     out_row['prefetchers']=getter(in_row, 'prefetchers')
+    out_row['Repetitions']=getter(in_row, 'Repetitions')
+    out_row['Vec. Type']=find_vector_ext(in_row)
 
 def calculate_iterations_per_rep(in_row):
     try:
@@ -114,6 +138,19 @@ def print_total_dram_energy_formula(formula_file):
     formula_file.write('Total DRAM Energy (J) = (UNC_DDR_ENERGY_STATUS or FREERUN_DRAM_ENERGY_STATUS) * energy.unit *' +
                                          ' iterations_per_rep\n')
 
+def user_op_to_rate_column_name(user_op_column):
+    matchobj = re.search(r'(.+?) \((.+?)\)', user_op_column)
+    op_name=matchobj.group(1)
+    unit_name=matchobj.group(2)
+    return "{} Rate (G{}/s)".format(op_name, unit_name)
+        
+    
+def calculate_user_op_rate(out_row, in_row, time_per_rep, user_op_column_name_dict):
+    for user_op_column, rate_column_name in user_op_column_name_dict.items():
+        ops_per_rep = in_row[user_op_column]
+        out_row[rate_column_name]=ops_per_rep/time_per_rep/1e9
+
+
 def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     insts_per_rep = ((getter(in_row, 'INST_RETIRED_ANY') * iterations_per_rep) / (1e9))
     out_row['O=Inst. Count (GI)'] = insts_per_rep
@@ -121,12 +158,12 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
 
     try:
-        out_row['FLOP Rate (GFLOP/s)'] = calculate_gflops(in_row, iterations_per_rep, time)
+        out_row['FLOP Rate (GFLOP/s)'], flops_sc, flops_xmm, flops_ymm, flops_zmm = calculate_gflops(in_row, iterations_per_rep, time)
     except:
         pass
 
     try:
-        out_row['IOP Rate (GIOP/s)'] = calculate_giops(in_row, iterations_per_rep, time)
+        out_row['IOP Rate (GIOP/s)'], iops_sc, iops_xmm, iops_ymm, iops_zmm = calculate_giops(in_row, iterations_per_rep, time)
     except:
         pass
     
@@ -214,57 +251,81 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
 
 
 def calculate_giops(in_row, iters_per_rep, time_per_rep):
+    def calculate_iops(iops_per_instr, instr_template, itypes):
+        ans = 0
+        for itype in itypes:
+            ans += (iops_per_instr * getter(in_row, instr_template.format(itype)))
+        return ans
+        
     iops = 0
     itypes = ['ADD_SUB', 'CMP', 'MUL' ]
-
-    for itype in itypes:
-        iops += (0.5 * getter(in_row, 'Nb_scalar_INT_arith_insn_{}'.format(itype)))
-        iops += (2 * getter(in_row, 'Nb_INT_arith_insn_{}_XMM'.format(itype)))
-        iops += (4 * getter(in_row, 'Nb_INT_arith_insn_{}_YMM'.format(itype)))
-        iops += (8 * getter(in_row, 'Nb_INT_arith_insn_{}_ZMM'.format(itype)))
+    iops_sc = calculate_iops(0.5, 'Nb_scalar_INT_arith_insn_{}', itypes)
+    iops_xmm = calculate_iops(2, 'Nb_INT_arith_insn_{}_XMM', itypes)
+    iops_ymm = calculate_iops(4, 'Nb_INT_arith_insn_{}_YMM', itypes)
+    iops_zmm = calculate_iops(8, 'Nb_INT_arith_insn_{}_ZMM', itypes)    
+        
 
     itypes = ['AND', 'XOR', 'OR', 'SHIFT']
-    for itype in itypes:
-        iops += (0.5 * getter(in_row, 'Nb_scalar_INT_logic_insn_{}'.format(itype)))
-        iops += (2 * getter(in_row, 'Nb_INT_logic_insn_{}_XMM'.format(itype)))
-        iops += (4 * getter(in_row, 'Nb_INT_logic_insn_{}_YMM'.format(itype)))
-        iops += (8 * getter(in_row, 'Nb_INT_logic_insn_{}_ZMM'.format(itype)))
-
+    iops_sc += calculate_iops(0.5, 'Nb_scalar_INT_logic_insn_{}', itypes)
+    iops_xmm += calculate_iops(2, 'Nb_INT_logic_insn_{}_XMM', itypes)
+    iops_ymm += calculate_iops(4, 'Nb_INT_logic_insn_{}_YMM', itypes)
+    iops_zmm += calculate_iops(8, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
+    
     # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
-    iops += (2 * getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + 4 * getter(in_row, 'Nb_INT_logic_insn_ANDN_YMM') + 8 * getter(in_row, 'Nb_INT_logic_insn_ANDN_ZMM'))
-    iops += (2 * getter(in_row, 'Nb_INT_logic_insn_TEST_XMM') + 4 * getter(in_row, 'Nb_INT_logic_insn_TEST_YMM') + 8 * getter(in_row, 'Nb_INT_logic_insn_TEST_ZMM'))
-    iops += (4 * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM') + 8 * getter(in_row, 'Nb_INT_arith_insn_FMA_YMM') + 16 * getter(in_row, 'Nb_INT_arith_insn_FMA_ZMM'))
-    iops += (4 * getter(in_row, 'Nb_INT_arith_insn_SAD_XMM') + 8 * getter(in_row, 'Nb_INT_arith_insn_SAD_YMM') + 16 * getter(in_row, 'Nb_INT_arith_insn_SAD_ZMM'))
-    return (iops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
+    iops_xmm += (2 * getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + 2 * getter(in_row, 'Nb_INT_logic_insn_TEST_XMM') + 4 * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
+    iops_ymm += (4 * getter(in_row, 'Nb_INT_logic_insn_ANDN_YMM') + 4 * getter(in_row, 'Nb_INT_logic_insn_TEST_YMM') + 8 * getter(in_row, 'Nb_INT_arith_insn_FMA_YMM'))
+    iops_zmm += (8 * getter(in_row, 'Nb_INT_logic_insn_ANDN_ZMM') + 8 * getter(in_row, 'Nb_INT_logic_insn_TEST_ZMM') + 16 * getter(in_row, 'Nb_INT_arith_insn_FMA_ZMM'))
+    # For 128bit (XMM) SAD instructions, 1 instruction does
+    # 1) 32 8-bit SUB
+    # 2) 32 8-bit ABS
+    # 3) 24 16-bit ADD
+    # Ignoring 2), 1 XMM instruction generates/processes 32*8+24*16=640 bits = 10 DP element(64-bit)
+    # Similar scaling, YMM = 20 DP, ZMM = 40DP
+    iops_xmm += (10 * getter(in_row, 'Nb_INT_arith_insn_SAD_XMM'))
+    iops_ymm += (20 * getter(in_row, 'Nb_INT_arith_insn_SAD_YMM'))
+    iops_zmm += (40 * getter(in_row, 'Nb_INT_arith_insn_SAD_ZMM'))
+
+    iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
+    return tuple((ops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
+                 for ops in [iops,iops_sc, iops_xmm, iops_ymm, iops_zmm])
 
 
 def calculate_gflops(in_row, iters_per_rep, time_per_rep):
+    def calculate_flops(flops_per_sp_inst, flops_per_dp_inst, sp_inst_template, dp_inst_template):
+        itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
+        ans=0
+        for itype in itypes:
+            ans += (flops_per_sp_inst * getter(in_row, sp_inst_template.format(itype)) + flops_per_dp_inst * getter(in_row, dp_inst_template.format(itype)))
+        return ans
+        
     flops = 0
+
     try:
         # try to use counters if collected.  The count should already be across all cores.
-        flops = ((0.5 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_SINGLE') + \
-                  1 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_DOUBLE') + \
-                  2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_SINGLE') + \
-                  2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_DOUBLE') + \
-                  4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_SINGLE') + \
-                  4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_DOUBLE') + \
-                  8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_SINGLE') + \
-                  8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_DOUBLE')))
+        flops_sc = 0.5 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_SINGLE') + 1 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_DOUBLE') 
+        flops_xmm = 2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_SINGLE') + 2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_DOUBLE')
+        flops_ymm = 4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_SINGLE') + 4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_DOUBLE')
+        flops_zmm = 8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_SINGLE') + 8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_DOUBLE')
+        flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
+        results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
+        
     except:
-        itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
-        for itype in itypes:
-            flops += (0.5 * getter(in_row, 'Nb_FP_insn_{}SS'.format(itype)) + 1 * getter(in_row, 'Nb_FP_insn_{}SD'.format(itype)))
-            flops += (2 * getter(in_row, 'Nb_FP_insn_{}PS_XMM'.format(itype)) + 2 * getter(in_row, 'Nb_FP_insn_{}PD_XMM'.format(itype)))
-            flops += (4 * getter(in_row, 'Nb_FP_insn_{}PS_YMM'.format(itype)) + 4 * getter(in_row, 'Nb_FP_insn_{}PD_YMM'.format(itype)))
-            flops += (8 * getter(in_row, 'Nb_FP_insn_{}PS_ZMM'.format(itype)) + 8 * getter(in_row, 'Nb_FP_insn_{}PD_ZMM'.format(itype)))
+        flops_sc = calculate_flops(0.5, 1, 'Nb_FP_insn_{}SS', 'Nb_FP_insn_{}SD')
+        flops_xmm = calculate_flops(2, 2, 'Nb_FP_insn_{}PS_XMM', 'Nb_FP_insn_{}PD_XMM')
+        flops_ymm = calculate_flops(4, 4, 'Nb_FP_insn_{}PS_YMM', 'Nb_FP_insn_{}PD_YMM')
+        flops_zmm = calculate_flops(8, 8, 'Nb_FP_insn_{}PS_ZMM', 'Nb_FP_insn_{}PD_ZMM')
+
 
         # try to add the FMA counts
-        flops += 1 * getter(in_row, 'Nb_FP_insn_FMASS') + 4 * getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPS_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + \
-                 2 * getter(in_row, 'Nb_FP_insn_FMASD') + 4 * getter(in_row, 'Nb_FP_insn_FMAPD_XMM') + 8 * getter(in_row, 'Nb_FP_insn_FMAPD_YMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPD_ZMM')
+        flops_sc +=  (1 * getter(in_row, 'Nb_FP_insn_FMASS') + 2 * getter(in_row, 'Nb_FP_insn_FMASD'))
+        flops_xmm += (4 * getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + 4 * getter(in_row, 'Nb_FP_insn_FMAPD_XMM'))
+        flops_ymm += (8 * getter(in_row, 'Nb_FP_insn_FMAPS_YMM')  + 8 * getter(in_row, 'Nb_FP_insn_FMAPD_YMM'))
+        flops_zmm += (16 * getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPD_ZMM'))
+        flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
+        results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
         # Multiple to get count for all cores
-        flops = flops * getter(in_row, 'decan_experimental_configuration.num_core')
-    
-    return (flops * iters_per_rep) / (1E9 * time_per_rep)
+        results = results * getter(in_row, 'decan_experimental_configuration.num_core')
+    return tuple([(ops * iters_per_rep) / (1E9 * time_per_rep) for ops in results])
 
 
 # def shorten_stall_counter(field):
@@ -286,8 +347,14 @@ def calculate_stall_percentages(res, row):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
-        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'FrontEnd']:
+        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM']:
             res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
+        try:
+            res['%FrontEnd'] = getter(row, StallDict[arch]['FrontEnd']) / unhlt
+        except:
+            warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
+            res['%FrontEnd'] = (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
+            
     except:
         pass
 
@@ -323,14 +390,23 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
     total_energy = total_pkg_energy + total_dram_energy
     calculate_derived_metrics('PKG+DRAM', total_energy)
 
+def calculate_speculation_ratios(out_row, in_row):
+    try:
+        out_row['%Misp. Branches']=getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
+        out_row['Issued/Retired Uops']=getter(in_row, 'UOPS_ISSUED_ANY') / getter(in_row, 'UOPS_RETIRED_ALL')
+    except:
+        return
 
-def build_row_output(in_row):
+
+def build_row_output(in_row, user_op_column_name_dict):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(out_row, in_row, iterations_per_rep)
     num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
+    calculate_speculation_ratios (out_row, in_row)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec)
 
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
@@ -371,10 +447,12 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfiles, outputfile, input_format):
+def summary_report(inputfiles, outputfile, input_format, user_op_file):
     print('Inputfile Format: ', input_format)
     print('Inputfiles: ', inputfiles)
     print('Outputfile: ', outputfile)
+    print('User Op file: ', user_op_file)
+
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
         print(inputfile)
@@ -386,16 +464,22 @@ def summary_report(inputfiles, outputfile, input_format):
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
         df = df.append(cur_df, ignore_index=True)
-    df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
+    df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
 
+    if user_op_file:
+        key_columns=['codelet.name', 'decan_experimental_configuration.data_size']
+        user_op_df = pd.read_csv(user_op_file, delimiter=',')
+        user_op_columns = [col for col in user_op_df.columns if col not in key_columns]
+        df = pd.merge(df, user_op_df, on=key_columns, how='left')
+    else:
+        user_op_columns = []
 
-#    for index, row in df.iterrows():
-#        print(getter(row,'L1D_REPLACEMENT'))
-
-
+    user_op_col_name_dict={op_name: user_op_to_rate_column_name(op_name) for op_name in user_op_columns}
+    field_names.extend(user_op_col_name_dict.values())
+    print(field_names)
 
     df.columns = unify_column_names(df.columns)
-    output_rows = list(df.apply(build_row_output, axis=1))
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, axis=1))
 
     if (outputfile == '-'):
         output_csvfile = sys.stdout
@@ -429,6 +513,7 @@ parser.add_argument('-i', nargs='+', help='the input csv file', required=True, d
 parser.add_argument('-f', nargs='?', default='csv', help='format of input file (default csv can change to xlsx)', choices=['csv', 'xlsx'], dest='in_file_format')
 parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
 parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
+parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
 parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
 parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
 parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
@@ -436,6 +521,7 @@ args = parser.parse_args()
 
 if args.name_file:
     read_short_names(args.name_file)
-summary_report(args.in_files, args.out_file, args.in_file_format)
+
+summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
