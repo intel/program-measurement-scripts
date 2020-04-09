@@ -123,7 +123,7 @@ def calculate_time(out_row, in_row, iterations_per_rep, use_cpi):
     else:
         time = getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') / getter(in_row, 'decan_experimental_configuration.num_core')
     out_row['Time (s)'] = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
-    return time
+    return out_row['Time (s)']
 
 def print_time_formula(formula_file):
     formula_file.write('Time (s) = (CPU_CLK_UNHALTED_THREAD * iterations_per_rep) /' +
