@@ -394,7 +394,10 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 def calculate_speculation_ratios(out_row, in_row):
     try:
         out_row['%Misp. Branches']=getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
-        out_row['Issued/Retired Uops']=getter(in_row, 'UOPS_ISSUED_ANY') / getter(in_row, 'UOPS_RETIRED_ALL')
+    except:
+        pass
+    try:
+        out_row['Issued/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
@@ -449,14 +452,14 @@ def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi):
-    print('Inputfile Format: ', input_format)
-    print('Inputfiles: ', inputfiles)
-    print('Outputfile: ', outputfile)
-    print('User Op file: ', user_op_file)
+    print('Inputfile Format: ', input_format, file=sys.stderr)
+    print('Inputfiles: ', inputfiles, file=sys.stderr)
+    print('Outputfile: ', outputfile, file=sys.stderr)
+    print('User Op file: ', user_op_file, file=sys.stderr)
 
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
-        print(inputfile)
+        print(inputfile, file=sys.stderr)
         if (input_format == 'csv'):
             input_data_source = sys.stdin if (inputfile == '-') else inputfile
             cur_df = pd.read_csv(input_data_source, delimiter=',')
