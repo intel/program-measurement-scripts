@@ -35,8 +35,9 @@ capacity_formula= {
 	}
 
 def parse_ip(inputfile,outputfile, scale, title, chosen_node_set):
-#	inputfile="/tmp/input.csv"
-	df = pd.read_csv(inputfile)
+	#	inputfile="/tmp/input.csv"
+	input_data_source = sys.stdin if (inputfile == '-') else inputfile
+	df = pd.read_csv(input_data_source)
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 
@@ -100,11 +101,13 @@ def compute_intensity(df, chosen_node_set):
 
 
 def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set):
+	if df.empty:
+		return # Nothing to do
 	compute_capacity(df, chosen_node_set)
-#	compute_saturation(df, chosen_node_set)
-#	compute_intensity(df, chosen_node_set)
-	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(variant+'_export_dataframe.csv', 
-                                                                                                      index = False, header=True)
+	#	compute_saturation(df, chosen_node_set)
+	#	compute_intensity(df, chosen_node_set)
+	output_data_source = sys.stdout if (outputfile_prefix == '-') else variant+'_export_dataframe.csv'
+	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
 	
 
 	indices = df['short_name']
@@ -185,54 +188,36 @@ def usage(reason):
 	sys.exit(error_code)
 	
 def main(argv):
-	if len(argv) != 8 and len(argv) != 6 and len(argv) != 4 and len(argv) != 2 and len(argv) != 1:
-		usage('Wrong number of arguments')
-	inputfile = []
-	outputfile = []
-	node_list = []
-	scale = 'scalar'
-	title=""
-	chosen_node_set = DEFAULT_CHOSEN_NODE_SET
-	try:
-		opts, args = getopt.getopt(argv, "hi:o:s:l:")
-		print (opts)
-		print (args)
-	except getopt.GetoptError:
-		usage('Wrong argument opts(s)')
-	if len(args) != 0:
-		usage('Wrong argument(s)')		
-	for opt, arg in opts:
-		if opt == '-h':
-			usage([])
-		elif opt == '-s':
-			normobj = arg
-			print (normobj)
-			if normobj != 'scalar' and normobj != 'loglog':
-				print ('norm has to be either scalar or loglog')
-			else:
-				scale = normobj
-		elif opt == '-l':
-			node_list = arg.split(',')
-			print (node_list)
-			chosen_node_set = set(node_list)
-			print (chosen_node_set)
-		elif opt == '-i':
-			inputfile.append(arg)
-			matchobj = re.search(r'(.+?)\.csv', arg)
-			title = str(matchobj.group(1))
-			if not matchobj:
-				print ('inputfile should be a *.csv file')
-				sys.exit()
-		elif opt == '-o':
-			outputfile.append(arg)
-	if matchobj and len(outputfile) == 0:
-		outputfile.append(str(matchobj.group(1))) # Use input file basename as output prefix if user did not provide info
-	
-	print ('Inputfile: ', inputfile[0])
-	print ('Outputfile: ', outputfile[0])
-	print ('Scale: ', scale)
-	print ('Node List: ', node_list)
-	parse_ip(inputfile[0],outputfile[0], scale, title.upper(), chosen_node_set)
+	parser = ArgumentParser(description='Generate QPlot data from summary data.')
+	parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
+	parser.add_argument('-s', help='plot scale', required=False, choices=['scalar','loglog'], 
+						default='scalar', dest='scale')
+	parser.add_argument('-l', help='list of nodes', required=False, 
+						default=','.join(sorted(list(DEFAULT_CHOSEN_NODE_SET))), dest='node_list')
+	parser.add_argument('-o', help='the output file prefix', required=False, dest='out_file_prefix')
+	args = parser.parse_args()
+	print(args)
+
+	# Check input file extension
+	print(args.in_file)
+	matchobj = re.search(r'(.+?)\.csv', args.in_file)
+	if args.in_file == '-':
+		title = "STDIN"
+	else:
+		title = str(matchobj.group(1).upper())
+		
+	if args.out_file_prefix is None:
+		args.out_file_prefix = str(matchobj.group(1))
+
+	# Construct chosen node set from comma-delimited string
+	chosen_node_set = set(args.node_list.split(','))
+
+	print ('Inputfile: ', args.in_file)
+	print ('Outputfile prefix: ', args.out_file_prefix)
+	print ('Scale: ', args.scale)
+	print ('Title: ', title)
+	print ('Node Set: ', chosen_node_set)
+	parse_ip(args.in_file, args.out_file_prefix, args.scale, title, chosen_node_set)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
