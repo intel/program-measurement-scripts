@@ -29,7 +29,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'E[DRAM]/O (J/GI)', 'C/E[DRAM] (GI/Js)', 'CO/E[DRAM] (GI2/Js)',
                 'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
                 'E[PKG+DRAM]/O (J/GI)', 'C/E[PKG+DRAM] (GI/Js)', 'CO/E[PKG+DRAM] (GI2/Js)',
-                '%Misp. Branches', 'Issued/Retired Uops',
+                '%Misp. Branches', 'Executed/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
@@ -397,7 +397,7 @@ def calculate_speculation_ratios(out_row, in_row):
     except:
         pass
     try:
-        out_row['Issued/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
+        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
