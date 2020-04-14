@@ -117,12 +117,13 @@ def calculate_iterations_per_rep(in_row):
 def print_iterations_per_rep_formula(formula_file):
     formula_file.write('iterations_per_rep = Iterations / Repetitions\n')
 
-def calculate_time(out_row, in_row, iterations_per_rep):
-    time = ((getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') * iterations_per_rep) /
-            (getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3 *
-             getter(in_row, 'decan_experimental_configuration.num_core')))
-    out_row['Time (s)'] = time
-    return time
+def calculate_time(out_row, in_row, iterations_per_rep, use_cpi):
+    if use_cpi:
+        time = getter(in_row, 'CPI')
+    else:
+        time = getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') / getter(in_row, 'decan_experimental_configuration.num_core')
+    out_row['Time (s)'] = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
+    return out_row['Time (s)']
 
 def print_time_formula(formula_file):
     formula_file.write('Time (s) = (CPU_CLK_UNHALTED_THREAD * iterations_per_rep) /' +
@@ -398,12 +399,12 @@ def calculate_speculation_ratios(out_row, in_row):
         return
 
 
-def build_row_output(in_row, user_op_column_name_dict):
+def build_row_output(in_row, user_op_column_name_dict, use_cpi):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
-    time = calculate_time(out_row, in_row, iterations_per_rep)
+    time = calculate_time(out_row, in_row, iterations_per_rep, use_cpi)
     num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
     calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
     calculate_speculation_ratios (out_row, in_row)
@@ -447,7 +448,7 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfiles, outputfile, input_format, user_op_file):
+def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi):
     print('Inputfile Format: ', input_format)
     print('Inputfiles: ', inputfiles)
     print('Outputfile: ', outputfile)
@@ -464,6 +465,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file):
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
         df = df.append(cur_df, ignore_index=True)
+
     df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
 
     if user_op_file:
@@ -476,10 +478,20 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file):
 
     user_op_col_name_dict={op_name: user_op_to_rate_column_name(op_name) for op_name in user_op_columns}
     field_names.extend(user_op_col_name_dict.values())
-    print(field_names)
 
     df.columns = unify_column_names(df.columns)
-    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, axis=1))
+
+
+    # Remove CQA columns if needed
+    if no_cqa:
+        script_dir=os.path.dirname(os.path.realpath(__file__))
+        cqa_metric_file=os.path.join(script_dir, 'metrics_data','STAN')
+        with open(cqa_metric_file) as f:
+            cqa_metrics = f.read().splitlines()
+            # Ignore error if extra CQA metrics in metrics_data/STAN
+            df = df.drop(columns=cqa_metrics, errors='ignore')
+        
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1))
 
     if (outputfile == '-'):
         output_csvfile = sys.stdout
@@ -517,11 +529,13 @@ parser.add_argument('-u', nargs='?', help='a user-defined operation count csv fi
 parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
 parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
 parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
+parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
+parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
 args = parser.parse_args()
 
 if args.name_file:
     read_short_names(args.name_file)
 
-summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file)
+summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
