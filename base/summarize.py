@@ -8,6 +8,7 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from capelib import succinctify
 from collections import OrderedDict
+from collections import namedtuple
 from argparse import ArgumentParser
 from enum import Enum
 import tempfile
@@ -21,7 +22,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'Vec. Type', 'Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'Ops(Vec. Type)', 'Time (s)',
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -32,8 +33,9 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 '%Misp. Branches', 'Executed/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
-                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)',
+                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops(Vec)', '%Inst(Vec)',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
+Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM'])
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
 L2W_TrafficDict={'SKL': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
@@ -49,27 +51,16 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
 
-def find_vector_ext(row):
-    def is_vt_insn(field, ext):
-        return field.endswith(ext) and \
-            (field.startswith("Nb_FP_insn") or field.startswith('Nb_insn'))
-    xmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'XMM'))
-    ymm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'YMM'))
-    zmm_vec = sum(getter(row, col) for col in row.keys() if is_vt_insn(col, 'ZMM'))
-    fma_vec = getter(row, 'Nb_FLOP_fma') if 'Nb_FLOP_fma' in row.keys() else None
-    # For conditons below, need to check against 0 explicitlty to handle nan's correctly
-    if zmm_vec > 0:
-        return 'AVX512'
-    elif ymm_vec >0 and fma_vec > 0:
-        return 'AVX2'
-    elif ymm_vec > 0:
-        return 'AVX'
-    elif xmm_vec > 0:
-        return 'SSE'
-    else:
-        return 'SC'
-
-
+def find_vector_ext(flop_counts, iop_counts):
+    if iop_counts is None:
+        iop_counts = Vecinfo(0,0,0,0,0)
+    if flop_counts is None:
+        flop_counts = Vecinfo(0,0,0,0,0)
+        
+    out = zip([ "SC", "XMM", "YMM", "ZMM" ],
+              [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) if flop_counts.SUM or iop_counts.SUM else None \
+                for metric in ["SC", "XMM", "YMM", "ZMM"] ])
+    return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in out if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
 
 def counter_sum(row, cols):
     sum = 0
@@ -105,7 +96,7 @@ def calculate_expr_settings(out_row, in_row):
     out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
     out_row['prefetchers']=getter(in_row, 'prefetchers')
     out_row['Repetitions']=getter(in_row, 'Repetitions')
-    out_row['Vec. Type']=find_vector_ext(in_row)
+
 
 def calculate_iterations_per_rep(in_row):
     try:
@@ -158,17 +149,41 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     ops_per_sec = insts_per_rep / time
     out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
 
-    try:
-        out_row['FLOP Rate (GFLOP/s)'], flops_sc, flops_xmm, flops_ymm, flops_zmm = calculate_gflops(in_row, iterations_per_rep, time)
-    except:
-        pass
+    vec_ops = all_ops = vec_insts = all_insts = 0
+    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter):
+        try:
+            nonlocal all_ops
+            nonlocal all_insts
+            nonlocal vec_ops
+            nonlocal vec_insts
+
+            cnts_per_iter, inst_cnts_per_iter=calculate_counts_per_iter(in_row)
+
+            out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            
+            vec_ops += (cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
+            all_ops += cnts_per_iter.SUM
+
+            vec_insts += (inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
+            all_insts += inst_cnts_per_iter.SUM
+            return cnts_per_iter, inst_cnts_per_iter
+        except:
+            return None, None
+
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts('FLOP Rate (GFLOP/s)', calculate_flops_counts_per_iter)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter)
+
+    out_row['%Ops(Vec)'] = vec_ops / all_ops
+    out_row['%Inst(Vec)'] = vec_insts / all_insts
 
     try:
-        out_row['IOP Rate (GIOP/s)'], iops_sc, iops_xmm, iops_ymm, iops_zmm = calculate_giops(in_row, iterations_per_rep, time)
+        # Check if CQA metric is available
+        cqa_vec_ratio=in_row['Vec._ratio_(%)_all']/100
+        if cqa_vec_ratio != out_row['%Inst(Vec)']:
+            warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}".format(cqa_vec_ratio, out_row['%Inst(Vec)']))
     except:
         pass
-    
-
+    out_row['Ops(Vec. Type)']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
     return (insts_per_rep, ops_per_sec)
 
 def print_num_ops_formula(formula_file):
@@ -251,82 +266,99 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
         pass
 
 
-def calculate_giops(in_row, iters_per_rep, time_per_rep):
-    def calculate_iops(iops_per_instr, instr_template, itypes):
-        ans = 0
-        for itype in itypes:
-            ans += (iops_per_instr * getter(in_row, instr_template.format(itype)))
-        return ans
-        
-    iops = 0
-    itypes = ['ADD_SUB', 'CMP', 'MUL' ]
-    iops_sc = calculate_iops(0.5, 'Nb_scalar_INT_arith_insn_{}', itypes)
-    iops_xmm = calculate_iops(2, 'Nb_INT_arith_insn_{}_XMM', itypes)
-    iops_ymm = calculate_iops(4, 'Nb_INT_arith_insn_{}_YMM', itypes)
-    iops_zmm = calculate_iops(8, 'Nb_INT_arith_insn_{}_ZMM', itypes)    
-        
-
-    itypes = ['AND', 'XOR', 'OR', 'SHIFT']
-    iops_sc += calculate_iops(0.5, 'Nb_scalar_INT_logic_insn_{}', itypes)
-    iops_xmm += calculate_iops(2, 'Nb_INT_logic_insn_{}_XMM', itypes)
-    iops_ymm += calculate_iops(4, 'Nb_INT_logic_insn_{}_YMM', itypes)
-    iops_zmm += calculate_iops(8, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
+def calculate_iops_counts_per_iter(in_row):
+    def calculate_iops_counts_with_weights(in_row, w_sc, w_vec_xmm, w_vec_ymm, w_vec_zmm, w_sad, w_fma):
+        def calculate_iops(iops_per_instr, instr_template, itypes):
+            ans = 0
+            for itype in itypes:
+                ans += (iops_per_instr * getter(in_row, instr_template.format(itype)))
+            return ans
+            
+        iops = 0
+        itypes = ['ADD_SUB', 'CMP', 'MUL' ]
+        iops_sc = calculate_iops(w_sc, 'Nb_scalar_INT_arith_insn_{}', itypes)
+        iops_xmm = calculate_iops(w_vec_xmm, 'Nb_INT_arith_insn_{}_XMM', itypes)
+        iops_ymm = calculate_iops(w_vec_ymm, 'Nb_INT_arith_insn_{}_YMM', itypes)
+        iops_zmm = calculate_iops(w_vec_zmm, 'Nb_INT_arith_insn_{}_ZMM', itypes)    
+            
     
-    # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
-    iops_xmm += (2 * getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + 2 * getter(in_row, 'Nb_INT_logic_insn_TEST_XMM') + 4 * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
-    iops_ymm += (4 * getter(in_row, 'Nb_INT_logic_insn_ANDN_YMM') + 4 * getter(in_row, 'Nb_INT_logic_insn_TEST_YMM') + 8 * getter(in_row, 'Nb_INT_arith_insn_FMA_YMM'))
-    iops_zmm += (8 * getter(in_row, 'Nb_INT_logic_insn_ANDN_ZMM') + 8 * getter(in_row, 'Nb_INT_logic_insn_TEST_ZMM') + 16 * getter(in_row, 'Nb_INT_arith_insn_FMA_ZMM'))
-    # For 128bit (XMM) SAD instructions, 1 instruction does
-    # 1) 32 8-bit SUB
-    # 2) 32 8-bit ABS
-    # 3) 24 16-bit ADD
-    # Ignoring 2), 1 XMM instruction generates/processes 32*8+24*16=640 bits = 10 DP element(64-bit)
-    # Similar scaling, YMM = 20 DP, ZMM = 40DP
-    iops_xmm += (10 * getter(in_row, 'Nb_INT_arith_insn_SAD_XMM'))
-    iops_ymm += (20 * getter(in_row, 'Nb_INT_arith_insn_SAD_YMM'))
-    iops_zmm += (40 * getter(in_row, 'Nb_INT_arith_insn_SAD_ZMM'))
-
-    iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
-    return tuple((ops * getter(in_row, 'decan_experimental_configuration.num_core') * iters_per_rep) / (1E9 * time_per_rep)
-                 for ops in [iops,iops_sc, iops_xmm, iops_ymm, iops_zmm])
-
-
-def calculate_gflops(in_row, iters_per_rep, time_per_rep):
-    def calculate_flops(flops_per_sp_inst, flops_per_dp_inst, sp_inst_template, dp_inst_template):
-        itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
-        ans=0
-        for itype in itypes:
-            ans += (flops_per_sp_inst * getter(in_row, sp_inst_template.format(itype)) + flops_per_dp_inst * getter(in_row, dp_inst_template.format(itype)))
-        return ans
+        itypes = ['AND', 'XOR', 'OR', 'SHIFT']
+        iops_sc += calculate_iops(w_sc, 'Nb_scalar_INT_logic_insn_{}', itypes)
+        iops_xmm += calculate_iops(w_vec_xmm, 'Nb_INT_logic_insn_{}_XMM', itypes)
+        iops_ymm += calculate_iops(w_vec_ymm, 'Nb_INT_logic_insn_{}_YMM', itypes)
+        iops_zmm += calculate_iops(w_vec_zmm, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
         
-    flops = 0
+        # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
+        iops_xmm += w_vec_xmm * (getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_XMM')
+                                 + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
+        iops_ymm += w_vec_ymm*(getter(in_row, 'Nb_INT_logic_insn_ANDN_YMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_YMM')
+                               + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_YMM'))
+        iops_zmm += w_vec_zmm*(getter(in_row, 'Nb_INT_logic_insn_ANDN_ZMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_ZMM')
+                               + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_ZMM'))
+        # For 128bit (XMM) SAD instructions, 1 instruction does
+        # 1) 32 8-bit SUB
+        # 2) 32 8-bit ABS
+        # 3) 24 16-bit ADD
+        # Ignoring 2), 1 XMM instruction generates/processes 32*8+24*16=640 bits = 10 DP element(64-bit)
+        # Similar scaling, YMM = 20 DP, ZMM = 40DP
+        iops_xmm += w_vec_xmm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_XMM'))
+        iops_ymm += w_vec_ymm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_YMM'))
+        iops_zmm += w_vec_zmm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_ZMM'))
+    
+        iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
+        results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) for ops in [iops ,iops_sc, iops_xmm, iops_ymm, iops_zmm]]
+        return Vecinfo(*results)
 
-    try:
-        # try to use counters if collected.  The count should already be across all cores.
-        flops_sc = 0.5 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_SINGLE') + 1 * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_DOUBLE') 
-        flops_xmm = 2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_SINGLE') + 2 * getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_DOUBLE')
-        flops_ymm = 4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_SINGLE') + 4 * getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_DOUBLE')
-        flops_zmm = 8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_SINGLE') + 8 * getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_DOUBLE')
-        flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
-        results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
-        
-    except:
-        flops_sc = calculate_flops(0.5, 1, 'Nb_FP_insn_{}SS', 'Nb_FP_insn_{}SD')
-        flops_xmm = calculate_flops(2, 2, 'Nb_FP_insn_{}PS_XMM', 'Nb_FP_insn_{}PD_XMM')
-        flops_ymm = calculate_flops(4, 4, 'Nb_FP_insn_{}PS_YMM', 'Nb_FP_insn_{}PD_YMM')
-        flops_zmm = calculate_flops(8, 8, 'Nb_FP_insn_{}PS_ZMM', 'Nb_FP_insn_{}PD_ZMM')
+    iops_counts = calculate_iops_count_with_weights(in_row, 0.5, 2, 4, 8, 5, 2)
+    insts_counts = calculate_iops_count_with_weights(in_row, 1, 1, 1, 1, 1, 1)    
+    return iops_counts, insts_counts
 
 
-        # try to add the FMA counts
-        flops_sc +=  (1 * getter(in_row, 'Nb_FP_insn_FMASS') + 2 * getter(in_row, 'Nb_FP_insn_FMASD'))
-        flops_xmm += (4 * getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + 4 * getter(in_row, 'Nb_FP_insn_FMAPD_XMM'))
-        flops_ymm += (8 * getter(in_row, 'Nb_FP_insn_FMAPS_YMM')  + 8 * getter(in_row, 'Nb_FP_insn_FMAPD_YMM'))
-        flops_zmm += (16 * getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + 16 * getter(in_row, 'Nb_FP_insn_FMAPD_ZMM'))
-        flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
-        results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
-        # Multiple to get count for all cores
-        results = results * getter(in_row, 'decan_experimental_configuration.num_core')
-    return tuple([(ops * iters_per_rep) / (1E9 * time_per_rep) for ops in results])
+def calculate_flops_counts_per_iter(in_row):
+    def calculate_flops_counts_with_weights(in_row, w_sc_sp, w_sc_dp, w_vec_xmm, w_vec_ymm, w_vec_zmm, w_fma):
+        def calculate_flops(flops_per_sp_inst, flops_per_dp_inst, sp_inst_template, dp_inst_template):
+            itypes = ['ADD_SUB', 'DIV', 'MUL', 'SQRT', 'RSQRT', 'RCP']
+            ans=0
+            for itype in itypes:
+                ans += (flops_per_sp_inst * getter(in_row, sp_inst_template.format(itype)) + flops_per_dp_inst * getter(in_row, dp_inst_template.format(itype)))
+            return ans
+
+
+        try:
+            # try to use counters if collected.  The count should already be across all cores.
+            # NOTE: for counters, we could not distinguish FMA instruction and those will be double counted
+            flops_sc = w_sc_sp * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_SINGLE') + w_sc_dp * getter(in_row, 'FP_ARITH_INST_RETIRED_SCALAR_DOUBLE') 
+            flops_xmm = w_vec_xmm * (getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_SINGLE') + getter(in_row, 'FP_ARITH_INST_RETIRED_128B_PACKED_DOUBLE'))
+            flops_ymm = w_vec_ymm * (getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_SINGLE') + getter(in_row, 'FP_ARITH_INST_RETIRED_256B_PACKED_DOUBLE'))
+            flops_zmm = w_vec_zmm * (getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_SINGLE') + getter(in_row, 'FP_ARITH_INST_RETIRED_512B_PACKED_DOUBLE'))
+            flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
+            results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
+        except:
+
+            flops_sc = calculate_flops(w_sc_sp, w_sc_dp, 'Nb_FP_insn_{}SS', 'Nb_FP_insn_{}SD')
+            flops_xmm = calculate_flops(w_vec_xmm, w_vec_xmm, 'Nb_FP_insn_{}PS_XMM', 'Nb_FP_insn_{}PD_XMM')
+            flops_ymm = calculate_flops(w_vec_ymm, w_vec_ymm, 'Nb_FP_insn_{}PS_YMM', 'Nb_FP_insn_{}PD_YMM')
+            flops_zmm = calculate_flops(w_vec_zmm, w_vec_zmm, 'Nb_FP_insn_{}PS_ZMM', 'Nb_FP_insn_{}PD_ZMM')
+    
+    
+            # try to add the FMA counts
+            flops_sc +=  w_fma * (w_sc_sp * getter(in_row, 'Nb_FP_insn_FMASS') + w_sc_dp * getter(in_row, 'Nb_FP_insn_FMASD'))
+            flops_xmm += w_fma * w_vec_xmm*(getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + getter(in_row, 'Nb_FP_insn_FMAPD_XMM'))
+            flops_ymm += w_fma * w_vec_ymm*(getter(in_row, 'Nb_FP_insn_FMAPS_YMM')  + getter(in_row, 'Nb_FP_insn_FMAPD_YMM'))
+            flops_zmm += w_fma * w_vec_zmm*(getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + getter(in_row, 'Nb_FP_insn_FMAPD_ZMM'))
+            flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
+
+    
+            results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm)
+
+            # Multiple to get count for all cores
+            results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) for ops in [flops , flops_sc, flops_xmm, flops_ymm, flops_zmm]]            
+        return Vecinfo(*results)
+
+    flops_counts = calculate_flops_counts_with_weights(in_row, 0.5, 1, 2, 4, 8, 2)
+    insts_counts = calculate_flops_counts_with_weights(in_row, 1, 1, 1, 1, 1, 1)
+    return flops_counts, insts_counts
+    
 
 
 # def shorten_stall_counter(field):
