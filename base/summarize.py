@@ -22,7 +22,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'Ops(Vec. Type)', 'Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'VecType[Ops]', 'Time (s)',
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -33,7 +33,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 '%Misp. Branches', 'Executed/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
-                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops(Vec)', '%Inst(Vec)',
+                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM'])
 
@@ -173,17 +173,17 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts('FLOP Rate (GFLOP/s)', calculate_flops_counts_per_iter)
     iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter)
 
-    out_row['%Ops(Vec)'] = vec_ops / all_ops
-    out_row['%Inst(Vec)'] = vec_insts / all_insts
+    out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else None
+    out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else None
 
     try:
         # Check if CQA metric is available
         cqa_vec_ratio=in_row['Vec._ratio_(%)_all']/100
-        if cqa_vec_ratio != out_row['%Inst(Vec)']:
-            warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}".format(cqa_vec_ratio, out_row['%Inst(Vec)']))
+        if cqa_vec_ratio != out_row['%Inst[Vec]']:
+            warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}".format(cqa_vec_ratio, out_row['%Inst[Vec]']))
     except:
         pass
-    out_row['Ops(Vec. Type)']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
+    out_row['VecType[Ops]']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
     return (insts_per_rep, ops_per_sec)
 
 def print_num_ops_formula(formula_file):
@@ -444,9 +444,9 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi):
     calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
     calculate_speculation_ratios (out_row, in_row)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec)
-
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
     calculate_stall_percentages(out_row, in_row)
+
     if args.succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
@@ -534,6 +534,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
         output_csvfile = open (outputfile, 'w', newline='')
 
     output_fields = succinctify(field_names) if args.succinct else field_names
+
     output_fields = list(filter(field_has_values(output_rows), output_fields))
     csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
     csvwriter.writeheader()
