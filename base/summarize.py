@@ -374,8 +374,8 @@ def calculate_flops_counts_per_iter(in_row):
 #     else:
 #         return '%' + field.upper()
 
-def calculate_stall_percentages(res, row):
-    if args.skip_stalls:
+def calculate_stall_percentages(res, row, skip_stalls):
+    if skip_stalls:
         return
     try:
         arch = arch_helper(row)
@@ -391,8 +391,8 @@ def calculate_stall_percentages(res, row):
     except:
         pass
 
-def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec):
-    if args.skip_energy:
+def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec, skip_energy):
+    if skip_energy:
         return
     def calculate_from_counter(counter, alt_counter):
         energy = getter(in_row, counter, alt_counter, default=None)
@@ -434,7 +434,7 @@ def calculate_speculation_ratios(out_row, in_row):
         return
 
 
-def build_row_output(in_row, user_op_column_name_dict, use_cpi):
+def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, skip_stalls, succinct):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
@@ -443,11 +443,11 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi):
     num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
     calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
     calculate_speculation_ratios (out_row, in_row)
-    calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec)
+    calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec, skip_energy)
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
-    calculate_stall_percentages(out_row, in_row)
+    calculate_stall_percentages(out_row, in_row, skip_stalls)
 
-    if args.succinct:
+    if succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
 
@@ -483,11 +483,16 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi):
+def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
+                   skip_stalls, succinct, name_file):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
+    print('Name file: ', name_file, file=sys.stderr)
+
+    if name_file:
+        read_short_names(name_file)
 
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
@@ -526,14 +531,14 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             # Ignore error if extra CQA metrics in metrics_data/STAN
             df = df.drop(columns=cqa_metrics, errors='ignore')
         
-    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1))
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1, skip_energy=skip_energy, skip_stalls=skip_stalls, succinct=succinct))
 
     if (outputfile == '-'):
         output_csvfile = sys.stdout
     else:
         output_csvfile = open (outputfile, 'w', newline='')
 
-    output_fields = succinctify(field_names) if args.succinct else field_names
+    output_fields = succinctify(field_names) if succinct else field_names
 
     output_fields = list(filter(field_has_values(output_rows), output_fields))
     csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
@@ -556,22 +561,22 @@ def read_short_names(filename):
             if 'variant' in row:
                 variants[row['name']] = row['variant']
 
-parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
-parser.add_argument('-i', nargs='+', help='the input csv file', required=True, dest='in_files')
-parser.add_argument('-f', nargs='?', default='csv', help='format of input file (default csv can change to xlsx)', choices=['csv', 'xlsx'], dest='in_file_format')
-parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
-parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
-parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
-parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
-parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
-parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
-parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
-parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
-args = parser.parse_args()
+if __name__ == '__main__':
+    parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
+    parser.add_argument('-i', nargs='+', help='the input csv file', required=True, dest='in_files')
+    parser.add_argument('-f', nargs='?', default='csv', help='format of input file (default csv can change to xlsx)', choices=['csv', 'xlsx'], dest='in_file_format')
+    parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
+    parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
+    parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
+    parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
+    parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
+    parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
+    parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
+    parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
+    args = parser.parse_args()
 
-if args.name_file:
-    read_short_names(args.name_file)
 
-summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi)
+    summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
+                   args.succinct, args.name_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
