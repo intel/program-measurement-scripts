@@ -12,6 +12,7 @@ from collections import namedtuple
 from argparse import ArgumentParser
 from enum import Enum
 import tempfile
+import math
 import os
 import pandas as pd
 import warnings
@@ -94,9 +95,14 @@ def calculate_codelet_name(out_row, in_row):
 def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
     out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
-    out_row['prefetchers']=getter(in_row, 'prefetchers')
-    out_row['Repetitions']=getter(in_row, 'Repetitions')
-
+    try:
+        out_row['prefetchers']=getter(in_row, 'prefetchers')
+    except:
+        out_row['prefetchers']='unknown'
+    try:
+        out_row['Repetitions']=getter(in_row, 'Repetitions')
+    except:        
+        out_row['Repetitions']=1
 
 def calculate_iterations_per_rep(in_row):
     try:
@@ -150,7 +156,7 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
 
     vec_ops = all_ops = vec_insts = all_insts = 0
-    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter):
+    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
@@ -160,18 +166,21 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
             cnts_per_iter, inst_cnts_per_iter=calculate_counts_per_iter(in_row)
 
             out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
-            
-            vec_ops += (cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
-            all_ops += cnts_per_iter.SUM
 
-            vec_insts += (inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
-            all_insts += inst_cnts_per_iter.SUM
+            if add_global_count:
+                vec_ops += (cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
+                all_ops += cnts_per_iter.SUM
+
+                vec_insts += (inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
+                all_insts += inst_cnts_per_iter.SUM
+
             return cnts_per_iter, inst_cnts_per_iter
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts('FLOP Rate (GFLOP/s)', calculate_flops_counts_per_iter)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts('FLOP Rate (GFLOP/s)', calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter, False)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts('MEMOP Rate (GMEMOP/s)', calculate_memops_counts_per_iter, True)
 
     out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else None
     out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else None
@@ -179,8 +188,11 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     try:
         # Check if CQA metric is available
         cqa_vec_ratio=in_row['Vec._ratio_(%)_all']/100
-        if cqa_vec_ratio != out_row['%Inst[Vec]']:
-            warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}".format(cqa_vec_ratio, out_row['%Inst[Vec]']))
+        if not math.isclose(cqa_vec_ratio, out_row['%Inst[Vec]'], rel_tol=1e-8):
+            warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}, AllIters={}".format \
+                          (cqa_vec_ratio, out_row['%Inst[Vec]'], in_row['AllIterations']))
+            # Just set to CQA value for now.  (Pending check with Emmanuel)
+            out_row['%Inst[Vec]'] = cqa_vec_ratio
     except:
         pass
     out_row['VecType[Ops]']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
@@ -273,6 +285,8 @@ def calculate_iops_counts_per_iter(in_row):
             for itype in itypes:
                 ans += (iops_per_instr * getter(in_row, instr_template.format(itype)))
             return ans
+        
+
             
         iops = 0
         itypes = ['ADD_SUB', 'CMP', 'MUL' ]
@@ -309,9 +323,36 @@ def calculate_iops_counts_per_iter(in_row):
         results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) for ops in [iops ,iops_sc, iops_xmm, iops_ymm, iops_zmm]]
         return Vecinfo(*results)
 
-    iops_counts = calculate_iops_count_with_weights(in_row, 0.5, 2, 4, 8, 5, 2)
-    insts_counts = calculate_iops_count_with_weights(in_row, 1, 1, 1, 1, 1, 1)    
+    iops_counts = calculate_iops_counts_with_weights(in_row, w_sc=0.5, w_vec_xmm=2, w_vec_ymm=4, w_vec_zmm=8, w_sad=5, w_fma=2)
+    insts_counts = calculate_iops_counts_with_weights(in_row, w_sc=1, w_vec_xmm=1, w_vec_ymm=1, w_vec_zmm=1, w_sad=1, w_fma=1)    
     return iops_counts, insts_counts
+
+def calculate_memops_counts_per_iter(in_row):
+    def calculate_memops_counts_with_weights(in_row, w_sc_8bit, w_sc_16bit, w_sc_32bit, w_sc_64bit, w_vec_xmm, w_vec_ymm, w_vec_zmm):
+
+        # Note that Nb_MOVH/LPS/D_loads and Nb_MOVH/LPS/D_stores are 64bits
+        # See: (https://www.felixcloutier.com/x86/movhps, https://www.felixcloutier.com/x86/movhpd)
+
+        memops_sc = w_sc_8bit * (getter(in_row, 'Nb_8_bits_loads') + getter(in_row, 'Nb_8_bits_stores')) \
+                   + w_sc_16bit * (getter(in_row, 'Nb_16_bits_loads') + getter(in_row, 'Nb_16_bits_stores')) \
+                   + w_sc_32bit * (getter(in_row, 'Nb_32_bits_loads') + getter(in_row, 'Nb_32_bits_stores')) \
+                   + w_sc_64bit * (getter(in_row, 'Nb_64_bits_loads') + getter(in_row, 'Nb_64_bits_stores')) \
+                   + w_sc_64bit * (getter(in_row, 'Nb_MOVH/LPS/D_loads') + getter(in_row, 'Nb_MOVH/LPS/D_stores'))                   
+
+        memops_xmm = w_vec_xmm * (getter(in_row, 'Nb_128_bits_loads') + getter(in_row, 'Nb_128_bits_stores'))
+        memops_ymm = w_vec_ymm * (getter(in_row, 'Nb_256_bits_loads') + getter(in_row, 'Nb_256_bits_stores'))
+        memops_zmm = w_vec_zmm * (getter(in_row, 'Nb_512_bits_loads') + getter(in_row, 'Nb_512_bits_stores'))
+        memops = memops_sc + memops_xmm + memops_ymm + memops_zmm
+
+        results = (memops, memops_sc, memops_xmm, memops_ymm, memops_zmm)
+        return Vecinfo(*results)    
+    
+    memops_counts = calculate_memops_counts_with_weights(in_row, w_sc_8bit=1/8, w_sc_16bit=1/4, w_sc_32bit=1/2, w_sc_64bit=1, \
+                                                         w_vec_xmm=2, w_vec_ymm=4, w_vec_zmm=8)
+    insts_counts = calculate_memops_counts_with_weights(in_row, w_sc_8bit=1, w_sc_16bit=1, w_sc_32bit=1, w_sc_64bit=1, \
+                                                         w_vec_xmm=1, w_vec_ymm=1, w_vec_zmm=1)
+    return memops_counts, insts_counts
+
 
 
 def calculate_flops_counts_per_iter(in_row):
@@ -490,6 +531,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
     print('Name file: ', name_file, file=sys.stderr)
+    print('Skip Energy: ', skip_energy, file=sys.stderr)
 
     if name_file:
         read_short_names(name_file)
