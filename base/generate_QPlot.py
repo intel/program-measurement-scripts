@@ -2,6 +2,7 @@
 import sys, getopt
 import csv
 import re
+import os
 import traceback
 import pandas as pd
 import numpy as np
@@ -34,7 +35,7 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 	df = pd.read_csv(input_data_source)
@@ -45,8 +46,8 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set):
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set)
+	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot)
+	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -60,6 +61,7 @@ def compute_capacity(df, chosen_node_set):
 		df['C_{}'.format(node)]=formula(df)
 
 	df['C_max']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
+	df = df[df['C_max'].notna()]
 	df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
 	# Remove the first two characters which is 'C_'
 	df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
@@ -77,7 +79,7 @@ def compute_capacity(df, chosen_node_set):
 	op_node = chosen_op_node_set.pop()
 	formula=capacity_formula[op_node]
 	df['C_op']=formula(df)
-#	print(df['C_op'])
+	return df
 
 
 
@@ -100,15 +102,18 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot):
 	if df.empty:
 		return # Nothing to do
-	compute_capacity(df, chosen_node_set)
+	df = compute_capacity(df, chosen_node_set)
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
-	output_data_source = sys.stdout if (outputfile_prefix == '-') else variant+'_export_dataframe.csv'
+	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
+	print('Saving to '+output_data_source)
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
 	
+	if no_plot:
+		return
 
 	indices = df['short_name']
 	xs = df['C_op']
@@ -195,6 +200,7 @@ def main(argv):
 	parser.add_argument('-l', help='list of nodes', required=False, 
 						default=','.join(sorted(list(DEFAULT_CHOSEN_NODE_SET))), dest='node_list')
 	parser.add_argument('-o', help='the output file prefix', required=False, dest='out_file_prefix')
+	parser.add_argument('--no-plot', action='store_true', help='Generate data but no plotting')
 	args = parser.parse_args()
 	print(args)
 
@@ -217,7 +223,7 @@ def main(argv):
 	print ('Scale: ', args.scale)
 	print ('Title: ', title)
 	print ('Node Set: ', chosen_node_set)
-	parse_ip(args.in_file, args.out_file_prefix, args.scale, title, chosen_node_set)
+	parse_ip(args.in_file, args.out_file_prefix, args.scale, title, chosen_node_set, args.no_plot)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
