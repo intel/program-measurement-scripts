@@ -34,7 +34,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 '%Misp. Branches', 'Executed/Retired Uops',
                 'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
-                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Inst[FMA]',
+                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA'])
 
@@ -155,13 +155,14 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     ops_per_sec = insts_per_rep / time
     out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
 
-    vec_ops = all_ops = vec_insts = all_insts = fma_insts = 0
+    vec_ops = all_ops = vec_insts = all_insts = fma_ops = fma_insts = 0
     def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
             nonlocal vec_ops
             nonlocal vec_insts
+            nonlocal fma_ops                        
             nonlocal fma_insts            
 
             cnts_per_iter, inst_cnts_per_iter=calculate_counts_per_iter(in_row)
@@ -170,6 +171,7 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
 
             if add_global_count:
                 vec_ops += (cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
+                fma_ops += cnts_per_iter.FMA
                 all_ops += cnts_per_iter.SUM
 
                 vec_insts += (inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
@@ -186,6 +188,7 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
 
     out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else None
     out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else None
+    out_row['%Ops[FMA]'] = fma_ops / all_ops if all_insts else None    
     out_row['%Inst[FMA]'] = fma_insts / all_insts if all_insts else None
 
     try:
