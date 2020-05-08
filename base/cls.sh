@@ -48,11 +48,11 @@ find_num_repetitions_and_iterations () {
 
 	if [[ "${variant}" == "ORG" ]]; then
 		#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 1>&2
+		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH ${num_core} 1>&2
 	else
 		#echo env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
 		#env -i ./w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH
-		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH 1>&2
+		$CLS_FOLDER/w_adjust.sh "$codelet_folder" "${codelet_name}_${variant}_hwc" "$data_size" $MIN_REPETITIONS $MAX_REPETITIONS $CODELET_LENGTH ${num_core} 1>&2
 	fi
 
 	echo "history file" 1>&2
@@ -66,22 +66,28 @@ find_num_repetitions_and_iterations () {
 	echo $repetitions 1>&2
 	echo "$repetitions $data_size" > "$codelet_folder/codelet.data"
 
-	echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..." 1>&2
-	#loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
-	echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM} 1>&2
-	loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" | grep ${DELIM})
-	res=$?
-
-	if [[ "$res" != "0" ]]; then
+	if [[ ${DISABLE_CQA} == 0 ]]; then
+	    echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..." 1>&2
+	    #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+	    echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM} 1>&2
+	    loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" | grep ${DELIM})
+	    res=$?
+	    
+	    if [[ "$res" != "0" ]]; then
 		if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]; then
-			echo "Cancelling CLS." 1>&2
-			exit -1
+		    echo "Cancelling CLS." 1>&2
+		    exit -1
 		else
-			loop_detection_success=0
+		    loop_detection_success=0
 		fi
+	    fi
+	    all_loop_info="$loop_info"
+	    echo $loop_info > /tmp/loop_info.txt
+	else
+	    # Disabled CQA, just handle it like loop detection failed
+	    echo "CQA disabled: No need to re-count loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..." 1>&2
+	    loop_detection_success=0
 	fi
-	all_loop_info="$loop_info"
-	echo $loop_info > /tmp/loop_info.txt
 
 	if [[ "$loop_detection_success" == "1" ]]; then
 		wanted_loop_info=$( echo "$loop_info" | grep "^$loop_id${DELIM}" )
@@ -257,32 +263,33 @@ first_data_size=$( echo ${data_sizes} | awk '{print $1;}' )
 ################################################################################
 
 echo "------------------------------------------------------------"
-
-echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
-#echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
-#echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
-# Get the target loop with low repetition to save time.
-if [[ ${LOOP_ITER_COUNTER} == "SEP" ]]; then
+echo "DISABLE CQA: ${DISABLE_CQA}"
+if [[ ${DISABLE_CQA} == 0 ]]; then
+    echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
+    #echo "Identifying the main loop for ($codelet_folder/$codelet_name", "$function_name, ${first_data_size})..."
+    #echo "Identifying the main loop for (${codelet_exe}", "$function_name, ${first_data_size})..."
+    # Get the target loop with low repetition to save time.
+    if [[ ${LOOP_ITER_COUNTER} == "SEP" ]]; then
 	# Need bigger repetition for sep/sampling base counting
 	try_repetitions=100
-else
+    else
 	try_repetitions=2
-fi
-try_num_core=1
-echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core}
-all_loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
-res=$?
-
-if [[ "$res" != "0" || "X${all_loop_info}" == "X" ]]; then
+    fi
+    try_num_core=1
+    echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core}
+    all_loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
+    res=$?
+    
+    if [[ "$res" != "0" || "X${all_loop_info}" == "X" ]]; then
 	if [[ "$IGNORE_LOOP_DETECTION_ERROR" == "0" ]]; then
-		echo "Cancelling CLS."
-		exit -1
+	    echo "Cancelling CLS."
+	    exit -1
 	else
-		loop_detection_success=0
+	    loop_detection_success=0
 	fi
-fi
-
-if [[ "$loop_detection_success" == "1" ]]; then
+    fi
+    
+    if [[ "$loop_detection_success" == "1" ]]; then
 	#    echo env -i ./count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions}
 	loop_info=$( echo -e "$all_loop_info" | grep ${DELIM} | head -n 1 )
 	loop_id=$( echo "$loop_info" | cut -f1 -d${DELIM} )
@@ -291,9 +298,13 @@ if [[ "$loop_detection_success" == "1" ]]; then
 	#	loop_iterations=$( echo "$loop_info" | cut -f2 -d${DELIM} )
 	loop_iterations=$( echo "$all_loop_iterations" |awk '{total+=$1}END{print total}' )
 	if [[ "$loop_iterations" == "0" ]]; then
-		# Just make it a failed case
-		loop_detection_success=0
+	    # Just make it a failed case
+	    loop_detection_success=0
 	fi
+    fi
+else
+    # Disabled CQA, just handle it like loop detection failed
+    loop_detection_success=0
 fi
 
 if [[ "$loop_detection_success" == "0" ]]; then
@@ -386,7 +397,7 @@ if [[ ${ACTIVATE_EXPERIMENTS} != "0" ]]; then
 		for data_size in $data_sizes; do
 			echo
 			echo
-			data_size_str=${data_size//[![:alnum:]]/}
+			data_size_str=${data_size//[![:alnum:]]/-}
 			data_path="$prefetcher_path/data_$data_size_str"
 			mkdir "$data_path" &> /dev/null
 

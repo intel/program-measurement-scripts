@@ -6,8 +6,8 @@ source $CLS_FOLDER/const.sh
 #	source /opt/intel/sep/sep_vars.sh > /dev/null
 #fi
 
-if [[ "$nb_args" != "6" ]]; then
-	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, max number of repetition, desired length)."
+if [[ "$nb_args" != "7" ]]; then
+	echo "ERROR! Invalid arguments (need: codelet's folder, binary's name, desired size, minimum number of repetitions, max number of repetition, desired length, num. cores)."
 	exit -1
 fi
 
@@ -17,6 +17,7 @@ desired_size="$3"
 min_repet="$4"
 max_repet="$5"
 desired_length="$6"
+num_cores="$7"
 
 echo "W_adjust: Going to assess the right number of repetitions (to reach $desired_length hundredths of second) for codelet '$codelet_folder' with a data set of '$desired_size'"
 cd "$codelet_folder"
@@ -40,7 +41,7 @@ do
 	echo "Trying number of repetitions = $current_repetitions"
 	#	echo "$current_repetitions $desired_size" > codelet.data
 	# Last argument number of core = 1, single core runs for this adjustment
-	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" "$codelet_folder" 1 )
+	command_line_args=$(parameter_set_decoding "$binary_name" "$desired_size" "$current_repetitions" "$codelet_folder" "$num_cores" )
 
 	saved_repetitions=$current_repetitions
 

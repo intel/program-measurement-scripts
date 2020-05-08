@@ -139,11 +139,13 @@ CODELET_LENGTH=50
 #MIN_REPETITIONS=400
 #MIN_REPETITIONS=40
 MIN_REPETITIONS=4
+MIN_REPETITIONS=1
 #MIN_REPETITIONS=4000000
 #MIN_REPETITIONS=80
 #MIN_REPETITIONS=4
 
 HARD_MAX_REPETITIONS=1000000000
+#HARD_MAX_REPETITIONS=1
 MAX_REPETITIONS=${HARD_MAX_REPETITIONS}
 #MAX_REPETITIONS=800
 #MAX_REPETITIONS=100
@@ -379,7 +381,23 @@ else
 	#XP_NODE=${XP_NODES[$HOSTNAME]}
 	# All cores at the XP_NODE node
 	#    XP_ALL_CORES=( $(numactl -H | grep "node ${XP_NODE} cpus" |cut -d: -f2) )
-	XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
+	# XP_ALL_CORES=( $(numactl -H | grep "node" | grep  "cpus" |cut -d: -f2) )
+
+
+	# Above code works if HT is off but will not work if HT is ON
+	# Use EMON instead of NUMACTL 
+	# Will have fouur columns (with column name not included)
+	#        OS Processor            Phys. Package           Core    Logical Processor
+        #         0                       0               0               0
+        #         1                       1               0               0
+        #         2                       2               0               0
+	# For the sort below, '-s' makes it stable and can chain up sorts in the following ourder:
+	# 2 : Phys Package, 3: Core in Package: 4: Logical 
+	# So it will be sorted in the order:
+	# small-to-large HT, small-to-large core, small-to-large package
+	# Later, in core selection, CapeScripts will pick last core first.
+	# Finally, extract the first column which is the OS processor# sorted in the right order
+	XP_ALL_CORES=( $(emon -v |sed -n '/-----/,/-----/p'|tail -n +3 |head -n -1 | awk '{print $1,$2,$3,$4}' |sort -k 2n -s |sort -k 3n -s |sort -k 4n -s|cut -f1 -d' ') )
 
 fi
 XP_NUM_CORES=${#XP_ALL_CORES[@]}
@@ -394,6 +412,9 @@ MC_NUM_CORES=2
 MC_ALL_CORES=${XP_ALL_CORES[@]:0:(${MC_NUM_CORES}-1)}
 
 MEMLOAD_ARGS_LIST=${MEMLOAD_ARGS[$HOSTNAME]}
+
+# If topmost script don't set this, default to not disable CQA
+DISABLE_CQA=${DISABLE_CQA:-0}
 
 # By default run with emon
 ENABLE_SEP=0

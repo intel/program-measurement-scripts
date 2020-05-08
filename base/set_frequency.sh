@@ -82,12 +82,12 @@ then
 				CPUPOWER_VERSION=$(cpupower -v | grep cpupower | sed -e 's/.* \([0-9]*\)\.\([0-9]*\).*/\1.\2/g' )
 				if [[ -u $(which cpupower) && $(echo ${CPUPOWER_VERSION} >= 3.19|bc -l) == 1 ]]; then
 				  # cpupower having SETUID bit and cpupower 3.19 fixed a bit to use it correctly
-					cpupower -c $i frequency-set -g userspace
-					cpupower -c $i frequency-set -f $target_frequency
+					cpupower -c $i frequency-set -g userspace &> /dev/null
+					cpupower -c $i frequency-set -f $target_frequency &> /dev/null
 				else
 				  # cpupower should have SETUID bit but here for the case it is not possible.
-					sudo cpupower -c $i frequency-set -g userspace
-					sudo cpupower -c $i frequency-set -f $target_frequency
+					sudo cpupower -c $i frequency-set -g userspace &> /dev/null
+					sudo cpupower -c $i frequency-set -f $target_frequency &> /dev/null
 				fi
 			fi
 		done

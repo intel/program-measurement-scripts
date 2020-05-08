@@ -44,16 +44,36 @@ parameter_set_decoding () {
 	    ktrussNum=7
         fi
 	
-        if [[ $(basename $codelet) == *BFS || $(basename $codelet) == *SSSP ]]; then
+        if [[ $(basename $codelet) == "galBFS" || $(basename $codelet) == "grbSSSP" || $(basename $codelet) == "grbSSSP64" ]]; then
             echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition}"
+        elif [[ $(basename $codelet) == 'grbBFS' ]]; then
+	    if [[ ${datasize} == road-* ]]; then
+		echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition} -m=1"
+	    elif [[ ${datasize} == 'eukarya' || ${datasize} == 'uk2007' ]]; then
+		echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition} -m=2"
+	    else
+		echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition}"
+	    fi
+        elif [[ $(basename $codelet) == 'galSSSP' || $(basename $codelet) == 'galSSSP64' || $(basename $codelet) == 'galSSSPdeltaStep' || $(basename $codelet) == 'galSSSPtopo' ]]; then
+	    if [[ ${datasize} == 'eukarya' ]]; then
+		echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition} -delta=20"
+	    else
+		echo "${gd}/${datasize}.cgr -startNode=${sn} -t=${num_cores} -rep=${repetition}"
+	    fi
         elif [[ $(basename $codelet) == 'grbKTruss' ]]; then
-            echo "${gd}/${datasize}.cgr -k=${ktrussNum} -t=${num_cores} -rep=${repetition}"
+	    if [[ ${datasize} == road-* ]]; then
+		echo "${gd}/${datasize}.cgr -k=${ktrussNum} -t=${num_cores} -rep=${repetition} -m=1"
+	    else
+		echo "${gd}/${datasize}.cgr -k=${ktrussNum} -t=${num_cores} -rep=${repetition} -m=0"
+	    fi
         elif [[ $(basename $codelet) == 'galKTruss' ]]; then
             echo "${gd}/${datasize}.csgr -trussNum=${ktrussNum} -t=${num_cores} -rep=${repetition}"
-        elif [[ $(basename $codelet) == 'galPR' ]]; then
+        elif [[ $(basename $codelet) == 'galPR' || $(basename $codelet) == 'galPRinv' || $(basename $codelet) == 'galPRaos' ]]; then
             echo "${gd}/${datasize}.ctgr -t=${num_cores} -rep=${repetition}"
-        elif [[ $(basename $codelet) == 'galCC' || $(basename $codelet) == 'galTri' ]]; then
+        elif [[ $(basename $codelet) == 'galCC' || $(basename $codelet) == 'galCCedgeTileAsync' ]]; then
             echo "${gd}/${datasize}.csgr -t=${num_cores} -rep=${repetition}"
+        elif [[ $(basename $codelet) == 'galTri' || $(basename $codelet) == 'galTriNS' ]]; then
+	    echo "${gd}/${datasize}.csgr -t=${num_cores} -rep=${repetition}"
         else
             echo "${gd}/${datasize}.cgr -t=${num_cores} -rep=${repetition}"
         fi
@@ -141,44 +161,146 @@ run() {
         name2sizes[galSSSP64]="eukarya"
         name2sizes[galCC]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
         name2sizes[galPR]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
+        name2sizes[galPRinv]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
         name2sizes[galTri]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
+        name2sizes[galTriNS]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
         name2sizes[galKTruss]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W"
 
-        # name2sizes[galTri]="rmat26"
-	# name2sizes[grbBFS]="livejournal"
-        # name2sizes[grbSSSP]="livejournal"
-        # name2sizes[grbSSSP64]="livejournal"
-        # name2sizes[grbCC]="livejournal"
-        # name2sizes[grbPRorig]="livejournal"
-        # name2sizes[grbTri]="livejournal"
-        # name2sizes[grbKTruss]="livejournal"
 
-	# name2sizes[galBFS]="livejournal"
-        # name2sizes[galSSSP]="livejournal"
-        # name2sizes[galSSSP64]="livejournal"
-        # name2sizes[galCC]="livejournal"
-        # name2sizes[galPR]="livejournal"
-        # name2sizes[galTri]="livejournal"
-        # name2sizes[galKTruss]="livejournal"
+	name2sizes[grbBFS]="livejournal"
+        name2sizes[grbSSSP]="livejournal"
+        name2sizes[grbSSSP64]="livejournal"
+        name2sizes[grbCC]="livejournal"
+        name2sizes[grbPRorig]="livejournal"
+        name2sizes[grbTri]="livejournal"
+        name2sizes[grbKTruss]="livejournal"
 
+	name2sizes[galBFS]="livejournal"
+        name2sizes[galSSSP]="livejournal"
+        name2sizes[galSSSP64]="livejournal"
+        name2sizes[galCC]="livejournal"
+        name2sizes[galPR]="livejournal"
+        name2sizes[galPRinv]="livejournal"
+        name2sizes[galTri]="livejournal"
+        name2sizes[galTriNS]="livejournal"
+        name2sizes[galKTruss]="livejournal"
+
+	# name2sizes[grbBFS]="twitter40"
+        # name2sizes[grbSSSP]="twitter40"
+        # name2sizes[grbSSSP64]="twitter40"
+        # name2sizes[grbCC]="twitter40"
+        # name2sizes[grbPRorig]="twitter40"
+        # name2sizes[grbTri]="twitter40"
+        # name2sizes[grbKTruss]="twitter40"
+
+	# name2sizes[galBFS]="twitter40"
+        # name2sizes[galSSSP]="twitter40"
+        # name2sizes[galSSSP64]="twitter40"
+        # name2sizes[galCC]="twitter40"
+        # name2sizes[galPR]="twitter40"
+        # name2sizes[galPRinv]="twitter40"
+        # name2sizes[galTri]="twitter40"
+        # name2sizes[galTriNS]="twitter40"
+        # name2sizes[galKTruss]="twitter40"
+
+	# name2sizes[grbBFS]="friendster"
+        # name2sizes[grbSSSP]="friendster"
+        # name2sizes[grbSSSP64]="friendster"
+        # name2sizes[grbCC]="friendster"
+        # name2sizes[grbPRorig]="friendster"
+        # name2sizes[grbTri]="friendster"
+        # name2sizes[grbKTruss]="friendster"
+
+	# name2sizes[galBFS]="friendster"
+        # name2sizes[galSSSP]="friendster"
+        # name2sizes[galSSSP64]="friendster"
+        # name2sizes[galCC]="friendster"
+        # name2sizes[galPR]="friendster"
+        # name2sizes[galPRinv]="friendster"
+        # name2sizes[galTri]="friendster"
+        # name2sizes[galTriNS]="friendster"
+        # name2sizes[galKTruss]="friendster"
+
+	# name2sizes[grbBFS]="uk2007"
+        # name2sizes[grbSSSP]="uk2007"
+        # name2sizes[grbSSSP64]="uk2007"
+        # name2sizes[grbCC]="uk2007"
+        # name2sizes[grbPRorig]="uk2007"
+        # name2sizes[grbTri]="uk2007"
+        # name2sizes[grbKTruss]="uk2007"
+
+	# name2sizes[galBFS]="uk2007"
+        # name2sizes[galSSSP]="uk2007"
+        # name2sizes[galSSSP64]="uk2007"
+        # name2sizes[galCC]="uk2007"
+        # name2sizes[galPR]="uk2007"
+        # name2sizes[galPRinv]="uk2007"
+        # name2sizes[galTri]="uk2007"
+        # name2sizes[galTriNS]="uk2007"
+        # name2sizes[galKTruss]="uk2007"
+
+
+	name2sizes[grbBFS]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbSSSP]="rmat22 indochina-2004 rmat26 road-USA road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbSSSP64]="eukarya"
+        name2sizes[grbCC]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbPRorig]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbTri]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbTri7]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbTri_sorted]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbTri7_sorted]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[grbKTruss]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+
+
+	name2sizes[galBFS]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galSSSP]="rmat22 indochina-2004 rmat26 road-USA road-USA-W twitter40 friendster uk2007"
+        name2sizes[galSSSP64]="eukarya"
+        name2sizes[galCC]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galPR]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galPRinv]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galTri]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galTriNS]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+
+        name2sizes[galCCedgeTileAsync]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galPRaos]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galSSSPdeltaStep]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galSSSPtopo]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+        name2sizes[galSSSPtopo]="indochina-2004 twitter40"
+        name2sizes[grbPRResidual]="rmat22 indochina-2004 rmat26 road-USA eukarya road-USA-W twitter40 friendster uk2007"
+
+        name2sizes[galPR]="rmat22 indochina-2004 road-USA eukarya road-USA-W"
+        name2sizes[galPRinv]="rmat22 indochina-2004 road-USA eukarya road-USA-W"
 
 	run_codelets=(
-            grbBFS
-	    grbSSSP
-	    grbSSSP64
-	    grbCC
-            grbPRorig
-	    grbTri
-	    # grbKTruss
+            # grbBFS
+	    # grbSSSP
+	    # grbSSSP64
+	    # grbCC
+            # grbPRorig
+	    # grbTri
+	    # grbTri7
+	    # grbTri_sorted
+	    # grbTri7_sorted
+
+
+	    # galCCedgeTileAsync
+	    # galPRaos
+	    # galSSSPdeltaStep
+	    # grbPRResidual
+
+	    galSSSPtopo
 
             # galBFS
 	    # galSSSP
 	    # galSSSP64
 	    # galCC
             # galPR
+            # galPRinv
 	    # galTri
+	    # galTriNS
+
+	    # grbKTruss	    
 	    # galKTruss
-	    
 	)
 
 	for codelet_name in ${run_codelets[@]}; do
@@ -215,8 +337,9 @@ run() {
 
 
 #runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0" runLoop
-	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0,FLOP=1" runLoop
-
+#	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0,FLOP=1,UOP_ISSUE_RETIRE=1" runLoop
+	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=1,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=1,TLB=1,LSD=0,FLOP=0,UOP_ISSUE_RETIRE=1" runLoop
+#	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0,FLOP=0,UOP_ISSUE_RETIRE=1" runLoop
 
 
 	return
