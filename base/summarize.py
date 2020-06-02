@@ -8,6 +8,7 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from capelib import succinctify
 from capelib import calculate_all_rate_and_counts
+from capelib import getter
 from collections import OrderedDict
 
 from argparse import ArgumentParser
@@ -148,22 +149,13 @@ def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     ops_per_sec = insts_per_rep / time
     out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
 
-    calculate_all_rate_and_counts(out_row, in_row)
+    calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time)
     return (insts_per_rep, ops_per_sec)
 
 def print_num_ops_formula(formula_file):
     formula_file.write( \
         'Inst. Count(GI) = (INST_RETIRED_ANY * iterations_per_rep) / 1E9\n')
 
-def getter(in_row, *argv, **kwargs):
-    type_ = kwargs.pop('type', float)
-    default_ = kwargs.pop('default', 0)
-    for arg in argv:
-        if (arg.startswith('Nb_insn') and arg not in in_row):
-            arg = 'Nb_FP_insn' + arg[7:]
-        if (arg in in_row):
-            return type_(in_row[arg] if in_row[arg] else default_)
-    raise IndexError(', '.join(map(str, argv)))
 
 def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
 

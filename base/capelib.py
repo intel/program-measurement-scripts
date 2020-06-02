@@ -14,7 +14,7 @@ def succinctify(value):
         return list(map(helper,value))
 
 # For CQA metrics
-def calculate_all_rate_and_counts(out_row, in_row):
+def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     vec_ops = all_ops = vec_insts = all_insts = fma_ops = fma_insts = 0
     def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
         try:
@@ -26,7 +26,6 @@ def calculate_all_rate_and_counts(out_row, in_row):
             nonlocal fma_insts            
 
             cnts_per_iter, inst_cnts_per_iter=calculate_counts_per_iter(in_row)
-
             out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
@@ -207,3 +206,14 @@ def find_vector_ext(flop_counts, iop_counts):
               [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) if flop_counts.SUM or iop_counts.SUM else None \
                 for metric in ["SC", "XMM", "YMM", "ZMM"] ])
     return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in out if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
+
+
+def getter(in_row, *argv, **kwargs):
+    type_ = kwargs.pop('type', float)
+    default_ = kwargs.pop('default', 0)
+    for arg in argv:
+        if (arg.startswith('Nb_insn') and arg not in in_row):
+            arg = 'Nb_FP_insn' + arg[7:]
+        if (arg in in_row):
+            return type_(in_row[arg] if in_row[arg] else default_)
+    raise IndexError(', '.join(map(str, argv)))
