@@ -24,7 +24,6 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             nonlocal vec_insts
             nonlocal fma_ops                        
             nonlocal fma_insts            
-
             cnts_per_iter, inst_cnts_per_iter=calculate_counts_per_iter(in_row)
             out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
@@ -132,13 +131,12 @@ def calculate_iops_counts_per_iter(in_row):
         iops_ymm = calculate_iops(w_vec_ymm, 'Nb_INT_arith_insn_{}_YMM', itypes)
         iops_zmm = calculate_iops(w_vec_zmm, 'Nb_INT_arith_insn_{}_ZMM', itypes)    
             
-    
+
         itypes = ['AND', 'XOR', 'OR', 'SHIFT']
         iops_sc += calculate_iops(w_sc, 'Nb_scalar_INT_logic_insn_{}', itypes)
         iops_xmm += calculate_iops(w_vec_xmm, 'Nb_INT_logic_insn_{}_XMM', itypes)
         iops_ymm += calculate_iops(w_vec_ymm, 'Nb_INT_logic_insn_{}_YMM', itypes)
         iops_zmm += calculate_iops(w_vec_zmm, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
-        
         # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
         iops_fma_xmm = w_vec_xmm * (getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_XMM')
                                  + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
@@ -150,6 +148,7 @@ def calculate_iops_counts_per_iter(in_row):
                                + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_ZMM'))
         iops_zmm += iops_fma_zmm
         iops_fma = iops_fma_xmm + iops_fma_ymm + iops_fma_zmm
+
         # For 128bit (XMM) SAD instructions, 1 instruction does
         # 1) 32 8-bit SUB
         # 2) 32 8-bit ABS
@@ -159,7 +158,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops_xmm += w_vec_xmm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_XMM'))
         iops_ymm += w_vec_ymm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_YMM'))
         iops_zmm += w_vec_zmm*(w_sad * getter(in_row, 'Nb_INT_arith_insn_SAD_ZMM'))
-    
+
         iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
         results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) for ops in [iops ,iops_sc, iops_xmm, iops_ymm, iops_zmm, iops_fma]]
         return Vecinfo(*results)
