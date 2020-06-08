@@ -35,7 +35,7 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 	df = pd.read_csv(input_data_source)
@@ -46,8 +46,8 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot):
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot)
+	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -102,7 +102,7 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False):
 	if df.empty:
 		return # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
@@ -115,12 +115,18 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	if no_plot:
 		return
 
-	indices = df['short_name']
+	try:
+		indices = df['short_name']
+	except:
+		indices = df['name']
 	xs = df['C_op']
 	ys = df['C_max']
 	mem_level=df['memlevel']
 	today = datetime.date.today()
-	outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)
+	if gui:
+		outputfile=None
+	else:
+		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)
 	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
 						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
 
