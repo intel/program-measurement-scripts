@@ -44,10 +44,10 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter, False)
     memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts('MEMOP Rate (GMEMOP/s)', calculate_memops_counts_per_iter, True)
 
-    out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else None
-    out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else None
-    out_row['%Ops[FMA]'] = fma_ops / all_ops if all_insts else None    
-    out_row['%Inst[FMA]'] = fma_insts / all_insts if all_insts else None
+    out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else 0
+    out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else 0
+    out_row['%Ops[FMA]'] = fma_ops / all_ops if all_insts else 0    
+    out_row['%Inst[FMA]'] = fma_insts / all_insts if all_insts else 0
 
     try:
         # Check if CQA metric is available
@@ -83,21 +83,22 @@ def calculate_flops_counts_per_iter(in_row):
             flops = flops_sc + flops_xmm + flops_ymm + flops_zmm
             results = (flops, flops_sc, flops_xmm, flops_ymm, flops_zmm, flops_fma)
         except:
+            metric_prefix="Nb_FP_insn" if "Nb_FP_insn_ADD_SUBSS" in in_row.keys() else "Nb_insn"
 
-            flops_sc = calculate_flops(w_sc_sp, w_sc_dp, 'Nb_FP_insn_{}SS', 'Nb_FP_insn_{}SD')
-            flops_xmm = calculate_flops(w_vec_xmm, w_vec_xmm, 'Nb_FP_insn_{}PS_XMM', 'Nb_FP_insn_{}PD_XMM')
-            flops_ymm = calculate_flops(w_vec_ymm, w_vec_ymm, 'Nb_FP_insn_{}PS_YMM', 'Nb_FP_insn_{}PD_YMM')
-            flops_zmm = calculate_flops(w_vec_zmm, w_vec_zmm, 'Nb_FP_insn_{}PS_ZMM', 'Nb_FP_insn_{}PD_ZMM')
+            flops_sc = calculate_flops(w_sc_sp, w_sc_dp, metric_prefix+'_{}SS', metric_prefix+'_{}SD')
+            flops_xmm = calculate_flops(w_vec_xmm, w_vec_xmm, metric_prefix+'_{}PS_XMM', metric_prefix+'_{}PD_XMM')
+            flops_ymm = calculate_flops(w_vec_ymm, w_vec_ymm, metric_prefix+'_{}PS_YMM', metric_prefix+'_{}PD_YMM')
+            flops_zmm = calculate_flops(w_vec_zmm, w_vec_zmm, metric_prefix+'_{}PS_ZMM', metric_prefix+'_{}PD_ZMM')
     
     
             # try to add the FMA counts
-            flops_fma_sc =  w_fma * (w_sc_sp * getter(in_row, 'Nb_FP_insn_FMASS') + w_sc_dp * getter(in_row, 'Nb_FP_insn_FMASD'))
+            flops_fma_sc =  w_fma * (w_sc_sp * getter(in_row, metric_prefix+'_FMASS') + w_sc_dp * getter(in_row, metric_prefix+'_FMASD'))
             flops_sc += flops_fma_sc
-            flops_fma_xmm = w_fma * w_vec_xmm*(getter(in_row, 'Nb_FP_insn_FMAPS_XMM') + getter(in_row, 'Nb_FP_insn_FMAPD_XMM'))
+            flops_fma_xmm = w_fma * w_vec_xmm*(getter(in_row, metric_prefix+'_FMAPS_XMM') + getter(in_row, metric_prefix+'_FMAPD_XMM'))
             flops_xmm += flops_fma_xmm
-            flops_fma_ymm = w_fma * w_vec_ymm*(getter(in_row, 'Nb_FP_insn_FMAPS_YMM')  + getter(in_row, 'Nb_FP_insn_FMAPD_YMM'))
+            flops_fma_ymm = w_fma * w_vec_ymm*(getter(in_row, metric_prefix+'_FMAPS_YMM')  + getter(in_row, metric_prefix+'_FMAPD_YMM'))
             flops_ymm += flops_fma_ymm
-            flops_fma_zmm = w_fma * w_vec_zmm*(getter(in_row, 'Nb_FP_insn_FMAPS_ZMM') + getter(in_row, 'Nb_FP_insn_FMAPD_ZMM'))
+            flops_fma_zmm = w_fma * w_vec_zmm*(getter(in_row, metric_prefix+'_FMAPS_ZMM') + getter(in_row, metric_prefix+'_FMAPD_ZMM'))
             flops_zmm += flops_fma_zmm
             flops_fma = flops_fma_sc + flops_fma_xmm + flops_fma_ymm + flops_fma_zmm
 
