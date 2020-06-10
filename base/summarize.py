@@ -174,25 +174,38 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
 
     def calculate_register_bandwidth():
         num_cores = getter(in_row, 'decan_experimental_configuration.num_core')
-        reg_gp_addr_rw = getter(in_row, 'Bytes_GP_addr_read') + getter(in_row, 'Bytes_GP_addr_write')
-        reg_gp_data_rw = getter(in_row, 'Bytes_GP_data_read') + getter(in_row, 'Bytes_GP_data_write')
+        reg_gp_addr_rw = getter(in_row, 'Bytes_GP_addr_read') \
+            + getter(in_row, 'Bytes_GP_addr_write')
+        reg_gp_data_rw = getter(in_row, 'Bytes_GP_data_read') \
+            + getter(in_row, 'Bytes_GP_data_write')
         reg_simd_rw = getter(in_row, 'Bytes_SIMD_read') + getter(in_row, 'Bytes_SIMD_write')
-        rates = [ num_cores * iterations_per_rep * x / (1E9 * time_per_rep) for x in [ \
-                                                                                       reg_gp_addr_rw, reg_gp_data_rw, reg_simd_rw \
-                                                                                   ]]
+        rates = [ num_cores * iterations_per_rep * x / (1E9 * time_per_rep) \
+            for x in [ reg_gp_addr_rw, reg_gp_data_rw, reg_simd_rw ]]
         return rates + [ sum(rates) ]
+    def get_dram_traffic_per_it(in_row, cas_count_name, alt_cas_count_sum_name):
+        count = 0
+        try:
+            count = getter(in_row, cas_count_name, alt_cas_count_sum_name)
+        except:
+            # If it fails (happens to Oneview data), try to look at individual channel counts
+            per_channel_cas_cnt_names = [n for n in list(in_row.keys()) \
+                if n.startswith(cas_count_name+"_")]
+            for name in per_channel_cas_cnt_names:
+                count += getter(in_row, name)
+        return count
 
     try:
         arch = arch_helper(in_row)
 
-        L2_rc_per_it  = counter_sum(in_row, L2R_TrafficDict[arch])
-        L2_wc_per_it  = counter_sum(in_row, L2W_TrafficDict[arch])
-        L3_rc_per_it  = counter_sum(in_row, L3R_TrafficDict[arch])
-        L3_wc_per_it  = counter_sum(in_row, L3W_TrafficDict[arch])
+        L2_rc_per_it = counter_sum(in_row, L2R_TrafficDict[arch])
+        L2_wc_per_it = counter_sum(in_row, L2W_TrafficDict[arch])
+        L3_rc_per_it = counter_sum(in_row, L3R_TrafficDict[arch])
+        L3_wc_per_it = counter_sum(in_row, L3W_TrafficDict[arch])
 
-        ram_rc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_RD', 'UNC_IMC_DRAM_DATA_READS')
-        ram_wc_per_it = getter(in_row, 'UNC_M_CAS_COUNT_WR', 'UNC_IMC_DRAM_DATA_WRITES')
-
+        ram_rc_per_it = get_dram_traffic_per_it(in_row, \
+            'UNC_M_CAS_COUNT_RD', 'UNC_IMC_DRAM_DATA_READS')
+        ram_wc_per_it = get_dram_traffic_per_it(in_row, \
+            'UNC_M_CAS_COUNT_WR', 'UNC_IMC_DRAM_DATA_WRITES')
 
         L2_rwb_per_it  = (L2_rc_per_it  + L2_wc_per_it) * 64
         L3_rwb_per_it  = (L3_rc_per_it  + L3_wc_per_it) * 64
