@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from argparse import ArgumentParser
 #from idlelib.TreeWidget import ScrolledCanvas, FileTreeItem, TreeNode
-import pathlib 
+import pathlib
 import os
 from os.path import expanduser
 from summarize import summary_report
@@ -12,14 +12,14 @@ import tempfile
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
-        self.treeview=ttk.Treeview(self)  
+        self.treeview = ttk.Treeview(self)
         vsb = ttk.Scrollbar(self, orient=tk.VERTICAL)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
         hsb = ttk.Scrollbar(self, orient=tk.HORIZONTAL)
         hsb.pack(side=tk.BOTTOM, fill=tk.X)
         vsb.configure(command=self.treeview.yview)
         hsb.configure(command=self.treeview.xview)
-        self.treeview.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)      
+        self.treeview.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         self.treeview.pack(fill=tk.BOTH, expand=1)  
 
 
@@ -198,7 +198,7 @@ class AnalyzerGui(tk.Frame):
         tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
         print(tmpfile.name)
         in_files = [source]
-        in_file_format='csv'
+        in_file_format ='csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
         user_op_file = None
         request_no_cqa = False
         request_use_cpi = False
