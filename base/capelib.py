@@ -214,5 +214,6 @@ def getter(in_row, *argv, **kwargs):
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            return type_(in_row[arg] if in_row[arg] else default_)
+            # should use None test because 0 is valid number and considered False in Python.
+            return type_(in_row[arg] if in_row[arg] is not None else default_)
     raise IndexError(', '.join(map(str, argv)))
