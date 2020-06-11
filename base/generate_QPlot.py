@@ -13,7 +13,7 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 from matplotlib import style
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from adjustText import adjust_text
 from tkinter import ttk
 
@@ -193,7 +193,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, root=None):
 		for w in widgets:
 			w.destroy()
 		canvas = FigureCanvasTkAgg(fig, root)
-		canvas.get_tk_widget().pack(fill="both", expand=True)
+		toolbar = NavigationToolbar2Tk(canvas, root)
+		toolbar.update()
+		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
+		canvas.draw()
+		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
 
 def usage(reason):
 	error_code = 0
