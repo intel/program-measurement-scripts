@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib import style
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from adjustText import adjust_text
+from tkinter import ttk
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -188,10 +189,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, root=None):
 		plt.savefig(filename)
 	else:
 		# Display QPlot in GUI
+		widgets = root.pack_slaves()
+		for w in widgets:
+			w.destroy()
 		canvas = FigureCanvasTkAgg(fig, root)
-		canvas.get_tk_widget().pack()
-		#plt.show()
-
+		canvas.get_tk_widget().pack(fill="both", expand=True)
 
 def usage(reason):
 	error_code = 0
