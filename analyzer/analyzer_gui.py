@@ -9,6 +9,7 @@ from os.path import expanduser
 from summarize import summary_report
 from generate_QPlot import parse_ip
 import tempfile
+import pkg_resources.py2_warn
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -232,7 +233,7 @@ def on_closing(root):
         root.quit()
         root.destroy()
 
-def main():
+if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
     root = tk.Tk()
     root.title("Cape Analyzer")
