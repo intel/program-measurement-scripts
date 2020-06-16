@@ -13,7 +13,9 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 from matplotlib import style
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from adjustText import adjust_text
+from tkinter import ttk
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -35,7 +37,7 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, root=None):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 	df = pd.read_csv(input_data_source)
@@ -46,8 +48,8 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, root)
+	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, root)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -102,7 +104,7 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, root=None):
 	if df.empty:
 		return # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
@@ -126,9 +128,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	if gui:
 		outputfile=None
 	else:
-		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)
+		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, root)
 
 
 def draw_contours(ax, maxx, ns):
@@ -144,7 +146,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, root=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -186,8 +188,16 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale):
 	if filename:
 		plt.savefig(filename)
 	else:
-		plt.show()
-
+		# Display QPlot in GUI
+		widgets = root.pack_slaves()
+		for w in widgets:
+			w.destroy()
+		canvas = FigureCanvasTkAgg(fig, root)
+		toolbar = NavigationToolbar2Tk(canvas, root)
+		toolbar.update()
+		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
+		canvas.draw()
+		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
 
 def usage(reason):
 	error_code = 0
