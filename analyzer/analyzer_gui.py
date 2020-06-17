@@ -240,6 +240,10 @@ class AnalyzerGui(tk.Frame):
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.pack(fill=tk.BOTH, expand=1)
+        # QPlot tab has paned window with summary table and qplot
+        self.c_qplot_window = tk.PanedWindow(self.c_qplotTab, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
         # Workload tabs
         self.w_summaryTab = SummaryTab(workload_note)
         self.w_trawlTab = TrawlTab(workload_note)
@@ -264,7 +268,8 @@ if __name__ == '__main__':
     # Set opening window to half user's screen wxh
     width  = root.winfo_screenwidth()
     height = root.winfo_screenheight()
-    root.geometry('%sx%s' % (int(width/1.2), int(height/1.6)))
+    root.geometry('%sx%s' % (int(width/1.2), int(height/1.2)))
+    #root.geometry(f'{width}x{height}')
 
     gui = AnalyzerGui(root)
 

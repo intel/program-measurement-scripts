@@ -49,7 +49,7 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 
 	grouped = df.groupby('variant')
 	# Destroy old Summary/QPlot if any
-	for w in analyzer_gui.c_qplotTab.pack_slaves():
+	for w in analyzer_gui.c_qplot_window.winfo_children():
 		w.destroy()
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
@@ -138,8 +138,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, analyzer_gui)
 	
 	# Add summary dataframe to QPlot tab
-	summary_frame = tk.Frame(analyzer_gui.c_qplotTab)
-	summary_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+	summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
+	summary_frame.pack()
+	analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
 	pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
 				showtoolbar=True, showstatusbar=True)
 	pt.show()
@@ -202,8 +203,10 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, analyzer_gui=No
 		plt.savefig(filename)
 	else:
 		# Display QPlot from QPlot tab
-		qplot_frame = tk.Frame(analyzer_gui.c_qplotTab)
+		qplot_frame = tk.Frame(analyzer_gui.c_qplot_window)
+		qplot_frame.pack()
 		qplot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+		analyzer_gui.c_qplot_window.add(qplot_frame, stretch='always')
 		canvas = FigureCanvasTkAgg(fig, qplot_frame)
 		toolbar = NavigationToolbar2Tk(canvas, qplot_frame)
 		toolbar.update()
