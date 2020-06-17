@@ -163,6 +163,10 @@ class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+class OneviewTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)        
+
 class TrawlTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -226,8 +230,10 @@ class AnalyzerGui(tk.Frame):
         main_note = ttk.Notebook(parent)
         self.workloadTab = WorkLoadTab(main_note)
         self.codeletTab = CodeletTab(main_note)
+        self.oneviewTab = OneviewTab(main_note)
         main_note.add(self.workloadTab, text="Workload")
         main_note.add(self.codeletTab, text="Codelet")
+        main_note.add(self.oneviewTab, text="Oneview")
         # Workload and Codelet each have their own 2nd level tabs
         workload_note = ttk.Notebook(self.workloadTab)
         codelet_note = ttk.Notebook(self.codeletTab)
