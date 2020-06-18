@@ -40,9 +40,6 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 
 	df = pd.read_csv(input_data_source)
-	output_data_source = '_export_summary.csv'
-	print('Saving to '+output_data_source)
-	df.to_csv(output_data_source, index = False, header=True)
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 
