@@ -44,7 +44,6 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df.columns = succinctify(df.columns)
 
 	grouped = df.groupby('variant')
-
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
 	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
@@ -130,9 +129,24 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		outputfile=None
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
+<<<<<<< HEAD
 	fig = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
 						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
 	return df, fig
+=======
+	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, analyzer_gui)
+	
+	# Add summary dataframe to QPlot tab
+	if analyzer_gui is not None:
+		summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
+		summary_frame.pack()
+		analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
+		pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
+				showtoolbar=True, showstatusbar=True)
+		pt.show()
+		pt.redraw()
+>>>>>>> 9cff357ab8b9a51bc806bb687af6544e57b1e8e3
 
 
 def draw_contours(ax, maxx, ns):
