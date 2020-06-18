@@ -15,7 +15,9 @@ import matplotlib.pyplot as plt
 from matplotlib import style
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from adjustText import adjust_text
+import tkinter as tk
 from tkinter import ttk
+from pandastable import Table
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -37,7 +39,7 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, root=None):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, analyzer_gui=None):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 	df = pd.read_csv(input_data_source)
@@ -46,10 +48,13 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 
 
 	grouped = df.groupby('variant')
+	# Destroy old Summary/QPlot if any
+	for w in analyzer_gui.c_qplot_window.winfo_children():
+		w.destroy()
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, root)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, root)
+	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, analyzer_gui)
+	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, analyzer_gui)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -104,7 +109,7 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, root=None):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, analyzer_gui=None):
 	if df.empty:
 		return # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
@@ -113,7 +118,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
 	print('Saving to '+output_data_source)
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
-	
+
 	if no_plot:
 		return
 
@@ -130,7 +135,16 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, root)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, analyzer_gui)
+	
+	# Add summary dataframe to QPlot tab
+	summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
+	summary_frame.pack()
+	analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
+	pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
+				showtoolbar=True, showstatusbar=True)
+	pt.show()
+	pt.redraw()
 
 
 def draw_contours(ax, maxx, ns):
@@ -146,7 +160,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, root=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, analyzer_gui=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -188,16 +202,17 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, root=None):
 	if filename:
 		plt.savefig(filename)
 	else:
-		# Display QPlot in GUI
-		widgets = root.pack_slaves()
-		for w in widgets:
-			w.destroy()
-		canvas = FigureCanvasTkAgg(fig, root)
-		toolbar = NavigationToolbar2Tk(canvas, root)
+		# Display QPlot from QPlot tab
+		qplot_frame = tk.Frame(analyzer_gui.c_qplot_window)
+		qplot_frame.pack()
+		qplot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+		analyzer_gui.c_qplot_window.add(qplot_frame, stretch='always')
+		canvas = FigureCanvasTkAgg(fig, qplot_frame)
+		toolbar = NavigationToolbar2Tk(canvas, qplot_frame)
 		toolbar.update()
-		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
+		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 		canvas.draw()
-		canvas.get_tk_widget().pack(side="top", fill="both", expand=1)
+		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
 def usage(reason):
 	error_code = 0

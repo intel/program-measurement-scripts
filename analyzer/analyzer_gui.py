@@ -7,7 +7,8 @@ import pathlib
 import os
 from os.path import expanduser
 from summarize import summary_report
-from generate_QPlot import parse_ip
+from generate_QPlot import parse_ip as parse_ip_qplot
+from generate_SI import parse_ip as parse_ip_siplot
 import tempfile
 import pkg_resources.py2_warn
 
@@ -146,6 +147,13 @@ class ExplorerPanel(tk.PanedWindow):
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
 
+class WorkLoadTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
+class CodeletTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
 
 class SummaryTab(tk.Frame):
     def __init__(self, parent):
@@ -190,16 +198,16 @@ class AnalyzerGui(tk.Frame):
         
         self.parent.config(menu=menubar)
 
-        pw=tk.PanedWindow(parent, orient="horizontal")
+        self.pw=tk.PanedWindow(parent, orient="horizontal")
 
-        explorerPanel = ExplorerPanel(pw, self.loadDataSource)
+        explorerPanel = ExplorerPanel(self.pw, self.loadDataSource)
         explorerPanel.pack(side = tk.LEFT)
-        pw.add(explorerPanel)
-        right = self.buildTabs(pw)
+        self.pw.add(explorerPanel)
+        right = self.buildTabs(self.pw)
         right.pack(side = tk.LEFT)
-        pw.add(right)
-        pw.pack(fill=tk.BOTH,expand=True)
-        pw.configure(sashrelief=tk.RAISED)
+        self.pw.add(right)
+        self.pw.pack(fill=tk.BOTH,expand=True)
+        self.pw.configure(sashrelief=tk.RAISED)
 
     def loadDataSource(self, source):
         print("DATA source to be loaded", source)
@@ -216,24 +224,44 @@ class AnalyzerGui(tk.Frame):
         summary_report(in_files, tmpfile.name, in_file_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, None)
         chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
-        parse_ip(tmpfile.name, "test", "scalar", "Testing", chosen_node_set, False, gui=True, root=self.qplotTab)
+        parse_ip_qplot(tmpfile.name, "test", "scalar", "Testing", chosen_node_set, False, gui=True, analyzer_gui=self)
+        #parse_ip_siplot(tmpfile.name, "test", 'row', "Testing", chosen_node_set, root=self.siPlotTab)
 
     def buildTabs(self, parent):
-        note = ttk.Notebook(parent)
-        summaryTab = SummaryTab(note)
-        appTab = ApplicationTab(note)
-        ovTab = OneviewTab(note)
-        trawlTab = TrawlTab(note)
-        self.qplotTab = QPlotTab(note)
-        siPlotTab = SIPlotTab(note)
-        note.add(summaryTab, text="Summary")
-        note.add(ovTab, text="Oneview")
-        note.add(appTab, text="Application")
-        note.add(trawlTab, text="TRAWL")
-        note.add(self.qplotTab, text="QPlot")
-        note.add(siPlotTab, text="SI Plot")
-        note.pack()
-        return note
+        # 1st level notebook with Workload and Codelet tabs
+        main_note = ttk.Notebook(parent)
+        self.workloadTab = WorkLoadTab(main_note)
+        self.codeletTab = CodeletTab(main_note)
+        self.oneviewTab = OneviewTab(main_note)
+        main_note.add(self.workloadTab, text="Workload")
+        main_note.add(self.codeletTab, text="Codelet")
+        main_note.add(self.oneviewTab, text="Oneview")
+        # Workload and Codelet each have their own 2nd level tabs
+        workload_note = ttk.Notebook(self.workloadTab)
+        codelet_note = ttk.Notebook(self.codeletTab)
+        # Codelet tabs
+        self.c_summaryTab = SummaryTab(codelet_note)
+        self.c_trawlTab = TrawlTab(codelet_note)
+        self.c_qplotTab = QPlotTab(codelet_note)
+        self.c_siPlotTab = SIPlotTab(codelet_note)
+        codelet_note.add(self.c_trawlTab, text="TRAWL")
+        codelet_note.add(self.c_qplotTab, text="QPlot")
+        codelet_note.add(self.c_siPlotTab, text="SI Plot")
+        codelet_note.pack(fill=tk.BOTH, expand=1)
+        # QPlot tab has paned window with summary table and qplot
+        self.c_qplot_window = tk.PanedWindow(self.c_qplotTab, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
+        # Workload tabs
+        self.w_summaryTab = SummaryTab(workload_note)
+        self.w_trawlTab = TrawlTab(workload_note)
+        self.w_qplotTab = QPlotTab(workload_note)
+        self.w_siPlotTab = SIPlotTab(workload_note)
+        workload_note.add(self.w_trawlTab, text="TRAWL")
+        workload_note.add(self.w_qplotTab, text="QPlot")
+        workload_note.add(self.w_siPlotTab, text="SI Plot")
+        workload_note.pack(fill=tk.BOTH, expand=True)
+        return main_note
 
 
 def on_closing(root):
@@ -245,6 +273,12 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
     root = tk.Tk()
     root.title("Cape Analyzer")
+    # Set opening window to half user's screen wxh
+    width  = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
+    root.geometry('%sx%s' % (int(width/1.2), int(height/1.2)))
+    #root.geometry(f'{width}x{height}')
+
     gui = AnalyzerGui(root)
 
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
