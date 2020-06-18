@@ -115,7 +115,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
 
 	if no_plot:
-		return
+		return df, None
 
 	try:
 		indices = df['short_name']
@@ -188,8 +188,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale):
 	plt.tight_layout()
 	if filename:
 		plt.savefig(filename)
-	else:
-		return fig
+
+	return fig
 
 def usage(reason):
 	error_code = 0
