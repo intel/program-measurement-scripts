@@ -9,8 +9,14 @@ from os.path import expanduser
 from summarize import summary_report
 from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
+from pandastable import Table
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+import pandas as pd
 import tempfile
 import pkg_resources.py2_warn
+#from web_browser import MainFrame
+#from cefpython3 import cefpython as cef
+#from cefpython3.cefpython_py37 import Initialize, Shutdown
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -147,38 +153,6 @@ class ExplorerPanel(tk.PanedWindow):
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
 
-class WorkLoadTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class CodeletTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class SummaryTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class ApplicationTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class OneviewTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)        
-
-class TrawlTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class QPlotTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class SIPlotTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -222,26 +196,54 @@ class AnalyzerGui(tk.Frame):
         summary_report(in_files, tmpfile.name, in_file_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, None)
         chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
-        parse_ip_qplot(tmpfile.name, "test", "scalar", "Testing", chosen_node_set, False, gui=True, analyzer_gui=self)
-        #parse_ip_siplot(tmpfile.name, "test", 'row', "Testing", chosen_node_set, root=self.siPlotTab)
+        df, fig = parse_ip_qplot(tmpfile.name, "test", "scalar", "Testing", chosen_node_set, False, gui=True)
+        # Show QPlot and Summary table
+        if df is not None:
+            for w in self.c_qplot_window.winfo_children():
+                w.destroy()
+            self.showQPlot(fig)
+            self.showQPlotSummary(df)
+    
+    def showQPlot(self, fig):
+        qplot_frame = tk.Frame(self.c_qplot_window)
+        qplot_frame.pack()
+        qplot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.c_qplot_window.add(qplot_frame, stretch='always')
+        canvas = FigureCanvasTkAgg(fig, qplot_frame)
+        toolbar = NavigationToolbar2Tk(canvas, qplot_frame)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    
+    def showQPlotSummary(self, df):
+        summary_frame = tk.Frame(self.c_qplot_window)
+        summary_frame.pack()
+        self.c_qplot_window.add(summary_frame, stretch='always')
+        pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
+                    showtoolbar=True, showstatusbar=True)
+        pt.show()
+        pt.redraw()
 
     def buildTabs(self, parent):
-        # 1st level notebook with Workload and Codelet tabs
+        # 1st level notebook with Workload, Codelet, and Oneview tabs
         main_note = ttk.Notebook(parent)
-        self.workloadTab = WorkLoadTab(main_note)
-        self.codeletTab = CodeletTab(main_note)
-        self.oneviewTab = OneviewTab(main_note)
-        main_note.add(self.workloadTab, text="Workload")
+        self.workloadTab = tk.Frame(main_note)
+        self.codeletTab = tk.Frame(main_note)
+        self.oneviewTab = tk.Frame(main_note)
+        main_note.add(self.workloadTab, text="Application")
         main_note.add(self.codeletTab, text="Codelet")
         main_note.add(self.oneviewTab, text="Oneview")
+        self.oneview_frame = tk.Frame(self.oneviewTab)
+        self.oneview_frame.pack(fill=tk.BOTH, expand=True)
         # Workload and Codelet each have their own 2nd level tabs
         workload_note = ttk.Notebook(self.workloadTab)
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
-        self.c_summaryTab = SummaryTab(codelet_note)
-        self.c_trawlTab = TrawlTab(codelet_note)
-        self.c_qplotTab = QPlotTab(codelet_note)
-        self.c_siPlotTab = SIPlotTab(codelet_note)
+        self.c_summaryTab = tk.Frame(codelet_note)
+        self.c_trawlTab = tk.Frame(codelet_note)
+        self.c_qplotTab = tk.Frame(codelet_note)
+        self.c_siPlotTab = tk.Frame(codelet_note)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
@@ -251,10 +253,10 @@ class AnalyzerGui(tk.Frame):
                                                 sashpad=3)
         self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
         # Workload tabs
-        self.w_summaryTab = SummaryTab(workload_note)
-        self.w_trawlTab = TrawlTab(workload_note)
-        self.w_qplotTab = QPlotTab(workload_note)
-        self.w_siPlotTab = SIPlotTab(workload_note)
+        self.w_summaryTab = tk.Frame(workload_note)
+        self.w_trawlTab = tk.Frame(workload_note)
+        self.w_qplotTab = tk.Frame(workload_note)
+        self.w_siPlotTab = tk.Frame(workload_note)
         workload_note.add(self.w_trawlTab, text="TRAWL")
         workload_note.add(self.w_qplotTab, text="QPlot")
         workload_note.add(self.w_siPlotTab, text="SI Plot")
@@ -262,7 +264,7 @@ class AnalyzerGui(tk.Frame):
         return main_note
 
 
-def on_closing(root):
+def onClosing(root):
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
         root.quit()
         root.destroy()
@@ -271,13 +273,15 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
     root = tk.Tk()
     root.title("Cape Analyzer")
-    # Set opening window to half user's screen wxh
     width  = root.winfo_screenwidth()
     height = root.winfo_screenheight()
     root.geometry('%sx%s' % (int(width/1.2), int(height/1.2)))
-    #root.geometry(f'{width}x{height}')
 
     gui = AnalyzerGui(root)
 
-    root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
+    root.protocol("WM_DELETE_WINDOW", lambda: onClosing(root))
+    #sys.excepthook = cef.ExceptHook  # To shutdown all CEF processes on error
+    #browser = MainFrame(gui.oneview_frame)
+    #cef.Initialize()
     root.mainloop()
+    #cef.Shutdown()
