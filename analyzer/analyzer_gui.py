@@ -3,6 +3,8 @@ from tkinter import messagebox
 from tkinter import ttk
 from argparse import ArgumentParser
 #from idlelib.TreeWidget import ScrolledCanvas, FileTreeItem, TreeNode
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from pandastable import Table
 import pathlib
 import os
 from os.path import expanduser
@@ -11,6 +13,24 @@ from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 import tempfile
 import pkg_resources.py2_warn
+
+
+# Simple implementation of Observer Design Pattern
+class Observable:
+    def __init__(self):
+        self.observers = []
+    def add_observers(self, observer):
+        self.observers.append(observer)
+    def notify_observers(self):
+        for observer in self.observers:
+            observer.notify(self)
+            
+class Observer:
+    def __init__(self, observable):
+        observable.add_observers(self)
+        
+    def notify(self, observable):
+        print("Notified from ", observable)
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -25,7 +45,62 @@ class ScrolledTreePane(tk.Frame):
         self.treeview.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         self.treeview.pack(fill=tk.BOTH, expand=1)  
 
+class LoadedData(Observable):
+    def __init__(self):
+        super().__init__()
+        self.data_items=[]
+    def add_data(self, source):
+        tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+        print(tmpfile.name)
+        in_files = [source]
+        in_file_format ='csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
+        user_op_file = None
+        request_no_cqa = False
+        request_use_cpi = False
+        request_skip_energy = False
+        request_skip_stalls = False
+        request_succinct = False
+        summary_report(in_files, tmpfile.name, in_file_format, user_op_file, request_no_cqa, \
+            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, None)
+        # Just use file for data storage now.  May explore keeping dataframe in future if needed.
+        # Currently assume only 1 run is loaded but we should extend this to aloow loading multiple
+        # data and pool data together
+        self.data_items=[tmpfile.name]
+        #self.data_items.append(tmpfile.name)
+        self.notify_observers()
+    def get_data_items(self):
+        return self.data_items
+        
+class QPlotData(Observable):
+    def __init__(self, loadedData):
+        super().__init__()
+        self.loadedData = loadedData
+        # Watch for updates in loaded data
+        loadedData.add_observers(self)
+        self.df = None
+        self.fig = None
 
+    def getDf(self):
+        return self.df
+    
+    def getFig(self):
+        return self.fig
+
+    def notify(self, loadedData):
+        print("Notified from ", loadedData)
+        chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
+        #fname=tmpfile.name
+        # Assume only one set of data loaded for now
+        fname=loadedData.get_data_items()[0]
+        df_XFORM, fig_XFORM, df_ORIG, fig_ORIG = parse_ip_qplot\
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True)
+        # TODO: Need to settle how to deal with multiple plots/dataframes
+        # May want to let user to select multiple plots to look at within this tab
+        # Currently just save the ORIG data
+        self.df = df_ORIG if df_ORIG is not None else df_XFORM
+        self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+        self.notify_observers()
+    
 class DataSourcePanel(ScrolledTreePane):
     class DataTreeNode:
         nextId = 0
@@ -174,8 +249,43 @@ class TrawlTab(tk.Frame):
         tk.Frame.__init__(self, parent)
 
 class QPlotTab(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, qplotData):
         tk.Frame.__init__(self, parent)
+        self.qplotData = qplotData
+        if qplotData is not None:
+            qplotData.add_observers(self)
+        # QPlot tab has paned window with summary table and qplot
+        self.c_qplot_window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
+
+    # QPlot data updated
+    def notify(self, qplotData):
+        df = qplotData.getDf()
+        fig = qplotData.getFig()
+
+        for w in self.c_qplot_window.winfo_children():
+            w.destroy()
+
+		# Display QPlot from QPlot tab
+        qplot_frame = tk.Frame(self.c_qplot_window)
+        qplot_frame.pack()
+        qplot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.c_qplot_window.add(qplot_frame, stretch='always')
+        canvas = FigureCanvasTkAgg(fig, qplot_frame)
+        toolbar = NavigationToolbar2Tk(canvas, qplot_frame)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        summary_frame = tk.Frame(self.c_qplot_window)
+        summary_frame.pack()
+        self.c_qplot_window.add(summary_frame, stretch='always')
+        pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', \
+            'C_RAM', 'C_max', 'memlevel', 'C_op']], showtoolbar=True, showstatusbar=True)
+        pt.show()
+        pt.redraw()
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent):
@@ -185,6 +295,7 @@ class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
         self.parent = parent
+        self.loadedData = LoadedData()
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
@@ -211,20 +322,7 @@ class AnalyzerGui(tk.Frame):
 
     def loadDataSource(self, source):
         print("DATA source to be loaded", source)
-        tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-        print(tmpfile.name)
-        in_files = [source]
-        in_file_format ='csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
-        user_op_file = None
-        request_no_cqa = False
-        request_use_cpi = False
-        request_skip_energy = False
-        request_skip_stalls = False
-        request_succinct = False
-        summary_report(in_files, tmpfile.name, in_file_format, user_op_file, request_no_cqa, \
-            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, None)
-        chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
-        parse_ip_qplot(tmpfile.name, "test", "scalar", "Testing", chosen_node_set, False, gui=True, analyzer_gui=self)
+        self.loadedData.add_data(source)
         #parse_ip_siplot(tmpfile.name, "test", 'row', "Testing", chosen_node_set, root=self.siPlotTab)
 
     def buildTabs(self, parent):
@@ -242,20 +340,16 @@ class AnalyzerGui(tk.Frame):
         # Codelet tabs
         self.c_summaryTab = SummaryTab(codelet_note)
         self.c_trawlTab = TrawlTab(codelet_note)
-        self.c_qplotTab = QPlotTab(codelet_note)
+        self.c_qplotTab = QPlotTab(codelet_note, QPlotData(self.loadedData))
         self.c_siPlotTab = SIPlotTab(codelet_note)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.pack(fill=tk.BOTH, expand=1)
-        # QPlot tab has paned window with summary table and qplot
-        self.c_qplot_window = tk.PanedWindow(self.c_qplotTab, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
-                                                sashpad=3)
-        self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
         # Workload tabs
         self.w_summaryTab = SummaryTab(workload_note)
         self.w_trawlTab = TrawlTab(workload_note)
-        self.w_qplotTab = QPlotTab(workload_note)
+        self.w_qplotTab = QPlotTab(workload_note, None) # None for data for now - to be updated
         self.w_siPlotTab = SIPlotTab(workload_note)
         workload_note.add(self.w_trawlTab, text="TRAWL")
         workload_note.add(self.w_qplotTab, text="QPlot")
