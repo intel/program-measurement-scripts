@@ -13,11 +13,7 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 from matplotlib import style
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from adjustText import adjust_text
-import tkinter as tk
-from tkinter import ttk
-from pandastable import Table
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -39,23 +35,21 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, analyzer_gui=None):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
+
 	df = pd.read_csv(input_data_source)
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 
-
 	grouped = df.groupby('variant')
-	# Destroy old Summary/QPlot if any
-	if analyzer_gui is not None:
-		for w in analyzer_gui.c_qplot_window.winfo_children():
-			w.destroy()
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, analyzer_gui)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, analyzer_gui)
+	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	# Return dataframe and figure for GUI
+	return (df_XFORM, fig_XFORM, df_ORIG, fig_ORIG)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -110,9 +104,9 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, analyzer_gui=None):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False):
 	if df.empty:
-		return # Nothing to do
+		return None, None # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
@@ -121,7 +115,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
 
 	if no_plot:
-		return
+		return df, None
 
 	try:
 		indices = df['short_name']
@@ -135,18 +129,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		outputfile=None
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
-	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, analyzer_gui)
-	
-	# Add summary dataframe to QPlot tab
-	if analyzer_gui is not None:
-		summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
-		summary_frame.pack()
-		analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
-		pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
-				showtoolbar=True, showstatusbar=True)
-		pt.show()
-		pt.redraw()
+	fig = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
+	return df, fig
 
 
 def draw_contours(ax, maxx, ns):
@@ -162,7 +147,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, analyzer_gui=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -203,18 +188,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, analyzer_gui=No
 	plt.tight_layout()
 	if filename:
 		plt.savefig(filename)
-	else:
-		# Display QPlot from QPlot tab
-		qplot_frame = tk.Frame(analyzer_gui.c_qplot_window)
-		qplot_frame.pack()
-		qplot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-		analyzer_gui.c_qplot_window.add(qplot_frame, stretch='always')
-		canvas = FigureCanvasTkAgg(fig, qplot_frame)
-		toolbar = NavigationToolbar2Tk(canvas, qplot_frame)
-		toolbar.update()
-		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-		canvas.draw()
-		canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+	return fig
 
 def usage(reason):
 	error_code = 0
