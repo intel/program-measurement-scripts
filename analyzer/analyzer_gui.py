@@ -166,6 +166,8 @@ class ApplicationTab(tk.Frame):
 class OneviewTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)        
+        # May want to explore solution to embed Chrome in GUI
+        # https://stackoverflow.com/questions/46571448/tkinter-and-a-html-file
 
 class TrawlTab(tk.Frame):
     def __init__(self, parent):
