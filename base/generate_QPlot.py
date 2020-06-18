@@ -49,8 +49,9 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 
 	grouped = df.groupby('variant')
 	# Destroy old Summary/QPlot if any
-	for w in analyzer_gui.c_qplot_window.winfo_children():
-		w.destroy()
+	if analyzer_gui is not None:
+		for w in analyzer_gui.c_qplot_window.winfo_children():
+			w.destroy()
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
 	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, analyzer_gui)
@@ -138,13 +139,14 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, analyzer_gui)
 	
 	# Add summary dataframe to QPlot tab
-	summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
-	summary_frame.pack()
-	analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
-	pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
+	if analyzer_gui is not None:
+		summary_frame = tk.Frame(analyzer_gui.c_qplot_window)
+		summary_frame.pack()
+		analyzer_gui.c_qplot_window.add(summary_frame, stretch='always')
+		pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']],
 				showtoolbar=True, showstatusbar=True)
-	pt.show()
-	pt.redraw()
+		pt.show()
+		pt.redraw()
 
 
 def draw_contours(ax, maxx, ns):
