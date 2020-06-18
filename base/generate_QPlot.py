@@ -50,7 +50,7 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
 	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
 	# Return dataframe and figure for GUI
-	return (df_XFORM, fig_XFORM) if df_XFORM is not None else (df_ORIG, fig_ORIG)
+	return (df_XFORM, fig_XFORM, df_ORIG, fig_ORIG)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
