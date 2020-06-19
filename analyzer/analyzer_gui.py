@@ -13,6 +13,9 @@ from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 import tempfile
 import pkg_resources.py2_warn
+from web_browser import MainFrame
+from cefpython3 import cefpython as cef
+import sys
 
 
 # Simple implementation of Observer Design Pattern
@@ -240,9 +243,10 @@ class ApplicationTab(tk.Frame):
 
 class OneviewTab(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)        
-        # May want to explore solution to embed Chrome in GUI
-        # https://stackoverflow.com/questions/46571448/tkinter-and-a-html-file
+        tk.Frame.__init__(self, parent)     
+        # Oneview embedded in this frame
+        self.oneview_frame = tk.Frame(self)
+        self.oneview_frame.pack(fill=tk.BOTH, expand=True)   
 
 class TrawlTab(tk.Frame):
     def __init__(self, parent):
@@ -375,5 +379,21 @@ if __name__ == '__main__':
 
     gui = AnalyzerGui(root)
 
+    browser = MainFrame(gui.oneviewTab.oneview_frame)
+    # Allow pyinstaller to find all CEFPython binaries
+    if getattr(sys, 'frozen', False):
+        appSettings = {
+            'cache_path': tempfile.gettempdir(),
+            'resources_dir_path': sys._MEIPASS,
+            'locales_dir_path': sys._MEIPASS + os.sep + 'locales',
+            'browser_subprocess_path': sys._MEIPASS + os.sep + 'subprocess.exe',
+        }
+    else:
+        appSettings = {
+            'cache_path': tempfile.gettempdir()
+        }
+    cef.Initialize(appSettings)
+
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
     root.mainloop()
+    cef.Shutdown()
