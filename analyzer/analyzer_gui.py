@@ -13,9 +13,13 @@ from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 import tempfile
 import pkg_resources.py2_warn
-from web_browser import MainFrame
+from web_browser import (MainFrame, BrowserFrame)
 from cefpython3 import cefpython as cef
 import sys
+import requests
+from lxml import html
+import time
+from pathlib import Path
 
 
 # Simple implementation of Observer Design Pattern
@@ -132,8 +136,57 @@ class DataSourcePanel(ScrolledTreePane):
             self.path = path
 
     class RemoteTreeNode(DataTreeNode):
-        def __init__(self, name):
+        def __init__(self, path, name, container, time_stamp=None):
             super().__init__(name)
+            self.container = container
+            self.path = path
+            self.time_stamp = time_stamp
+
+    class RemoteNode(RemoteTreeNode):
+        def __init__(self, path, name, container, time_stamp=None):
+            super().__init__(path, name, container, time_stamp)
+            self.children = []
+
+        def open(self):
+            print("remote node open:", self.name, self.id) 
+            page = requests.get(self.path)
+            content_type = page.headers['content-type']
+
+            # Webpage node
+            if content_type == 'text/html':
+                # Load this webpage into Oneview tab
+                gui.mainFrame.browser_frame.change_browser(url=self.path)
+                # Replicate remote directory structure
+                local_file_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\Oneview'
+                dirs = self.path[66:].split('/')
+                for directory in dirs:
+                    local_file_path = local_file_path + '\\' + directory
+                # Each file has its own directory with versions of that file labeled by time stamp
+                local_dir_path = local_file_path
+                local_file_path = local_file_path + '\\' + self.time_stamp + '.xlsx'
+                print(f'LOCAL PATH:{local_file_path}')
+                # Download Corresponding Excel file if it doesn't already exist
+                if not os.path.isfile(local_file_path):
+                    Path(local_dir_path).mkdir(parents=True, exist_ok=True)
+                    excel_url = self.path[:-1] + '.xlsx'
+                    excel = requests.get(excel_url)
+                    open(local_file_path, 'wb').write(excel.content)
+                # Open excel file from local directory and plot
+                self.container.openLocalFile(local_file_path)
+
+            # Directory node
+            elif content_type == 'text/html;charset=ISO-8859-1':
+                tree = html.fromstring(page.content)
+                for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
+                    hyperlink = link_element.xpath('td[position()=2]/a')[0]
+                    name = hyperlink.get('href')
+                    # Only show html pages, xlsx will be auto loaded
+                    if name[-1] == '/' and name not in self.children:
+                        self.children.append(name)
+                        fullpath = self.path + name
+                        # Time stamp will be the date last modified (TODO: Distinguish between same day versions)
+                        time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10]
+                        self.container.insertNode(self, DataSourcePanel.RemoteNode(fullpath, name, self.container, time_stamp=time_stamp))
 
     class LocalFileNode(LocalTreeNode):
         def __init__(self, path, name, container):
@@ -199,9 +252,10 @@ class DataSourcePanel(ScrolledTreePane):
 
 
     def setupRemoteRoots(self):
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('uvsq'))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('uiuc'))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('uta'))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'Oneview', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('','uvsq', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('','uiuc', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('','uta', self))
 
 class AnalysisResultsPanel(ScrolledTreePane):
     def __init__(self, parent):
@@ -237,6 +291,10 @@ class SummaryTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+class LabelTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -263,6 +321,15 @@ class QPlotTab(tk.Frame):
                                                 sashpad=3)
         self.c_qplot_window.pack(fill=tk.BOTH,expand=True)
 
+    # Create tabs for summary table and short labels
+    def buildSummaryTabs(self):
+        self.summary_note = ttk.Notebook(self.summary_frame)
+        self.summaryTab = SummaryTab(self.summary_note)
+        self.labelTab = LabelTab(self.summary_note)
+        self.summary_note.add(self.summaryTab, text="Summary")
+        self.summary_note.add(self.labelTab, text="Labels")
+        self.summary_note.pack(fill=tk.BOTH, expand=True)
+
     # QPlot data updated
     def notify(self, qplotData):
         df = qplotData.getDf()
@@ -283,10 +350,11 @@ class QPlotTab(tk.Frame):
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        summary_frame = tk.Frame(self.c_qplot_window)
-        summary_frame.pack()
-        self.c_qplot_window.add(summary_frame, stretch='always')
-        pt = Table(summary_frame, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', \
+        self.summary_frame = tk.Frame(self.c_qplot_window)
+        self.summary_frame.pack()
+        self.buildSummaryTabs()
+        self.c_qplot_window.add(self.summary_frame, stretch='always')
+        pt = Table(self.summaryTab, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', \
             'C_RAM', 'C_max', 'memlevel', 'C_op']], showtoolbar=True, showstatusbar=True)
         pt.show()
         pt.redraw()
@@ -323,6 +391,7 @@ class AnalyzerGui(tk.Frame):
         self.pw.add(right)
         self.pw.pack(fill=tk.BOTH,expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
+        self.mainFrame = MainFrame(self.oneviewTab.oneview_frame)
 
     def loadDataSource(self, source):
         print("DATA source to be loaded", source)
@@ -331,18 +400,17 @@ class AnalyzerGui(tk.Frame):
 
     def buildTabs(self, parent):
         # 1st level notebook with Workload and Codelet tabs
-        main_note = ttk.Notebook(parent)
-        self.workloadTab = WorkLoadTab(main_note)
-        self.codeletTab = CodeletTab(main_note)
-        self.oneviewTab = OneviewTab(main_note)
-        main_note.add(self.workloadTab, text="Workload")
-        main_note.add(self.codeletTab, text="Codelet")
-        main_note.add(self.oneviewTab, text="Oneview")
+        self.main_note = ttk.Notebook(parent)
+        self.workloadTab = WorkLoadTab(self.main_note)
+        self.codeletTab = CodeletTab(self.main_note)
+        self.oneviewTab = OneviewTab(self.main_note)
+        self.main_note.add(self.oneviewTab, text="Oneview")
+        self.main_note.add(self.workloadTab, text="Workload")
+        self.main_note.add(self.codeletTab, text="Codelet")
         # Workload and Codelet each have their own 2nd level tabs
         workload_note = ttk.Notebook(self.workloadTab)
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
-        self.c_summaryTab = SummaryTab(codelet_note)
         self.c_trawlTab = TrawlTab(codelet_note)
         self.c_qplotTab = QPlotTab(codelet_note, QPlotData(self.loadedData))
         self.c_siPlotTab = SIPlotTab(codelet_note)
@@ -351,7 +419,6 @@ class AnalyzerGui(tk.Frame):
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.pack(fill=tk.BOTH, expand=1)
         # Workload tabs
-        self.w_summaryTab = SummaryTab(workload_note)
         self.w_trawlTab = TrawlTab(workload_note)
         self.w_qplotTab = QPlotTab(workload_note, None) # None for data for now - to be updated
         self.w_siPlotTab = SIPlotTab(workload_note)
@@ -359,7 +426,7 @@ class AnalyzerGui(tk.Frame):
         workload_note.add(self.w_qplotTab, text="QPlot")
         workload_note.add(self.w_siPlotTab, text="SI Plot")
         workload_note.pack(fill=tk.BOTH, expand=True)
-        return main_note
+        return self.main_note
 
 
 def on_closing(root):
@@ -371,15 +438,16 @@ if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
     root = tk.Tk()
     root.title("Cape Analyzer")
-    # Set opening window to half user's screen wxh
+    # Set opening window to portion of user's screen wxh
     width  = root.winfo_screenwidth()
     height = root.winfo_screenheight()
     root.geometry('%sx%s' % (int(width/1.2), int(height/1.2)))
     #root.geometry(f'{width}x{height}')
 
+    # The AnalyzerGui is global so that the data source panel can access it
+    global gui
     gui = AnalyzerGui(root)
 
-    browser = MainFrame(gui.oneviewTab.oneview_frame)
     # Allow pyinstaller to find all CEFPython binaries
     if getattr(sys, 'frozen', False):
         appSettings = {
@@ -393,7 +461,6 @@ if __name__ == '__main__':
             'cache_path': tempfile.gettempdir()
         }
     cef.Initialize(appSettings)
-
     root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root))
     root.mainloop()
     cef.Shutdown()
