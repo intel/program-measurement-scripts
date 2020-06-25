@@ -82,6 +82,8 @@ def calculate_codelet_name(out_row, in_row):
         getter(in_row, 'codelet.name', type=str))
     if out_row['Name'] in short_names:
         out_row['Short Name'] = short_names[out_row['Name']]
+    else:
+        out_row['Short Name'] = out_row['Name'] # Short Name is default set to actual name
     out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
         else getter(in_row, 'decan_variant.name', type=str)
 
@@ -414,7 +416,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             df = df.drop(columns=cqa_metrics, errors='ignore')
         
     output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1, skip_energy=skip_energy, skip_stalls=skip_stalls, succinct=succinct))
-
+    #print(f'***OUTPUT ROWS:{output_rows}')
     if (outputfile == '-'):
         output_csvfile = sys.stdout
     else:
@@ -435,7 +437,7 @@ def summary_formulas(formula_file_name):
         print_formulas(formula_file)
 
 def read_short_names(filename):
-    with open(filename, 'r') as infile:
+    with open(filename, 'r', encoding='utf-8-sig') as infile:
         rows = list(csv.DictReader(infile, delimiter=','))
         for row in rows:
             if 'short_name' in row:
