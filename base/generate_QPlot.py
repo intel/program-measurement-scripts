@@ -38,16 +38,18 @@ capacity_formula= {
 def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
+
 	df = pd.read_csv(input_data_source)
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 
-
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
-	compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	# Return dataframe and figure for GUI
+	return (df_XFORM, fig_XFORM, df_ORIG, fig_ORIG)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -104,16 +106,16 @@ def compute_intensity(df, chosen_node_set):
 
 def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False):
 	if df.empty:
-		return # Nothing to do
+		return None, None # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
 	print('Saving to '+output_data_source)
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
-	
+
 	if no_plot:
-		return
+		return df, None
 
 	try:
 		indices = df['short_name']
@@ -126,9 +128,10 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	if gui:
 		outputfile=None
 	else:
-		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)
-	plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
+		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
+	fig = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
 						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
+	return df, fig
 
 
 def draw_contours(ax, maxx, ns):
@@ -185,9 +188,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale):
 	plt.tight_layout()
 	if filename:
 		plt.savefig(filename)
-	else:
-		plt.show()
 
+	return fig
 
 def usage(reason):
 	error_code = 0
