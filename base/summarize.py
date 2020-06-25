@@ -387,7 +387,7 @@ def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, enable_lfb, succinct, name_file):
+                   skip_stalls, succinct, name_file, enable_lfb=False):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
@@ -484,6 +484,6 @@ if __name__ == '__main__':
 
 
     summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.enable_lfb, args.succinct, args.name_file)
+                   args.succinct, args.name_file, args.enable_lfb)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
