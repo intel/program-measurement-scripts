@@ -55,6 +55,7 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
 
+LFBFields = ['%k-value:c0', '%k-value:c1', '%k-value:c2', '%k-value:c3', '%k-value:c4', '%k-value:c5', '%k-value:c6', '%k-value:c7', '%k-value:c8', '%k-value:c9', '%k-value:c0xa']
 
 def counter_sum(row, cols):
     sum = 0
@@ -310,10 +311,24 @@ def calculate_speculation_ratios(out_row, in_row):
     except:
         pass
     try:
-        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
+        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
+def calculate_lfb_histogram(row):
+    try:
+        clk = "CPU_CLK_UNHALTED_THREAD"
+        fmt = "L1D_PEND_MISS_PENDING:c%s"
+        prv, res = clk, []
+        rng = [ ("0x%x" if x > 9 else "%x") % x for x in range(1,11) ]
+        for i in rng:
+            res.append(max(0, getter(row, prv) - getter(row, fmt % i)) / getter(row, clk))
+            prv = fmt % i
+        return dict(zip(
+            ("%%k-value:c%s" % x for x in ([ "0" ] + rng)), \
+            res + [ getter(row, prv) / getter(row, clk) ]))
+    except:
+        return {}
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, skip_stalls, succinct):
     out_row = {}
@@ -321,12 +336,19 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, ski
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(out_row, in_row, iterations_per_rep, use_cpi)
-    num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    try:
+        num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    except:
+        num_ops, ops_per_sec = None, None
     calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
     calculate_speculation_ratios (out_row, in_row)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec, skip_energy)
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
     calculate_stall_percentages(out_row, in_row, skip_stalls)
+
+    lfb_kvals = calculate_lfb_histogram(in_row)
+    if lfb_kvals:
+        out_row.update(lfb_kvals)
 
     if succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
@@ -365,7 +387,7 @@ def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file):
+                   skip_stalls, enable_lfb, succinct, name_file):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
@@ -403,6 +425,8 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
 
     df.columns = unify_column_names(df.columns)
 
+    if enable_lfb:
+        field_names.extend(LFBFields)
 
     # Remove CQA columns if needed
     if no_cqa:
@@ -455,10 +479,11 @@ if __name__ == '__main__':
     parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
     parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
     parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
+    parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
     args = parser.parse_args()
 
 
     summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file)
+                   args.enable_lfb, args.succinct, args.name_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
