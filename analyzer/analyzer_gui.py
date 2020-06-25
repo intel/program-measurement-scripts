@@ -297,6 +297,10 @@ class SummaryTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+class DetailedSummaryTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
 class LabelTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -337,10 +341,12 @@ class QPlotTab(tk.Frame):
     # Create tabs for summary table and short labels
     def buildSummaryTabs(self):
         self.summary_note = ttk.Notebook(self.summary_frame)
-        self.summaryTab = SummaryTab(self.summary_note)
+        self.detailedSummaryTab = DetailedSummaryTab(self.summary_note)
         self.labelTab = LabelTab(self.summary_note)
+        self.summaryTab = SummaryTab(self.summary_note)
         self.summary_note.add(self.summaryTab, text="Summary")
         self.summary_note.add(self.labelTab, text="Labels")
+        self.summary_note.add(self.detailedSummaryTab, text="Detailed Summary")
         self.summary_note.pack(fill=tk.BOTH, expand=True)
 
     # Create table for Labels tab and update button
@@ -403,9 +409,15 @@ class QPlotTab(tk.Frame):
         self.buildSummaryTabs()
         self.buildLabelTable(df)
         self.c_qplot_window.add(self.summary_frame, stretch='always')
-        pt = Table(self.summaryTab, dataframe=df[['name', 'variant','C_L1', 'C_L2', 'C_L3', \
-            'C_RAM', 'C_max', 'memlevel', 'C_op']], showtoolbar=True, showstatusbar=True)
-        pt.show()
+        summary_df = df[['name', 'short_name', 'time_s']]
+        summary_df = summary_df.sort_values(by='time_s', ascending=False)
+        summary_pt = Table(self.summaryTab, dataframe=summary_df, showtoolbar=True, showstatusbar=True)
+        summary_pt.show()
+        detailed_df = df[['name', 'short_name', 'time_s', 'variant','C_L1', 'C_L2', 'C_L3', \
+            'C_RAM', 'C_max', 'memlevel', 'C_op']]
+        detailed_df = detailed_df.sort_values(by='time_s', ascending=False)
+        detail_pt = Table(self.detailedSummaryTab, dataframe=detailed_df, showtoolbar=True, showstatusbar=True)
+        detail_pt.show()
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent):
@@ -483,10 +495,17 @@ def on_closing(root):
         root.quit()
         root.destroy()
 
+def check_focus(event):
+    # Embedded chrome browser takes focus from application
+    if root.focus_get() is None:
+        root.focus_force()
+
 if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
+    global root
     root = tk.Tk()
     root.title("Cape Analyzer")
+    root.bind("<Button-1>", check_focus)
     # Set opening window to portion of user's screen wxh
     width  = root.winfo_screenwidth()
     height = root.winfo_screenheight()
