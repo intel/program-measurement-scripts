@@ -99,14 +99,14 @@ class QPlotData(Observable):
     def getFig(self):
         return self.fig
 
-    def notify(self, loadedData):
+    def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
         chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
         df_XFORM, fig_XFORM, df_ORIG, fig_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True)
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
         # TODO: Need to settle how to deal with multiple plots/dataframes
         # May want to let user to select multiple plots to look at within this tab
         # Currently just save the ORIG data
@@ -301,6 +301,28 @@ class DetailedSummaryTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+class AxesTab(tk.Frame):
+    def __init__(self, parent, qplotTab):
+        tk.Frame.__init__(self, parent)
+        self.qplotTab = qplotTab
+        self.parent = parent
+        # Options for y axis
+        self.y_selected = tk.StringVar()
+        self.y_selected.set('Choose Y Axis')
+        y_options = ['C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max']
+        y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
+        y_menu.pack(side=tk.TOP, anchor=tk.NW)
+
+        # Update button to replot
+        update = tk.Button(self, text='Update', command=self.update_axes)
+        update.pack(side=tk.TOP, anchor=tk.NW)
+    
+    def update_axes(self):
+        if self.y_selected.get() == 'Choose Y Axis':
+            pass
+        else:
+            self.qplotTab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
+
 class LabelTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -341,12 +363,14 @@ class QPlotTab(tk.Frame):
     # Create tabs for summary table and short labels
     def buildSummaryTabs(self):
         self.summary_note = ttk.Notebook(self.summary_frame)
-        self.detailedSummaryTab = DetailedSummaryTab(self.summary_note)
-        self.labelTab = LabelTab(self.summary_note)
         self.summaryTab = SummaryTab(self.summary_note)
+        self.labelTab = LabelTab(self.summary_note)
+        self.detailedSummaryTab = DetailedSummaryTab(self.summary_note)
+        self.axesTab = AxesTab(self.summary_note, self)
         self.summary_note.add(self.summaryTab, text="Summary")
         self.summary_note.add(self.labelTab, text="Labels")
         self.summary_note.add(self.detailedSummaryTab, text="Detailed Summary")
+        self.summary_note.add(self.axesTab, text="Axes")
         self.summary_note.pack(fill=tk.BOTH, expand=True)
 
     # Create table for Labels tab and update button
