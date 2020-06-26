@@ -121,6 +121,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		indices = df['short_name']
 	except:
 		indices = df['name']
+
 	if x_axis:
 		xs = df[x_axis]
 	else:
@@ -129,6 +130,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		ys = df[y_axis]
 	else:
 		ys = df['C_max']
+		
 	mem_level=df['memlevel']
 	today = datetime.date.today()
 	if gui:
