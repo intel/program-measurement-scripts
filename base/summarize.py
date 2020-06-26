@@ -55,7 +55,8 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
 
-LFBFields = ['%k-value:c0', '%k-value:c1', '%k-value:c2', '%k-value:c3', '%k-value:c4', '%k-value:c5', '%k-value:c6', '%k-value:c7', '%k-value:c8', '%k-value:c9', '%k-value:c0xa']
+LFBFields = ['lfb:k{}'.format(i) for i in range(0,11)]
+field_names = field_names + LFBFields
 
 def counter_sum(row, cols):
     sum = 0
@@ -315,22 +316,25 @@ def calculate_speculation_ratios(out_row, in_row):
     except:
         return
 
-def calculate_lfb_histogram(row):
+def calculate_lfb_histogram(out_row, row, enable_lfb):
+    if not enable_lfb:
+        return
     try:
         clk = "CPU_CLK_UNHALTED_THREAD"
         fmt = "L1D_PEND_MISS_PENDING:c%s"
-        prv, res = clk, []
-        rng = [ ("0x%x" if x > 9 else "%x") % x for x in range(1,11) ]
-        for i in rng:
-            res.append(max(0, getter(row, prv) - getter(row, fmt % i)) / getter(row, clk))
-            prv = fmt % i
-        return dict(zip(
-            ("%%k-value:c%s" % x for x in ([ "0" ] + rng)), \
-            res + [ getter(row, prv) / getter(row, clk) ]))
+        ofmt = "lfb:k%d"
+        prv = clk
+        for x in range(1,11): 
+            i = ("0x%x" if x > 9 else "%x") % x 
+            cnt = fmt % i
+            out_row[ofmt % (x-1)] = max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
+            prv = cnt
+        out_row[ofmt % x] = getter(row, prv) / getter(row, clk)
     except:
-        return {}
+        pass
 
-def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, skip_stalls, succinct):
+def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
+        skip_stalls, succinct, enable_lfb):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
@@ -346,10 +350,7 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, ski
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
     calculate_stall_percentages(out_row, in_row, skip_stalls)
 
-    lfb_kvals = calculate_lfb_histogram(in_row)
-    if lfb_kvals:
-        out_row.update(lfb_kvals)
-
+    calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
@@ -394,6 +395,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     print('User Op file: ', user_op_file, file=sys.stderr)
     print('Name file: ', name_file, file=sys.stderr)
     print('Skip Energy: ', skip_energy, file=sys.stderr)
+    print('Enable LFB: ', enable_lfb, file=sys.stderr)
 
     if name_file:
         read_short_names(name_file)
@@ -425,8 +427,6 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
 
     df.columns = unify_column_names(df.columns)
 
-    if enable_lfb:
-        field_names.extend(LFBFields)
 
     # Remove CQA columns if needed
     if no_cqa:
@@ -437,7 +437,9 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             # Ignore error if extra CQA metrics in metrics_data/STAN
             df = df.drop(columns=cqa_metrics, errors='ignore')
         
-    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1, skip_energy=skip_energy, skip_stalls=skip_stalls, succinct=succinct))
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
+                use_cpi=use_cpi, axis=1, skip_energy=skip_energy, \
+                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb))
 
     if (outputfile == '-'):
         output_csvfile = sys.stdout
