@@ -55,6 +55,8 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
 
+LFBFields = ['%lfb:k{}'.format(i) for i in range(0,11)]
+field_names = field_names + LFBFields
 
 def counter_sum(row, cols):
     sum = 0
@@ -312,24 +314,45 @@ def calculate_speculation_ratios(out_row, in_row):
     except:
         pass
     try:
-        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
+        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
+def calculate_lfb_histogram(out_row, row, enable_lfb):
+    if not enable_lfb:
+        return
+    try:
+        clk = "CPU_CLK_UNHALTED_THREAD"
+        fmt = "L1D_PEND_MISS_PENDING:c%s"
+        ofmt = "%%lfb:k%d"
+        prv = clk
+        for x in range(1,11): 
+            i = ("0x%x" if x > 9 else "%x") % x 
+            cnt = fmt % i
+            out_row[ofmt % (x-1)] = max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
+            prv = cnt
+        out_row[ofmt % x] = getter(row, prv) / getter(row, clk)
+    except:
+        pass
 
-def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, skip_stalls, succinct):
+def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
+        skip_stalls, succinct, enable_lfb):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
     time = calculate_time(out_row, in_row, iterations_per_rep, use_cpi)
-    num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    try:
+        num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
+    except:
+        num_ops, ops_per_sec = None, None
     calculate_user_op_rate(out_row, in_row, time, user_op_column_name_dict)
     calculate_speculation_ratios (out_row, in_row)
     calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per_sec, skip_energy)
     calculate_data_rates(out_row, in_row, iterations_per_rep, time)
     calculate_stall_percentages(out_row, in_row, skip_stalls)
 
+    calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
@@ -367,13 +390,14 @@ def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file):
+                   skip_stalls, succinct, name_file, enable_lfb=False):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
     print('Name file: ', name_file, file=sys.stderr)
     print('Skip Energy: ', skip_energy, file=sys.stderr)
+    print('Enable LFB: ', enable_lfb, file=sys.stderr)
 
     if name_file:
         read_short_names(name_file)
@@ -415,8 +439,10 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             # Ignore error if extra CQA metrics in metrics_data/STAN
             df = df.drop(columns=cqa_metrics, errors='ignore')
         
-    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, use_cpi=use_cpi, axis=1, skip_energy=skip_energy, skip_stalls=skip_stalls, succinct=succinct))
-    #print(f'***OUTPUT ROWS:{output_rows}')
+    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
+                use_cpi=use_cpi, axis=1, skip_energy=skip_energy, \
+                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb))
+
     if (outputfile == '-'):
         output_csvfile = sys.stdout
     else:
@@ -457,10 +483,11 @@ if __name__ == '__main__':
     parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
     parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
     parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
+    parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
     args = parser.parse_args()
 
 
     summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file)
+                   args.succinct, args.name_file, args.enable_lfb)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
