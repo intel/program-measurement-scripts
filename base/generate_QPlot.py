@@ -35,7 +35,7 @@ capacity_formula= {
 	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
-def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False):
+def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
 
@@ -46,8 +46,8 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
-	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui)
+	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 	# Return dataframe and figure for GUI
 	return (df_XFORM, fig_XFORM, df_ORIG, fig_ORIG)
 	#for variant, group in grouped:
@@ -104,7 +104,7 @@ def compute_intensity(df, chosen_node_set):
 	print(df['Intensity'])
 
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
 	if df.empty:
 		return None, None # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
@@ -121,8 +121,16 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		indices = df['short_name']
 	except:
 		indices = df['name']
-	xs = df['C_op']
-	ys = df['C_max']
+
+	if x_axis:
+		xs = df[x_axis]
+	else:
+		xs = df['C_op']
+	if y_axis:
+		ys = df[y_axis]
+	else:
+		ys = df['C_max']
+		
 	mem_level=df['memlevel']
 	today = datetime.date.today()
 	if gui:
