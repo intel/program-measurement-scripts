@@ -55,7 +55,7 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
 
-LFBFields = ['lfb:k{}'.format(i) for i in range(0,11)]
+LFBFields = ['%lfb:k{}'.format(i) for i in range(0,11)]
 field_names = field_names + LFBFields
 
 def counter_sum(row, cols):
@@ -322,7 +322,7 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
     try:
         clk = "CPU_CLK_UNHALTED_THREAD"
         fmt = "L1D_PEND_MISS_PENDING:c%s"
-        ofmt = "lfb:k%d"
+        ofmt = "%%lfb:k%d"
         prv = clk
         for x in range(1,11): 
             i = ("0x%x" if x > 9 else "%x") % x 
