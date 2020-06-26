@@ -251,7 +251,10 @@ class DataSourcePanel(ScrolledTreePane):
 
 
     def setupLocalRoots(self):
-        self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(expanduser("~"), 'Home', self) )
+        home_dir=expanduser("~")
+        self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(home_dir, 'Home', self) )
+        cape_cache_path= os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
+        self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_cache_path, 'Previously Visited', self) )
 
     def openLocalChildren(self):
         pass
