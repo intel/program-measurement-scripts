@@ -92,12 +92,16 @@ class QPlotData(Observable):
         loadedData.add_observers(self)
         self.df = None
         self.fig = None
+        self.coverageFig = None
 
     def getDf(self):
         return self.df
     
     def getFig(self):
         return self.fig
+    
+    def getCoverageFig(self):
+        return self.coverageFig
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
@@ -112,6 +116,10 @@ class QPlotData(Observable):
         # Currently just save the ORIG data
         self.df = df_ORIG if df_ORIG is not None else df_XFORM
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+
+        df_XFORM, fig_XFORM, df_ORIG, fig_ORIG = parse_ip_qplot\
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis='time_s')
+        self.coverageFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.notify_observers()
     
 class DataSourcePanel(ScrolledTreePane):
@@ -296,6 +304,30 @@ class CodeletTab(tk.Frame):
 class SummaryTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.mainNote = ttk.Notebook(self)
+        self.plotTab = tk.Frame(self.mainNote)
+        self.dataTab = tk.Frame(self.mainNote)
+        self.labelTab = LabelTab(self.mainNote)
+        self.mainNote.add(self.plotTab, text='Plot')
+        self.mainNote.add(self.dataTab, text='Data')
+        self.mainNote.add(self.labelTab, text='Labels')
+        self.mainNote.pack(fill=tk.BOTH, expand=True)
+
+    def update(self, df, fig):
+        canvas = FigureCanvasTkAgg(fig, self.plotTab)
+        toolbar = NavigationToolbar2Tk(canvas, self.plotTab)
+        toolbar.update()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.draw()
+
+        summaryDf = df[['name', 'short_name', 'time_s']]
+        summaryDf = summaryDf.sort_values(by='time_s', ascending=False)
+        summary_pt = Table(self.dataTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summary_pt.show()
+        summary_pt.redraw()
+
+        self.labelTab.buildLabelTable(df, self.labelTab)
 
 class DetailedSummaryTab(tk.Frame):
     def __init__(self, parent):
@@ -326,6 +358,51 @@ class AxesTab(tk.Frame):
 class LabelTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
+        self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
+        self.short_names_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
+        if not os.path.isfile(self.short_names_path):
+            Path(self.short_names_dir_path).mkdir(parents=True, exist_ok=True)
+            open(self.short_names_path, 'wb')
+
+    # Create table for Labels tab and update button
+    def buildLabelTable(self, df, tab):
+        table_labels = df[['name', 'time_s']]
+        table_labels['short_name'] = table_labels['name']
+        if os.path.getsize(self.short_names_path) > 0:
+            short_names = pd.read_csv(self.short_names_path)
+            short_names = short_names[['name', 'short_name']]
+            inner = pd.merge(left=table_labels, right=short_names, left_on='name', right_on='name')
+            inner.rename(columns={'short_name_y':'short_name'}, inplace=True)
+            inner = inner[['name', 'short_name']]
+            merged = pd.concat([table_labels, inner]).drop_duplicates('name', keep='last')
+        else:
+            merged = table_labels
+        # sort label table by time to keep consistent with data table
+        merged = pd.merge(merged, df[['name','time_s']], on='name')
+        merged = merged.sort_values(by='time_s_y', ascending=False)
+        merged = merged[['name', 'short_name']]
+        table = Table(tab, dataframe=merged, showtoolbar=True, showstatusbar=True)
+        table.show()
+        table.redraw()
+        update_b = tk.Button(tab, text="Update", command=lambda: self.updateLabels(table))
+        update_b.grid()
+        return table
+
+    # Merge user input labels with current mappings and replot
+    def updateLabels(self, table):
+        if os.path.getsize(self.short_names_path) > 0:
+            short_names = pd.read_csv(self.short_names_path)
+            short_names = short_names[['name', 'short_name']]
+            table_names = table.model.df[['name', 'short_name']]
+            outer = pd.merge(left=short_names, right=table_names, left_on='name', right_on='name', how='outer')
+            outer.rename(columns={'short_name_y':'short_name'}, inplace=True)
+            outer = outer[['name', 'short_name']].dropna()
+            merged = pd.concat([short_names, outer]).drop_duplicates('name', keep='last')
+        else:
+            merged = table.model.df[['name', 'short_name']]
+        merged.to_csv(self.short_names_path)
+        gui.loadDataSource(gui.source)
+        #gui.c_qplotTab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
 
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
@@ -367,7 +444,7 @@ class QPlotTab(tk.Frame):
             self.tableFrame = tk.Frame(self.window)
             self.tableFrame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
             self.buildTableTabs()
-            self.parent.buildLabelTable(df, self.labelTab)
+            self.labelTab.buildLabelTable(df, self.labelTab)
             self.window.add(self.tableFrame, stretch='always')
             summaryDf = df[['name', 'short_name', 'time_s', 'variant','C_L1', 'C_L2', 'C_L3', \
                 'C_RAM', 'C_max', 'memlevel', 'C_op']]
@@ -378,7 +455,7 @@ class QPlotTab(tk.Frame):
         # Create tabs for QPlot Summary, Labels, and Axes
         def buildTableTabs(self):
             self.tableNote = ttk.Notebook(self.tableFrame)
-            self.summaryTab = SummaryTab(self.tableNote)
+            self.summaryTab = tk.Frame(self.tableNote)
             self.labelTab = LabelTab(self.tableNote)
             self.axesTab = AxesTab(self.tableNote, self.parent)
             self.tableNote.add(self.summaryTab, text="Data")
@@ -386,106 +463,28 @@ class QPlotTab(tk.Frame):
             self.tableNote.add(self.axesTab, text="Axes")
             self.tableNote.pack(fill=tk.BOTH, expand=True)
 
-    class SummaryTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-            self.parent = parent
-            self.mainNote = ttk.Notebook(self)
-            self.plotTab = tk.Frame(self.mainNote)
-            self.dataTab = tk.Frame(self.mainNote)
-            self.mainNote.add(self.plotTab, text='Plot')
-            self.mainNote.add(self.dataTab, text='Data')
-            self.mainNote.pack(fill=tk.BOTH, expand=True)
-
-        def update(self, df, fig):
-            canvas = FigureCanvasTkAgg(fig, self.plotTab)
-            toolbar = NavigationToolbar2Tk(canvas, self.plotTab)
-            toolbar.update()
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-            canvas.draw()
-
-            summaryDf = df[['name', 'short_name', 'time_s']]
-            summaryDf = summaryDf.sort_values(by='time_s', ascending=False)
-            summary_pt = Table(self.dataTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
-            summary_pt.show()
-            summary_pt.redraw()
-
     def __init__(self, parent, qplotData):
         tk.Frame.__init__(self, parent)
         self.qplotData = qplotData
         if qplotData is not None:
             qplotData.add_observers(self)
 
-        # Setup
-        self.buildTabs()
-        self.checkShortNames()
-    
-    # QPlot will have a tab for the plot and a tab for the summary
-    def buildTabs(self):
-        self.main_note = ttk.Notebook(self)
         self.plotTab = self.PlotTab(self)
-        self.summaryTab = self.SummaryTab(self)
-        self.main_note.add(self.summaryTab, text='Summary')
-        self.main_note.add(self.plotTab, text='Plot')
-        self.main_note.pack(fill=tk.BOTH, expand=True)
-
-    # Create short names mapping file if it doesn't already exist
-    def checkShortNames(self):
-        self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
-        self.short_names_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
-        if not os.path.isfile(self.short_names_path):
-            Path(self.short_names_dir_path).mkdir(parents=True, exist_ok=True)
-            open(self.short_names_path, 'wb')
-
-    # Create table for Labels tab and update button
-    def buildLabelTable(self, df, tab):
-        table_labels = df[['name']]
-        table_labels['short_name'] = table_labels['name']
-        if os.path.getsize(self.short_names_path) > 0:
-            short_names = pd.read_csv(self.short_names_path)
-            short_names = short_names[['name', 'short_name']]
-            inner = pd.merge(left=table_labels, right=short_names, left_on='name', right_on='name')
-            inner.rename(columns={'short_name_y':'short_name'}, inplace=True)
-            inner = inner[['name', 'short_name']]
-            merged = pd.concat([table_labels, inner]).drop_duplicates('name', keep='last')
-        else:
-            merged = table_labels
-
-        table = Table(tab, dataframe=merged, showtoolbar=True, showstatusbar=True)
-        table.show()
-        update_b = tk.Button(tab, text="Update", command=lambda: self.updateLabels(table))
-        update_b.grid()
-        return table
-
-    # Merge user input labels with current mappings and replot
-    def updateLabels(self, table):
-        if os.path.getsize(self.short_names_path) > 0:
-            short_names = pd.read_csv(self.short_names_path)
-            short_names = short_names[['name', 'short_name']]
-            table_names = table.model.df[['name', 'short_name']]
-            outer = pd.merge(left=short_names, right=table_names, left_on='name', right_on='name', how='outer')
-            outer.rename(columns={'short_name_y':'short_name'}, inplace=True)
-            outer = outer[['name', 'short_name']].dropna()
-            merged = pd.concat([short_names, outer]).drop_duplicates('name', keep='last')
-        else:
-            merged = table.model.df[['name', 'short_name']]
-        merged.to_csv(self.short_names_path)
-        gui.loadDataSource(gui.source)
+        self.plotTab.pack(fill=tk.BOTH, expand=True)
 
     # QPlot data updated
     def notify(self, qplotData):
         df = qplotData.getDf()
         fig = qplotData.getFig()
+        coverageFig = qplotData.getCoverageFig()
 
-        for w in self.plotTab.window.winfo_children():
-            w.destroy()
-        for w in self.summaryTab.plotTab.winfo_children():
-            w.destroy()
-        for w in self.summaryTab.dataTab.winfo_children():
-            w.destroy()
+        qplotTabs = [self.plotTab.window, gui.summaryTab.plotTab, gui.summaryTab.dataTab, gui.summaryTab.labelTab]
+        for tab in qplotTabs:
+            for w in tab.winfo_children():
+                w.destroy()
 
         self.plotTab.update(df, fig)
-        self.summaryTab.update(df, fig)
+        gui.summaryTab.update(df, coverageFig)
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent):
@@ -533,9 +532,11 @@ class AnalyzerGui(tk.Frame):
         self.workloadTab = WorkLoadTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
         self.oneviewTab = OneviewTab(self.main_note)
+        self.summaryTab = SummaryTab(self.main_note)
         self.main_note.add(self.oneviewTab, text="Oneview")
         self.main_note.add(self.workloadTab, text="Workload")
         self.main_note.add(self.codeletTab, text="Codelet")
+        self.main_note.add(self.summaryTab, text="Summary")
         # Workload and Codelet each have their own 2nd level tabs
         workload_note = ttk.Notebook(self.workloadTab)
         codelet_note = ttk.Notebook(self.codeletTab)

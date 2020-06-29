@@ -130,7 +130,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		ys = df[y_axis]
 	else:
 		ys = df['C_max']
-		
+
 	mem_level=df['memlevel']
 	today = datetime.date.today()
 	if gui:
@@ -138,7 +138,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	fig = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis)
 	return df, fig
 
 
@@ -155,7 +155,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -186,7 +186,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale):
 	#adjust_text(texts)
 	adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
 
-	ax.set(xlabel=r'OP Rate', ylabel=r'Memory Rate')
+	ax.set(xlabel=r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
 	ax.set_title(title, pad=40)
 
 #	chartBox = ax.get_position()
