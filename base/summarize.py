@@ -38,7 +38,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -335,6 +335,21 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
     except:
         pass
 
+def calculate_app_time_coverage(out_rows, in_rows):
+    in_cols = in_rows.columns
+    if 'Time(Second)' in in_cols:
+        out_rows['AppTime (s)']=in_rows['Time(Second)']
+    else:
+        # Just use codelet time if no App time provided from measurement (e.g. CapeScripts measurements)
+        out_rows['AppTime (s)']=in_rows['Time (s)']
+    if 'Coverage(Percent)' in in_cols:
+        # Coverage info provide, go ahead to use it
+        out_rows['%Coverage']=in_rows['Coverage(Percent)']/100
+    else:
+        # No coverage info provided, try to compute using AppTime
+        totalAppTime = sum(out_rows['AppTime (s)'])
+        out_rows['%Coverage']=in_rows['AppTime (s)']/totalAppTime
+
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb):
     out_row = {}
@@ -439,24 +454,33 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             # Ignore error if extra CQA metrics in metrics_data/STAN
             df = df.drop(columns=cqa_metrics, errors='ignore')
         
-    output_rows = list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
+    output_rows = pd.DataFrame(list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
                 use_cpi=use_cpi, axis=1, skip_energy=skip_energy, \
-                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb))
+                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb)))
 
-    if (outputfile == '-'):
-        output_csvfile = sys.stdout
-    else:
-        output_csvfile = open (outputfile, 'w', newline='')
+    # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
+    # For CapeScript runs, will add up Codelet Time and consider it AppTime.
+    calculate_app_time_coverage(output_rows, df)
 
-    output_fields = succinctify(field_names) if succinct else field_names
+    outputfile = sys.stdout if outputfile == '-' else outputfile
+    output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
 
-    output_fields = list(filter(field_has_values(output_rows), output_fields))
-    csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
-    csvwriter.writeheader()
-    for output_row in output_rows:
-        csvwriter.writerow(enforce(output_row, output_fields))
-    if (outputfile != '-'):
-        output_csvfile.close()
+    output_rows.to_csv(outputfile, index=False)
+
+    # if (outputfile == '-'):
+    #     output_csvfile = sys.stdout
+    # else:
+    #     output_csvfile = open (outputfile, 'w', newline='')
+
+    # output_fields = succinctify(field_names) if succinct else field_names
+
+    # output_fields = list(filter(field_has_values(output_rows), output_fields))
+    # csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
+    # csvwriter.writeheader()
+    # for output_row in output_rows:
+    #     csvwriter.writerow(enforce(output_row, output_fields))
+    # if (outputfile != '-'):
+    #     output_csvfile.close()
 
 def summary_formulas(formula_file_name):
     with open (formula_file_name, 'w') as formula_file:
