@@ -12,16 +12,24 @@ from os.path import expanduser
 from summarize import summary_report
 from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
+from generate_coveragePlot import coverage_plot
 import tempfile
 import pkg_resources.py2_warn
-from web_browser import (MainFrame, BrowserFrame)
+from web_browser import BrowserFrame
 from cefpython3 import cefpython as cef
 import sys
 import requests
 from lxml import html
 import time
 from pathlib import Path
+from adjustText import adjust_text
+from pywebcopy import WebPage, config
+import shutil
+import threading
+import logging
 
+# pywebcopy produces a lot of logging that clouds other useful information
+logging.disable(logging.CRITICAL)
 
 # Simple implementation of Observer Design Pattern
 class Observable:
@@ -57,11 +65,13 @@ class LoadedData(Observable):
     def __init__(self):
         super().__init__()
         self.data_items=[]
-    def add_data(self, source):
+    def add_data(self, sources):
         tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
         print(tmpfile.name)
-        in_files = [source]
-        in_file_format ='csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
+        in_files = sources
+        in_files_format = [None] * len(sources)
+        for index, source in enumerate(sources):
+            in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
         user_op_file = None
         request_no_cqa = False
         request_use_cpi = False
@@ -73,7 +83,8 @@ class LoadedData(Observable):
             short_names = short_names_path
         else: 
             short_names = None
-        summary_report(in_files, tmpfile.name, in_file_format, user_op_file, request_no_cqa, \
+        #print(f'in_files_format[index]: {in_files_format[index]} \nsource: {source} \nin_files[index]:{in_files[index]}')
+        summary_report(in_files, tmpfile.name, in_files_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names)
         # Just use file for data storage now.  May explore keeping dataframe in future if needed.
         # Currently assume only 1 run is loaded but we should extend this to aloow loading multiple
@@ -99,9 +110,15 @@ class QPlotData(Observable):
     
     def getFig(self):
         return self.fig
+
+    def getTexts(self):
+        return self.texts
     
     def getCoverageFig(self):
         return self.coverageFig
+
+    def getCoverageTexts(self):
+        return self.coverageTexts
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
@@ -109,17 +126,19 @@ class QPlotData(Observable):
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
-        df_XFORM, fig_XFORM, df_ORIG, fig_ORIG = parse_ip_qplot\
+        df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG = parse_ip_qplot\
             (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
         # TODO: Need to settle how to deal with multiple plots/dataframes
         # May want to let user to select multiple plots to look at within this tab
         # Currently just save the ORIG data
         self.df = df_ORIG if df_ORIG is not None else df_XFORM
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+        self.texts = texts_ORIG if texts_ORIG is not None else texts_XFORM
 
-        df_XFORM, fig_XFORM, df_ORIG, fig_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis='time_s')
-        self.coverageFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+        # use qplot dataframe to generate the coverage plot
+        fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
+        self.coverageFig = fig
+        self.coverageTexts = texts
         self.notify_observers()
     
 class DataSourcePanel(ScrolledTreePane):
@@ -159,6 +178,7 @@ class DataSourcePanel(ScrolledTreePane):
     class RemoteNode(RemoteTreeNode):
         def __init__(self, path, name, container, time_stamp=None):
             super().__init__(path, name, container, time_stamp)
+            self.cape_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\'
             self.children = []
 
         def open(self):
@@ -168,39 +188,66 @@ class DataSourcePanel(ScrolledTreePane):
 
             # Webpage node
             if content_type == 'text/html':
-                # Load this webpage into Oneview tab
-                gui.mainFrame.browser_frame.change_browser(url=self.path)
-                # Replicate remote directory structure
-                local_file_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\Oneview'
-                dirs = self.path[66:].split('/')
-                for directory in dirs:
-                    local_file_path = local_file_path + '\\' + directory
-                # Each file has its own directory with versions of that file labeled by time stamp
-                local_dir_path = local_file_path
-                local_file_path = local_file_path + '\\' + self.time_stamp + '.xlsx'
-                print(f'LOCAL PATH:{local_file_path}')
-                # Download Corresponding Excel file if it doesn't already exist
-                if not os.path.isfile(local_file_path):
-                    Path(local_dir_path).mkdir(parents=True, exist_ok=True)
-                    excel_url = self.path[:-1] + '.xlsx'
-                    excel = requests.get(excel_url)
-                    open(local_file_path, 'wb').write(excel.content)
-                # Open excel file from local directory and plot
-                self.container.openLocalFile(local_file_path)
+                self.open_webpage()
 
             # Directory node
             elif content_type == 'text/html;charset=ISO-8859-1':
-                tree = html.fromstring(page.content)
-                for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
-                    hyperlink = link_element.xpath('td[position()=2]/a')[0]
-                    name = hyperlink.get('href')
-                    # Only show html pages, xlsx will be auto loaded
-                    if name[-1] == '/' and name not in self.children:
-                        self.children.append(name)
-                        fullpath = self.path + name
-                        # Time stamp will be the date last modified (TODO: Distinguish between same day versions)
-                        time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10]
-                        self.container.insertNode(self, DataSourcePanel.RemoteNode(fullpath, name, self.container, time_stamp=time_stamp))
+                self.open_directory(page)
+        
+        def open_directory(self, page):
+            tree = html.fromstring(page.content)
+            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
+                hyperlink = link_element.xpath('td[position()=2]/a')[0]
+                name = hyperlink.get('href')
+                # Only show html pages, xlsx will be auto loaded
+                if name[-1] == '/' and name not in self.children:
+                    self.children.append(name)
+                    fullpath = self.path + name
+                    time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10]
+                    self.container.insertNode(self, DataSourcePanel.RemoteNode(fullpath, name, self.container, time_stamp=time_stamp))
+
+        def open_webpage(self):
+            # Replicate remote directory structure
+            local_dir_path = self.cape_path + 'Oneview'
+            for directory in self.path[66:].split('/'):
+                local_dir_path = local_dir_path + '\\' + directory
+            # Each file has its own directory with versions of that file labeled by time stamp
+            local_dir_path = local_dir_path + self.time_stamp
+            # Download Corresponding Excel file if it doesn't already exist
+            local_file_path = local_dir_path + '\\data.xlsx'
+            if not os.path.isdir(local_dir_path):
+                Path(local_dir_path).mkdir(parents=True, exist_ok=True)
+                excel_url = self.path[:-1] + '.xlsx'
+                excel = requests.get(excel_url)
+                open(local_file_path, 'wb').write(excel.content)
+            # Download Corresponding HTML files if they don't already exist
+            local_dir_path = local_dir_path + '\\HTML' 
+            if not os.path.isdir(local_dir_path):
+                pages = ['index.html', 'application.html', 'fcts_and_loops.html', 'loops_index.html', 'topology.html']
+                kwargs = {'project_folder': self.cape_path, 'project_name' : 'TEMP', 'zip_project_folder' : False, 'over_write' : True}
+                for page in pages:
+                    url = self.path + page
+                    config.setup_config(url, **kwargs)
+                    wp = WebPage()
+                    wp.get(url)
+                    wp.parse()
+                    wp.save_html()
+                    wp.save_assets()
+                    for thread in wp._threads:
+                        thread.join()
+                print("Done Downloading Webpages")
+                # Move html files/assets to HTML directory and delete TEMP directory
+                temp_dir_path = self.cape_path + 'TEMP'
+                for directory in self.path[8:].split('/'):
+                    temp_dir_path = temp_dir_path + '\\' + directory
+                shutil.move(temp_dir_path, local_dir_path)
+                shutil.rmtree(self.cape_path + 'TEMP')
+            # Add local html file path to browser
+            for name in os.listdir(local_dir_path):
+                if name.endswith("__index.html"):
+                    gui.urls.append(local_dir_path + '\\' + name)
+            # Open excel file from local directory and plot
+            self.container.openLocalFile(local_file_path)
 
     class LocalFileNode(LocalTreeNode):
         def __init__(self, path, name, container):
@@ -296,10 +343,6 @@ class ExplorerPanel(tk.PanedWindow):
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
 
-class WorkLoadTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
 class CodeletTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -308,33 +351,38 @@ class SummaryTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
         self.parent = parent
-        self.mainNote = ttk.Notebook(self)
-        self.plotTab = tk.Frame(self.mainNote)
-        self.dataTab = tk.Frame(self.mainNote)
-        self.labelTab = LabelTab(self.mainNote)
-        self.mainNote.add(self.plotTab, text='Plot')
-        self.mainNote.add(self.dataTab, text='Data')
-        self.mainNote.add(self.labelTab, text='Labels')
-        self.mainNote.pack(fill=tk.BOTH, expand=True)
+        self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                    sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
 
-    def update(self, df, fig):
-        canvas = FigureCanvasTkAgg(fig, self.plotTab)
-        toolbar = NavigationToolbar2Tk(canvas, self.plotTab)
+    def update(self, df, fig, texts):
+        self.plotFrame = tk.Frame(self.window)
+        self.tableFrame = tk.Frame(self.window)
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tableFrame, stretch='always')
+        self.buildTableTabs()
+
+        canvas = FigureCanvasTkAgg(fig, self.plotFrame)
+        toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
         toolbar.update()
-        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        canvas.get_tk_widget().pack()
         canvas.draw()
 
-        summaryDf = df[['name', 'short_name', 'time_s']]
-        summaryDf = summaryDf.sort_values(by='time_s', ascending=False)
-        summary_pt = Table(self.dataTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summaryDf = df[['name', 'short_name', r'%coverage']]
+        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summary_pt.show()
-        summary_pt.redraw()
 
-        self.labelTab.buildLabelTable(df, self.labelTab)
-
-class DetailedSummaryTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        self.labelTab.buildLabelTable(df, self.labelTab, texts)
+    
+    # Create tabs for QPlot Summary, Labels, and Axes
+    def buildTableTabs(self):
+        self.tableNote = ttk.Notebook(self.tableFrame)
+        self.summaryTab = tk.Frame(self.tableNote)
+        self.labelTab = LabelTab(self.tableNote)
+        self.tableNote.add(self.summaryTab, text="Data")
+        self.tableNote.add(self.labelTab, text="Labels")
+        self.tableNote.pack(fill=tk.BOTH, expand=True)
 
 class AxesTab(tk.Frame):
     def __init__(self, parent, qplotTab):
@@ -368,8 +416,8 @@ class LabelTab(tk.Frame):
             open(self.short_names_path, 'wb')
 
     # Create table for Labels tab and update button
-    def buildLabelTable(self, df, tab):
-        table_labels = df[['name', 'time_s']]
+    def buildLabelTable(self, df, tab, texts=None):
+        table_labels = df[['name', r'%coverage']]
         table_labels['short_name'] = table_labels['name']
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
@@ -380,19 +428,19 @@ class LabelTab(tk.Frame):
             merged = pd.concat([table_labels, inner]).drop_duplicates('name', keep='last')
         else:
             merged = table_labels
-        # sort label table by time to keep consistent with data table
-        merged = pd.merge(merged, df[['name','time_s']], on='name')
-        merged = merged.sort_values(by='time_s_y', ascending=False)
+        # sort label table by coverage to keep consistent with data table
+        merged = pd.merge(merged, df[['name',r'%coverage']], on='name')
+        merged = merged.sort_values(by=r'%coverage_y', ascending=False)
         merged = merged[['name', 'short_name']]
         table = Table(tab, dataframe=merged, showtoolbar=True, showstatusbar=True)
         table.show()
         table.redraw()
-        update_b = tk.Button(tab, text="Update", command=lambda: self.updateLabels(table))
+        update_b = tk.Button(tab, text="Update", command=lambda: self.updateLabels(table, texts))
         update_b.grid()
         return table
 
     # Merge user input labels with current mappings and replot
-    def updateLabels(self, table):
+    def updateLabels(self, table, texts=None):
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             short_names = short_names[['name', 'short_name']]
@@ -404,19 +452,50 @@ class LabelTab(tk.Frame):
         else:
             merged = table.model.df[['name', 'short_name']]
         merged.to_csv(self.short_names_path)
-        gui.loadDataSource(gui.source)
-        #gui.c_qplotTab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
+        gui.loadedData.add_data(gui.sources)
 
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
 class OneviewTab(tk.Frame):
+
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)     
-        # Oneview embedded in this frame
-        self.oneview_frame = tk.Frame(self)
-        self.oneview_frame.pack(fill=tk.BOTH, expand=True)   
+        tk.Frame.__init__(self, parent)
+        # Oneview tab has a paned window to handle simultaneous HTML viewing
+        self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
+        self.browser1 = None
+        self.browser2 = None
+    
+    def loadFirstPage(self):
+        self.removePages()
+        self.browser1 = BrowserFrame(self.window)
+        self.window.add(self.browser1, stretch='always')
+        current_tab = gui.main_note.select()
+        gui.main_note.select(1)
+        self.update()
+        gui.main_note.select(current_tab)
+        self.browser1.change_browser(url=gui.urls[0])
+
+    def loadSecondPage(self):
+        self.removePages()
+        self.browser1 = BrowserFrame(self.window)
+        self.browser2 = BrowserFrame(self.window)
+        self.window.add(self.browser1, stretch='always')
+        self.window.add(self.browser2, stretch='always')
+        current_tab = gui.main_note.select()
+        gui.main_note.select(1)
+        self.update()
+        gui.main_note.select(current_tab)
+        self.browser1.change_browser(url=gui.urls[0])
+        self.browser2.change_browser(url=gui.urls[1])
+
+    def removePages(self):
+        if self.browser1:
+            self.window.remove(self.browser1)
+        if self.browser2:
+            self.window.remove(self.browser2)
 
 class TrawlTab(tk.Frame):
     def __init__(self, parent):
@@ -424,70 +503,64 @@ class TrawlTab(tk.Frame):
 
 class QPlotTab(tk.Frame):
 
-    class PlotTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-            self.parent = parent
-            # QPlot tab has a paned window with the summary table and qplot
-            self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
-                                                    sashpad=3)
-            self.window.pack(fill=tk.BOTH,expand=True)
-
-        def update(self, df, fig):
-            # Display QPlot from QPlot tab
-            self.plotFrame = tk.Frame(self.window)
-            self.plotFrame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-            self.window.add(self.plotFrame, stretch='always')
-            canvas = FigureCanvasTkAgg(fig, self.plotFrame)
-            toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
-            toolbar.update()
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-            canvas.draw()
-
-            self.tableFrame = tk.Frame(self.window)
-            self.tableFrame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-            self.buildTableTabs()
-            self.labelTab.buildLabelTable(df, self.labelTab)
-            self.window.add(self.tableFrame, stretch='always')
-            summaryDf = df[['name', 'short_name', 'time_s', 'variant','C_L1', 'C_L2', 'C_L3', \
-                'C_RAM', 'C_max', 'memlevel', 'C_op']]
-            summaryDf = summaryDf.sort_values(by='time_s', ascending=False)
-            summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
-            summaryTable.show()
-
-        # Create tabs for QPlot Summary, Labels, and Axes
-        def buildTableTabs(self):
-            self.tableNote = ttk.Notebook(self.tableFrame)
-            self.summaryTab = tk.Frame(self.tableNote)
-            self.labelTab = LabelTab(self.tableNote)
-            self.axesTab = AxesTab(self.tableNote, self.parent)
-            self.tableNote.add(self.summaryTab, text="Data")
-            self.tableNote.add(self.labelTab, text="Labels")
-            self.tableNote.add(self.axesTab, text="Axes")
-            self.tableNote.pack(fill=tk.BOTH, expand=True)
-
     def __init__(self, parent, qplotData):
         tk.Frame.__init__(self, parent)
         self.qplotData = qplotData
         if qplotData is not None:
             qplotData.add_observers(self)
+        # QPlot tab has a paned window with the summary table and qplot
+        self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
 
-        self.plotTab = self.PlotTab(self)
-        self.plotTab.pack(fill=tk.BOTH, expand=True)
+    def update(self, df, fig, texts):
+        self.plotFrame = tk.Frame(self.window)
+        self.tableFrame = tk.Frame(self.window)
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tableFrame, stretch='always')
+        self.buildTableTabs()
 
-    # QPlot data updated
+        canvas = FigureCanvasTkAgg(fig, self.plotFrame)
+        toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
+        toolbar.update()
+        canvas.get_tk_widget().pack()
+        canvas.draw()
+
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1', 'C_L2', 'C_L3', \
+            'C_RAM', 'C_max', 'memlevel', 'C_op', 'color']]
+        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summaryTable.show()
+        summaryTable.redraw()
+
+        self.labelTab.buildLabelTable(df, self.labelTab)
+
+    # Create tabs for QPlot Summary, Labels, and Axes
+    def buildTableTabs(self):
+        self.tableNote = ttk.Notebook(self.tableFrame)
+        self.summaryTab = tk.Frame(self.tableNote)
+        self.labelTab = LabelTab(self.tableNote)
+        self.axesTab = AxesTab(self.tableNote, self)
+        self.tableNote.add(self.summaryTab, text="Data")
+        self.tableNote.add(self.labelTab, text="Labels")
+        self.tableNote.add(self.axesTab, text="Axes")
+        self.tableNote.pack(fill=tk.BOTH, expand=True)
+
+    # plot data to be updated
     def notify(self, qplotData):
         df = qplotData.getDf()
         fig = qplotData.getFig()
+        texts = qplotData.getTexts()
         coverageFig = qplotData.getCoverageFig()
+        coverageTexts = qplotData.getCoverageTexts()
 
-        qplotTabs = [self.plotTab.window, gui.summaryTab.plotTab, gui.summaryTab.dataTab, gui.summaryTab.labelTab]
-        for tab in qplotTabs:
+        plotTabs = [self.window, gui.summaryTab.window]
+        for tab in plotTabs:
             for w in tab.winfo_children():
                 w.destroy()
 
-        self.plotTab.update(df, fig)
-        gui.summaryTab.update(df, coverageFig)
+        self.update(df, fig, texts)
+        gui.summaryTab.update(df, coverageFig, coverageTexts)
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent):
@@ -521,27 +594,67 @@ class AnalyzerGui(tk.Frame):
         self.pw.add(right)
         self.pw.pack(fill=tk.BOTH,expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
-        self.mainFrame = MainFrame(self.oneviewTab.oneview_frame)
+        self.sources = []
+        self.urls = []
+        self.choice = ''
+
+    def appendData(self, win):
+        self.choice = 'Append'
+        win.destroy()
+
+    def overwriteData(self, win):
+        self.choice = 'Overwrite'
+        win.destroy()
+
+    def cancelAction(self, win):
+        self.choice = 'Cancel'
+        win.destroy()
 
     def loadDataSource(self, source):
-        self.source = source
+        if self.sources:
+            win = tk.Toplevel()
+            win.protocol("WM_DELETE_WINDOW", lambda: self.cancelAction(win))
+            win.title('Existing Data')
+            if len(self.sources) >= 2:
+                message = 'You have the max number of data files open.\nWould you like to overwrite with the new data?'
+            else:
+                message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+                tk.Button(win, text='Append', command=lambda: self.appendData(win)).grid(row=1, column=0, sticky=tk.E)
+            tk.Label(win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+            tk.Button(win, text='Overwrite', command=lambda: self.overwriteData(win)).grid(row=1, column=1)
+            tk.Button(win, text='Cancel', command=lambda: self.cancelAction(win)).grid(row=1, column=2, pady=10, sticky=tk.W)
+            root.wait_window(win)
+            if self.choice == 'Cancel':
+                if self.urls:
+                    self.urls.pop(-1)
+                return
+            elif self.choice == 'Overwrite':
+                if self.urls:
+                    self.urls = [self.urls.pop(-1)]
+                    self.oneviewTab.loadFirstPage()
+                self.sources.clear()
+            elif self.choice == 'Append' and self.urls:
+                self.oneviewTab.loadSecondPage()
+        elif self.urls:
+            self.oneviewTab.loadFirstPage()
+
+        self.sources.append(source)
         print("DATA source to be loaded", source)
-        self.loadedData.add_data(source)
-        #parse_ip_siplot(tmpfile.name, "test", 'row', "Testing", chosen_node_set, root=self.siPlotTab)
+        self.loadedData.add_data(self.sources)
 
     def buildTabs(self, parent):
-        # 1st level notebook with Workload and Codelet tabs
+        # 1st level notebook
         self.main_note = ttk.Notebook(parent)
-        self.workloadTab = WorkLoadTab(self.main_note)
+        self.applicationTab = ApplicationTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
         self.oneviewTab = OneviewTab(self.main_note)
         self.summaryTab = SummaryTab(self.main_note)
+        self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.oneviewTab, text="Oneview")
-        self.main_note.add(self.workloadTab, text="Workload")
         self.main_note.add(self.codeletTab, text="Codelet")
         self.main_note.add(self.summaryTab, text="Summary")
-        # Workload and Codelet each have their own 2nd level tabs
-        workload_note = ttk.Notebook(self.workloadTab)
+        # Application and Codelet each have their own 2nd level tabs
+        application_note = ttk.Notebook(self.applicationTab)
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
         self.c_trawlTab = TrawlTab(codelet_note)
@@ -551,14 +664,14 @@ class AnalyzerGui(tk.Frame):
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.pack(fill=tk.BOTH, expand=1)
-        # Workload tabs
-        self.w_trawlTab = TrawlTab(workload_note)
-        self.w_qplotTab = QPlotTab(workload_note, None) # None for data for now - to be updated
-        self.w_siPlotTab = SIPlotTab(workload_note)
-        workload_note.add(self.w_trawlTab, text="TRAWL")
-        workload_note.add(self.w_qplotTab, text="QPlot")
-        workload_note.add(self.w_siPlotTab, text="SI Plot")
-        workload_note.pack(fill=tk.BOTH, expand=True)
+        # Application tabs
+        self.w_trawlTab = TrawlTab(application_note)
+        self.w_qplotTab = QPlotTab(application_note, None) # None for data for now - to be updated
+        self.w_siPlotTab = SIPlotTab(application_note)
+        application_note.add(self.w_trawlTab, text="TRAWL")
+        application_note.add(self.w_qplotTab, text="QPlot")
+        application_note.add(self.w_siPlotTab, text="SI Plot")
+        application_note.pack(fill=tk.BOTH, expand=True)
         return self.main_note
 
 

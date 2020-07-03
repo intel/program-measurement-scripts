@@ -38,7 +38,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -417,16 +417,19 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     if name_file:
         read_short_names(name_file)
 
+    # Each file has a different color associated with it (Max 5 files plotted together)
+    colors = ['blue', 'red', 'green', 'yellow', 'black']
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
-    for inputfile in inputfiles:
+    for index, inputfile in enumerate(inputfiles):
         print(inputfile, file=sys.stderr)
-        if (input_format == 'csv'):
+        if (input_format[index] == 'csv'):
             input_data_source = sys.stdin if (inputfile == '-') else inputfile
             cur_df = pd.read_csv(input_data_source, delimiter=',')
         else:
             # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
+        cur_df['Color'] = colors[index]
         df = df.append(cur_df, ignore_index=True)
 
     df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
@@ -460,7 +463,12 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
 
     # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
+    
     calculate_app_time_coverage(output_rows, df)
+    # Set Corresponding color for each codelet
+    df['Name'] = df['application.name'] + ': ' + df['codelet.name']
+    color_df = df[['Name', 'Color']]
+    output_rows = pd.merge(output_rows, color_df, how='inner', on='Name')
 
     outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns

@@ -4,17 +4,16 @@ import tkinter as tk
 class MainFrame(tk.Frame):
 
     def __init__(self, root):
-        self.navigation_bar = None
-
         # MainFrame
         tk.Frame.__init__(self, root)
 
         # BrowserFrame
         self.browser_frame = BrowserFrame(self)
-        self.browser_frame.grid(row=1, column=0,
-                                sticky=(tk.N + tk.S + tk.E + tk.W))
-        tk.Grid.rowconfigure(self, 1, weight=1)
-        tk.Grid.columnconfigure(self, 0, weight=1)
+        # self.browser_frame.grid(row=1, column=1,
+        #                         sticky=(tk.N + tk.S + tk.E + tk.W))
+        # tk.Grid.rowconfigure(self, 1, weight=1)
+        # tk.Grid.columnconfigure(self, 1, weight=1)
+        self.browser_frame.pack(fill=tk.BOTH, expand=True)
 
         # Pack MainFrame
         self.pack(fill=tk.BOTH, expand=tk.YES)
@@ -47,3 +46,7 @@ class BrowserFrame(tk.Frame):
     def message_loop_work(self):
         cef.MessageLoopWork()
         self.after(100, self.message_loop_work)
+
+    def close(self):
+        self.browser = None
+        self.destroy()

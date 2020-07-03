@@ -12,6 +12,7 @@ from capelib import succinctify
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib import style
 from adjustText import adjust_text
 
@@ -46,10 +47,10 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	df_XFORM, fig_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
-	df_ORIG, fig_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_XFORM, fig_XFORM, texts_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_ORIG, fig_ORIG, texts_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 	# Return dataframe and figure for GUI
-	return (df_XFORM, fig_XFORM, df_ORIG, fig_ORIG)
+	return (df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -103,19 +104,29 @@ def compute_intensity(df, chosen_node_set):
 	df['Intensity']=node_cnt*df['C_max'] / csum
 	print(df['Intensity'])
 
+def compute_color_labels(df):
+	color_labels = []
+	for color in df['color'].unique():
+		colorDf = df.loc[df['color']==color].reset_index()
+		codelet = (colorDf['name'][0])
+		color_labels.append((codelet.split(':')[0], color))
+	return color_labels
 
 def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
 	if df.empty:
-		return None, None # Nothing to do
+		return None, None, None # Nothing to do
 	df = compute_capacity(df, chosen_node_set)
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
 	print('Saving to '+output_data_source)
 	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
+	
+	# Used to create a legend of file names to color for multiple plots
+	color_labels = compute_color_labels(df)
 
 	if no_plot:
-		return df, None
+		return df, None, None
 
 	try:
 		indices = df['short_name']
@@ -137,9 +148,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		outputfile=None
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
-	fig = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis)
-	return df, fig
+	fig, texts = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis, df, color_labels)
+	return df, fig, texts
 
 
 def draw_contours(ax, maxx, ns):
@@ -151,11 +162,11 @@ def draw_contours(ax, maxx, ns):
 	lines=[]
 	for n in ns:
 		cty=n*ctx
-		lines.append(ax.plot(ctx, cty, label='n={}'.format(n)))
+		lines.append(ax.plot(ctx, cty, label='n={}'.format(n))[0])
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df=None, color_labels=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -176,28 +187,38 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None):
 		ax.set_ylim((0, ymax))
     
 	(x, y) = zip(*DATA)
-	ax.scatter(x, y, marker='o')
+	ax.scatter(x, y, marker='o', c=df.color)
 
 	ns = [1,2,4,8,16,32]
-
-	ctxs = draw_contours(ax, xmax, ns)
+	ctxs = []
+	if y_axis and y_axis == r'%coverage':
+		pass
+	else:
+		ctxs = draw_contours(ax, xmax, ns)
+	plt.rcParams.update({'font.size': 7})
 	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]    
-	texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
-	#adjust_text(texts)
-	adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
+	# texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
+	texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
 
+	adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
 	ax.set(xlabel=r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
 	ax.set_title(title, pad=40)
-
 #	chartBox = ax.get_position()
 #	ax.set_position([chartBox.x0,chartBox.y0,chartBox.width,chartBox.height*0.65])
 #	ax.legend(loc="center left", bbox_to_anchor=(1,0.5),title="(name,memlevel)", mode='expand')
-	ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="(name,memlevel)", mode='expand', borderaxespad=0.)
+	patches = []
+	if color_labels and len(color_labels) >= 2:
+		for color_label in color_labels:
+			patch = mpatches.Patch(label=color_label[0], color=color_label[1])
+			patches.append(patch)
+	patches.extend(ctxs)
+	ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="(name,memlevel)", mode='expand', borderaxespad=0., \
+		handles=patches)
 	plt.tight_layout()
 	if filename:
 		plt.savefig(filename)
 
-	return fig
+	return fig, texts
 
 def usage(reason):
 	error_code = 0
