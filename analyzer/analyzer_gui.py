@@ -372,6 +372,7 @@ class SummaryTab(tk.Frame):
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summary_pt.show()
+        summary_pt.redraw()
 
         self.labelTab.buildLabelTable(df, self.labelTab, texts)
     
@@ -649,8 +650,8 @@ class AnalyzerGui(tk.Frame):
         self.codeletTab = CodeletTab(self.main_note)
         self.oneviewTab = OneviewTab(self.main_note)
         self.summaryTab = SummaryTab(self.main_note)
-        self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.oneviewTab, text="Oneview")
+        self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.codeletTab, text="Codelet")
         self.main_note.add(self.summaryTab, text="Summary")
         # Application and Codelet each have their own 2nd level tabs
