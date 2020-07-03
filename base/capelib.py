@@ -224,6 +224,9 @@ def calculate_memops_counts_per_iter(in_row):
     return memops_counts, insts_counts
 
 
+def vector_ext_str(type2percent):
+    return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in type2percent if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
+    
 def find_vector_ext(flop_counts, iop_counts):
     if iop_counts is None:
         iop_counts = Vecinfo(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -234,8 +237,12 @@ def find_vector_ext(flop_counts, iop_counts):
               [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) \
                   if flop_counts.SUM or iop_counts.SUM else None \
                       for metric in ["SC", "XMM", "YMM", "ZMM"] ])
-    return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in out if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
+    return vector_ext_str(out)
 
+def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
+    out_row['E[{}]/O (J/GI)'.format(kind)] = energy / num_ops
+    out_row['C/E[{}] (GI/Js)'.format(kind)] = ops_per_sec / energy
+    out_row['CO/E[{}] (GI2/Js)'.format(kind)] = (ops_per_sec * num_ops) / energy
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
