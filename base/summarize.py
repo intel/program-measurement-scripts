@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 from capelib import succinctify
 from capelib import calculate_all_rate_and_counts
 from capelib import getter
+from capelib import calculate_energy_derived_metrics
 from collections import OrderedDict
 
 from argparse import ArgumentParser
@@ -291,9 +292,7 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
     def calculate_derived_metrics(kind, energy):
         out_row['Total {} Energy (J)'.format(kind)] = energy
         out_row['Total {} Power (W)'.format(kind)] = energy / time
-        out_row['E[{}]/O (J/GI)'.format(kind)] = energy / num_ops
-        out_row['C/E[{}] (GI/Js)'.format(kind)] = ops_per_sec / energy
-        out_row['CO/E[{}] (GI2/Js)'.format(kind)] = (ops_per_sec * num_ops) / energy
+        calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec)
 
     # Can extend to report PP0, PP1 but ignore for now.
     total_pkg_energy = calculate_total_pkg_energy()
