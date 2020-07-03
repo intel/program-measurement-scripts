@@ -404,20 +404,20 @@ def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb=False):
+                   skip_stalls, succinct, short_names_path, enable_lfb=False):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
-    print('Name file: ', name_file, file=sys.stderr)
+    print('Short Names File: ', short_names_path, file=sys.stderr)
     print('Skip Energy: ', skip_energy, file=sys.stderr)
     print('Enable LFB: ', enable_lfb, file=sys.stderr)
 
-    if name_file:
-        read_short_names(name_file)
+    if short_names_path:
+        read_short_names(short_names_path)
 
-    # Each file has a different color associated with it (Max 5 files plotted together)
-    colors = ['blue', 'red', 'green', 'yellow', 'black']
+    # Each file has a different color associated with it (Current max of 4 files plotted together)
+    colors = ['blue', 'red', 'green', 'yellow']
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for index, inputfile in enumerate(inputfiles):
         print(inputfile, file=sys.stderr)

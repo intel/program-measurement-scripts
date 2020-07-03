@@ -2,7 +2,9 @@
 import sys
 import numpy as np
 import pandas as pd
-import re
+import csv, re
+import os
+from os.path import expanduser
 
 from argparse import ArgumentParser
 from capelib import calculate_energy_derived_metrics
@@ -16,13 +18,23 @@ def parseVecType(text, vecType):
     expanded = text.str.extract(r"(?P<prefix>{}=)(?P<value>\d*\.?\d*)(?P<suffix>%.*)".format(vecType), expand=True)
     return pd.to_numeric(expanded['value']).fillna(0)/100
 
-def agg_fn(df):
-    app_name, variant, numCores, ds, prefetchers, repetitions = df.name
+def getShortName(df):
+    short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
+    if os.path.isfile(short_names_path):
+        with open(short_names_path, 'r', encoding='utf-8-sig') as infile:
+            rows = list(csv.DictReader(infile, delimiter=','))
+            for row in rows:
+                if df['Name'][0] == row['name']:
+                    df['Short Name'] = row['short_name']
 
-    # TODO: Handle short name by getting shorthand file
+def agg_fn(df):
+    app_name, variant, numCores, ds, prefetchers, repetitions, Color = df.name
+
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Repetitions': [repetitions]})
+            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'color': [Color]})
+
+    getShortName(out_df)
 
     # Calculate sum metrics 
     for metric in ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', \
@@ -79,7 +91,7 @@ def aggregate_runs(inputfiles, outputfile):
     # Need to fix datasize being nan's because groupby does not work
     dsMask = np.isnan(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby(['AppName', 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions'])
+    grouped = df.groupby(['AppName', 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color'])
     aggregated = grouped.apply(agg_fn)
     aggregated.to_csv(outputfile, index=False)
 

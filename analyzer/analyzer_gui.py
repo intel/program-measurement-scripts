@@ -10,6 +10,7 @@ import pathlib
 import os
 from os.path import expanduser
 from summarize import summary_report
+from aggregate_summary import aggregate_runs
 from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 from generate_coveragePlot import coverage_plot
@@ -79,17 +80,19 @@ class LoadedData(Observable):
         request_skip_stalls = False
         request_succinct = False
         short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
-        if os.path.isfile(short_names_path):
-            short_names = short_names_path
-        else: 
-            short_names = None
+        if not os.path.isfile(short_names_path):
+            short_names_path = None
         #print(f'in_files_format[index]: {in_files_format[index]} \nsource: {source} \nin_files[index]:{in_files[index]}')
+        # Codelet summary
         summary_report(in_files, tmpfile.name, in_files_format, user_op_file, request_no_cqa, \
-            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names)
+            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path)
+        # Application summary
+        tmpfile_app = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+        aggregate_runs([tmpfile.name], tmpfile_app.name)
         # Just use file for data storage now.  May explore keeping dataframe in future if needed.
         # Currently assume only 1 run is loaded but we should extend this to aloow loading multiple
         # data and pool data together
-        self.data_items=[tmpfile.name]
+        self.data_items=[tmpfile.name, tmpfile_app.name]
         #self.data_items.append(tmpfile.name)
         self.notify_observers()
     def get_data_items(self):
@@ -104,6 +107,8 @@ class QPlotData(Observable):
         self.df = None
         self.fig = None
         self.coverageFig = None
+        self.appDf = None
+        self.appFig = None
 
     def getDf(self):
         return self.df
@@ -119,6 +124,12 @@ class QPlotData(Observable):
 
     def getCoverageTexts(self):
         return self.coverageTexts
+
+    def getAppDf(self):
+        return self.appDf
+    
+    def getAppFig(self):
+        return self.appFig
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
@@ -139,6 +150,14 @@ class QPlotData(Observable):
         fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
         self.coverageFig = fig
         self.coverageTexts = texts
+
+        # application qplot
+        fname=loadedData.get_data_items()[1]
+        df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG = parse_ip_qplot\
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
+        self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
+        self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+
         self.notify_observers()
     
 class DataSourcePanel(ScrolledTreePane):
@@ -408,8 +427,9 @@ class AxesTab(tk.Frame):
             self.qplotTab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
 
 class LabelTab(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, level=None):
         tk.Frame.__init__(self, parent)
+        self.level = level
         self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
         self.short_names_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
         if not os.path.isfile(self.short_names_path):
@@ -459,6 +479,7 @@ class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+
 class OneviewTab(tk.Frame):
 
     def __init__(self, parent):
@@ -504,8 +525,9 @@ class TrawlTab(tk.Frame):
 
 class QPlotTab(tk.Frame):
 
-    def __init__(self, parent, qplotData):
+    def __init__(self, parent, qplotData, level):
         tk.Frame.__init__(self, parent)
+        self.level = level
         self.qplotData = qplotData
         if qplotData is not None:
             qplotData.add_observers(self)
@@ -514,7 +536,7 @@ class QPlotTab(tk.Frame):
                                                 sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
 
-    def update(self, df, fig, texts):
+    def update(self, df, fig):
         self.plotFrame = tk.Frame(self.window)
         self.tableFrame = tk.Frame(self.window)
         self.window.add(self.plotFrame, stretch='always')
@@ -549,19 +571,28 @@ class QPlotTab(tk.Frame):
 
     # plot data to be updated
     def notify(self, qplotData):
-        df = qplotData.getDf()
-        fig = qplotData.getFig()
-        texts = qplotData.getTexts()
-        coverageFig = qplotData.getCoverageFig()
-        coverageTexts = qplotData.getCoverageTexts()
+        if self.level == 'Codelet':
+            df = qplotData.getDf()
+            fig = qplotData.getFig()
+            texts = qplotData.getTexts()
+            coverageFig = qplotData.getCoverageFig()
+            coverageTexts = qplotData.getCoverageTexts()
+            # TODO: Separate coverage plot from qplot data
+            plotTabs = [self.window, gui.summaryTab.window]
+            for tab in plotTabs:
+                for w in tab.winfo_children():
+                    w.destroy()
+            gui.summaryTab.update(df, coverageFig, coverageTexts)
 
-        plotTabs = [self.window, gui.summaryTab.window]
-        for tab in plotTabs:
-            for w in tab.winfo_children():
-                w.destroy()
+        elif self.level == 'Application':
+            df = qplotData.getAppDf()
+            fig = qplotData.getAppFig()
+            plotTabs = [self.window]
+            for tab in plotTabs:
+                for w in tab.winfo_children():
+                    w.destroy()
 
-        self.update(df, fig, texts)
-        gui.summaryTab.update(df, coverageFig, coverageTexts)
+        self.update(df, fig)
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent):
@@ -659,7 +690,7 @@ class AnalyzerGui(tk.Frame):
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
         self.c_trawlTab = TrawlTab(codelet_note)
-        self.c_qplotTab = QPlotTab(codelet_note, QPlotData(self.loadedData))
+        self.c_qplotTab = QPlotTab(codelet_note, QPlotData(self.loadedData), 'Codelet')
         self.c_siPlotTab = SIPlotTab(codelet_note)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
@@ -667,7 +698,7 @@ class AnalyzerGui(tk.Frame):
         codelet_note.pack(fill=tk.BOTH, expand=1)
         # Application tabs
         self.w_trawlTab = TrawlTab(application_note)
-        self.w_qplotTab = QPlotTab(application_note, None) # None for data for now - to be updated
+        self.w_qplotTab = QPlotTab(application_note, QPlotData(self.loadedData), 'Application')
         self.w_siPlotTab = SIPlotTab(application_note)
         application_note.add(self.w_trawlTab, text="TRAWL")
         application_note.add(self.w_qplotTab, text="QPlot")
