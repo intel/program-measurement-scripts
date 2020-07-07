@@ -101,7 +101,7 @@ class QPlotData(Observable):
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
-        chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
@@ -312,7 +312,7 @@ class AxesTab(tk.Frame):
         # Options for y axis
         self.y_selected = tk.StringVar()
         self.y_selected.set('Choose Y Axis')
-        y_options = ['C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max']
+        y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
         y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
 
@@ -372,8 +372,9 @@ class QPlotTab(tk.Frame):
             self.buildTableTabs()
             self.parent.buildLabelTable(df, self.labelTab)
             self.window.add(self.tableFrame, stretch='always')
-            summaryDf = df[['name', 'short_name', 'time_s', 'variant','C_L1', 'C_L2', 'C_L3', \
-                'C_RAM', 'C_max', 'memlevel', 'C_op']]
+            # TODO: Hardcode op node name but it could be something else.
+            summaryDf = df[['name', 'short_name', 'time_s', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+                'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]']]
             summaryDf = summaryDf.sort_values(by='time_s', ascending=False)
             summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
             summaryTable.show()
