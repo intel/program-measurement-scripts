@@ -84,8 +84,10 @@ def aggregate_runs(inputfiles, outputfile):
     aggregated.to_csv(outputfile, index=False)
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Aggregate summary sheets into app level.')
+    parser = ArgumentParser(description='Aggregate summary sheets into source or app level.')
     parser.add_argument('-i', nargs='+', help='the input csv file(s)', required=True, dest='in_files')
+    parser.add_argument('-l', nargs='?', default='app', help='aggregation level (default app can change to src)', \
+        choices=['app', 'src'], dest='level')
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     args = parser.parse_args()
     aggregate_runs(args.in_files, args.out_file)
