@@ -4,6 +4,8 @@ from tkinter import ttk
 from argparse import ArgumentParser
 #from idlelib.TreeWidget import ScrolledCanvas, FileTreeItem, TreeNode
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+import matplotlib
+import matplotlib.pyplot as plt
 from pandastable import Table
 import pandas as pd
 import pathlib
@@ -14,6 +16,7 @@ from aggregate_summary import aggregate_runs
 from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 from generate_coveragePlot import coverage_plot
+from generate_TRAWL import trawl_plot
 import tempfile
 import pkg_resources.py2_warn
 from web_browser import BrowserFrame
@@ -28,6 +31,7 @@ from pywebcopy import WebPage, config
 import shutil
 import threading
 import logging
+import copy
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -80,8 +84,11 @@ class LoadedData(Observable):
         request_skip_stalls = False
         request_succinct = False
         short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
+        mappings_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\mappings.csv'
         if not os.path.isfile(short_names_path):
             short_names_path = None
+        if not os.path.isfile(mappings_path):
+            mappings_path = None
         #print(f'in_files_format[index]: {in_files_format[index]} \nsource: {source} \nin_files[index]:{in_files[index]}')
         # Codelet summary
         summary_report(in_files, tmpfile.name, in_files_format, user_op_file, request_no_cqa, \
@@ -97,6 +104,29 @@ class LoadedData(Observable):
         self.notify_observers()
     def get_data_items(self):
         return self.data_items
+
+class TRAWLData(Observable):
+    def __init__(self, loadedData):
+        super().__init__()
+        self.loadedData = loadedData
+        # Watch for updates in loaded data
+        loadedData.add_observers(self)
+    
+    def notify(self, loadedData, x_axis=None, y_axis=None):
+        fname=loadedData.get_data_items()[0]
+        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, y_axis=y_axis)
+        self.df = df
+        self.fig = fig
+        self.texts = texts
+
+        # application trawl plot
+        fname=loadedData.get_data_items()[1]
+        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, y_axis=y_axis)
+        self.appDf = df
+        self.appFig = fig
+        self.appTexts = texts
+
+        self.notify_observers()
         
 class QPlotData(Observable):
     def __init__(self, loadedData):
@@ -106,30 +136,12 @@ class QPlotData(Observable):
         loadedData.add_observers(self)
         self.df = None
         self.fig = None
+        self.ax = None
         self.coverageFig = None
+        self.coverageTexts = None
         self.appDf = None
         self.appFig = None
-
-    def getDf(self):
-        return self.df
-    
-    def getFig(self):
-        return self.fig
-
-    def getTexts(self):
-        return self.texts
-    
-    def getCoverageFig(self):
-        return self.coverageFig
-
-    def getCoverageTexts(self):
-        return self.coverageTexts
-
-    def getAppDf(self):
-        return self.appDf
-    
-    def getAppFig(self):
-        return self.appFig
+        self.appTextData = None
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
@@ -137,14 +149,14 @@ class QPlotData(Observable):
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
-        df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG = parse_ip_qplot\
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
             (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
         # TODO: Need to settle how to deal with multiple plots/dataframes
         # May want to let user to select multiple plots to look at within this tab
         # Currently just save the ORIG data
         self.df = df_ORIG if df_ORIG is not None else df_XFORM
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
-        self.texts = texts_ORIG if texts_ORIG is not None else texts_XFORM
+        self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
 
         # use qplot dataframe to generate the coverage plot
         fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
@@ -153,10 +165,11 @@ class QPlotData(Observable):
 
         # application qplot
         fname=loadedData.get_data_items()[1]
-        df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG = parse_ip_qplot\
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
             (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
         self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
         self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+        self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
 
         self.notify_observers()
     
@@ -222,7 +235,8 @@ class DataSourcePanel(ScrolledTreePane):
                 if name[-1] == '/' and name not in self.children:
                     self.children.append(name)
                     fullpath = self.path + name
-                    time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10]
+                    time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10] + '_' + link_element.xpath('td[position()=3]/text()')[0][11:13] + \
+                        '-' + link_element.xpath('td[position()=3]/text()')[0][14:16]
                     self.container.insertNode(self, DataSourcePanel.RemoteNode(fullpath, name, self.container, time_stamp=time_stamp))
 
         def open_webpage(self):
@@ -405,14 +419,17 @@ class SummaryTab(tk.Frame):
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
 class AxesTab(tk.Frame):
-    def __init__(self, parent, qplotTab):
+    def __init__(self, parent, tab, plotType):
         tk.Frame.__init__(self, parent)
-        self.qplotTab = qplotTab
         self.parent = parent
-        # Options for y axis
         self.y_selected = tk.StringVar()
         self.y_selected.set('Choose Y Axis')
-        y_options = ['C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max']
+        self.tab = tab
+        self.plotType = plotType
+        if self.plotType == 'QPlot':
+            y_options = ['C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max']
+        elif self.plotType == 'TRAWL':
+            y_options = ['vec', 'DL1']
         y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
 
@@ -423,8 +440,10 @@ class AxesTab(tk.Frame):
     def update_axes(self):
         if self.y_selected.get() == 'Choose Y Axis':
             pass
-        else:
-            self.qplotTab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
+        elif self.plotType == 'QPlot':
+            self.tab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
+        elif self.plotType == 'TRAWL':
+            self.tab.trawlData.notify(gui.loadedData, y_axis=self.y_selected.get())
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -520,18 +539,13 @@ class OneviewTab(tk.Frame):
             self.window.remove(self.browser2)
 
 class TrawlTab(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-
-class QPlotTab(tk.Frame):
-
-    def __init__(self, parent, qplotData, level):
+    def __init__(self, parent, trawlData, level):
         tk.Frame.__init__(self, parent)
         self.level = level
-        self.qplotData = qplotData
-        if qplotData is not None:
-            qplotData.add_observers(self)
-        # QPlot tab has a paned window with the summary table and qplot
+        self.trawlData = trawlData
+        if trawlData is not None:
+            trawlData.add_observers(self)
+        # TRAWL tab has a paned window with the data tables and trawl plot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
                                                 sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
@@ -542,12 +556,106 @@ class QPlotTab(tk.Frame):
         self.window.add(self.plotFrame, stretch='always')
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
+        self.df = df
+        self.fig = fig
+        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
+        self.toolbar.update()
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
 
-        canvas = FigureCanvasTkAgg(fig, self.plotFrame)
-        toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
-        toolbar.update()
-        canvas.get_tk_widget().pack()
-        canvas.draw()
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', \
+            'vec', 'DL1', 'C_op', 'color']]
+        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summaryTable.show()
+        summaryTable.redraw()
+
+        self.labelTab.buildLabelTable(df, self.labelTab)
+
+    # Create tabs for QPlot Summary, Labels, and Axes
+    def buildTableTabs(self):
+        self.tableNote = ttk.Notebook(self.tableFrame)
+        self.summaryTab = tk.Frame(self.tableNote)
+        self.labelTab = LabelTab(self.tableNote)
+        self.axesTab = AxesTab(self.tableNote, self, 'TRAWL')
+        self.tableNote.add(self.summaryTab, text="Data")
+        self.tableNote.add(self.labelTab, text="Labels")
+        self.tableNote.add(self.axesTab, text="Axes")
+        self.tableNote.pack(fill=tk.BOTH, expand=True)
+
+    # plot data to be updated
+    def notify(self, trawlData):
+        if self.level == 'Codelet':
+            df = trawlData.df
+            fig = trawlData.fig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
+
+        elif self.level == 'Application':
+            df = trawlData.appDf
+            fig = trawlData.appFig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
+    
+
+class QPlotTab(tk.Frame):
+
+    def __init__(self, parent, qplotData, level):
+        tk.Frame.__init__(self, parent)
+        self.level = level
+        self.qplotData = qplotData
+        if qplotData is not None:
+            qplotData.add_observers(self)
+        # QPlot tab has a paned window with the data tables and qplot
+        self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
+
+    def adjust_texts(self):
+        for child in self.textData['ax'].get_children():
+            if isinstance(child, matplotlib.text.Annotation):
+                child.remove()
+        self.texts = [plt.text(self.textData['xs'][i], self.textData['ys'][i], self.textData['text'][i]) \
+            for i in range(len(self.textData['xs']))]
+        adjust_text(self.texts, ax=self.textData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+        self.canvas.get_tk_widget().destroy()
+        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
+        self.toolbar.destroy()
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
+        self.toolbar.update()
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
+
+    def update(self, df, fig, textData=None):
+        self.plotFrame = tk.Frame(self.window)
+        self.tableFrame = tk.Frame(self.window)
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tableFrame, stretch='always')
+        self.buildTableTabs()
+        self.df = df
+        self.fig = fig
+        self.textData = textData
+        # tk.Button(self.plotFrame, text='Adjust Texts', command=self.adjust_texts).pack()
+        # if textData:
+        #     orig_texts = []
+            #print('\n\n\n')
+            # self.texts = [plt.text(self.textData['xs'][i], self.textData['ys'][i], self.textData['text'][i]) \
+            #     for i in range(len(self.textData['xs']))]
+            # for text in self.texts:
+            #     print(text)
+                # orig_texts.append(plt.text(text.get_position()[0], text.get_position()[1], text.get_text()))
+                # r = self.ax.get_figure().canvas.get_renderer()
+                # print(text.get_window_extent(r).expanded(*(1,1)).transformed(self.ax.transData.inverted()))
+            #print('\n\n\n')
+            # adjust_text(self.texts, ax=self.textData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
+        self.toolbar.update()
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
 
         summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1', 'C_L2', 'C_L3', \
             'C_RAM', 'C_max', 'memlevel', 'C_op', 'color']]
@@ -563,7 +671,7 @@ class QPlotTab(tk.Frame):
         self.tableNote = ttk.Notebook(self.tableFrame)
         self.summaryTab = tk.Frame(self.tableNote)
         self.labelTab = LabelTab(self.tableNote)
-        self.axesTab = AxesTab(self.tableNote, self)
+        self.axesTab = AxesTab(self.tableNote, self, 'QPlot')
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.labelTab, text="Labels")
         self.tableNote.add(self.axesTab, text="Axes")
@@ -572,29 +680,33 @@ class QPlotTab(tk.Frame):
     # plot data to be updated
     def notify(self, qplotData):
         if self.level == 'Codelet':
-            df = qplotData.getDf()
-            fig = qplotData.getFig()
-            texts = qplotData.getTexts()
-            coverageFig = qplotData.getCoverageFig()
-            coverageTexts = qplotData.getCoverageTexts()
+            df = qplotData.df
+            fig = qplotData.fig
+            textData = qplotData.textData
+            coverageFig = qplotData.coverageFig
+            coverageTexts = qplotData.coverageTexts
             # TODO: Separate coverage plot from qplot data
             plotTabs = [self.window, gui.summaryTab.window]
             for tab in plotTabs:
                 for w in tab.winfo_children():
                     w.destroy()
             gui.summaryTab.update(df, coverageFig, coverageTexts)
+            self.update(df, fig, textData)
 
         elif self.level == 'Application':
-            df = qplotData.getAppDf()
-            fig = qplotData.getAppFig()
+            df = qplotData.appDf
+            fig = qplotData.appFig
             plotTabs = [self.window]
             for tab in plotTabs:
                 for w in tab.winfo_children():
                     w.destroy()
-
-        self.update(df, fig)
+            self.update(df, fig)
 
 class SIPlotTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
+class CustomTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
@@ -689,16 +801,20 @@ class AnalyzerGui(tk.Frame):
         application_note = ttk.Notebook(self.applicationTab)
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
-        self.c_trawlTab = TrawlTab(codelet_note)
-        self.c_qplotTab = QPlotTab(codelet_note, QPlotData(self.loadedData), 'Codelet')
+        self.qplotData = QPlotData(self.loadedData)
+        self.trawlData = TRAWLData(self.loadedData)
+        self.c_trawlTab = TrawlTab(codelet_note, self.trawlData, 'Codelet')
+        self.c_qplotTab = QPlotTab(codelet_note, self.qplotData, 'Codelet')
         self.c_siPlotTab = SIPlotTab(codelet_note)
+        self.c_customTab = CustomTab(codelet_note)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
+        codelet_note.add(self.c_customTab, text="Custom")
         codelet_note.pack(fill=tk.BOTH, expand=1)
         # Application tabs
-        self.w_trawlTab = TrawlTab(application_note)
-        self.w_qplotTab = QPlotTab(application_note, QPlotData(self.loadedData), 'Application')
+        self.w_trawlTab = TrawlTab(application_note, self.trawlData, 'Application')
+        self.w_qplotTab = QPlotTab(application_note, self.qplotData, 'Application')
         self.w_siPlotTab = SIPlotTab(application_note)
         application_note.add(self.w_trawlTab, text="TRAWL")
         application_note.add(self.w_qplotTab, text="QPlot")

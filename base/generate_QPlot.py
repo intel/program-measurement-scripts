@@ -47,10 +47,10 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	df_XFORM, fig_XFORM, texts_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
-	df_ORIG, fig_ORIG, texts_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 	# Return dataframe and figure for GUI
-	return (df_XFORM, fig_XFORM, texts_XFORM, df_ORIG, fig_ORIG, texts_ORIG)
+	return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
@@ -148,9 +148,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		outputfile=None
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
-	fig, texts = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis, df, color_labels)
-	return df, fig, texts
+	fig, textData = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis=y_axis, df=df, color_labels=color_labels)
+	return df, fig, textData
 
 
 def draw_contours(ax, maxx, ns):
@@ -199,8 +199,13 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df
 	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]    
 	# texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
 	texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
-
 	adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+	textData = {
+		'xs' : xs,
+		'ys' : ys,
+		'text' : mytext,
+		'ax' : ax
+	}
 	ax.set(xlabel=r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
 	ax.set_title(title, pad=40)
 #	chartBox = ax.get_position()
@@ -218,7 +223,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df
 	if filename:
 		plt.savefig(filename)
 
-	return fig, texts
+	return fig, textData
 
 def usage(reason):
 	error_code = 0

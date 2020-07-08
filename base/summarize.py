@@ -39,7 +39,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color', 'Vec', 'DL1' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -89,6 +89,9 @@ def calculate_codelet_name(out_row, in_row):
         out_row['Short Name'] = out_row['Name'] # Short Name is default set to actual name
     out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
         else getter(in_row, 'decan_variant.name', type=str)
+
+def create_mappings(out_row, in_row):
+    pass
 
 def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
@@ -349,6 +352,10 @@ def calculate_app_time_coverage(out_rows, in_rows):
         totalAppTime = sum(out_rows['AppTime (s)'])
         out_rows['%Coverage']=in_rows['AppTime (s)']/totalAppTime
 
+def add_trawl_data(out_rows, in_rows):
+    out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
+    out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
+
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb):
     out_row = {}
@@ -464,6 +471,8 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
     
     calculate_app_time_coverage(output_rows, df)
+    # Add y-value data for TRAWL Plot
+    add_trawl_data(output_rows, df)
     # Set Corresponding color for each codelet
     df['Name'] = df['application.name'] + ': ' + df['codelet.name']
     color_df = df[['Name', 'Color']]

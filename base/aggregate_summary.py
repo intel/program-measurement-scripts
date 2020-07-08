@@ -36,6 +36,10 @@ def agg_fn(df):
 
     getShortName(out_df)
 
+    # Calculate potential speedups
+    for metric in ['Vec', 'DL1']:
+        out_df[metric] = (np.sum(df['AppTime (s)'])) / (np.sum(df['AppTime (s)'] / df[metric]))
+
     # Calculate sum metrics 
     for metric in ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', \
         'Total PKG Energy (J)', 'Total DRAM Energy (J)', 'Total PKG+DRAM Energy (J)']:
