@@ -14,7 +14,7 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 def trawl_plot(inputfile, outputfile, scale, title, no_plot, gui=False, y_axis=None):
     df = pd.read_csv(inputfile)
     df.columns = succinctify(df.columns)
-    df.rename(columns={'dl1' : 'DL1', 'flop_rate_gflop/s' : 'C_op'}, inplace=True)
+    df.rename(columns={'dl1' : 'DL1', 'flop_rate_gflop/s' : 'C_FLOP [GFlop/s]'}, inplace=True)
     fig, texts = compute_and_plot(
         'ORIG', df, outputfile, scale, title, no_plot, gui=gui, y_axis=y_axis)
     # Return dataframe and figure for GUI
@@ -45,7 +45,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if x_axis:
         xs = df[x_axis]
     else:
-        xs = df['C_op']
+        xs = df['C_FLOP [GFlop/s]']
     if y_axis:
         ys = df[y_axis]
     else:

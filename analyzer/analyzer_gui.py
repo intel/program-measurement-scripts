@@ -145,7 +145,7 @@ class QPlotData(Observable):
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         print("Notified from ", loadedData)
-        chosen_node_set = set(['L1','L2','L3','RAM','FLOP'])
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
@@ -427,7 +427,7 @@ class AxesTab(tk.Frame):
         self.tab = tab
         self.plotType = plotType
         if self.plotType == 'QPlot':
-            y_options = ['C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max']
+            y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
         elif self.plotType == 'TRAWL':
             y_options = ['vec', 'DL1']
         y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
@@ -498,7 +498,6 @@ class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
-
 class OneviewTab(tk.Frame):
 
     def __init__(self, parent):
@@ -564,8 +563,8 @@ class TrawlTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', \
-            'vec', 'DL1', 'C_op', 'color']]
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summaryTable.show()
@@ -657,8 +656,9 @@ class QPlotTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1', 'C_L2', 'C_L3', \
-            'C_RAM', 'C_max', 'memlevel', 'C_op', 'color']]
+        # TODO: Hardcode op node name but it could be something else.
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summaryTable.show()

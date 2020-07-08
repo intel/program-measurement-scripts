@@ -40,7 +40,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     except:
         indices = df['name']
 
-    xs = df['C_op']
+    xs = df['C_FLOP [GFlop/s]']
     ys = df[r'%coverage']
 
     mem_level = df['memlevel']

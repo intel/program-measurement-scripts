@@ -18,22 +18,22 @@ from adjustText import adjust_text
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-MEM_NODE_SET={'L1', 'L2', 'L3', 'RAM'}
-OP_NODE_SET={'FLOP', 'SIMD'}
+MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
+OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}
 BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET
 
 BUFFER_NODE_SET={'FrontEnd'}
-DEFAULT_CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'RAM', 'FLOP'}
+DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]', 'FLOP [GFlop/s]'}
 
 # For node using derived metrics (e.g. FrontEnd), make sure the depended metrics are computed
 capacity_formula= {
-	'L1': (lambda df : df['l1_rate_gb/s']/8),
-	'L2': (lambda df : df['l2_rate_gb/s']/8),
-	'L3': (lambda df : df['l3_rate_gb/s']/8),
-	'FLOP': (lambda df : df['flop_rate_gflop/s']),
-	'SIMD': (lambda df : df['register_simd_rate_gb/s']/8),
-	'RAM': (lambda df : df['ram_rate_gb/s']/8),
-	'FrontEnd': (lambda df : df['%frontend']*df['C_max'])	
+	'L1 [GB/s]': (lambda df : df['l1_rate_gb/s']),
+	'L2 [GB/s]': (lambda df : df['l2_rate_gb/s']),
+	'L3 [GB/s]': (lambda df : df['l3_rate_gb/s']),
+	'FLOP [GFlop/s]': (lambda df : df['flop_rate_gflop/s']),
+	'SIMD [GB/s]': (lambda df : df['register_simd_rate_gb/s']),
+	'RAM [GB/s]': (lambda df : df['ram_rate_gb/s']),
+	'FrontEnd [GB/s]': (lambda df : df['%frontend']*df['C_max'])	
 	}
 
 def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
@@ -63,11 +63,13 @@ def compute_capacity(df, chosen_node_set):
 		formula=capacity_formula[node]
 		df['C_{}'.format(node)]=formula(df)
 
-	df['C_max']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
-	df = df[df['C_max'].notna()]
+	df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
+	df = df[df['C_max [GB/s]'].notna()]
 	df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
 	# Remove the first two characters which is 'C_'
 	df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
+	# Drop the unit
+	df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
 	print ("<=====compute_capacity======>")
 #	print(df['C_max'])
 
@@ -80,9 +82,10 @@ def compute_capacity(df, chosen_node_set):
 		sys.exit(-1)
 	# Exactly 1 op node selected below
 	op_node = chosen_op_node_set.pop()
+	op_metric_name = 'C_{}'.format(op_node)
 	formula=capacity_formula[op_node]
-	df['C_op']=formula(df)
-	return df
+	df[op_metric_name]=formula(df)
+	return df, op_metric_name
 
 
 
@@ -101,7 +104,7 @@ def compute_saturation(df, chosen_node_set):
 def compute_intensity(df, chosen_node_set):
 	node_cnt = len(chosen_node_set)
 	csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
-	df['Intensity']=node_cnt*df['C_max'] / csum
+	df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
 	print(df['Intensity'])
 
 def compute_color_labels(df):
@@ -115,12 +118,12 @@ def compute_color_labels(df):
 def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
 	if df.empty:
 		return None, None, None # Nothing to do
-	df = compute_capacity(df, chosen_node_set)
+	df, op_node_name = compute_capacity(df, chosen_node_set)
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
 	print('Saving to '+output_data_source)
-	df[['name', 'variant','C_L1', 'C_L2', 'C_L3', 'C_RAM', 'C_max', 'memlevel', 'C_op']].to_csv(output_data_source, index = False, header=True)
+	df[['name', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', op_node_name]].to_csv(output_data_source, index = False, header=True)
 	
 	# Used to create a legend of file names to color for multiple plots
 	color_labels = compute_color_labels(df)
@@ -136,12 +139,12 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	if x_axis:
 		xs = df[x_axis]
 	else:
-		xs = df['C_op']
+		xs = df[op_node_name]
 	if y_axis:
 		ys = df[y_axis]
 	else:
-		ys = df['C_max']
-
+		ys = df['C_max [GB/s]']
+		
 	mem_level=df['memlevel']
 	today = datetime.date.today()
 	if gui:
