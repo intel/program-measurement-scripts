@@ -204,8 +204,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	plt.rcParams.update({'font.size': 7})
 	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]  
 	texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
-	#adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-	adjust_text(texts)
+	adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
 	textData = {
 		'xs' : xs,
 		'ys' : ys,
@@ -227,7 +226,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 				y_axis = y_axis if y_axis else 'C_max [GB/s]'
 				xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
 				xyB = (match[x_axis][0], match[y_axis][0])
-				con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w")
+				con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
+					connectionstyle='arc3,rad=0.3')
 				ax.add_artist(con)
 
 	# Legend

@@ -10,6 +10,7 @@ from pandastable import Table
 import pandas as pd
 import pathlib
 import os
+import re
 from os.path import expanduser
 from summarize import summary_report
 from aggregate_summary import aggregate_runs
@@ -17,6 +18,7 @@ from generate_QPlot import parse_ip as parse_ip_qplot
 from generate_SI import parse_ip as parse_ip_siplot
 from generate_coveragePlot import coverage_plot
 from generate_TRAWL import trawl_plot
+from generate_custom import custom_plot
 import tempfile
 import pkg_resources.py2_warn
 from web_browser import BrowserFrame
@@ -96,14 +98,33 @@ class LoadedData(Observable):
         # Application summary
         tmpfile_app = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
         aggregate_runs([tmpfile.name], tmpfile_app.name)
+        # Source summary
+        tmpfile_src = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+        aggregate_runs([tmpfile.name], tmpfile_src.name, level='src')
         # Just use file for data storage now.  May explore keeping dataframe in future if needed.
         # Currently assume only 1 run is loaded but we should extend this to aloow loading multiple
         # data and pool data together
-        self.data_items=[tmpfile.name, tmpfile_app.name]
+        self.data_items=[tmpfile.name, tmpfile_src.name, tmpfile_app.name]
         #self.data_items.append(tmpfile.name)
         self.notify_observers()
     def get_data_items(self):
         return self.data_items
+
+class CustomData(Observable):
+    def __init__(self, loadedData):
+        super().__init__()
+        self.loadedData = loadedData
+        # Watch for updates in loaded data
+        #loadedData.add_observers(self)
+
+    def notify(self, loadedData, x_axis=None, y_axis=None):
+        fname=loadedData.get_data_items()[0]
+        df, fig, texts = custom_plot(fname, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.df = df
+        self.fig = fig
+        self.texts = texts
+
+        #self.notify_observers()
 
 class TRAWLData(Observable):
     def __init__(self, loadedData):
@@ -114,14 +135,21 @@ class TRAWLData(Observable):
     
     def notify(self, loadedData, x_axis=None, y_axis=None):
         fname=loadedData.get_data_items()[0]
-        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, y_axis=y_axis)
+        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
         self.df = df
         self.fig = fig
         self.texts = texts
 
-        # application trawl plot
+        # source trawl plot
         fname=loadedData.get_data_items()[1]
-        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, y_axis=y_axis)
+        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.srcDf = df
+        self.srcFig = fig
+        self.srcTexts = texts
+
+        # application trawl plot
+        fname=loadedData.get_data_items()[2]
+        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
         self.appDf = df
         self.appFig = fig
         self.appTexts = texts
@@ -150,7 +178,7 @@ class QPlotData(Observable):
         # Assume only one set of data loaded for now
         fname=loadedData.get_data_items()[0]
         df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
         # TODO: Need to settle how to deal with multiple plots/dataframes
         # May want to let user to select multiple plots to look at within this tab
         # Currently just save the ORIG data
@@ -158,15 +186,27 @@ class QPlotData(Observable):
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
 
+        # Test Custom Plot
+        df, fig, texts = custom_plot(fname, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.customFig = fig
+
         # use qplot dataframe to generate the coverage plot
         fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
         self.coverageFig = fig
         self.coverageTexts = texts
-
-        # application qplot
+        
+        # source qplot
         fname=loadedData.get_data_items()[1]
         df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, y_axis=y_axis)
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
+        self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
+        self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
+
+        # application qplot
+        fname=loadedData.get_data_items()[2]
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
+            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
         self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
         self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -247,7 +287,7 @@ class DataSourcePanel(ScrolledTreePane):
             # Each file has its own directory with versions of that file labeled by time stamp
             local_dir_path = local_dir_path + self.time_stamp
             # Download Corresponding Excel file if it doesn't already exist
-            local_file_path = local_dir_path + '\\data.xlsx'
+            local_file_path = local_dir_path + '\\' + self.name[:-1] + '.xlsx'
             if not os.path.isdir(local_dir_path):
                 Path(local_dir_path).mkdir(parents=True, exist_ok=True)
                 excel_url = self.path[:-1] + '.xlsx'
@@ -302,7 +342,14 @@ class DataSourcePanel(ScrolledTreePane):
                 if d not in self.children:
                     self.children.append(d)
                     fullpath= os.path.join(self.path, d)
-                    if os.path.isdir(fullpath):
+                    if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', d): # timestamp
+                        html_path = fullpath + '\\HTML'
+                        for name in os.listdir(html_path): # add html files
+                            if name.endswith("__index.html"):
+                                gui.urls.append(html_path + '\\' + name)
+                        fullpath = fullpath + '\\' + fullpath.split('\\')[-2] + '.xlsx' # open excel file
+                        self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container))
+                    elif os.path.isdir(fullpath):
                         self.container.insertNode(self, DataSourcePanel.LocalDirNode(fullpath, d, self.container))
                     elif os.path.isfile(fullpath):
                         self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container))
@@ -401,9 +448,9 @@ class SummaryTab(tk.Frame):
         canvas.get_tk_widget().pack()
         canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage']]
+        summaryDf = df[['name', 'short_name', r'%coverage', 'apptime_s', 'C_FLOP [GFlop/s]']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
-        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
 
@@ -423,27 +470,43 @@ class AxesTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.y_selected = tk.StringVar()
+        self.x_selected = tk.StringVar()
         self.y_selected.set('Choose Y Axis')
+        self.x_selected.set('Choose X Axis')
         self.tab = tab
         self.plotType = plotType
+        x_options = ['C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']
         if self.plotType == 'QPlot':
             y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
         elif self.plotType == 'TRAWL':
             y_options = ['vec', 'DL1']
+        elif self.plotType == 'Custom':
+            y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'vec', 'DL1']
         y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
+        x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
+        x_menu.pack(side=tk.TOP, anchor=tk.NW)
 
         # Update button to replot
         update = tk.Button(self, text='Update', command=self.update_axes)
         update.pack(side=tk.TOP, anchor=tk.NW)
     
     def update_axes(self):
+        if self.x_selected.get() == 'Choose X Axis':
+            x_axis = None
+        else:
+            x_axis = self.x_selected.get()
         if self.y_selected.get() == 'Choose Y Axis':
-            pass
-        elif self.plotType == 'QPlot':
-            self.tab.qplotData.notify(gui.loadedData, y_axis=self.y_selected.get())
-        elif self.plotType == 'TRAWL':
-            self.tab.trawlData.notify(gui.loadedData, y_axis=self.y_selected.get())
+            y_axis = None
+        else:
+            y_axis = self.y_selected.get()
+        if x_axis or y_axis:
+            if self.plotType == 'QPlot':
+                self.tab.qplotData.notify(gui.loadedData, x_axis=x_axis, y_axis=y_axis)
+            elif self.plotType == 'TRAWL':
+                self.tab.trawlData.notify(gui.loadedData, x_axis=x_axis, y_axis=y_axis)
+            elif self.plotType == 'Custom':
+                self.tab.customData.notify(gui.loadedData, x_axis=x_axis, y_axis=y_axis)
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -472,11 +535,11 @@ class LabelTab(tk.Frame):
         merged = pd.merge(merged, df[['name',r'%coverage']], on='name')
         merged = merged.sort_values(by=r'%coverage_y', ascending=False)
         merged = merged[['name', 'short_name']]
-        table = Table(tab, dataframe=merged, showtoolbar=True, showstatusbar=True)
+        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
-        update_b = tk.Button(tab, text="Update", command=lambda: self.updateLabels(table, texts))
-        update_b.grid()
+        tk.Button(tab, text="Update", command=lambda: self.updateLabels(table, texts)).grid(row=10, column=0)
+        tk.Button(tab, text="Export", command=lambda: self.exportCSV(table)).grid(row=10, column=1, sticky=tk.W)
         return table
 
     # Merge user input labels with current mappings and replot
@@ -494,7 +557,15 @@ class LabelTab(tk.Frame):
         merged.to_csv(self.short_names_path)
         gui.loadedData.add_data(gui.sources)
 
+    def exportCSV(self, table):
+        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+        table.model.df.to_csv(export_file_path, index=False, header=True)
+
 class ApplicationTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
+class SourceTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
@@ -565,13 +636,13 @@ class TrawlTab(tk.Frame):
 
         summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'vec', 'DL1','C_FLOP [GFlop/s]', 'version', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
 
         self.labelTab.buildLabelTable(df, self.labelTab)
 
-    # Create tabs for QPlot Summary, Labels, and Axes
+    # Create tabs for TRAWL Summary, Labels, and Axes
     def buildTableTabs(self):
         self.tableNote = ttk.Notebook(self.tableFrame)
         self.summaryTab = tk.Frame(self.tableNote)
@@ -591,16 +662,21 @@ class TrawlTab(tk.Frame):
                 w.destroy()
             self.update(df, fig)
 
+        elif self.level == 'Source':
+            df = trawlData.srcDf
+            fig = trawlData.srcFig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
+
         elif self.level == 'Application':
             df = trawlData.appDf
             fig = trawlData.appFig
             for w in self.window.winfo_children():
                 w.destroy()
             self.update(df, fig)
-    
 
 class QPlotTab(tk.Frame):
-
     def __init__(self, parent, qplotData, level):
         tk.Frame.__init__(self, parent)
         self.level = level
@@ -659,7 +735,7 @@ class QPlotTab(tk.Frame):
         summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
             'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'version', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
+        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
 
@@ -684,13 +760,24 @@ class QPlotTab(tk.Frame):
             textData = qplotData.textData
             coverageFig = qplotData.coverageFig
             coverageTexts = qplotData.coverageTexts
+            customFig = qplotData.customFig
             # TODO: Separate coverage plot from qplot data
-            plotTabs = [self.window, gui.summaryTab.window]
+            plotTabs = [self.window, gui.summaryTab.window, gui.c_customTab.window]
             for tab in plotTabs:
                 for w in tab.winfo_children():
                     w.destroy()
             gui.summaryTab.update(df, coverageFig, coverageTexts)
+            gui.c_customTab.update(df, customFig)
             self.update(df, fig, textData)
+
+        elif self.level == 'Source':
+            df = qplotData.srcDf
+            fig = qplotData.srcFig
+            plotTabs = [self.window]
+            for tab in plotTabs:
+                for w in tab.winfo_children():
+                    w.destroy()
+            self.update(df, fig)
 
         elif self.level == 'Application':
             df = qplotData.appDf
@@ -706,8 +793,61 @@ class SIPlotTab(tk.Frame):
         tk.Frame.__init__(self, parent)
 
 class CustomTab(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, customData, level):
         tk.Frame.__init__(self, parent)
+        self.level = level
+        self.customData = customData
+        if customData is not None:
+            customData.add_observers(self)
+        # TRAWL tab has a paned window with the data tables and trawl plot
+        self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
+                                                sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
+
+    def update(self, df, fig):
+        self.plotFrame = tk.Frame(self.window)
+        self.tableFrame = tk.Frame(self.window)
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tableFrame, stretch='always')
+        self.buildTableTabs()
+        self.df = df
+        self.fig = fig
+        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
+        self.toolbar.update()
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
+
+        df.rename(columns={'dl1' : 'DL1'}, inplace=True)
+        summaryDf = df[['name', 'short_name', r'%coverage', 'apptime_s', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'vec', 'DL1', 'version', 'color']]
+
+        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        summary_pt.show()
+        summary_pt.redraw()
+
+        self.labelTab.buildLabelTable(df, self.labelTab)
+    
+    # Create tabs for Custom Summary, Labels, and Axes
+    def buildTableTabs(self):
+        self.tableNote = ttk.Notebook(self.tableFrame)
+        self.summaryTab = tk.Frame(self.tableNote)
+        self.labelTab = LabelTab(self.tableNote)
+        self.axesTab = AxesTab(self.tableNote, self, 'Custom')
+        self.tableNote.add(self.summaryTab, text="Data")
+        self.tableNote.add(self.labelTab, text="Labels")
+        self.tableNote.add(self.axesTab, text="Axes")
+        self.tableNote.pack(fill=tk.BOTH, expand=True)
+
+    # plot data to be updated
+    def notify(self, customData):
+        if self.level == 'Codelet':
+            df = customData.df
+            fig = customData.fig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
 
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
@@ -798,7 +938,7 @@ class AnalyzerGui(tk.Frame):
                     b = tk.Button(self.win, text=source.split('\\')[-1].split('.')[0])
                     b['command'] = lambda b=b : self.orderAction(b) 
                     self.button_to_source[b] = source
-                    b.grid(row=index+1, column=1, pady=10)
+                    b.grid(row=index+1, column=1, padx=5, pady=10)
                 if self.urls:
                     self.oneviewTab.loadSecondPage()
                 root.wait_window(self.win)
@@ -815,28 +955,40 @@ class AnalyzerGui(tk.Frame):
         # 1st level notebook
         self.main_note = ttk.Notebook(parent)
         self.applicationTab = ApplicationTab(self.main_note)
+        self.sourceTab = SourceTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
         self.oneviewTab = OneviewTab(self.main_note)
         self.summaryTab = SummaryTab(self.main_note)
         self.main_note.add(self.oneviewTab, text="Oneview")
         self.main_note.add(self.applicationTab, text="Application")
+        self.main_note.add(self.sourceTab, text="Source")
         self.main_note.add(self.codeletTab, text="Codelet")
         self.main_note.add(self.summaryTab, text="Summary")
-        # Application and Codelet each have their own 2nd level tabs
+        # Application, Source, and Codelet each have their own 2nd level tabs
         application_note = ttk.Notebook(self.applicationTab)
+        source_note = ttk.Notebook(self.sourceTab)
         codelet_note = ttk.Notebook(self.codeletTab)
         # Codelet tabs
         self.qplotData = QPlotData(self.loadedData)
         self.trawlData = TRAWLData(self.loadedData)
+        self.customData = CustomData(self.loadedData)
         self.c_trawlTab = TrawlTab(codelet_note, self.trawlData, 'Codelet')
         self.c_qplotTab = QPlotTab(codelet_note, self.qplotData, 'Codelet')
         self.c_siPlotTab = SIPlotTab(codelet_note)
-        self.c_customTab = CustomTab(codelet_note)
+        self.c_customTab = CustomTab(codelet_note, self.customData, 'Codelet')
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.add(self.c_customTab, text="Custom")
         codelet_note.pack(fill=tk.BOTH, expand=1)
+        # Source Tabs
+        self.s_trawlTab = TrawlTab(source_note, self.trawlData, 'Source')
+        self.s_qplotTab = QPlotTab(source_note, self.qplotData, 'Source')
+        self.s_siPlotTab = SIPlotTab(source_note)
+        source_note.add(self.s_trawlTab, text="TRAWL")
+        source_note.add(self.s_qplotTab, text="QPlot")
+        source_note.add(self.s_siPlotTab, text="SI Plot")
+        source_note.pack(fill=tk.BOTH, expand=True)
         # Application tabs
         self.w_trawlTab = TrawlTab(application_note, self.trawlData, 'Application')
         self.w_qplotTab = QPlotTab(application_note, self.qplotData, 'Application')

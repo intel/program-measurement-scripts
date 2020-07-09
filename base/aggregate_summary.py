@@ -104,7 +104,7 @@ def aggregate_runs(inputfiles, outputfile, level="app"):
     # Need to fix datasize being nan's because groupby does not work
     dsMask = np.isnan(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby(['AppName', 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color', 'Version'])
+    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color', 'Version'])
     aggregated = grouped.apply(agg_fn)
     aggregated.to_csv(outputfile, index=False)
 

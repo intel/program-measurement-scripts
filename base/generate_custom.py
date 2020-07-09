@@ -12,7 +12,7 @@ from capelib import succinctify
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def trawl_plot(inputfile, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
+def custom_plot(inputfile, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
     df = pd.read_csv(inputfile)
     df.columns = succinctify(df.columns)
     df.rename(columns={'dl1' : 'DL1', 'flop_rate_gflop/s' : 'C_FLOP [GFlop/s]'}, inplace=True)
@@ -50,7 +50,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if y_axis:
         ys = df[y_axis]
     else:
-        ys = df['vec']
+        ys = df[r'%coverage']
 
     today = datetime.date.today()
     if gui:
@@ -91,7 +91,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
     texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
 
     adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'Potential Speedup: Vectorized')
+    ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'%Coverage')
     ax.set_title(title, pad=40)
 
     # Arrows between multiple runs
