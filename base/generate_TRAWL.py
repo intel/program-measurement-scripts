@@ -5,6 +5,7 @@ import warnings
 import datetime
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 from capelib import succinctify
@@ -58,11 +59,11 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         outputfile = '{}-{}-{}-{}.png'.format(outputfile_prefix,
                                           variant, scale, today)
     fig, texts = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
-        xs), list(ys), list(indices), scale, df=df, color_labels=color_labels, y_axis=y_axis)
+        xs), list(ys), list(indices), scale, df, color_labels=color_labels, y_axis=y_axis)
     return fig, texts
 
 # Set filename to [] for GUI output
-def plot_data(title, filename, xs, ys, indices, scale, df=None, color_labels=None, x_axis=None, y_axis=None):
+def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None):
     DATA = tuple(zip(xs, ys))
 
     fig, ax = plt.subplots()
@@ -93,6 +94,22 @@ def plot_data(title, filename, xs, ys, indices, scale, df=None, color_labels=Non
     ax.set(xlabel=r'OP Rate', ylabel=y_axis if y_axis else r'Potential Speedup: Vectorized')
     ax.set_title(title, pad=40)
 
+    # Arrows between multiple runs
+    if len(df.version.unique()) > 1:
+        df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
+        cur_version = df.loc[df['version'] == 1]
+        next_version = df.loc[df['version'] == 2]
+        for index in cur_version.index:
+            match = next_version.loc[next_version['map_name'] == cur_version['map_name'][index]].reset_index()
+            if not match.empty:
+                x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
+                y_axis = y_axis if y_axis else 'vec'
+                xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
+                xyB = (match[x_axis][0], match[y_axis][0])
+                con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w")
+                ax.add_artist(con)
+
+    # Legend
     patches = []
     if color_labels and len(color_labels) >= 2:
         for color_label in color_labels:

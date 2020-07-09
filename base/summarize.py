@@ -39,7 +39,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color', 'Vec', 'DL1' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color', 'Version', 'Vec', 'DL1' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -436,6 +436,8 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
         cur_df['Color'] = colors[index]
+        # Each file has a version number that increments with each new file
+        cur_df['Version'] = index + 1
         df = df.append(cur_df, ignore_index=True)
 
     df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
@@ -473,9 +475,9 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     calculate_app_time_coverage(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
-    # Set Corresponding color for each codelet
+    # Set Corresponding color/version for each codelet
     df['Name'] = df['application.name'] + ': ' + df['codelet.name']
-    color_df = df[['Name', 'Color']]
+    color_df = df[['Name', 'Color', 'Version']]
     output_rows = pd.merge(output_rows, color_df, how='inner', on='Name')
 
     outputfile = sys.stdout if outputfile == '-' else outputfile

@@ -563,8 +563,7 @@ class TrawlTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'color']]
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'vec', 'DL1','C_FLOP [GFlop/s]', 'version', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summaryTable.show()
@@ -658,7 +657,7 @@ class QPlotTab(tk.Frame):
 
         # TODO: Hardcode op node name but it could be something else.
         summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'color']]
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'version', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=True, showstatusbar=True)
         summaryTable.show()
@@ -742,32 +741,40 @@ class AnalyzerGui(tk.Frame):
         self.urls = []
         self.choice = ''
 
-    def appendData(self, win):
+    def appendData(self):
         self.choice = 'Append'
-        win.destroy()
+        self.win.destroy()
 
-    def overwriteData(self, win):
+    def overwriteData(self):
         self.choice = 'Overwrite'
-        win.destroy()
+        self.win.destroy()
 
-    def cancelAction(self, win):
+    def cancelAction(self):
+        if len(self.sources) > 1:
+            self.sources.pop(-1)
         self.choice = 'Cancel'
-        win.destroy()
+        self.win.destroy()
+
+    def orderAction(self, button):
+        self.source_order.append(self.button_to_source.pop(button))
+        button.destroy()
+        if not self.button_to_source:
+            self.win.destroy()
 
     def loadDataSource(self, source):
         if self.sources:
-            win = tk.Toplevel()
-            win.protocol("WM_DELETE_WINDOW", lambda: self.cancelAction(win))
-            win.title('Existing Data')
+            self.win = tk.Toplevel()
+            self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+            self.win.title('Existing Data')
             if len(self.sources) >= 2:
                 message = 'You have the max number of data files open.\nWould you like to overwrite with the new data?'
             else:
                 message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
-                tk.Button(win, text='Append', command=lambda: self.appendData(win)).grid(row=1, column=0, sticky=tk.E)
-            tk.Label(win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-            tk.Button(win, text='Overwrite', command=lambda: self.overwriteData(win)).grid(row=1, column=1)
-            tk.Button(win, text='Cancel', command=lambda: self.cancelAction(win)).grid(row=1, column=2, pady=10, sticky=tk.W)
-            root.wait_window(win)
+                tk.Button(self.win, text='Append', command=self.appendData).grid(row=1, column=0, sticky=tk.E)
+            tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+            tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
+            tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
+            root.wait_window(self.win)
             if self.choice == 'Cancel':
                 if self.urls:
                     self.urls.pop(-1)
@@ -777,8 +784,26 @@ class AnalyzerGui(tk.Frame):
                     self.urls = [self.urls.pop(-1)]
                     self.oneviewTab.loadFirstPage()
                 self.sources.clear()
-            elif self.choice == 'Append' and self.urls:
-                self.oneviewTab.loadSecondPage()
+            elif self.choice == 'Append':
+                self.sources.append(source)
+                print("DATA source to be loaded", source)
+                self.win = tk.Toplevel()
+                self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+                self.win.title('Order Data')
+                message = 'Select the order of data files from oldest to newest'
+                tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+                self.source_order = []
+                self.button_to_source = {}
+                for index, source in enumerate(self.sources):
+                    b = tk.Button(self.win, text=source.split('\\')[-1].split('.')[0])
+                    b['command'] = lambda b=b : self.orderAction(b) 
+                    self.button_to_source[b] = source
+                    b.grid(row=index+1, column=1, pady=10)
+                if self.urls:
+                    self.oneviewTab.loadSecondPage()
+                root.wait_window(self.win)
+                self.loadedData.add_data(self.source_order)
+                return
         elif self.urls:
             self.oneviewTab.loadFirstPage()
 

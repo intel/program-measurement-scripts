@@ -28,11 +28,11 @@ def getShortName(df):
                     df['Short Name'] = row['short_name']
 
 def agg_fn(df):
-    app_name, variant, numCores, ds, prefetchers, repetitions, Color = df.name
+    app_name, variant, numCores, ds, prefetchers, repetitions, Color, Version = df.name
 
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'color': [Color]})
+            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'color': [Color], 'version' : [Version]})
 
     getShortName(out_df)
 
@@ -95,7 +95,7 @@ def aggregate_runs(inputfiles, outputfile):
     # Need to fix datasize being nan's because groupby does not work
     dsMask = np.isnan(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby(['AppName', 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color'])
+    grouped = df.groupby(['AppName', 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color', 'Version'])
     aggregated = grouped.apply(agg_fn)
     aggregated.to_csv(outputfile, index=False)
 

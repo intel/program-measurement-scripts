@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 
@@ -152,7 +153,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	fig, textData = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, y_axis=y_axis, df=df, color_labels=color_labels)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, df, op_node_name, x_axis=x_axis, y_axis=y_axis, color_labels=color_labels)
 	return df, fig, textData
 
 
@@ -169,7 +170,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df=None, color_labels=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_name, x_axis=None, y_axis=None, color_labels=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -198,22 +199,38 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df
 		pass
 	else:
 		ctxs = draw_contours(ax, xmax, ns)
+	
+	# Point Labels
 	plt.rcParams.update({'font.size': 7})
-	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]    
-	# texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
+	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]  
 	texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
-	adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+	#adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+	adjust_text(texts)
 	textData = {
 		'xs' : xs,
 		'ys' : ys,
 		'text' : mytext,
 		'ax' : ax
 	}
-	ax.set(xlabel=r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
+	ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
 	ax.set_title(title, pad=40)
-#	chartBox = ax.get_position()
-#	ax.set_position([chartBox.x0,chartBox.y0,chartBox.width,chartBox.height*0.65])
-#	ax.legend(loc="center left", bbox_to_anchor=(1,0.5),title="(name,memlevel)", mode='expand')
+
+	# Arrows between multiple runs
+	if len(df.version.unique()) > 1:
+		df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
+		cur_version = df.loc[df['version'] == 1]
+		next_version = df.loc[df['version'] == 2]
+		for index in cur_version.index:
+			match = next_version.loc[next_version['map_name'] == cur_version['map_name'][index]].reset_index()
+			if not match.empty:
+				x_axis = x_axis if x_axis else op_node_name
+				y_axis = y_axis if y_axis else 'C_max [GB/s]'
+				xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
+				xyB = (match[x_axis][0], match[y_axis][0])
+				con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w")
+				ax.add_artist(con)
+
+	# Legend
 	patches = []
 	if color_labels and len(color_labels) >= 2:
 		for color_label in color_labels:
@@ -223,6 +240,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, y_axis=None, df
 	ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="(name,memlevel)", mode='expand', borderaxespad=0., \
 		handles=patches)
 	plt.tight_layout()
+
 	if filename:
 		plt.savefig(filename)
 
