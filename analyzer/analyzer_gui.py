@@ -115,7 +115,7 @@ class CustomData(Observable):
         super().__init__()
         self.loadedData = loadedData
         # Watch for updates in loaded data
-        #loadedData.add_observers(self)
+        loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
         fname=loadedData.get_data_items()[0]
@@ -123,8 +123,7 @@ class CustomData(Observable):
         self.df = df
         self.fig = fig
         self.texts = texts
-
-        #self.notify_observers()
+        self.notify_observers()
 
 class TRAWLData(Observable):
     def __init__(self, loadedData):
@@ -185,10 +184,6 @@ class QPlotData(Observable):
         self.df = df_ORIG if df_ORIG is not None else df_XFORM
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
-
-        # Test Custom Plot
-        df, fig, texts = custom_plot(fname, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
-        self.customFig = fig
 
         # use qplot dataframe to generate the coverage plot
         fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
@@ -394,7 +389,6 @@ class DataSourcePanel(ScrolledTreePane):
     def openLocalChildren(self):
         pass
 
-
     def setupRemoteRoots(self):
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'Oneview', self))
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteTreeNode('','uvsq', self))
@@ -469,27 +463,61 @@ class AxesTab(tk.Frame):
     def __init__(self, parent, tab, plotType):
         tk.Frame.__init__(self, parent)
         self.parent = parent
-        self.y_selected = tk.StringVar()
-        self.x_selected = tk.StringVar()
-        self.y_selected.set('Choose Y Axis')
-        self.x_selected.set('Choose X Axis')
+        self.y_selected = tk.StringVar(value='Choose Y Axis')
+        self.x_selected = tk.StringVar(value='Choose X Axis')
         self.tab = tab
         self.plotType = plotType
         x_options = ['C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']
-        if self.plotType == 'QPlot':
-            y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
-        elif self.plotType == 'TRAWL':
-            y_options = ['vec', 'DL1']
-        elif self.plotType == 'Custom':
-            y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'vec', 'DL1']
-        y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
-        x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
+        if self.plotType == 'Custom':
+            x_menu = self.custom_axes(self.x_selected)
+            y_menu = self.custom_axes(self.y_selected)
+        else:  
+            if self.plotType == 'QPlot':
+                y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
+            elif self.plotType == 'TRAWL':
+                y_options = ['vec', 'DL1']
+            y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
+            x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
         x_menu.pack(side=tk.TOP, anchor=tk.NW)
 
         # Update button to replot
         update = tk.Button(self, text='Update', command=self.update_axes)
         update.pack(side=tk.TOP, anchor=tk.NW)
+
+    def custom_axes(self, var):
+        menubutton = tk.Menubutton(self, textvariable=var, indicatoron=True,
+                           borderwidth=2, relief="raised", highlightthickness=2)
+        main_menu = tk.Menu(menubutton, tearoff=False)
+        menubutton.configure(menu=main_menu)
+        # TRAWL
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='TRAWL', menu=menu)
+        for metric in ['vec', 'DL1', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # QPlot
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='QPlot', menu=menu)
+        for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # Summary categories/metrics
+        summary_menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='Summary', menu=summary_menu)
+        metrics = [[r'%coverage', 'apptime_s'],
+                    ['num_cores', 'dataset/size', 'prefetchers', 'repetitions'],
+                    ['total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j'], 
+                    ['total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w'],
+                    ['o=inst_count_gi', 'c=inst_rate_gi/s'],
+                    ['l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s', 'flop_rate_gflop/s', 'c=inst_rate_gi/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s'],
+                    [r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]'],
+                    [r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]']]
+        categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst']
+        for index, category in enumerate(categories):
+            menu = tk.Menu(summary_menu, tearoff=False)
+            summary_menu.add_cascade(label=category, menu=menu)
+            for metric in metrics[index]:
+                menu.add_radiobutton(value=metric, label=metric, variable=var)
+        return menubutton
     
     def update_axes(self):
         if self.x_selected.get() == 'Choose X Axis':
@@ -760,14 +788,12 @@ class QPlotTab(tk.Frame):
             textData = qplotData.textData
             coverageFig = qplotData.coverageFig
             coverageTexts = qplotData.coverageTexts
-            customFig = qplotData.customFig
             # TODO: Separate coverage plot from qplot data
-            plotTabs = [self.window, gui.summaryTab.window, gui.c_customTab.window]
+            plotTabs = [self.window, gui.summaryTab.window]
             for tab in plotTabs:
                 for w in tab.winfo_children():
                     w.destroy()
             gui.summaryTab.update(df, coverageFig, coverageTexts)
-            gui.c_customTab.update(df, customFig)
             self.update(df, fig, textData)
 
         elif self.level == 'Source':
@@ -818,10 +844,15 @@ class CustomTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        df.rename(columns={'dl1' : 'DL1'}, inplace=True)
         summaryDf = df[['name', 'short_name', r'%coverage', 'apptime_s', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'vec', 'DL1', 'version', 'color']]
-
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s', 'vec', 'dl1', \
+            'num_cores', 'dataset/size', 'prefetchers', 'repetitions', \
+            'total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j', 'total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w', \
+            'o=inst_count_gi', 'c=inst_rate_gi/s', \
+            'l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s', 'flop_rate_gflop/s', 'c=inst_rate_gi/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s', \
+            r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
+            r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
+            'version', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()

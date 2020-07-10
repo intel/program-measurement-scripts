@@ -9,14 +9,14 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 from capelib import succinctify
+from generate_QPlot import compute_capacity
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 def custom_plot(inputfile, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
     df = pd.read_csv(inputfile)
     df.columns = succinctify(df.columns)
-    df.rename(columns={'dl1' : 'DL1', 'flop_rate_gflop/s' : 'C_FLOP [GFlop/s]'}, inplace=True)
-    fig, texts = compute_and_plot(
+    df, fig, texts = compute_and_plot(
         'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis)
     # Return dataframe and figure for GUI
     return (df, fig, texts)
@@ -31,7 +31,11 @@ def compute_color_labels(df):
 
 def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
     if df.empty:
-        return None, None  # Nothing to do
+        return None, None, None  # Nothing to do
+
+    # Get QPlot metrics
+    chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+    df, op_node_name = compute_capacity(df, chosen_node_set)
 
     # Used to create a legend of file names to color for multiple plots
     color_labels = compute_color_labels(df)
@@ -46,7 +50,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if x_axis:
         xs = df[x_axis]
     else:
-        xs = df['C_FLOP [GFlop/s]']
+        xs = df[op_node_name]
     if y_axis:
         ys = df[y_axis]
     else:
@@ -60,7 +64,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
                                           variant, scale, today)
     fig, texts = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
         xs), list(ys), list(indices), scale, df, color_labels=color_labels, y_axis=y_axis)
-    return fig, texts
+    return df, fig, texts
 
 # Set filename to [] for GUI output
 def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None):
