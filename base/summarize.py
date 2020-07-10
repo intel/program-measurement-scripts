@@ -2,6 +2,7 @@
 import csv, re
 import sys
 import traceback
+from datetime import datetime
 
 from operator import attrgetter
 from openpyxl import Workbook
@@ -343,21 +344,21 @@ def calculate_app_time_coverage(out_rows, in_rows):
         out_rows['AppTime (s)']=in_rows['Time(Second)']
     else:
         # Just use codelet time if no App time provided from measurement (e.g. CapeScripts measurements)
-        out_rows['AppTime (s)']=in_rows['Time (s)']
+        out_rows['AppTime (s)']=out_rows['Time (s)']
     if 'Coverage(Percent)' in in_cols:
         # Coverage info provide, go ahead to use it
         out_rows['%Coverage']=in_rows['Coverage(Percent)']/100
     else:
         # No coverage info provided, try to compute using AppTime
         totalAppTime = sum(out_rows['AppTime (s)'])
-        out_rows['%Coverage']=in_rows['AppTime (s)']/totalAppTime
+        out_rows['%Coverage']=out_rows['AppTime (s)']/totalAppTime
 
 def add_trawl_data(out_rows, in_rows):
     out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
     out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
-        skip_stalls, succinct, enable_lfb):
+        skip_stalls, succinct, enable_lfb, incl_meta_data):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
@@ -374,6 +375,8 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
     calculate_stall_percentages(out_row, in_row, skip_stalls)
 
     calculate_lfb_histogram(out_row, in_row, enable_lfb)
+    if incl_meta_data:
+        out_row['Timestamp#'] = in_row['Timestamp#']
     if succinct:
         out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
@@ -410,18 +413,10 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
     
-def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, short_names_path, enable_lfb=False):
-    print('Inputfile Format: ', input_format, file=sys.stderr)
-    print('Inputfiles: ', inputfiles, file=sys.stderr)
-    print('Outputfile: ', outputfile, file=sys.stderr)
-    print('User Op file: ', user_op_file, file=sys.stderr)
-    print('Short Names File: ', short_names_path, file=sys.stderr)
-    print('Skip Energy: ', skip_energy, file=sys.stderr)
-    print('Enable LFB: ', enable_lfb, file=sys.stderr)
-
-    if short_names_path:
-        read_short_names(short_names_path)
+def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
+                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data):
+    if name_file:
+        read_short_names(name_file)
 
     # Each file has a different color associated with it (Current max of 4 files plotted together)
     colors = ['blue', 'red', 'green', 'yellow']
@@ -431,13 +426,19 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
         if (input_format[index] == 'csv'):
             input_data_source = sys.stdin if (inputfile == '-') else inputfile
             cur_df = pd.read_csv(input_data_source, delimiter=',')
+            # For CapeScripts data, just use experiment timestamp as the time stamp
+            cur_df['Timestamp#'] = cur_df['Expr TS#']
         else:
             # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
             cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
-        cur_df['Color'] = colors[index]
-        # Each file has a version number that increments with each new file
-        cur_df['Version'] = index + 1
+            # For Oneview output, needs to read the 'Experiment_Summary' tab for Timestamp
+            expr_summ_df = pd.read_excel(input_data_source, sheet_name='Experiment_Summary')
+            ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
+            ts_string = ts_row.iloc[0,1]
+            date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
+            cur_df['Timestamp#'] = int(date_time_obj.timestamp())
+
         df = df.append(cur_df, ignore_index=True)
 
     df = df.sort_values(by=['codelet.name', 'decan_experimental_configuration.data_size', 'decan_experimental_configuration.num_core'])
@@ -467,7 +468,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
         
     output_rows = pd.DataFrame(list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
                 use_cpi=use_cpi, axis=1, skip_energy=skip_energy, \
-                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb)))
+                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb, incl_meta_data=incl_meta_data)))
 
     # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
@@ -480,9 +481,24 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     color_df = df[['Name', 'Color', 'Version']]
     output_rows = pd.merge(output_rows, color_df, how='inner', on='Name')
 
-    outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
+    return output_rows
 
+
+def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
+                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False):
+    print('Inputfile Format: ', input_format, file=sys.stderr)
+    print('Inputfiles: ', inputfiles, file=sys.stderr)
+    print('Outputfile: ', outputfile, file=sys.stderr)
+    print('User Op file: ', user_op_file, file=sys.stderr)
+    print('Name file: ', name_file, file=sys.stderr)
+    print('Skip Energy: ', skip_energy, file=sys.stderr)
+    print('Enable LFB: ', enable_lfb, file=sys.stderr)
+
+    output_rows = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
+        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data)
+
+    outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.to_csv(outputfile, index=False)
 
     # if (outputfile == '-'):
@@ -526,10 +542,11 @@ if __name__ == '__main__':
     parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
     parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
     parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
+    parser.add_argument('--enable-meta', action='store_true', help='include meta data in the output', dest='enable_meta')
     args = parser.parse_args()
 
 
     summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file, args.enable_lfb)
+                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
