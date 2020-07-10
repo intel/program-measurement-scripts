@@ -539,6 +539,7 @@ class AxesTab(tk.Frame):
 class LabelTab(tk.Frame):
     def __init__(self, parent, level=None):
         tk.Frame.__init__(self, parent)
+        self.parent = parent
         self.level = level
         self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
         self.short_names_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
@@ -548,21 +549,21 @@ class LabelTab(tk.Frame):
 
     # Create table for Labels tab and update button
     def buildLabelTable(self, df, tab, texts=None):
-        table_labels = df[['name', r'%coverage']]
+        table_labels = df[['name', r'%coverage', 'color']]
         table_labels['short_name'] = table_labels['name']
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             short_names = short_names[['name', 'short_name']]
             inner = pd.merge(left=table_labels, right=short_names, left_on='name', right_on='name')
             inner.rename(columns={'short_name_y':'short_name'}, inplace=True)
-            inner = inner[['name', 'short_name']]
+            inner = inner[['name', 'short_name', 'color']]
             merged = pd.concat([table_labels, inner]).drop_duplicates('name', keep='last')
         else:
             merged = table_labels
         # sort label table by coverage to keep consistent with data table
         merged = pd.merge(merged, df[['name',r'%coverage']], on='name')
         merged = merged.sort_values(by=r'%coverage_y', ascending=False)
-        merged = merged[['name', 'short_name']]
+        merged = merged[['name', 'short_name', 'color']]
         table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
@@ -572,6 +573,14 @@ class LabelTab(tk.Frame):
 
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table, texts=None):
+        # Check if there are duplicates in short names for a single file
+        df = table.model.df
+        for color in df['color'].unique():
+            curfile = df.loc[df['color'] == color]
+            if curfile['short_name'].duplicated().any():
+                messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names \
+                    \n from the same file. Please change them to continue.")
+                return
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             short_names = short_names[['name', 'short_name']]
