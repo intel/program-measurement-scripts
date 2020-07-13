@@ -12,9 +12,9 @@ import pathlib
 import os
 import re
 from os.path import expanduser
-from summarize import summary_report
-from aggregate_summary import aggregate_runs
-from generate_QPlot import parse_ip as parse_ip_qplot
+from summarize import summary_report_df
+from aggregate_summary import aggregate_runs_df
+from generate_QPlot import parse_ip_df as parse_ip_qplot_df
 from generate_SI import parse_ip as parse_ip_siplot
 from generate_coveragePlot import coverage_plot
 from generate_TRAWL import trawl_plot
@@ -72,9 +72,10 @@ class LoadedData(Observable):
     def __init__(self):
         super().__init__()
         self.data_items=[]
-    def add_data(self, sources):
-        tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-        print(tmpfile.name)
+        self.source_order=[]
+
+    def add_data(self, sources, update=False):
+        self.sources = sources
         in_files = sources
         in_files_format = [None] * len(sources)
         for index, source in enumerate(sources):
@@ -93,22 +94,55 @@ class LoadedData(Observable):
             mappings_path = None
         #print(f'in_files_format[index]: {in_files_format[index]} \nsource: {source} \nin_files[index]:{in_files[index]}')
         # Codelet summary
-        summary_report(in_files, tmpfile.name, in_files_format, user_op_file, request_no_cqa, \
-            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path)
+        self.summaryDf = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
+            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path, \
+            False, True)
+        self.summaryDf = self.compute_colors(self.summaryDf)
+        # Ask user for the before and after order of the files
+        if not update and len(sources) > 1:
+            self.source_order = []
+            self.get_order()
         # Application summary
-        tmpfile_app = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-        aggregate_runs([tmpfile.name], tmpfile_app.name)
+        self.appDf = aggregate_runs_df(self.summaryDf)
+        self.appDf = self.compute_colors(self.appDf)
         # Source summary
-        tmpfile_src = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
-        aggregate_runs([tmpfile.name], tmpfile_src.name, level='src')
-        # Just use file for data storage now.  May explore keeping dataframe in future if needed.
-        # Currently assume only 1 run is loaded but we should extend this to aloow loading multiple
-        # data and pool data together
-        self.data_items=[tmpfile.name, tmpfile_src.name, tmpfile_app.name]
-        #self.data_items.append(tmpfile.name)
+        self.srcDf = aggregate_runs_df(self.summaryDf, level='src')
+        self.srcDf = self.compute_colors(self.srcDf)
+
         self.notify_observers()
-    def get_data_items(self):
-        return self.data_items
+    
+    def cancelAction(self):
+        # If user quits the window we set a default before/after order
+        self.source_order = self.summaryDf['Timestamp#'].unique()
+        self.win.destroy()
+
+    def orderAction(self, button, df):
+        self.source_order.append(df['Timestamp#'][0])
+        button.destroy()
+        if len(self.source_order) == len(self.sources):
+            self.win.destroy()
+
+    def get_order(self):
+        self.win = tk.Toplevel()
+        self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+        self.win.title('Order Data')
+        message = 'Select the order of data files from oldest to newest'
+        tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        for index, timestamp in enumerate(self.summaryDf['Timestamp#'].unique()):
+            curDf = self.summaryDf.loc[self.summaryDf['Timestamp#']==timestamp].reset_index()
+            b = tk.Button(self.win, text=curDf['Name'][0].split(':')[0])
+            b['command'] = lambda b=b, df=curDf : self.orderAction(b, df) 
+            b.grid(row=index+1, column=1, padx=5, pady=10)
+        root.wait_window(self.win)
+
+    def compute_colors(self, df):
+        colors = ['blue', 'red', 'green']
+        colorDf = pd.DataFrame() 
+        for index, timestamp in enumerate(df['Timestamp#'].unique()):
+            curDf = df.loc[df['Timestamp#']==timestamp]
+            curDf['Color'] = colors[index]
+            colorDf = colorDf.append(curDf, ignore_index=True)
+        return colorDf
 
 class CustomData(Observable):
     def __init__(self, loadedData):
@@ -118,11 +152,26 @@ class CustomData(Observable):
         loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None):
-        fname=loadedData.get_data_items()[0]
-        df, fig, texts = custom_plot(fname, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.summaryDf
+        df, fig, texts = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
         self.df = df
         self.fig = fig
         self.texts = texts
+
+        # source trawl plot
+        df = loadedData.srcDf
+        df, fig, texts = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.srcDf = df
+        self.srcFig = fig
+        self.srcTexts = texts
+
+        # application trawl plot
+        df = loadedData.appDf
+        df, fig, texts = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        self.appDf = df
+        self.appFig = fig
+        self.appTexts = texts
+
         self.notify_observers()
 
 class TRAWLData(Observable):
@@ -133,22 +182,22 @@ class TRAWLData(Observable):
         loadedData.add_observers(self)
     
     def notify(self, loadedData, x_axis=None, y_axis=None):
-        fname=loadedData.get_data_items()[0]
-        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.summaryDf
+        df, fig, texts = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         self.df = df
         self.fig = fig
         self.texts = texts
 
         # source trawl plot
-        fname=loadedData.get_data_items()[1]
-        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.srcDf
+        df, fig, texts = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         self.srcDf = df
         self.srcFig = fig
         self.srcTexts = texts
 
         # application trawl plot
-        fname=loadedData.get_data_items()[2]
-        df, fig, texts = trawl_plot(fname, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.appDf
+        df, fig, texts = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         self.appDf = df
         self.appFig = fig
         self.appTexts = texts
@@ -175,9 +224,9 @@ class QPlotData(Observable):
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #fname=tmpfile.name
         # Assume only one set of data loaded for now
-        fname=loadedData.get_data_items()[0]
-        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.summaryDf
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
+            (df, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         # TODO: Need to settle how to deal with multiple plots/dataframes
         # May want to let user to select multiple plots to look at within this tab
         # Currently just save the ORIG data
@@ -186,22 +235,22 @@ class QPlotData(Observable):
         self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
 
         # use qplot dataframe to generate the coverage plot
-        fig, texts = coverage_plot(self.df, fname, "test", "scalar", "Coverage", False, gui=True)
+        fig, texts = coverage_plot(self.df, "test", "scalar", "Coverage", False, gui=True)
         self.coverageFig = fig
         self.coverageTexts = texts
         
         # source qplot
-        fname=loadedData.get_data_items()[1]
-        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.srcDf
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
+            (df, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
         self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
 
         # application qplot
-        fname=loadedData.get_data_items()[2]
-        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot\
-            (fname, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis)
+        df = loadedData.appDf
+        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
+            (df, "test", "scalar", "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order)
         self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
         self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -475,7 +524,7 @@ class AxesTab(tk.Frame):
             if self.plotType == 'QPlot':
                 y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
             elif self.plotType == 'TRAWL':
-                y_options = ['vec', 'DL1']
+                y_options = ['vec', 'dl1']
             y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
             x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
@@ -493,7 +542,7 @@ class AxesTab(tk.Frame):
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in ['vec', 'DL1', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+        for metric in ['vec', 'dl1', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # QPlot
         menu = tk.Menu(main_menu, tearoff=False)
@@ -575,12 +624,19 @@ class LabelTab(tk.Frame):
     def updateLabels(self, table, texts=None):
         # Check if there are duplicates in short names for a single file
         df = table.model.df
+        df = df.reset_index(drop=True)
+        duplicate_df = pd.DataFrame()
         for color in df['color'].unique():
             curfile = df.loc[df['color'] == color]
-            if curfile['short_name'].duplicated().any():
-                messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names \
-                    \n from the same file. Please change them to continue.")
-                return
+            duplicates = curfile['short_name'].duplicated(keep=False)
+            duplicate_df = duplicate_df.append(curfile[duplicates])
+        if not duplicate_df.empty:
+            message = str()
+            for index, row in duplicate_df.iterrows():
+                message = message + 'row: ' + str(index + 1) + ', short_name: ' + row['short_name'] + '\n'
+            messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
+                + message)
+            return
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             short_names = short_names[['name', 'short_name']]
@@ -592,7 +648,7 @@ class LabelTab(tk.Frame):
         else:
             merged = table.model.df[['name', 'short_name']]
         merged.to_csv(self.short_names_path)
-        gui.loadedData.add_data(gui.sources)
+        gui.loadedData.add_data(gui.sources, update=True)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
@@ -671,7 +727,7 @@ class TrawlTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'vec', 'DL1','C_FLOP [GFlop/s]', 'version', 'color']]
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'vec', 'dl1','C_FLOP [GFlop/s]', 'timestamp#', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
@@ -749,19 +805,6 @@ class QPlotTab(tk.Frame):
         self.df = df
         self.fig = fig
         self.textData = textData
-        # tk.Button(self.plotFrame, text='Adjust Texts', command=self.adjust_texts).pack()
-        # if textData:
-        #     orig_texts = []
-            #print('\n\n\n')
-            # self.texts = [plt.text(self.textData['xs'][i], self.textData['ys'][i], self.textData['text'][i]) \
-            #     for i in range(len(self.textData['xs']))]
-            # for text in self.texts:
-            #     print(text)
-                # orig_texts.append(plt.text(text.get_position()[0], text.get_position()[1], text.get_text()))
-                # r = self.ax.get_figure().canvas.get_renderer()
-                # print(text.get_window_extent(r).expanded(*(1,1)).transformed(self.ax.transData.inverted()))
-            #print('\n\n\n')
-            # adjust_text(self.texts, ax=self.textData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
         self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
         self.toolbar.update()
@@ -770,7 +813,7 @@ class QPlotTab(tk.Frame):
 
         # TODO: Hardcode op node name but it could be something else.
         summaryDf = df[['name', 'short_name', r'%coverage', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'version', 'color']]
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'timestamp#', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
@@ -861,7 +904,7 @@ class CustomTab(tk.Frame):
             'l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s', 'flop_rate_gflop/s', 'c=inst_rate_gi/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s', \
             r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
             r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
-            'version', 'color']]
+            'timestamp#', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
@@ -885,6 +928,20 @@ class CustomTab(tk.Frame):
         if self.level == 'Codelet':
             df = customData.df
             fig = customData.fig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
+
+        elif self.level == 'Source':
+            df = customData.srcDf
+            fig = customData.srcFig
+            for w in self.window.winfo_children():
+                w.destroy()
+            self.update(df, fig)
+
+        elif self.level == 'Application':
+            df = customData.appDf
+            fig = customData.appFig
             for w in self.window.winfo_children():
                 w.destroy()
             self.update(df, fig)
@@ -967,22 +1024,9 @@ class AnalyzerGui(tk.Frame):
             elif self.choice == 'Append':
                 self.sources.append(source)
                 print("DATA source to be loaded", source)
-                self.win = tk.Toplevel()
-                self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
-                self.win.title('Order Data')
-                message = 'Select the order of data files from oldest to newest'
-                tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-                self.source_order = []
-                self.button_to_source = {}
-                for index, source in enumerate(self.sources):
-                    b = tk.Button(self.win, text=source.split('\\')[-1].split('.')[0])
-                    b['command'] = lambda b=b : self.orderAction(b) 
-                    self.button_to_source[b] = source
-                    b.grid(row=index+1, column=1, padx=5, pady=10)
                 if self.urls:
                     self.oneviewTab.loadSecondPage()
-                root.wait_window(self.win)
-                self.loadedData.add_data(self.source_order)
+                self.loadedData.add_data(self.sources)
                 return
         elif self.urls:
             self.oneviewTab.loadFirstPage()
@@ -1025,17 +1069,21 @@ class AnalyzerGui(tk.Frame):
         self.s_trawlTab = TrawlTab(source_note, self.trawlData, 'Source')
         self.s_qplotTab = QPlotTab(source_note, self.qplotData, 'Source')
         self.s_siPlotTab = SIPlotTab(source_note)
+        self.s_customTab = CustomTab(source_note, self.customData, 'Source')
         source_note.add(self.s_trawlTab, text="TRAWL")
         source_note.add(self.s_qplotTab, text="QPlot")
         source_note.add(self.s_siPlotTab, text="SI Plot")
+        source_note.add(self.s_customTab, text="Custom")
         source_note.pack(fill=tk.BOTH, expand=True)
         # Application tabs
         self.w_trawlTab = TrawlTab(application_note, self.trawlData, 'Application')
         self.w_qplotTab = QPlotTab(application_note, self.qplotData, 'Application')
         self.w_siPlotTab = SIPlotTab(application_note)
+        self.w_customTab = CustomTab(application_note, self.customData, 'Application')
         application_note.add(self.w_trawlTab, text="TRAWL")
         application_note.add(self.w_qplotTab, text="QPlot")
         application_note.add(self.w_siPlotTab, text="SI Plot")
+        application_note.add(self.w_customTab, text="Custom")
         application_note.pack(fill=tk.BOTH, expand=True)
         return self.main_note
 

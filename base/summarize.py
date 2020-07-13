@@ -40,7 +40,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Color', 'Version', 'Vec', 'DL1' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Vec', 'DL1' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -418,8 +418,6 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     if name_file:
         read_short_names(name_file)
 
-    # Each file has a different color associated with it (Current max of 4 files plotted together)
-    colors = ['blue', 'red', 'green', 'yellow']
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for index, inputfile in enumerate(inputfiles):
         print(inputfile, file=sys.stderr)
@@ -476,10 +474,6 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     calculate_app_time_coverage(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
-    # Set Corresponding color/version for each codelet
-    df['Name'] = df['application.name'] + ': ' + df['codelet.name']
-    color_df = df[['Name', 'Color', 'Version']]
-    output_rows = pd.merge(output_rows, color_df, how='inner', on='Name')
 
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
     return output_rows

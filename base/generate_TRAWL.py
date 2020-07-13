@@ -12,12 +12,11 @@ from capelib import succinctify
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def trawl_plot(inputfile, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
-    df = pd.read_csv(inputfile)
+def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
     df.columns = succinctify(df.columns)
-    df.rename(columns={'dl1' : 'DL1', 'flop_rate_gflop/s' : 'C_FLOP [GFlop/s]'}, inplace=True)
+    df['C_FLOP [GFlop/s]'] = df['flop_rate_gflop/s']
     fig, texts = compute_and_plot(
-        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis)
+        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order)
     # Return dataframe and figure for GUI
     return (df, fig, texts)
 
@@ -29,7 +28,7 @@ def compute_color_labels(df):
         color_labels.append((codelet.split(':')[0], color))
     return color_labels
 
-def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
+def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
     if df.empty:
         return None, None  # Nothing to do
 
@@ -59,11 +58,11 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         outputfile = '{}-{}-{}-{}.png'.format(outputfile_prefix,
                                           variant, scale, today)
     fig, texts = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
-        xs), list(ys), list(indices), scale, df, color_labels=color_labels, y_axis=y_axis)
+        xs), list(ys), list(indices), scale, df, color_labels=color_labels, y_axis=y_axis, source_order=source_order)
     return fig, texts
 
 # Set filename to [] for GUI output
-def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None):
+def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None, source_order=None):
     DATA = tuple(zip(xs, ys))
 
     fig, ax = plt.subplots()
@@ -95,16 +94,16 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
     ax.set_title(title, pad=40)
 
     # Arrows between multiple runs
-    if len(df.version.unique()) > 1:
+    if source_order:
         df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
-        cur_version = df.loc[df['version'] == 1]
-        next_version = df.loc[df['version'] == 2]
-        for index in cur_version.index:
-            match = next_version.loc[next_version['map_name'] == cur_version['map_name'][index]].reset_index()
+        before = df.loc[df['timestamp#'] == source_order[0]]
+        after = df.loc[df['timestamp#'] == source_order[1]]
+        for index in before.index:
+            match = after.loc[after['map_name'] == before['map_name'][index]].reset_index()
             if not match.empty:
                 x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
                 y_axis = y_axis if y_axis else 'vec'
-                xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
+                xyA = (before[x_axis][index], before[y_axis][index])
                 xyB = (match[x_axis][0], match[y_axis][0])
                 con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
                     connectionstyle='arc3,rad=0.3')

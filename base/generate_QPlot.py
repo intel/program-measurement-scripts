@@ -40,16 +40,18 @@ capacity_formula= {
 def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
 	#	inputfile="/tmp/input.csv"
 	input_data_source = sys.stdin if (inputfile == '-') else inputfile
-
 	df = pd.read_csv(input_data_source)
+	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 
 	grouped = df.groupby('variant')
 	# Generate SI plot for each variant
 	mask = df['variant'] == "ORIG"
-	df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
-	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
+	df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order)
+	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order)
 	# Return dataframe and figure for GUI
 	return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
 	#for variant, group in grouped:
@@ -116,7 +118,7 @@ def compute_color_labels(df):
 		color_labels.append((codelet.split(':')[0], color))
 	return color_labels
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
 	if df.empty:
 		return None, None, None # Nothing to do
 	df, op_node_name = compute_capacity(df, chosen_node_set)
@@ -153,7 +155,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	fig, textData = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, df, op_node_name, x_axis=x_axis, y_axis=y_axis, color_labels=color_labels)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, df, op_node_name, x_axis=x_axis, y_axis=y_axis, color_labels=color_labels, source_order=source_order)
 	return df, fig, textData
 
 
@@ -170,7 +172,7 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_name, x_axis=None, y_axis=None, color_labels=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_name, x_axis=None, y_axis=None, color_labels=None, source_order=None):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
@@ -215,16 +217,16 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	ax.set_title(title, pad=40)
 
 	# Arrows between multiple runs
-	if len(df.version.unique()) > 1:
+	if source_order:
 		df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
-		cur_version = df.loc[df['version'] == 1]
-		next_version = df.loc[df['version'] == 2]
-		for index in cur_version.index:
-			match = next_version.loc[next_version['map_name'] == cur_version['map_name'][index]].reset_index()
+		before = df.loc[df['timestamp#'] == source_order[0]]
+		after = df.loc[df['timestamp#'] == source_order[1]]
+		for index in before.index:
+			match = after.loc[after['map_name'] == before['map_name'][index]].reset_index()
 			if not match.empty:
 				x_axis = x_axis if x_axis else op_node_name
 				y_axis = y_axis if y_axis else 'C_max [GB/s]'
-				xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
+				xyA = (before[x_axis][index], before[y_axis][index])
 				xyB = (match[x_axis][0], match[y_axis][0])
 				con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
 					connectionstyle='arc3,rad=0.3')

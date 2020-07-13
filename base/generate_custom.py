@@ -13,8 +13,7 @@ from generate_QPlot import compute_capacity
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def custom_plot(inputfile, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
-    df = pd.read_csv(inputfile)
+def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
     df.columns = succinctify(df.columns)
     df, fig, texts = compute_and_plot(
         'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis)
@@ -97,22 +96,6 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
     adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
     ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'%Coverage')
     ax.set_title(title, pad=40)
-
-    # Arrows between multiple runs
-    if len(df.version.unique()) > 1:
-        df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
-        cur_version = df.loc[df['version'] == 1]
-        next_version = df.loc[df['version'] == 2]
-        for index in cur_version.index:
-            match = next_version.loc[next_version['map_name'] == cur_version['map_name'][index]].reset_index()
-            if not match.empty:
-                x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
-                y_axis = y_axis if y_axis else 'vec'
-                xyA = (cur_version[x_axis][index], cur_version[y_axis][index])
-                xyB = (match[x_axis][0], match[y_axis][0])
-                con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
-                    connectionstyle='arc3,rad=0.3')
-                ax.add_artist(con)
 
     # Legend
     patches = []

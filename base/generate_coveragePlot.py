@@ -11,7 +11,7 @@ from adjustText import adjust_text
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 
-def coverage_plot(df, inputfile, outputfile, scale, title, no_plot, gui=False):
+def coverage_plot(df, outputfile, scale, title, no_plot, gui=False):
     fig, texts = compute_and_plot(
         'ORIG', df, outputfile, scale, title, no_plot, gui)
     # Return dataframe and figure for GUI

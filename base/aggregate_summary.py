@@ -28,12 +28,11 @@ def getShortName(df):
                     df['Short Name'] = row['short_name']
 
 def agg_fn(df):
-    app_name, variant, numCores, ds, prefetchers, repetitions, Color, Version = df.name
+    app_name, variant, numCores, ds, prefetchers, repetitions, timestamp = df.name
 
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'color': [Color], 'version' : [Version]})
-
+            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp]})
     getShortName(out_df)
 
     # Calculate potential speedups
@@ -82,15 +81,7 @@ def agg_fn(df):
 
     return out_df
 
-def aggregate_runs(inputfiles, outputfile, level="app"):
-    print('Inputfiles: ', inputfiles, file=sys.stderr)
-    print('Outputfile: ', outputfile, file=sys.stderr)
-    
-    df = pd.DataFrame()  # empty df as start and keep appending in loop next
-    for inputfile in inputfiles:
-        print(inputfile, file=sys.stderr)
-        cur_df = pd.read_csv(inputfile, delimiter=',')
-        df = df.append(cur_df, ignore_index=True)
+def aggregate_runs_df(df, level="app"):
     df[['AppName', 'codelet_name']] = df.Name.str.split(pat=": ", expand=True)
     if level == "app":
         newNameColumn='AppName'
@@ -102,10 +93,19 @@ def aggregate_runs(inputfiles, outputfile, level="app"):
         df['AppNameWithSrcInfo'] = df['AppName']+': '+df['SrcInfo']
         newNameColumn = 'AppNameWithSrcInfo'
     # Need to fix datasize being nan's because groupby does not work
-    dsMask = np.isnan(df['DataSet/Size'])
+    dsMask = pd.isnull(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Color', 'Version'])
+    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Timestamp#'])
     aggregated = grouped.apply(agg_fn)
+    return aggregated
+
+def aggregate_runs(inputfiles, outputfile, level="app"):
+    df = pd.DataFrame()  # empty df as start and keep appending in loop next
+    for inputfile in inputfiles:
+        print(inputfile, file=sys.stderr)
+        cur_df = pd.read_csv(inputfile, delimiter=',')
+        df = df.append(cur_df, ignore_index=True)
+    aggregated = aggregate_runs_df(df, level=level)
     aggregated.to_csv(outputfile, index=False)
 
 if __name__ == '__main__':
