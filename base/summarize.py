@@ -91,9 +91,6 @@ def calculate_codelet_name(out_row, in_row):
     out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
         else getter(in_row, 'decan_variant.name', type=str)
 
-def create_mappings(out_row, in_row):
-    pass
-
 def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
     out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)

@@ -197,10 +197,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 
 	ns = [1,2,4,8,16,32]
 	ctxs = []
-	if y_axis and y_axis == r'%coverage':
-		pass
-	else:
-		ctxs = draw_contours(ax, xmax, ns)
+	ctxs = draw_contours(ax, xmax, ns)
 	
 	# Point Labels
 	plt.rcParams.update({'font.size': 7})

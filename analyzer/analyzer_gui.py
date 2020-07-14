@@ -654,6 +654,60 @@ class LabelTab(tk.Frame):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
 
+class MappingsTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.mappings_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\mappings.csv'
+        self.mappings_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
+        if not os.path.isfile(self.mappings_path):
+            Path(self.mappings_dir_path).mkdir(parents=True, exist_ok=True)
+            open(self.mappings_path, 'wb')
+
+    def addMapping(self, before_names, after_names):
+        self.win = tk.Toplevel()
+        self.win.title('Edit Mappings')
+        message = 'Select a before and after codelet to create a new\nmapping or update an existing one.'
+        tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        self.before_selected = tk.StringVar(value='Choose Before Codelet')
+        self.after_selected = tk.StringVar(value='Choose After Codelet')
+        before_menu = tk.OptionMenu(self.win, self.before_selected, *before_names)
+        after_menu = tk.OptionMenu(self.win, self.after_selected, *after_names)
+        before_menu.grid(row=1, column=0, padx=10, pady=10)
+        after_menu.grid(row=1, column=2, padx=10, pady=10)
+        tk.Button(self.win, text="Map", command=self.updateMappings).grid(row=2, column=1, padx=10, pady=10)
+
+    def updateMappings(self):
+        pass
+
+    def buildMappingsTab(self, df, tab):
+        # df consists of before name, before timestamp, after name, after timestamp
+        source_order = gui.loadedData.source_order
+        if len(source_order) > 1:
+            df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
+            before = df.loc[df['timestamp#'] == source_order[0]]
+            after = df.loc[df['timestamp#'] == source_order[1]]
+            mappings = pd.DataFrame()
+            for index in before.index:
+                match = after.loc[after['map_name'] == before['map_name'][index]].reset_index(drop=True)
+                if not match.empty:
+                    match = match.iloc[0]
+                    match['after_timestamp#'] = match['timestamp#']
+                    match['after_name'] = match['name']
+                else:
+                    match['after_timestamp#'] = ['Unknown']
+                    match['after_name'] = ['Unknown']
+                match['before_timestamp#'] = before['timestamp#'][index]
+                match['before_name'] = before['name'][index]
+                mappings = mappings.append(match)
+            #mappings.to_csv(self.mappings_path)
+            mappings = mappings[['before_timestamp#', 'before_name', 'after_timestamp#', 'after_name']]
+            table = Table(tab, dataframe=mappings, showtoolbar=False, showstatusbar=True)
+            table.show()
+            table.redraw()
+            tk.Button(tab, text="Edit", command=lambda before=list(before['name']), after=list(after['name']) : self.addMapping(before, after)).grid(row=10, column=0)
+            return table
+
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -781,21 +835,6 @@ class QPlotTab(tk.Frame):
                                                 sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
 
-    def adjust_texts(self):
-        for child in self.textData['ax'].get_children():
-            if isinstance(child, matplotlib.text.Annotation):
-                child.remove()
-        self.texts = [plt.text(self.textData['xs'][i], self.textData['ys'][i], self.textData['text'][i]) \
-            for i in range(len(self.textData['xs']))]
-        adjust_text(self.texts, ax=self.textData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-        self.canvas.get_tk_widget().destroy()
-        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame)
-        self.toolbar.destroy()
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame)
-        self.toolbar.update()
-        self.canvas.get_tk_widget().pack()
-        self.canvas.draw()
-
     def update(self, df, fig, textData=None):
         self.plotFrame = tk.Frame(self.window)
         self.tableFrame = tk.Frame(self.window)
@@ -820,6 +859,8 @@ class QPlotTab(tk.Frame):
         summaryTable.redraw()
 
         self.labelTab.buildLabelTable(df, self.labelTab)
+        if self.level == 'Codelet':
+            self.mappingsTab.buildMappingsTab(df, self.mappingsTab)
 
     # Create tabs for QPlot Summary, Labels, and Axes
     def buildTableTabs(self):
@@ -827,9 +868,11 @@ class QPlotTab(tk.Frame):
         self.summaryTab = tk.Frame(self.tableNote)
         self.labelTab = LabelTab(self.tableNote)
         self.axesTab = AxesTab(self.tableNote, self, 'QPlot')
+        self.mappingsTab = MappingsTab(self.tableNote)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.labelTab, text="Labels")
         self.tableNote.add(self.axesTab, text="Axes")
+        self.tableNote.add(self.mappingsTab, text="Mappings")
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
     # plot data to be updated
