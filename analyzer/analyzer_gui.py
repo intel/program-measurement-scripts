@@ -103,10 +103,10 @@ class LoadedData(Observable):
             self.source_order = []
             self.get_order()
         # Application summary
-        self.appDf = aggregate_runs_df(self.summaryDf, short_names_path)
+        self.appDf = aggregate_runs_df(self.summaryDf, level='app', name_file=short_names_path)
         self.appDf = self.compute_colors(self.appDf)
         # Source summary
-        self.srcDf = aggregate_runs_df(self.summaryDf, level='src')
+        self.srcDf = aggregate_runs_df(self.summaryDf, level='src', name_file=short_names_path)
         self.srcDf = self.compute_colors(self.srcDf)
 
         self.notify_observers()
