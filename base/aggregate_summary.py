@@ -34,7 +34,7 @@ def agg_fn(df, short_names_path):
     getShortName(out_df, short_names_path)
 
     # Calculate potential speedups
-    for metric in ['Vec', 'DL1']:
+    for metric in ['Speedup[Vec]', 'Speedup[DL1]']:
         out_df[metric] = (np.sum(df['AppTime (s)'])) / (np.sum(df['AppTime (s)'] / df[metric]))
 
     # Calculate sum metrics 

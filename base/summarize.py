@@ -40,7 +40,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Vec', 'DL1' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Speedup[Vec]', 'Speedup[DL1]' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -352,21 +352,21 @@ def calculate_app_time_coverage(out_rows, in_rows):
 
 def add_trawl_data(out_rows, in_rows):
     # initialize to None and set to correct values
-    out_rows['Vec'] = None
-    out_rows['DL1'] = None
+    out_rows['Speedup[Vec]'] = None
+    out_rows['Speedup[DL1]'] = None
     try:
-        out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
+        out_rows['Speedup[Vec]'] = in_rows['potential_speedup.if_fully_vectorized']
     except:
         if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'] + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'])/2
         dl1_cycles = (in_rows['(L1)_Nb_cycles_min'] + in_rows['(L1)_Nb_cycles_max'])/2
-        out_rows['Vec'] = dl1_cycles / if_fully_cycles
+        out_rows['Speedup[Vec]'] = dl1_cycles / if_fully_cycles
 
     try:
-        out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
+        out_rows['Speedup[DL1]'] = in_rows['time(ORIG) / time(DL1)']
     except:
         # Go ahead to use the dl1_cycles (assuming exception was thrown when computing what-if vectorization speedup)
         # use core cycles instead of ref or CPI so timing not affected by TurboBoost
-        out_rows['DL1'] = in_rows['CPU_CLK_UNHALTED_THREAD'] / dl1_cycles
+        out_rows['Speedup[DL1]'] = in_rows['CPU_CLK_UNHALTED_THREAD'] / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb, incl_meta_data):

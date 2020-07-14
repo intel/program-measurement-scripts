@@ -524,7 +524,7 @@ class AxesTab(tk.Frame):
             if self.plotType == 'QPlot':
                 y_options = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
             elif self.plotType == 'TRAWL':
-                y_options = ['vec', 'dl1']
+                y_options = ['speedup[vec]', 'speedup[dl1]']
             y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
             x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
         y_menu.pack(side=tk.TOP, anchor=tk.NW)
@@ -542,7 +542,7 @@ class AxesTab(tk.Frame):
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in ['vec', 'dl1', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+        for metric in ['speedup[vec]', 'speedup[dl1]', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # QPlot
         menu = tk.Menu(main_menu, tearoff=False)
@@ -781,7 +781,7 @@ class TrawlTab(tk.Frame):
         self.canvas.get_tk_widget().pack()
         self.canvas.draw()
 
-        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'vec', 'dl1','C_FLOP [GFlop/s]', 'timestamp#', 'color']]
+        summaryDf = df[['name', 'short_name', r'%coverage', 'variant', 'speedup[vec]', 'speedup[dl1]','C_FLOP [GFlop/s]', 'timestamp#', 'color']]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
@@ -940,7 +940,7 @@ class CustomTab(tk.Frame):
         self.canvas.draw()
 
         summaryDf = df[['name', 'short_name', r'%coverage', 'apptime_s', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s', 'vec', 'dl1', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s', 'speedup[vec]', 'speedup[dl1]', \
             'num_cores', 'dataset/size', 'prefetchers', 'repetitions', \
             'total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j', 'total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w', \
             'o=inst_count_gi', 'c=inst_rate_gi/s', \

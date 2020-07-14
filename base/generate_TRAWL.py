@@ -49,7 +49,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if y_axis:
         ys = df[y_axis]
     else:
-        ys = df['vec']
+        ys = df['speedup[vec]']
 
     today = datetime.date.today()
     if gui:
@@ -102,7 +102,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
             match = after.loc[after['map_name'] == before['map_name'][index]].reset_index()
             if not match.empty:
                 x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
-                y_axis = y_axis if y_axis else 'vec'
+                y_axis = y_axis if y_axis else 'speedup[vec]'
                 xyA = (before[x_axis][index], before[y_axis][index])
                 xyB = (match[x_axis][0], match[y_axis][0])
                 # Check which way to curve the arrow to avoid going out of the axes
