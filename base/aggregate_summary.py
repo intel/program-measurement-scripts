@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import csv, re
 import os
-from os.path import expanduser
 
 from argparse import ArgumentParser
 from capelib import calculate_energy_derived_metrics
@@ -18,22 +17,21 @@ def parseVecType(text, vecType):
     expanded = text.str.extract(r"(?P<prefix>{}=)(?P<value>\d*\.?\d*)(?P<suffix>%.*)".format(vecType), expand=True)
     return pd.to_numeric(expanded['value']).fillna(0)/100
 
-def getShortName(df):
-    short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
-    if os.path.isfile(short_names_path):
+def getShortName(df, short_names_path):
+    if short_names_path is not None and os.path.isfile(short_names_path):
         with open(short_names_path, 'r', encoding='utf-8-sig') as infile:
             rows = list(csv.DictReader(infile, delimiter=','))
             for row in rows:
                 if df['Name'][0] == row['name']:
                     df['Short Name'] = row['short_name']
 
-def agg_fn(df):
+def agg_fn(df, short_names_path):
     app_name, variant, numCores, ds, prefetchers, repetitions, timestamp = df.name
 
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
             'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp]})
-    getShortName(out_df)
+    getShortName(out_df, short_names_path)
 
     # Calculate potential speedups
     for metric in ['Vec', 'DL1']:
@@ -81,7 +79,7 @@ def agg_fn(df):
 
     return out_df
 
-def aggregate_runs_df(df, level="app"):
+def aggregate_runs_df(df, level="app", name_file=None):
     df[['AppName', 'codelet_name']] = df.Name.str.split(pat=": ", expand=True)
     if level == "app":
         newNameColumn='AppName'
@@ -96,16 +94,20 @@ def aggregate_runs_df(df, level="app"):
     dsMask = pd.isnull(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
     grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Timestamp#'])
-    aggregated = grouped.apply(agg_fn)
+    aggregated = grouped.apply(agg_fn, short_names_path=name_file)
     return aggregated
 
-def aggregate_runs(inputfiles, outputfile, level="app"):
+def aggregate_runs(inputfiles, outputfile, level="app", name_file=None):
+    print('Inputfiles: ', inputfiles, file=sys.stderr)
+    print('Outputfile: ', outputfile, file=sys.stderr)
+    print('Short name file: ', name_file, file=sys.stderr)
+
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
         print(inputfile, file=sys.stderr)
         cur_df = pd.read_csv(inputfile, delimiter=',')
         df = df.append(cur_df, ignore_index=True)
-    aggregated = aggregate_runs_df(df, level=level)
+    aggregated = aggregate_runs_df(df, level=level, name_file=name_file)
     aggregated.to_csv(outputfile, index=False)
 
 if __name__ == '__main__':
@@ -113,6 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', nargs='+', help='the input csv file(s)', required=True, dest='in_files')
     parser.add_argument('-l', nargs='?', default='app', help='aggregation level (default app can change to src)', \
         choices=['app', 'src'], dest='level')
+    parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     args = parser.parse_args()
-    aggregate_runs(args.in_files, args.out_file, args.level)
+    aggregate_runs(args.in_files, args.out_file, args.level, args.name_file)

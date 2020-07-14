@@ -351,8 +351,22 @@ def calculate_app_time_coverage(out_rows, in_rows):
         out_rows['%Coverage']=out_rows['AppTime (s)']/totalAppTime
 
 def add_trawl_data(out_rows, in_rows):
-    out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
-    out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
+    # initialize to None and set to correct values
+    out_rows['Vec'] = None
+    out_rows['DL1'] = None
+    try:
+        out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
+    except:
+        if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'] + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'])/2
+        dl1_cycles = (in_rows['(L1)_Nb_cycles_min'] + in_rows['(L1)_Nb_cycles_max'])/2
+        out_rows['Vec'] = dl1_cycles / if_fully_cycles
+
+    try:
+        out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
+    except:
+        # Go ahead to use the dl1_cycles (assuming exception was thrown when computing what-if vectorization speedup)
+        # use core cycles instead of ref or CPI so timing not affected by TurboBoost
+        out_rows['DL1'] = in_rows['CPU_CLK_UNHALTED_THREAD'] / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb, incl_meta_data):
@@ -536,8 +550,7 @@ if __name__ == '__main__':
     parser.add_argument('--enable-meta', action='store_true', help='include meta data in the output', dest='enable_meta')
     args = parser.parse_args()
 
-
-    summary_report(args.in_files, args.out_file, args.in_file_format, args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
+    summary_report(args.in_files, args.out_file, [args.in_file_format] * len(args.in_files), args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
                    args.succinct, args.name_file, args.enable_lfb, args.enable_meta)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
