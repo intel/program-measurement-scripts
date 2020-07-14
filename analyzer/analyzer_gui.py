@@ -992,12 +992,6 @@ class AnalyzerGui(tk.Frame):
         self.choice = 'Cancel'
         self.win.destroy()
 
-    def orderAction(self, button):
-        self.source_order.append(self.button_to_source.pop(button))
-        button.destroy()
-        if not self.button_to_source:
-            self.win.destroy()
-
     def loadDataSource(self, source):
         if self.sources:
             self.win = tk.Toplevel()
@@ -1044,10 +1038,10 @@ class AnalyzerGui(tk.Frame):
         self.oneviewTab = OneviewTab(self.main_note)
         self.summaryTab = SummaryTab(self.main_note)
         self.main_note.add(self.oneviewTab, text="Oneview")
+        self.main_note.add(self.summaryTab, text="Summary")
         self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.sourceTab, text="Source")
         self.main_note.add(self.codeletTab, text="Codelet")
-        self.main_note.add(self.summaryTab, text="Summary")
         # Application, Source, and Codelet each have their own 2nd level tabs
         application_note = ttk.Notebook(self.applicationTab)
         source_note = ttk.Notebook(self.sourceTab)

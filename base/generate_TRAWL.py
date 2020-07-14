@@ -105,8 +105,16 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
                 y_axis = y_axis if y_axis else 'vec'
                 xyA = (before[x_axis][index], before[y_axis][index])
                 xyB = (match[x_axis][0], match[y_axis][0])
-                con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
-                    connectionstyle='arc3,rad=0.3')
+                # Check which way to curve the arrow to avoid going out of the axes
+                if (xmax - xyB[0] > xyB[0] and xmax - xyA[0] > xyA[0] and xyA[1] < xyB[1]) or \
+                    (ymax - xyB[1] > xyB[1] and ymax - xyA[1] > xyA[1] and xyA[0] > xyB[0]) or \
+                    (ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
+                    (xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
+                    con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
+                        connectionstyle='arc3,rad=0.3')
+                else:
+                    con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
+                        connectionstyle='arc3,rad=-0.3')
                 ax.add_artist(con)
 
     # Legend
