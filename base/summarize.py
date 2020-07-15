@@ -337,36 +337,37 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
 
 def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
+    # Note: need to use .values to be more robust and not index dependent
     if 'Time(Second)' in in_cols:
-        out_rows['AppTime (s)']=in_rows['Time(Second)']
+        out_rows['AppTime (s)']=in_rows['Time(Second)'].values
     else:
         # Just use codelet time if no App time provided from measurement (e.g. CapeScripts measurements)
-        out_rows['AppTime (s)']=out_rows['Time (s)']
+        out_rows['AppTime (s)']=out_rows['Time (s)'].values
     if 'Coverage(Percent)' in in_cols:
         # Coverage info provide, go ahead to use it
-        out_rows['%Coverage']=in_rows['Coverage(Percent)']/100
+        out_rows['%Coverage']=in_rows['Coverage(Percent)'].values/100
     else:
         # No coverage info provided, try to compute using AppTime
-        totalAppTime = sum(out_rows['AppTime (s)'])
-        out_rows['%Coverage']=out_rows['AppTime (s)']/totalAppTime
+        totalAppTime = sum(out_rows['AppTime (s)'].values)
+        out_rows['%Coverage']=out_rows['AppTime (s)'].values/totalAppTime
 
 def add_trawl_data(out_rows, in_rows):
     # initialize to None and set to correct values
     out_rows['Vec'] = None
     out_rows['DL1'] = None
     try:
-        out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized']
+        out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized'].values
     except:
-        if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'] + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'])/2
-        dl1_cycles = (in_rows['(L1)_Nb_cycles_min'] + in_rows['(L1)_Nb_cycles_max'])/2
+        if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'].values + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'].values)/2
+        dl1_cycles = (in_rows['(L1)_Nb_cycles_min'].values + in_rows['(L1)_Nb_cycles_max'].values)/2
         out_rows['Vec'] = dl1_cycles / if_fully_cycles
 
     try:
-        out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)']
+        out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)'].values
     except:
         # Go ahead to use the dl1_cycles (assuming exception was thrown when computing what-if vectorization speedup)
         # use core cycles instead of ref or CPI so timing not affected by TurboBoost
-        out_rows['DL1'] = in_rows['CPU_CLK_UNHALTED_THREAD'] / dl1_cycles
+        out_rows['DL1'] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb, incl_meta_data):
