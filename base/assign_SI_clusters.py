@@ -12,7 +12,7 @@ def read_csvfiles_as_df(inputfiles):
         in_data = in_data.append(cur_df, ignore_index=True)
     return in_data
 
-def read_csvfiles_as_lists(inputfiles):
+def read_csvfiles_as_list(inputfiles):
     in_data = []
     for inputfile in inputfiles:
         cur_df = pd.read_csv(inputfile, delimiter=',')
