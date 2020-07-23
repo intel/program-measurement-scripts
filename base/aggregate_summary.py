@@ -33,9 +33,12 @@ def agg_fn(df, short_names_path):
             'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp]})
     getShortName(out_df, short_names_path)
 
+    # totalAppTime useful for many computations below
+    totalAppTime = np.sum(df['AppTime (s)'])
+
     # Calculate potential speedups
     for metric in ['Speedup[Vec]', 'Speedup[DL1]']:
-        out_df[metric] = (np.sum(df['AppTime (s)'])) / (np.sum(df['AppTime (s)'] / df[metric]))
+        out_df[metric] = totalAppTime / (np.sum(df['AppTime (s)'] / df[metric]))
 
     # Calculate sum metrics 
     for metric in ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', \
@@ -51,7 +54,9 @@ def agg_fn(df, short_names_path):
             '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]', '%Inst[FMA]', '%Ops[DIV]', '%Inst[DIV]', \
                 '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]', \
                     'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)']:
-        out_df[metric] = np.dot(df['%Coverage'], df[metric])
+        #out_df[metric] = np.dot(df['%Coverage'], df[metric])
+        # FIX: Could just divide above dot product by total %Coverage but use a cleaner formula directly from AppTime
+        out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
     
     # For energy derived, go ahead to compute using aggregated metrics
     num_ops = out_df['O=Inst. Count (GI)']
@@ -70,9 +75,9 @@ def agg_fn(df, short_names_path):
     # Don't bother to compute scPercent because coverage may not sum to 1
     # Just compute aggregated xmm, ymm, zmm percentage and assume the rest as sc
     #scPercent = np.dot(df['%Coverage'], scPercent)
-    xmmPercent = np.dot(df['%Coverage'], xmmPercent)
-    ymmPercent = np.dot(df['%Coverage'], ymmPercent)
-    zmmPercent = np.dot(df['%Coverage'], zmmPercent)
+    xmmPercent = np.dot(df['AppTime (s)'], xmmPercent)/totalAppTime
+    ymmPercent = np.dot(df['AppTime (s)'], ymmPercent)/totalAppTime
+    zmmPercent = np.dot(df['AppTime (s)'], zmmPercent)/totalAppTime
     scPercent = 1 - (xmmPercent + ymmPercent + zmmPercent)
 
     out_df['VecType[Ops]']=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
