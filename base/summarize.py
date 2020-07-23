@@ -84,12 +84,12 @@ def calculate_codelet_name(out_row, in_row):
     out_row['Name'] = '{0}: {1}'.format(
         getter(in_row, 'application.name', type=str),
         getter(in_row, 'codelet.name', type=str))
-    if out_row['Name'] in short_names:
-        out_row['Short Name'] = short_names[out_row['Name']]
-    else:
-        out_row['Short Name'] = out_row['Name'] # Short Name is default set to actual name
-    out_row['Variant'] = variants[out_row['Name']] if out_row['Name'] in variants \
-        else getter(in_row, 'decan_variant.name', type=str)
+    name_key = (out_row['Name'], in_row['Timestamp#'])
+    name_key = name_key if name_key in short_names else out_row['Name']
+    # Short Name is default set to actual name
+    out_row['Short Name'] = short_names.get(name_key, out_row['Name'])
+    out_row['Variant'] = variants.get(name_key, getter(in_row, 'decan_variant.name', type=str))        
+
 
 def calculate_expr_settings(out_row, in_row):
     out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
@@ -389,8 +389,6 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
     calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if incl_meta_data:
         out_row['Timestamp#'] = in_row['Timestamp#']
-    if succinct:
-        out_row = { succinctify(k): v for k, v in out_row.items() }
     return out_row
 
 def print_formulas(formula_file):
@@ -530,10 +528,17 @@ def read_short_names(filename):
     with open(filename, 'r', encoding='utf-8-sig') as infile:
         rows = list(csv.DictReader(infile, delimiter=','))
         for row in rows:
-            if 'short_name' in row:
-                short_names[row['name']] = row['short_name']
-            if 'variant' in row:
-                variants[row['name']] = row['variant']
+            name = getter(row, 'Name', 'name', type=str)
+            timestamp = row.get('Timestamp#', None)
+            name_key = (name, timestamp) if timestamp is not None else name
+            try:
+                short_names[name_key] = getter(row, 'short_name', 'Short Name', type=str)
+            except:
+                pass
+            try:
+                variants[name_key] = getter(row, 'variant', 'Variant', type=str)
+            except:
+                pass             
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Generate summary sheets from raw CAPE data.')
