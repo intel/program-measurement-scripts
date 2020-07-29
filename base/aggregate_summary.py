@@ -93,7 +93,7 @@ def aggregate_runs_df(df, level="app", name_file=None):
         splitInfo = df['codelet_name'].str.extract(r'((?P<LoopId>\d+)_)?(?P<SrcInfo>.+)', expand=True)
         # Need to store output into splitInfo first because optional group introduced an extra column
         df[['LoopId', 'SrcInfo']] = splitInfo[['LoopId', 'SrcInfo']]
-        df['AppNameWithSrcInfo'] = df['AppName']+': '+df['SrcInfo']
+        df['AppNameWithSrcInfo'] = df['AppName']+': '+df['SrcInfo']+': '+df['Source Name']
         newNameColumn = 'AppNameWithSrcInfo'
     # Need to fix datasize being nan's because groupby does not work
     dsMask = pd.isnull(df['DataSet/Size'])

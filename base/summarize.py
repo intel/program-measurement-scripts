@@ -389,6 +389,7 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
     calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if incl_meta_data:
         out_row['Timestamp#'] = in_row['Timestamp#']
+        out_row['Source Name'] = in_row['code.name']
     return out_row
 
 def print_formulas(formula_file):
