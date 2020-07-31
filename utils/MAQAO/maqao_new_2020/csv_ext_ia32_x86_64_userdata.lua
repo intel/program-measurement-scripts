@@ -50,7 +50,8 @@ __cqa_user_data = {
       "[ia32_x86_64] cycles",
       "cycles L1 if fully vectorized", "cycles L1 if nomem vectorized",
       "cycles L1 if FP arith vectorized", "cycles if clean",
-      "cycles if only FP", "cycles if only FP arith", "SP/DP conversion instructions",
+      "cycles if only FP", "cycles if only FP arith",
+      "SP/DP conversion instructions", "INT/FP conversion instructions",
       "bytes moved GP registers", "bytes moved SIMD registers",
    },
 
