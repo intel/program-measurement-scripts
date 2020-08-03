@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import csv, re
 import sys
 import traceback
@@ -389,6 +389,7 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
     calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if incl_meta_data:
         out_row['Timestamp#'] = in_row['Timestamp#']
+        out_row['Source Name'] = in_row['Source Name']
     return out_row
 
 def print_formulas(formula_file):
@@ -436,6 +437,7 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
             cur_df = pd.read_csv(input_data_source, delimiter=',')
             # For CapeScripts data, just use experiment timestamp as the time stamp
             cur_df['Timestamp#'] = cur_df['Expr TS#']
+            cur_df['Source Name'] = None
         else:
             # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
             input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
@@ -446,6 +448,7 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
             ts_string = ts_row.iloc[0,1]
             date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
             cur_df['Timestamp#'] = int(date_time_obj.timestamp())
+            cur_df['Source Name']=cur_df['code.name']
 
         df = df.append(cur_df, ignore_index=True)
 

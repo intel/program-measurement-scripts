@@ -62,8 +62,8 @@ def generate_qplot(inputfile, outputfile, qplot_html):
 # Mostly copied from report_summary.py
 def main(argv):
     if len(argv) != 6:
-        print '\nERROR: Wrong number of arguments!\n'
-        print 'Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>'
+        print('\nERROR: Wrong number of arguments!\n')
+        print('Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>')
         sys.exit(2)
     inputfile = []
     outputfile = []
@@ -71,22 +71,22 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hi:o:q:")
     except getopt.GetoptError:
-        print '\nERROR: Wrong argument(s)!\n'
-        print 'Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>'
+        print('\nERROR: Wrong argument(s)!\n')
+        print('Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>')
         sys.exit(2)
     if len(args) != 0:
-        print '\nERROR: Wrong argument(s)!\n'
-        print 'Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>'
+        print('\nERROR: Wrong argument(s)!\n')
+        print('Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>'
+            print('Usage:\n  qplot_data_generation.py  -i <inputfile> (optionally) -o <outputfile>')
             sys.exit()
         elif opt == '-i':
             inputfile.append(arg)
             matchobj = re.search(r'(.+?)\.csv', arg)
             if not matchobj:
-              print 'inputfile should be a *.csv file'
+              print('inputfile should be a *.csv file')
               sys.exit()
             if matchobj and len(argv) == 2:
               outputfile.append(str(matchobj.group(1)) + '_qplot.xlsx')
@@ -94,13 +94,13 @@ def main(argv):
             outputfile.append(arg)
             matchobj = re.search(r'(.+?)\.xlsx', arg)
             if not matchobj:
-              print 'outputfile should be a *.xlsx file'
+              print('outputfile should be a *.xlsx file')
               sys.exit()
         elif opt == '-q':
             qplot_html.append(arg)
 
-    print 'Inputfile: ', inputfile[0]
-    print 'Outputfile: ', outputfile[0]
+    print('Inputfile: ', inputfile[0])
+    print('Outputfile: ', outputfile[0])
     generate_qplot(inputfile[0], outputfile[0], qplot_html[0])        
         
 

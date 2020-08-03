@@ -43,7 +43,10 @@ def agg_fn(df, short_names_path):
     # Calculate sum metrics 
     for metric in ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', \
         'Total PKG Energy (J)', 'Total DRAM Energy (J)', 'Total PKG+DRAM Energy (J)']:
-        out_df[metric] = np.sum(df[metric])
+        try:
+            out_df[metric] = np.sum(df[metric])
+        except:
+            pass
 
     # Calculate time weighted metrics like rate metrics
     # Note: for % metrics, they will be approximated by time weight manner although 
@@ -56,14 +59,21 @@ def agg_fn(df, short_names_path):
                     'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)']:
         #out_df[metric] = np.dot(df['%Coverage'], df[metric])
         # FIX: Could just divide above dot product by total %Coverage but use a cleaner formula directly from AppTime
-        out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
+        try:
+            out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
+        except:
+            pass
     
     # For energy derived, go ahead to compute using aggregated metrics
     num_ops = out_df['O=Inst. Count (GI)']
     ops_per_sec = out_df['C=Inst. Rate (GI/s)'] 
     for kind in ['PKG', 'DRAM', 'PKG+DRAM']:
-        energy = out_df['Total {} Energy (J)'.format(kind)]
-        calculate_energy_derived_metrics(out_df, kind, energy, num_ops, ops_per_sec)
+        try:
+            energy = out_df['Total {} Energy (J)'.format(kind)]
+            calculate_energy_derived_metrics(out_df, kind, energy, num_ops, ops_per_sec)
+        except:
+            pass
+
     # Finally compute VecType which is the most complicated field to aggregate due to the need to parse strings
     # First reconstruct the sc, xmm, ymm, zmm metrics
     # more precise to just compute scPercent from other vector percentage (see below)
@@ -93,7 +103,11 @@ def aggregate_runs_df(df, level="app", name_file=None):
         splitInfo = df['codelet_name'].str.extract(r'((?P<LoopId>\d+)_)?(?P<SrcInfo>.+)', expand=True)
         # Need to store output into splitInfo first because optional group introduced an extra column
         df[['LoopId', 'SrcInfo']] = splitInfo[['LoopId', 'SrcInfo']]
-        df['AppNameWithSrcInfo'] = df['AppName']+': '+df['SrcInfo']
+        df['AppNameWithSrcInfo'] = df['AppName']+': ' + df['SrcInfo']
+        srcNameNullMask = df['Source Name'].isnull()
+#        df.loc[srcNameNullMask]['AppNameWithSrcInfo'] = df['AppNameWithSrcInfo'] +': '+df['Source Name']
+        df.loc[~srcNameNullMask, 'AppNameWithSrcInfo'] = \
+            df.loc[~srcNameNullMask, 'AppNameWithSrcInfo'] + ': ' + df.loc[~srcNameNullMask, 'Source Name']
         newNameColumn = 'AppNameWithSrcInfo'
     # Need to fix datasize being nan's because groupby does not work
     dsMask = pd.isnull(df['DataSet/Size'])
