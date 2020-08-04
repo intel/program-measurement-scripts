@@ -59,7 +59,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else 0
     out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else 0
     for itype in itypes:
-        out_row['%Ops[{}]'.format(itype)] = ops_dict[itype] / all_ops if all_insts else 0
+        out_row['%Ops[{}]'.format(itype)] = ops_dict[itype] / all_ops if all_ops else 0
         out_row['%Inst[{}]'.format(itype)] = inst_dict[itype] / all_insts if all_insts else 0
 
     try:
@@ -272,10 +272,11 @@ def calculate_memops_counts_per_iter(in_row):
         memops_ymm = w_vec_ymm * (getter(in_row, 'Nb_256_bits_loads') + getter(in_row, 'Nb_256_bits_stores'))
         memops_zmm = w_vec_zmm * (getter(in_row, 'Nb_512_bits_loads') + getter(in_row, 'Nb_512_bits_stores'))
         memops = memops_sc + memops_xmm + memops_ymm + memops_zmm
-        memops_fma = 0
+        memops_fma = memops_div = memops_sqrt = memops_rsqrt = memops_rcp = memops_cvt = 0
 
-        results = (memops, memops_sc, memops_xmm, memops_ymm, memops_zmm, memops_fma)
-        return Vecinfo(*results, 0.0)    
+        results = (memops, memops_sc, memops_xmm, memops_ymm, memops_zmm, memops_fma, 
+                   memops_div, memops_sqrt, memops_rsqrt, memops_rcp, memops_cvt)
+        return Vecinfo(*results)    
     
     memops_counts = calculate_memops_counts_with_weights(in_row, w_sc_8bit=1/8, w_sc_16bit=1/4, w_sc_32bit=1/2, w_sc_64bit=1, \
                                                          w_vec_xmm=2, w_vec_ymm=4, w_vec_zmm=8)
