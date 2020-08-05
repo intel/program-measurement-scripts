@@ -24,6 +24,7 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
 #SCALAR_NODE_SET={'l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s'}
+MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
 SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
 BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FrontEnd'}
@@ -118,6 +119,15 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
     for node in chosen_buffer_node_set:
         formula=capacity_formula[node]
         df['C_{}'.format(node)]=formula(df)
+    # Compute memory level 
+    chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
+	# Below will get the C_* name with max value
+	df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+	# Remove the first two characters which is 'C_'
+	df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
+	# Drop the unit
+	df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
+    
 
 def compute_saturation(df, chosen_node_set, out_df):
     nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
