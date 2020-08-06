@@ -103,9 +103,10 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
     texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
 
     #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    if x_axis == r'%coverage': x_axis = x_axis + ' (Fraction)'
-    if y_axis == r'%coverage': y_axis = y_axis + ' (Fraction)'
-    ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'%Coverage (Fraction)')
+    x_label, y_label = x_axis, y_axis
+    if x_label == r'%coverage': x_label = x_label + ' (Fraction)'
+    if y_label == r'%coverage': y_label = y_label + ' (Fraction)'
+    ax.set(xlabel=x_label if x_label else r'OP Rate', ylabel=y_label if y_label else r'%Coverage (Fraction)')
     ax.set_title(title, pad=40)
 
     # Legend
