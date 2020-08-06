@@ -3,6 +3,7 @@ import sys, getopt
 import csv
 import re
 import os
+from os.path import expanduser
 import traceback
 import pandas as pd
 import numpy as np
@@ -16,6 +17,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
+import copy
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -43,15 +45,18 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df = pd.read_csv(input_data_source)
 	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 
-def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame()):
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
+	if not mappings.empty:
+		mappings.columns = succinctify(mappings.columns)
 
 	grouped = df.groupby('variant')
-	# Generate SI plot for each variant
-	mask = df['variant'] == "ORIG"
-	df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order)
-	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df[mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order)
+	# Only show selected variants, default is 'ORIG'
+	df = df.loc[df['variant'].isin(variants)]
+	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
+	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings)
+	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings)
 	# Return dataframe and figure for GUI
 	return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
 	#for variant, group in grouped:
@@ -118,7 +123,7 @@ def compute_color_labels(df):
 		color_labels.append((codelet.split(':')[0], color))
 	return color_labels
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame()):
 	if df.empty:
 		return None, None, None # Nothing to do
 	df, op_node_name = compute_capacity(df, chosen_node_set)
@@ -139,6 +144,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	except:
 		indices = df['name']
 
+
 	if x_axis:
 		xs = df[x_axis]
 	else:
@@ -155,7 +161,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, scale, today)	
 	fig, textData = plot_data("{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale),
-						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, df, op_node_name, x_axis=x_axis, y_axis=y_axis, color_labels=color_labels, source_order=source_order)
+						outputfile, list(xs), list(ys),	list(indices), list(mem_level), scale, df, op_node_name, x_axis=x_axis, y_axis=y_axis, color_labels=color_labels, source_order=source_order, mappings=mappings)
 	return df, fig, textData
 
 
@@ -172,71 +178,54 @@ def draw_contours(ax, maxx, ns):
 	return lines
 
 # Set filename to [] for GUI output	
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_name, x_axis=None, y_axis=None, color_labels=None, source_order=None):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_name, x_axis=None, y_axis=None, color_labels=None, source_order=None, mappings=pd.DataFrame()):
 	DATA =tuple(zip(xs,ys))
     
 	fig, ax = plt.subplots()
 
-	#xmax=max(xs)*2
 	xmax=max(xs)*1.2
 	ymax=max(ys)*1.2  
+	xmin=min(xs)
+	ymin=min(ys)
 
-	if scale == 'loglog':
-		xmin=min(xs)
-		ymin=min(ys)
-		ax.set_xlim((xmin, xmax))
-		ax.set_ylim((ymin, ymax))
-		plt.xscale("log")
-		plt.yscale("log")
-	else:
+	# Set specified axis scales
+	if scale == 'linear' or scale == 'linearlinear':
 		ax.set_xlim((0, xmax))
 		ax.set_ylim((0, ymax))
+	elif scale == 'log' or scale == 'loglog':
+		plt.xscale("log")
+		plt.yscale("log")
+		ax.set_xlim((xmin, xmax))
+		ax.set_ylim((ymin, ymax))
+	elif scale == 'loglinear':
+		plt.xscale("log")
+		ax.set_xlim((xmin, xmax))
+		ax.set_ylim((0, ymax))
+	elif scale == 'linearlog':
+		plt.yscale("log")
+		ax.set_xlim((0, xmax))
+		ax.set_ylim((ymin, ymax))
     
 	(x, y) = zip(*DATA)
-	ax.scatter(x, y, marker='o', c=df.color)
-
+	#ax.scatter(x, y, marker='o', c=df.color)
+	# Draw contour lines
 	ns = [1,2,4,8,16,32]
 	ctxs = []
 	ctxs = draw_contours(ax, xmax, ns)
+	# Plot markers
+	markers = []
+	df.reset_index(drop=True, inplace=True)
+	for i in range(len(x)):
+		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label='data'+str(i), linestyle='', alpha=1))
 	
 	# Point Labels
 	plt.rcParams.update({'font.size': 7})
 	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]  
-	texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
-	adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-	textData = {
-		'xs' : xs,
-		'ys' : ys,
-		'text' : mytext,
-		'ax' : ax
-	}
+	texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
+	#adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
 	ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
 	ax.set_title(title, pad=40)
-
-	# Arrows between multiple runs
-	if source_order:
-		df['map_name'] = df['name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
-		before = df.loc[df['timestamp#'] == source_order[0]]
-		after = df.loc[df['timestamp#'] == source_order[1]]
-		for index in before.index:
-			match = after.loc[after['map_name'] == before['map_name'][index]].reset_index()
-			if not match.empty:
-				x_axis = x_axis if x_axis else op_node_name
-				y_axis = y_axis if y_axis else 'C_max [GB/s]'
-				xyA = (before[x_axis][index], before[y_axis][index])
-				xyB = (match[x_axis][0], match[y_axis][0])
-				# Check which way to curve the arrow to avoid going out of the axes
-				if (xmax - xyB[0] > xyB[0] and xmax - xyA[0] > xyA[0] and xyA[1] < xyB[1]) or \
-					(ymax - xyB[1] > xyB[1] and ymax - xyA[1] > xyA[1] and xyA[0] > xyB[0]) or \
-					(ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
-					(xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
-					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
-						connectionstyle='arc3,rad=0.3')
-				else:
-					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=5, shrinkB=5, mutation_scale=13, fc="w", \
-						connectionstyle='arc3,rad=-0.3')
-				ax.add_artist(con)
-
+				
 	# Legend
 	patches = []
 	if color_labels and len(color_labels) >= 2:
@@ -244,14 +233,56 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 			patch = mpatches.Patch(label=color_label[0], color=color_label[1])
 			patches.append(patch)
 	patches.extend(ctxs)
-	ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="(name,memlevel)", mode='expand', borderaxespad=0., \
+	legend = ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="Label = (name, memlevel)", mode='expand', borderaxespad=0., \
 		handles=patches)
+
+	# Arrows between multiple runs
+	if not mappings.empty:
+		for index in mappings.index:
+			before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
+			after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
+			if not before_row.empty and not after_row.empty:
+				x_axis = x_axis if x_axis else op_node_name
+				y_axis = y_axis if y_axis else 'C_max [GB/s]'
+				xyA = (before_row[x_axis][0], before_row[y_axis][0])
+				xyB = (after_row[x_axis][0], after_row[y_axis][0])
+				# Check which way to curve the arrow to avoid going out of the axes
+				if (xmax - xyB[0] > xyB[0] and xmax - xyA[0] > xyA[0] and xyA[1] < xyB[1]) or \
+					(ymax - xyB[1] > xyB[1] and ymax - xyA[1] > xyA[1] and xyA[0] > xyB[0]) or \
+					(ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
+					(xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
+					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
+						connectionstyle='arc3,rad=0.3')
+				else:
+					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
+						connectionstyle='arc3,rad=-0.3')
+				ax.add_artist(con)
+
 	plt.tight_layout()
+
+	plotData = {
+		'xs' : xs,
+		'ys' : ys,
+		'mytext' : mytext,
+		'orig_mytext' : copy.deepcopy(mytext),
+		'ax' : ax,
+		'legend' : legend,
+		'orig_legend' : legend.get_title().get_text(),
+		'title' : title,
+		'texts' : texts,
+		'markers' : markers,
+		'names' : df['name'].values.tolist(),
+		'marker:text' : dict(zip(markers,texts)),
+		'marker:name' : dict(zip(markers,df['name'].values.tolist())),
+		'name:marker' : dict(zip(df['name'].values.tolist(), markers)),
+		'text:arrow' : {},
+		'text:name' : dict(zip(texts, df['name'].values.tolist()))
+	}
 
 	if filename:
 		plt.savefig(filename)
 
-	return fig, textData
+	return fig, plotData
 
 def usage(reason):
 	error_code = 0
@@ -265,8 +296,8 @@ def usage(reason):
 def main(argv):
 	parser = ArgumentParser(description='Generate QPlot data from summary data.')
 	parser.add_argument('-i', help='the input csv file', required=True, dest='in_file')
-	parser.add_argument('-s', help='plot scale', required=False, choices=['scalar','loglog'], 
-						default='scalar', dest='scale')
+	parser.add_argument('-s', help='plot scale', required=False, choices=['linear','log','linearlog','loglinear'], 
+						default='linear', dest='scale')
 	parser.add_argument('-l', help='list of nodes', required=False, 
 						default=','.join(sorted(list(DEFAULT_CHOSEN_NODE_SET))), dest='node_list')
 	parser.add_argument('-o', help='the output file prefix', required=False, dest='out_file_prefix')

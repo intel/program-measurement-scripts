@@ -10,15 +10,20 @@ from matplotlib import style
 from adjustText import adjust_text
 from capelib import succinctify
 from generate_QPlot import compute_capacity
+import copy
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
+def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], mappings=pd.DataFrame()):
     df.columns = succinctify(df.columns)
-    df, fig, texts = compute_and_plot(
-        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis)
+    if not mappings.empty:
+        mappings.columns = succinctify(mappings.columns)
+    # Only show selected variants, default is 'ORIG'
+    df = df.loc[df['variant'].isin(variants)]
+    df, fig, textData = compute_and_plot(
+        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
     # Return dataframe and figure for GUI
-    return (df, fig, texts)
+    return (df, fig, textData)
 
 def compute_color_labels(df):
     color_labels = []
@@ -28,7 +33,7 @@ def compute_color_labels(df):
         color_labels.append((codelet.split(':')[0], color))
     return color_labels
 
-def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None):
+def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame()):
     if df.empty:
         return None, None, None  # Nothing to do
 
@@ -61,12 +66,12 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     else:
         outputfile = '{}-{}-{}-{}.png'.format(outputfile_prefix,
                                           variant, scale, today)
-    fig, texts = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
-        xs), list(ys), list(indices), scale, df, color_labels=color_labels, y_axis=y_axis)
-    return df, fig, texts
+    fig, textData = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
+        xs), list(ys), list(indices), scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings, op_node_name=op_node_name)
+    return df, fig, textData
 
 # Set filename to [] for GUI output
-def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None):
+def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None, mappings=pd.DataFrame(), op_node_name=None):
     DATA = tuple(zip(xs, ys))
 
     fig, ax = plt.subplots()
@@ -86,15 +91,21 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
         ax.set_ylim((0, ymax))
 
     (x, y) = zip(*DATA)
-    ax.scatter(x, y, marker='o', c=df.color)
+
+    # Plot data points
+    markers = []
+    df.reset_index(drop=True, inplace=True)
+    for i in range(len(x)):
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label='data'+str(i), linestyle='', alpha=1))
 
     plt.rcParams.update({'font.size': 7})
-    mytext = [str('({0})'.format(indices[i]))
-              for i in range(len(DATA))]
-    texts = [plt.text(xs[i], ys[i], mytext[i]) for i in range(len(DATA))]
+    mytext = [str('({0})'.format(indices[i])) for i in range(len(DATA))]
+    texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
 
-    adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'%Coverage')
+    #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+    if x_axis == r'%coverage': x_axis = x_axis + ' (Fraction)'
+    if y_axis == r'%coverage': y_axis = y_axis + ' (Fraction)'
+    ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'%Coverage (Fraction)')
     ax.set_title(title, pad=40)
 
     # Legend
@@ -104,11 +115,53 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
             patch = mpatches.Patch(label=color_label[0], color=color_label[1])
             patches.append(patch)
 
-    ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0., 1.02, 1., .102), title="(name)", mode='expand', borderaxespad=0.,
+    legend = ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0., 1.02, 1., .102), title="(name)", mode='expand', borderaxespad=0.,
               handles=patches)
 
+    # Arrows between multiple runs
+    if not mappings.empty:
+        for index in mappings.index:
+            before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
+            after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
+            if not before_row.empty and not after_row.empty:
+                x_axis = x_axis if x_axis else op_node_name
+                y_axis = y_axis if y_axis else r'%coverage'
+                xyA = (before_row[x_axis][0], before_row[y_axis][0])
+                xyB = (after_row[x_axis][0], after_row[y_axis][0])
+                # Check which way to curve the arrow to avoid going out of the axes
+                if (xmax - xyB[0] > xyB[0] and xmax - xyA[0] > xyA[0] and xyA[1] < xyB[1]) or \
+                    (ymax - xyB[1] > xyB[1] and ymax - xyA[1] > xyA[1] and xyA[0] > xyB[0]) or \
+                    (ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
+                    (xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
+                    con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
+                        connectionstyle='arc3,rad=0.3')
+                else:
+                    con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
+                        connectionstyle='arc3,rad=-0.3')
+                ax.add_artist(con)
+
     plt.tight_layout()
+
+    plotData = {
+        'xs' : xs,
+        'ys' : ys,
+        'mytext' : mytext,
+        'orig_mytext' : copy.deepcopy(mytext),
+        'ax' : ax,
+        'legend' : legend,
+        'orig_legend' : legend.get_title().get_text(),
+        'title' : title,
+        'texts' : texts,
+        'markers' : markers,
+        'names' : df['name'].values.tolist(),
+        'marker:text' : dict(zip(markers,texts)),
+        'marker:name' : dict(zip(markers,df['name'].values.tolist())),
+        'name:marker' : dict(zip(df['name'].values.tolist(), markers)),
+        'text:arrow' : {},
+        'text:name' : dict(zip(texts, df['name'].values.tolist()))
+    }
+
     if filename:
         plt.savefig(filename)
 
-    return fig, texts
+    return fig, plotData

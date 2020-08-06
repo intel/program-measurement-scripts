@@ -72,7 +72,7 @@ def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, varian
     rdf = rdf.loc[rdf['variant'].isin(variants)]
     l_df = df
     column_list = df.columns.tolist()
-    column_list.extend(['timestamp#', r'%coverage', 'color'])
+    column_list.extend(['apptime_s', 'timestamp#', r'%coverage', 'color'])
     data = pd.DataFrame(columns=column_list)
     short_name = rdf['short_name']
     data = data.append(rdf, ignore_index=False)[column_list]
@@ -121,13 +121,12 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
         df['C_{}'.format(node)]=formula(df)
     # Compute memory level 
     chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
-	# Below will get the C_* name with max value
-	df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-	# Remove the first two characters which is 'C_'
-	df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
-	# Drop the unit
-	df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
-    
+    # Below will get the C_* name with max value
+    df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+    # Remove the first two characters which is 'C_'
+    df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
+    # Drop the unit
+    df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
 
 def compute_saturation(df, chosen_node_set, out_df):
     nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
@@ -388,6 +387,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     orig_codelet_names = orig_df['name'].values.tolist()
     orig_codelet_speedup = orig_df['speedup'].values.tolist()
     orig_codelet_variant = orig_df['variant'].values.tolist()
+    orig_codelet_memlevel = orig_df['memlevel'].values.tolist()
     #xmax=max(xs)*2
     xmax=max(xs)*1.2
     ymax=max(ys)*1.2  
@@ -413,7 +413,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
 
     plt.rcParams.update({'font.size': 7})
     #mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_speedup[i] ))  for i in range(len(DATA))]
-    mytext= [str('({0}, {1})'.format( orig_codelet_index[i], orig_codelet_variant[i]))  for i in range(len(DATA))]
+    mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_memlevel[i]))  for i in range(len(DATA))]
     texts = [plt.text(x[i], y[i], mytext[i], alpha=1) for i in range(len(DATA))]
 
     # Create a Rectangle patch
@@ -432,7 +432,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
             patch = mpatches.Patch(label=color_label[0], color=color_label[1])
             patches.append(patch)
     patches.extend(ctxs)
-    legend = ax.legend(loc="lower left",ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name, variant)", \
+    legend = ax.legend(loc="lower left",ncol=6, bbox_to_anchor=(0.,1.02,1.,.102),title="I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name, variant, memlevel)", \
         mode='expand', borderaxespad=0., handles=patches)
     
     # Arrows between multiple runs
