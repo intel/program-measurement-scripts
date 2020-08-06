@@ -1,6 +1,8 @@
 from cefpython3 import cefpython as cef
 import tkinter as tk
 
+main_browser = None
+
 class MainFrame(tk.Frame):
 
     def __init__(self, root):
@@ -35,6 +37,9 @@ class BrowserFrame(tk.Frame):
                 self.browser = cef.CreateBrowserSync(self.window_info,
                                                     url=url)
                 assert self.browser
+                global main_browser 
+                main_browser = self.browser
+                self.browser.SetClientHandler(LifespanHandler(self))
                 self.message_loop_work()
             else:
                 self.browser.LoadUrl(url)
@@ -50,3 +55,13 @@ class BrowserFrame(tk.Frame):
     def close(self):
         self.browser = None
         self.destroy()
+
+class LifespanHandler(object):
+
+    def __init__(self, tkFrame):
+        self.tkFrame = tkFrame
+    
+    def OnBeforePopup(self, browser, **_):
+        global main_browser
+        main_browser.LoadUrl(_['target_url'])
+        return True
