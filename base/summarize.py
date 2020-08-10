@@ -40,7 +40,7 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Vec', 'DL1' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Speedup[Vec]', 'Speedup[DL1]' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -353,21 +353,21 @@ def calculate_app_time_coverage(out_rows, in_rows):
 
 def add_trawl_data(out_rows, in_rows):
     # initialize to None and set to correct values
-    out_rows['Vec'] = None
-    out_rows['DL1'] = None
+    out_rows['Speedup[Vec]'] = None
+    out_rows['Speedup[DL1]'] = None
     try:
-        out_rows['Vec'] = in_rows['potential_speedup.if_fully_vectorized'].values
+        out_rows['Speedup[Vec]'] = in_rows['potential_speedup.if_fully_vectorized'].values
     except:
         if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'].values + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'].values)/2
         dl1_cycles = (in_rows['(L1)_Nb_cycles_min'].values + in_rows['(L1)_Nb_cycles_max'].values)/2
-        out_rows['Vec'] = dl1_cycles / if_fully_cycles
+        out_rows['Speedup[Vec]'] = dl1_cycles / if_fully_cycles
 
     try:
-        out_rows['DL1'] = in_rows['time(ORIG) / time(DL1)'].values
+        out_rows['Speedup[DL1]'] = in_rows['time(ORIG) / time(DL1)'].values
     except:
         # Go ahead to use the dl1_cycles (assuming exception was thrown when computing what-if vectorization speedup)
         # use core cycles instead of ref or CPI so timing not affected by TurboBoost
-        out_rows['DL1'] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
+        out_rows['Speedup[DL1]'] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb, incl_meta_data):
@@ -423,9 +423,30 @@ def enforce(d, field_names):
 
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
+
+def compute_speedup(output_rows, mapping_df):
+    keyColumns=['Name', 'Timestamp#']
+    timeColumns=['Time (s)', 'AppTime (s)']
+    rateColumns=['FLOP Rate (GFLOP/s)']
+    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+                              right_on=keyColumns, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    for timeColumn in timeColumns: 
+        new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
+            new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
+    for rateColumn in rateColumns: 
+        new_mapping_df['Speedup[{}]'.format(rateColumn)] = \
+            new_mapping_df['{}_after'.format(rateColumn)] / new_mapping_df['{}_before'.format(rateColumn)]
+    # Remove those _after and _before columns
+    retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
+    retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
+    return new_mapping_df[retainColumns]
     
 def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data):
+                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df):
     if name_file:
         read_short_names(name_file)
 
@@ -488,25 +509,34 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
 
+    new_mapping_df = compute_speedup(output_rows, mapping_df) if mapping_df is not None else None
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
-    return output_rows
+    return output_rows, new_mapping_df
 
 
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False):
+                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False, mapping_file=None):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
     print('Name file: ', name_file, file=sys.stderr)
+    print('Mapping file: ', mapping_file, file=sys.stderr)
     print('Skip Energy: ', skip_energy, file=sys.stderr)
     print('Enable LFB: ', enable_lfb, file=sys.stderr)
 
-    output_rows = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
-        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data)
+    mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else None
+    output_rows, new_mapping_df = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
+        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df)
 
     outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.to_csv(outputfile, index=False)
+
+    if new_mapping_df is not None:
+        outdir = os.path.dirname(outputfile)
+        out_new_mapping_file = os.path.join(outdir, os.path.splitext(os.path.basename(mapping_file))[0]+'.speedup.csv')
+        new_mapping_df.to_csv(out_new_mapping_file, index=False)
+        
 
     # if (outputfile == '-'):
     #     output_csvfile = sys.stdout
@@ -550,6 +580,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
+    parser.add_argument('-m', nargs='?', help='the input mapping/transition csv file for speedup computation', dest='mapping_file')
     parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
     parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
     parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
@@ -558,8 +589,10 @@ if __name__ == '__main__':
     parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
     parser.add_argument('--enable-meta', action='store_true', help='include meta data in the output', dest='enable_meta')
     args = parser.parse_args()
+    if (args.mapping_file is not None and not args.enable_meta):
+        parser.error("The -m argument requires the --enable-meta argument")
 
     summary_report(args.in_files, args.out_file, [args.in_file_format] * len(args.in_files), args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta)
+                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta, args.mapping_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
