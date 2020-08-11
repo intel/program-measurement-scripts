@@ -216,7 +216,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	markers = []
 	df.reset_index(drop=True, inplace=True)
 	for i in range(len(x)):
-		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label='data'+str(i), linestyle='', alpha=1))
+		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i], linestyle='', alpha=1))
 	
 	# Point Labels
 	plt.rcParams.update({'font.size': 7})
@@ -237,7 +237,12 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 		handles=patches)
 
 	# Arrows between multiple runs
+	name_mapping = dict()
+	mymappings = []
 	if not mappings.empty:
+		for i in mappings.index:
+			name_mapping[mappings['before_name'][i]] = []
+			name_mapping[mappings['after_name'][i]] = []
 		for index in mappings.index:
 			before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
 			after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
@@ -252,12 +257,14 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 					(ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
 					(xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
 					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-						connectionstyle='arc3,rad=0.3')
+						connectionstyle='arc3,rad=0.3', alpha=1)
 				else:
 					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-						connectionstyle='arc3,rad=-0.3')
+						connectionstyle='arc3,rad=-0.3', alpha=1)
 				ax.add_artist(con)
-
+				name_mapping[before_row['name'][0]].append(con)
+				name_mapping[after_row['name'][0]].append(con)
+				mymappings.append(con)
 	plt.tight_layout()
 
 	plotData = {
@@ -275,8 +282,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 		'marker:text' : dict(zip(markers,texts)),
 		'marker:name' : dict(zip(markers,df['name'].values.tolist())),
 		'name:marker' : dict(zip(df['name'].values.tolist(), markers)),
+		'name:text' : dict(zip(df['name'].values.tolist(), texts)),
 		'text:arrow' : {},
-		'text:name' : dict(zip(texts, df['name'].values.tolist()))
+		'text:name' : dict(zip(texts, df['name'].values.tolist())),
+		'name:mapping' : name_mapping,
+		'mappings' : mymappings
 	}
 
 	if filename:

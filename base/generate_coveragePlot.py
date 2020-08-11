@@ -70,19 +70,28 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
     plt.rcParams.update({'font.size': 7})
     fig, ax = plt.subplots()
 
-    xmax = max(xs)*1.2
-    ymax = max(ys)*1.2
+    xmax=max(xs)*1.2
+    ymax=max(ys)*1.2  
+    xmin=min(xs)
+    ymin=min(ys)
 
-    if scale == 'loglog':
-        xmin = min(xs)
-        ymin = min(ys)
-        ax.set_xlim((xmin, xmax))
-        ax.set_ylim((ymin, ymax))
-        plt.xscale("log")
-        plt.yscale("log")
-    else:
+    # Set specified axis scales
+    if scale == 'linear' or scale == 'linearlinear':
         ax.set_xlim((0, xmax))
         ax.set_ylim((0, ymax))
+    elif scale == 'log' or scale == 'loglog':
+        plt.xscale("log")
+        plt.yscale("log")
+        ax.set_xlim((xmin, xmax))
+        ax.set_ylim((ymin, ymax))
+    elif scale == 'loglinear':
+        plt.xscale("log")
+        ax.set_xlim((xmin, xmax))
+        ax.set_ylim((0, ymax))
+    elif scale == 'linearlog':
+        plt.yscale("log")
+        ax.set_xlim((0, xmax))
+        ax.set_ylim((ymin, ymax))
 
     (x, y) = zip(*DATA)
     
@@ -90,7 +99,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
     markers = []
     df.reset_index(drop=True, inplace=True)
     for i in range(len(x)):
-        markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label='data'+str(i), linestyle='', alpha=1))
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i], linestyle='', alpha=1))
 
     mytext = [str('({0}, {1})'.format(indices[i], memlevel[i]))
               for i in range(len(DATA))]
@@ -109,7 +118,12 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
               handles=patches)
 
     # Arrows between multiple runs
+    name_mapping = dict()
+    mymappings = []
     if not mappings.empty:
+        for i in mappings.index:
+            name_mapping[mappings['before_name'][i]] = []
+            name_mapping[mappings['after_name'][i]] = []
         for index in mappings.index:
             before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
             after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
@@ -124,12 +138,14 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
                     (ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
                     (xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                        connectionstyle='arc3,rad=0.3')
+                        connectionstyle='arc3,rad=0.3', alpha=1)
                 else:
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                        connectionstyle='arc3,rad=-0.3')
+                        connectionstyle='arc3,rad=-0.3', alpha=1)
                 ax.add_artist(con)
-
+                name_mapping[before_row['name'][0]].append(con)
+                name_mapping[after_row['name'][0]].append(con)
+                mymappings.append(con)
     plotData = {
         'xs' : xs,
         'ys' : ys,
@@ -145,8 +161,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
         'marker:text' : dict(zip(markers,texts)),
         'marker:name' : dict(zip(markers,df['name'].values.tolist())),
         'name:marker' : dict(zip(df['name'].values.tolist(), markers)),
+        'name:text' : dict(zip(df['name'].values.tolist(), texts)),
         'text:arrow' : {},
-        'text:name' : dict(zip(texts, df['name'].values.tolist()))
+        'text:name' : dict(zip(texts, df['name'].values.tolist())),
+        'name:mapping' : name_mapping,
+        'mappings' : mymappings
     }
 
     plt.tight_layout()

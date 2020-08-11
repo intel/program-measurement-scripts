@@ -56,7 +56,7 @@ def concat_ordered_columns(frames):
     final_df = pd.concat(frames)
     return final_df[columns_ordered]
 
-def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame()):
+def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
     df = pd.read_csv(inputfile)
     grouped = df.groupby('variant')
     # Generate SI plot for each variant
@@ -80,7 +80,7 @@ def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, varian
     dfs = [l_df,data]
     full_df = concat_ordered_columns(dfs)
 
-    return compute_and_plot_orig('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, short_name, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings)
+    return compute_and_plot_orig('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, short_name, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
@@ -157,7 +157,7 @@ def compute_color_labels(df):
         color_labels.append((codelet.split(':')[0], color))
     return color_labels
 
-def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_node_set, tdf, orig_name, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame()):
+def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_node_set, tdf, orig_name, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
     out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
     #print (out_csv)
     out_df = pd.DataFrame()
@@ -201,7 +201,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
         color_labels = compute_color_labels(l_df)
         fig, textData = plot_data_point("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
                             str(sorted(list(chosen_node_set)))),
-                            f_outputfile, l_df, orig_name, list(z), list(y), len(chosen_node_set), tdf, k_avg, color_labels, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings)
+                            f_outputfile, l_df, orig_name, list(z), list(y), len(chosen_node_set), tdf, k_avg, color_labels, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)
     return l_df, fig, textData
     #print ("Plotting Magnified Data")
     #outputfile='Magnified - {}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
@@ -358,7 +358,7 @@ def plot_data(title, filename, xs, ys, indices, speedups, floprates, Ns):
         plt.show()
 
 # Set filename to [] for GUI output    
-def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, k_average, color_labels=None, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame()):
+def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, k_average, color_labels=None, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
     #     DATA = ((1, 3),
     #             (2, 4),
     #             (3, 1),
@@ -377,6 +377,30 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         orig_df = orig_df.loc[(orig_df[filter_data[0]] >= filter_data[1]) & (orig_df[filter_data[0]] <= filter_data[2])]
 
     fig, ax = plt.subplots()
+
+    xmax=max(xs)*1.2
+    ymax=max(ys)*1.2  
+    xmin=min(xs)
+    ymin=min(ys)
+
+    # Set specified axis scales
+    if scale == 'linear' or scale == 'linearlinear':
+        ax.set_xlim((0, xmax))
+        ax.set_ylim((0, ymax))
+    elif scale == 'log' or scale == 'loglog':
+        plt.xscale("log")
+        plt.yscale("log")
+        ax.set_xlim((xmin, xmax))
+        ax.set_ylim((ymin, ymax))
+    elif scale == 'loglinear':
+        plt.xscale("log")
+        ax.set_xlim((xmin, xmax))
+        ax.set_ylim((0, ymax))
+    elif scale == 'linearlog':
+        plt.yscale("log")
+        ax.set_xlim((0, xmax))
+        ax.set_ylim((ymin, ymax))
+
     print("Entering plot_data_orig_point")
 
     orig_codelet_sat = orig_df['Saturation'].values.tolist()
@@ -409,7 +433,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     markers = []
     orig_df.reset_index(drop=True, inplace=True)
     for i in range(len(DATA)):
-        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['color'][i][0], label='data'+str(i), linestyle='', alpha=1))
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['color'][i][0], label=orig_df['name'][i], linestyle='', alpha=1))
 
     plt.rcParams.update({'font.size': 7})
     #mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_speedup[i] ))  for i in range(len(DATA))]
@@ -436,7 +460,12 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         mode='expand', borderaxespad=0., handles=patches)
     
     # Arrows between multiple runs
+    name_mapping = dict()
+    mymappings = []
     if not mappings.empty:
+        for i in mappings.index:
+            name_mapping[mappings['before_name'][i]] = []
+            name_mapping[mappings['after_name'][i]] = []
         for index in mappings.index:
             before_row = orig_df.loc[orig_df['name']==mappings['before_name'][index]].reset_index(drop=True)
             after_row = orig_df.loc[orig_df['name']==mappings['after_name'][index]].reset_index(drop=True)
@@ -451,12 +480,14 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
                     (ymax - xyB[1] < xyB[1] and ymax - xyA[1] < xyA[1] and xyA[0] < xyB[0]) or \
                     (xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                        connectionstyle='arc3,rad=0.3')
+                        connectionstyle='arc3,rad=0.3', alpha=1)
                 else:
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                        connectionstyle='arc3,rad=-0.3')
+                        connectionstyle='arc3,rad=-0.3', alpha=1)
                 ax.add_artist(con)
-    
+                name_mapping[before_row['name'][0]].append(con)
+                name_mapping[after_row['name'][0]].append(con)
+                mymappings.append(con)
     plt.tight_layout()
     #ax.add_artist(leg);
 
@@ -475,8 +506,11 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         'marker:text' : dict(zip(markers,texts)),
         'marker:name' : dict(zip(markers,orig_df['name'].values.tolist())),
         'name:marker' : dict(zip(orig_df['name'].values.tolist(), markers)),
+        'name:text' : dict(zip(orig_df['name'].values.tolist(), texts)),
         'text:arrow' : {},
-        'text:name' : dict(zip(texts, orig_df['name'].values.tolist()))
+        'text:name' : dict(zip(texts, orig_df['name'].values.tolist())),
+        'name:mapping' : name_mapping,
+        'mappings' : mymappings
     }
 
     if filename:

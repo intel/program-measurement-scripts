@@ -78,13 +78,15 @@ class LoadedData(Observable):
         self.source_order=[]
         self.common_columns_start = ['name', 'short_name', r'%coverage', 'apptime_s', 'C_FLOP [GFlop/s]', 'variant']
         self.common_columns_end = ['c=inst_rate_gi/s', 'timestamp#', 'color']
-        self.codeletMap = pd.DataFrame()
-        self.srcMap = pd.DataFrame()
-        self.appMap = pd.DataFrame()
+        self.mappings = pd.DataFrame()
         self.UIUCMap = pd.DataFrame()
         self.UIUCAnalytics = pd.DataFrame()
         self.UIUCNames = pd.DataFrame()
         self.UIUC = False
+        # Track points/labels that have been hidden/highlighted by the user
+        self.c_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
+        self.s_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
+        self.a_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
 
     def resetTabValues(self):
         gui.c_qplotTab.x_axis = 'C_FLOP [GFlop/s]'
@@ -120,9 +122,10 @@ class LoadedData(Observable):
         if not os.path.isfile(mappings_path):
             mappings_path = None
         # Codelet summary
-        self.summaryDf = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
+        mappingDf = self.UIUCMap if not self.UIUCMap.empty else None
+        self.summaryDf, new_mappings = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path, \
-            False, True)
+            False, True, mappingDf)
         if self.UIUC: 
             # Add variants from UIUC .names.csv
             nameDf = self.UIUCNames[['name', 'variant']]
@@ -150,11 +153,11 @@ class LoadedData(Observable):
             self.srcDf = self.compute_colors(self.srcDf)
             self.appDf = self.compute_colors(self.appDf)
         if len(sources) > 1:
-            # Get mappings
-            self.codeletMap = self.getMappings(self.summaryDf)
-            if not self.UIUC:
-                self.srcMap = self.getMappings(self.srcDf)
-                #self.appMap = self.getMappings(self.appDf)
+            if not self.UIUC: 
+                self.mappings = self.getMappings()
+                if self.mappings.empty:# Create default mappings
+                    self.mappings = self.createMappings(self.summaryDf) # Add default codelet mappings
+                    self.mappings = self.mappings.append(self.createMappings(self.srcDf), ignore_index=True) # Add default source mappings
         self.notify_observers()
     
     def cancelAction(self):
@@ -195,7 +198,7 @@ class LoadedData(Observable):
             colorDf['Color'] = colors[0]
         return colorDf
 
-    def getMappings(self, df):
+    def getMappings(self):
         # Create mappings csv if it doesn't already exist
         self.mappings_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\mappings.csv'
         self.mappings_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
@@ -209,58 +212,63 @@ class LoadedData(Observable):
             self.all_mappings = pd.read_csv(self.mappings_path)
             before_mappings = self.all_mappings.loc[self.all_mappings['before_timestamp#']==self.source_order[0]]
             mappings = before_mappings.loc[before_mappings['after_timestamp#']==self.source_order[1]]
-        if mappings.empty: # We might have mappings but not from the current files, so create default mappings
-            df['map_name'] = df['Name'].map(lambda x: x.split(' ')[-1].split(',')[-1].split('_')[-1])
-            before = df.loc[df['Timestamp#'] == self.source_order[0]]
-            after = df.loc[df['Timestamp#'] == self.source_order[1]]
-            for index in before.index:
-                match = after.loc[after['map_name'] == before['map_name'][index]].reset_index(drop=True) 
-                if not match.empty:
-                    match = match.iloc[[0]]
-                    match['before_timestamp#'] = before['Timestamp#'][index]
-                    match['before_name'] = before['Name'][index]
-                    match['before_short_name'] = before['Short Name'][index]
-                    match['after_timestamp#'] = match['Timestamp#']
-                    match['after_name'] = match['Name']
-                    match['after_short_name'] = match['Short Name']
-                    match = match[['before_timestamp#', 'before_name', 'before_short_name', 'after_timestamp#', 'after_name', 'after_short_name']]
-                    mappings = mappings.append(match, ignore_index=True)
-            self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
-            self.all_mappings.to_csv(self.mappings_path, index=False)
+        return mappings
+
+    def createMappings(self, df):
+        mappings = pd.DataFrame()
+        df['map_name'] = df['Name'].map(lambda x: x.split(' ')[1].split(',')[-1].split('_')[-1])
+        before = df.loc[df['Timestamp#'] == self.source_order[0]]
+        after = df.loc[df['Timestamp#'] == self.source_order[1]]
+        for index in before.index:
+            match = after.loc[after['map_name'] == before['map_name'][index]].reset_index(drop=True) 
+            if not match.empty:
+                match = match.iloc[[0]]
+                match['before_timestamp#'] = before['Timestamp#'][index]
+                match['before_name'] = before['Name'][index]
+                match['before_short_name'] = before['Short Name'][index]
+                match['after_timestamp#'] = match['Timestamp#']
+                match['after_name'] = match['Name']
+                match['after_short_name'] = match['Short Name']
+                match = match[['before_timestamp#', 'before_name', 'before_short_name', 'after_timestamp#', 'after_name', 'after_short_name']]
+                mappings = mappings.append(match, ignore_index=True)
+        self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
+        self.all_mappings.to_csv(self.mappings_path, index=False)
         return mappings
         
 class CustomData(Observable):
     def __init__(self, loadedData):
         super().__init__()
         self.loadedData = loadedData
+        self.mappings = pd.DataFrame()
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear'):
         df = loadedData.summaryDf.copy(deep=True)
         if not gui.loadedData.UIUC:
-            self.codeletMap = loadedData.codeletMap
+            self.mappings = loadedData.mappings
         else:
-            self.codeletMap = loadedData.UIUCMap
+            self.mappings = loadedData.UIUCMap
         if not update:
             self.variants = df['Variant'].dropna().unique()
-        df, fig, textData = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.codeletMap)
+        # codelet custom plot
+        df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.mappings)
         self.df = df
         self.fig = fig
         self.textData = textData
 
-        # source trawl plot
+        # source custom plot
         if not gui.loadedData.UIUC:
             df = loadedData.srcDf
-            df, fig, textData = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
 
-        # application trawl plot
+        # application custom plot
         if not gui.loadedData.UIUC:
             df = loadedData.appDf
-            df, fig, textData = custom_plot(df, 'test', 'scalar', 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -271,25 +279,24 @@ class TRAWLData(Observable):
     def __init__(self, loadedData):
         super().__init__()
         self.loadedData = loadedData
+        self.mappings = pd.DataFrame()
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear'):
         print("TRAWLData Notified from ", loadedData)
         # mappings
         if not gui.loadedData.UIUC:
-            self.codeletMap = loadedData.codeletMap
+            self.mappings = loadedData.mappings
         else:
-            self.codeletMap = loadedData.UIUCMap
-        self.srcMap = loadedData.srcMap
-        self.appMap = loadedData.appMap
+            self.mappings = loadedData.UIUCMap
         
         # Codelet trawl plot
         df = loadedData.summaryDf.copy(deep=True)
         if not update:
             self.variants = df['Variant'].dropna().unique()
-        df, fig, textData = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-            source_order=loadedData.source_order, mappings=self.codeletMap, variants=variants)
+        df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+            source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
         self.df = df
         self.fig = fig
         self.textData = textData
@@ -297,8 +304,8 @@ class TRAWLData(Observable):
         # source trawl plot
         if not gui.loadedData.UIUC:
             df = loadedData.srcDf
-            df, fig, textData = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.srcMap, variants=variants)
+            df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -306,8 +313,8 @@ class TRAWLData(Observable):
         # application trawl plot
         if not gui.loadedData.UIUC:
             df = loadedData.appDf
-            df, fig, textData = trawl_plot(df, 'test', 'scalar', 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.appMap, variants=variants)
+            df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -318,6 +325,7 @@ class CoverageData(Observable):
     def __init__(self, loadedData):
         super().__init__()
         self.loadedData = loadedData
+        self.mappings = pd.DataFrame()
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
@@ -328,10 +336,11 @@ class CoverageData(Observable):
         if not update: # Get all unique variants upon first load
             self.variants = df['Variant'].dropna().unique()
         if not gui.loadedData.UIUC and len(loadedData.sources) > 1: # Get default/custom mappings
-            self.mappings = loadedData.getMappings(df)
+            if update: self.mappings = loadedData.getMappings()
+            else: self.mappings = loadedData.mappings
         else: # Get UIUC Mappings
             self.mappings = loadedData.UIUCMap
-        df, fig, texts = coverage_plot(df, "test", "scalar", "Coverage", False, chosen_node_set, gui=True, mappings=self.mappings, variants=variants)
+        df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, mappings=self.mappings, variants=variants)
         self.df = df
         self.fig = fig
         self.textData = texts
@@ -340,36 +349,34 @@ class CoverageData(Observable):
 class QPlotData(Observable):
     def __init__(self, loadedData):
         super().__init__()
-        self.loadedData = loadedData
         # Watch for updates in loaded data
         loadedData.add_observers(self)
+        self.loadedData = loadedData
         self.df = None
         self.fig = None
         self.ax = None
-        self.coverageFig = None
-        self.coverageTexts = None
         self.appDf = None
         self.appFig = None
         self.appTextData = None
-        self.codeletMap = pd.DataFrame()
-        self.srcMap = pd.DataFrame()
+        self.mappings = pd.DataFrame()
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All'):
         print("QPlotData Notified from ", loadedData)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-
+        # Mappings
+        if len(loadedData.sources) > 1:
+            if update: self.mappings = loadedData.getMappings()
+            else: self.mappings = loadedData.mappings
+        # Get all unique variants upon first load
+        if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
         # Codelet plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
-            if not update: # Get all unique variants upon first load
-                self.variants = df['Variant'].dropna().unique()
-            if not gui.loadedData.UIUC and len(loadedData.sources) > 1: # Get default/custom mappings
-                self.codeletMap = loadedData.getMappings(df)
-            else: # Get UIUC Mappings
-                self.codeletMap = loadedData.UIUCMap
+            # Get UIUC Mappings if they exist
+            if gui.loadedData.UIUC: self.mappings = loadedData.UIUCMap
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.codeletMap, variants=variants)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
             # TODO: Need to settle how to deal with multiple plots/dataframes
             # May want to let user to select multiple plots to look at within this tab
             # Currently just save the ORIG data
@@ -382,11 +389,9 @@ class QPlotData(Observable):
         # source qplot
         if (level == 'All' or level == 'Source') and not gui.loadedData.UIUC:
             df = loadedData.srcDf
-            if len(loadedData.sources) > 1:
-                self.srcMap = loadedData.getMappings(df)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.srcMap, variants=variants)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
             self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -417,12 +422,12 @@ class SIPlotData(Observable):
         loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=expanduser('~') + '\\AppData\\Roaming\\Cape\\Clusters\\FE_tier1.csv', title="FE_tier1", \
-        filtering=False, filter_data=None):
+        filtering=False, filter_data=None, scale='linear'):
         print("SIPlotData Notified from ", loadedData)
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
         # mappings
         if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
-            self.mappings = loadedData.codeletMap
+            self.mappings = loadedData.mappings
         else:
             self.mappings = loadedData.UIUCMap
         # Plot only at Codelet level for now
@@ -430,7 +435,7 @@ class SIPlotData(Observable):
         if not update:
             self.variants = df['Variant'].dropna().unique()
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
-            (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings)
+            (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale)
         self.df = df_ORIG
         if not self.loadedData.UIUCAnalytics.empty: # Merge diagnostic variables with SIPlot dataframe
                 self.df.drop(columns=['ddg_artifical_cyclic', 'limits', 'ddg_true_cyclic', 'init_only', 'rhs_op_count'], inplace=True)
@@ -537,6 +542,7 @@ class DataSourcePanel(ScrolledTreePane):
                 elif name.endswith('.analytics.csv'):
                     local_analytics_path = local_file_path + name
                     gui.loadedData.UIUCAnalytics = pd.read_csv(local_analytics_path)
+                    gui.loadedData.UIUCAnalytics.columns = succinctify(gui.loadedData.UIUCAnalytics.columns)
             shortnameTab = ShortNameTab(root)
             shortnameTab.addShortNames(df)
             # Remove any previous plots in Application/Source
@@ -680,6 +686,7 @@ class DataSourcePanel(ScrolledTreePane):
                                 elif name.endswith('.analytics.csv'):
                                     analyticspath = fullpath + '\\' + name
                                     analyticsDf = pd.read_csv(analyticspath)
+                                    analyticsDf.columns = succinctify(analyticsDf.columns)
                                 elif name.endswith(".names.csv"):
                                     shortnamespath = fullpath + '\\' + name
                                     namesDf = pd.read_csv(shortnamespath)
@@ -769,6 +776,10 @@ class SummaryTab(tk.Frame):
            coverageData.add_observers(self)
         self.level = level
         self.current_variants = ['ORIG']
+        self.x_scale = 'linear'
+        self.y_scale = 'linear'
+        self.x_axis = 'C_FLOP [GFlop/s]'
+        self.y_axis = r'%coverage'
         self.current_labels = []
         self.parent = parent
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -790,10 +801,19 @@ class SummaryTab(tk.Frame):
         summaryDf = df[column_list]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        full_summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
-        tk.Button(self.summaryTab, text="Export", command=lambda: self.shortnameTab.exportCSV(summary_pt)).grid(row=3, column=1)
+        table_button_frame = tk.Frame(self.summaryTab)
+        table_button_frame.grid(row=3, column=1)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(full_summary_pt)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export Summary", command=lambda: self.exportCSV()).grid(row=0, column=1)
+
         self.shortnameTab.buildLabelTable(df, self.shortnameTab, textData)
+
+    def exportCSV(self):
+        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+        gui.loadedData.summaryDf.to_csv(export_file_path, index=False, header=True)
     
     # Create tabs for data and labels
     def buildTableTabs(self):
@@ -824,11 +844,20 @@ class PlotInteraction():
         self.adjusting = False
         self.xlim = self.textData['ax'].get_xlim()
         self.ylim = self.textData['ax'].get_ylim()
-        # Create lists of tabs that need to be synchronized according to the level
+        # Create lists of tabs that need to be synchronized according to the level and update the plot with the saved state
         self.level = level
-        if self.level == 'Codelet': self.tabs = [gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.summaryTab]
-        elif self.level == 'Source': self.tabs = [gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab]
-        elif self.level == 'Application': self.tabs = [gui.a_trawlTab, gui.a_qplotTab, gui.a_customTab]
+        if self.level == 'Codelet': 
+            self.tabs = [gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.summaryTab]
+            self.stateDictionary = gui.loadedData.c_plot_state
+            self.restoreState(self.stateDictionary)
+        elif self.level == 'Source': 
+            self.tabs = [gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab]
+            self.stateDictionary = gui.loadedData.s_plot_state
+            self.restoreState(self.stateDictionary)
+        elif self.level == 'Application': 
+            self.tabs = [gui.a_trawlTab, gui.a_qplotTab, gui.a_customTab]
+            self.stateDictionary = gui.loadedData.a_plot_state
+            self.restoreState(self.stateDictionary)
         # Setup Frames
         self.plotFrame = tk.Frame(self.tab.window)
         self.plotFrame2 = tk.Frame(self.plotFrame)
@@ -855,6 +884,7 @@ class PlotInteraction():
         for i in range(len(self.df['short_name'])):
             options.append('[' + self.df['short_name'][i] + '] ' + self.df['name'][i])
         self.pointSelector = ChecklistBox(self.plotFrame2, options, options, listType='pointSelector', tab=self, bd=1, relief="sunken", background="white")
+        self.pointSelector.restoreState(self.stateDictionary)
         # Grid Layout
         self.toolbar.grid(column=4, row=0, sticky=tk.S)
         self.action_menu.grid(column=3, row=0, sticky=tk.S)
@@ -866,6 +896,13 @@ class PlotInteraction():
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
         self.toolbar.update()
         self.canvas.draw()
+
+    def restoreState(self, dictionary):
+        for name in dictionary['hidden_names']:
+                self.textData['name:marker'][name].set_alpha(0)
+                self.textData['name:text'][name].set_alpha(0)
+        for name in dictionary['highlighted_names']:
+            self.highlight(self.textData['name:marker'][name])
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -906,6 +943,9 @@ class PlotInteraction():
         for tab in self.tabs:
             for marker in tab.plotInteraction.textData['markers']:
                 marker.set_alpha(1)
+                if tab.plotInteraction.textData['mappings']: 
+                    for i in range(len(tab.plotInteraction.textData['mappings'])): 
+                        tab.plotInteraction.textData['mappings'][i].set_alpha(1) 
                 if tab.plotInteraction.toggle_labels_button['text'] == 'Hide Labels': # Know we need to show the labels/arrows as well
                     tab.plotInteraction.textData['marker:text'][marker].set_alpha(1)
                     if tab.plotInteraction.adjusted:
@@ -916,6 +956,8 @@ class PlotInteraction():
             tab.plotInteraction.canvas.draw()
 
     def onClick(self, event):
+        # for child in self.textData['ax'].get_children():
+        #     print(child)
         if self.action_selected.get() == 'Choose Action':
             pass
         elif self.action_selected.get() == 'Highlight Point':
@@ -942,27 +984,32 @@ class PlotInteraction():
             otherMarker = tab.plotInteraction.textData['name:marker'][self.textData['marker:name'][marker]]
             otherMarker.set_alpha(0)
             tab.plotInteraction.textData['marker:text'][otherMarker].set_alpha(0)
+            try: 
+                for mapping in tab.plotInteraction.textData['name:mapping'][marker.get_label()]:
+                    mapping.set_alpha(0)
+            except: pass
             try: tab.plotInteraction.textData['text:arrow'][tab.plotInteraction.textData['marker:text'][otherMarker]].set_visible(False)
             except: pass
             name = tab.plotInteraction.textData['marker:name'][otherMarker]
             index = tab.plotInteraction.pointSelector.names.index(name)
             tab.plotInteraction.pointSelector.vars[index].set(0)
             tab.plotInteraction.canvas.draw()
+
+    def highlight(self, marker):
+        if marker.get_marker() == 'o':
+            marker.set_marker('*')
+            marker.set_markeredgecolor('k')
+            marker.set_markeredgewidth(0.5)
+            marker.set_markersize(10.0)
+        elif marker.get_marker() == '*':
+            marker.set_marker('o')
+            marker.set_markeredgecolor(marker.get_markerfacecolor())
+            marker.set_markersize(6.0)
     
     def highlightPoint(self, marker):
-        def highlight(marker):
-            if marker.get_marker() == 'o':
-                marker.set_marker('*')
-                marker.set_markeredgecolor('k')
-                marker.set_markeredgewidth(0.5)
-                marker.set_markersize(10.0)
-            elif marker.get_marker() == '*':
-                marker.set_marker('o')
-                marker.set_markeredgecolor(marker.get_markerfacecolor())
-                marker.set_markersize(6.0)
         for tab in self.tabs:
             otherMarker = tab.plotInteraction.textData['name:marker'][self.textData['marker:name'][marker]]
-            highlight(otherMarker)
+            self.highlight(otherMarker)
             tab.plotInteraction.canvas.draw()
 
     def onDraw(self, event):
@@ -1100,13 +1147,29 @@ class AxesTab(tk.Frame):
             self.tab.x_scale = self.xscale_selected.get().lower()
         if self.yscale_selected.get() != 'Choose Y Axis Scale':
             self.tab.y_scale = self.yscale_selected.get().lower()
-        # Set user selected metrics/scales
-        if self.plotType == 'QPlot':
-            self.tab.qplotData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, scale=self.tab.x_scale+self.tab.y_scale)
-        elif self.plotType == 'TRAWL':
-            self.tab.trawlData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis)
-        elif self.plotType == 'Custom':
-            self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis)
+        # Save current plot states
+        self.save_state()
+        # Set user selected metrics/scales if they have changed at least one
+        if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
+            if self.plotType == 'QPlot':
+                self.tab.qplotData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+            elif self.plotType == 'TRAWL':
+                self.tab.trawlData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+            elif self.plotType == 'Custom':
+                self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+
+    def save_state(self):
+        # Get names of this tabs current hidden/highlighted data points
+        if self.tab.level == 'Codelet': dictionary = gui.loadedData.c_plot_state
+        elif self.tab.level == 'Source': dictionary = gui.loadedData.s_plot_state
+        elif self.tab.level == 'Application': dictionary = gui.loadedData.a_plot_state
+        dictionary['hidden_names'] = []
+        dictionary['highlighted_names'] = []
+        for marker in self.tab.plotInteraction.textData['markers']:
+            if not marker.get_alpha():
+                dictionary['hidden_names'].append(marker.get_label())
+            if marker.get_marker() == '*':
+                dictionary['highlighted_names'].append(marker.get_label())
 
 class ShortNameTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -1183,7 +1246,6 @@ class ShortNameTab(tk.Frame):
             return True
         return False
 
-
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
@@ -1244,7 +1306,7 @@ class MappingsTab(tk.Frame):
                                 (self.all_mappings['after_timestamp#']!=self.source_order[1])].reset_index(drop=True)
         self.all_mappings = self.all_mappings.append(self.mappings, ignore_index=True)
         self.all_mappings.to_csv(self.mappings_path, index=False)
-        self.tab.qplotData.notify(gui.loadedData, level=self.level)
+        self.tab.qplotData.notify(gui.loadedData, level=self.level, update=True)
 
     def buildMappingsTab(self, df, mappings):
         self.df = df
@@ -1328,6 +1390,13 @@ class ChecklistBox(tk.Frame):
         scrollbar_x.config(command=checklist.xview)
         checklist.configure(state="disabled")
 
+    def restoreState(self, dictionary):
+        for name in dictionary['hidden_names']:
+            try: 
+                index = self.names.index(name)
+                self.vars[index].set(0)
+            except: pass
+
     def updatePlot(self, name, index):
         selected = self.vars[index].get()
         codelet_name = name.split(' ', 1)[-1]
@@ -1340,6 +1409,10 @@ class ChecklistBox(tk.Frame):
                 text.set_alpha(1)
                 try: tab.plotInteraction.textData['text:arrow'][text].set_visible(True)
                 except: pass
+                try: 
+                    for mapping in tab.plotInteraction.textData['name:mapping'][codelet_name]:
+                        mapping.set_alpha(1)
+                except: pass
                 tab.plotInteraction.canvas.draw()
         else:
             for tab in self.tab.tabs:
@@ -1349,6 +1422,10 @@ class ChecklistBox(tk.Frame):
                 text = tab.plotInteraction.textData['marker:text'][marker]
                 text.set_alpha(0)
                 try: tab.plotInteraction.textData['text:arrow'][text].set_visible(False)
+                except: pass
+                try: 
+                    for mapping in tab.plotInteraction.textData['name:mapping'][codelet_name]:
+                        mapping.set_alpha(0)
                 except: pass
                 tab.plotInteraction.canvas.draw()
 
@@ -1529,6 +1606,10 @@ class TrawlTab(tk.Frame):
            trawlData.add_observers(self)
         self.level = level
         self.trawlData = trawlData
+        self.x_scale = 'linear'
+        self.y_scale = 'linear'
+        self.x_axis = 'C_FLOP [GFlop/s]'
+        self.y_axis = 'speedup[vec]'
         self.current_variants = ['ORIG']
         self.current_labels = []
         # TRAWL tab has a paned window with the data tables and trawl plot
@@ -1581,11 +1662,11 @@ class TrawlTab(tk.Frame):
     # plot data to be updated
     def notify(self, trawlData):
         variants = trawlData.variants
+        mappings = trawlData.mappings
         if self.level == 'Codelet':
             df = trawlData.df
             fig = trawlData.fig
             textData = trawlData.textData
-            mappings = trawlData.codeletMap
             for w in self.window.winfo_children():
                 w.destroy()
             self.update(df, fig, textData=textData, mappings=mappings, variants=variants)
@@ -1671,11 +1752,11 @@ class QPlotTab(tk.Frame):
     # plot data to be updated
     def notify(self, qplotData):
         variants = qplotData.variants
+        mappings = qplotData.mappings
         if self.level == 'Codelet':
             df = qplotData.df
             fig = qplotData.fig
             textData = qplotData.textData
-            mappings = qplotData.codeletMap
             for w in self.window.winfo_children():
                 w.destroy()
             self.update(df, fig, textData, mappings, variants=variants)
@@ -1684,7 +1765,6 @@ class QPlotTab(tk.Frame):
             df = qplotData.srcDf
             fig = qplotData.srcFig
             textData = qplotData.srcTextData
-            mappings = qplotData.srcMap
             for w in self.window.winfo_children():
                 w.destroy()
             self.update(df, fig, textData, mappings, variants=variants)
@@ -1707,6 +1787,10 @@ class SIPlotTab(tk.Frame):
         self.cluster = expanduser('~') + '\\AppData\\Roaming\\Cape\\Clusters\\FE_tier1.csv'
         self.title = 'FE_tier1'
         self.current_variants = ['ORIG']
+        self.x_scale = 'linear'
+        self.y_scale = 'linear'
+        self.x_axis = 'Intensity'
+        self.y_axis = 'Saturation'
         self.current_labels = []
         # SIPlot tab has a paned window with the data tables and sipLot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -1779,6 +1863,10 @@ class CustomTab(tk.Frame):
         self.level = level
         self.customData = customData
         self.current_variants = ['ORIG']
+        self.x_scale = 'linear'
+        self.y_scale = 'linear'
+        self.x_axis = 'C_FLOP [GFlop/s]'
+        self.y_axis = r'%coverage'
         self.current_labels = []
         # TRAWL tab has a paned window with the data tables and trawl plot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
