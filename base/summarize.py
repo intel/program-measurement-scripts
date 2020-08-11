@@ -423,9 +423,30 @@ def enforce(d, field_names):
 
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
+
+def compute_speedup(output_rows, mapping_df):
+    keyColumns=['Name', 'Timestamp#']
+    timeColumns=['Time (s)', 'AppTime (s)']
+    rateColumns=['FLOP Rate (GFLOP/s)']
+    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+                              right_on=keyColumns, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    for timeColumn in timeColumns: 
+        new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
+            new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
+    for rateColumn in rateColumns: 
+        new_mapping_df['Speedup[{}]'.format(rateColumn)] = \
+            new_mapping_df['{}_after'.format(rateColumn)] / new_mapping_df['{}_before'.format(rateColumn)]
+    # Remove those _after and _before columns
+    retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
+    retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
+    return new_mapping_df[retainColumns]
     
 def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data):
+                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df):
     if name_file:
         read_short_names(name_file)
 
@@ -488,25 +509,34 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
 
+    new_mapping_df = compute_speedup(output_rows, mapping_df) if mapping_df is not None else None
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
-    return output_rows
+    return output_rows, new_mapping_df
 
 
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False):
+                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False, mapping_file=None):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('User Op file: ', user_op_file, file=sys.stderr)
     print('Name file: ', name_file, file=sys.stderr)
+    print('Mapping file: ', mapping_file, file=sys.stderr)
     print('Skip Energy: ', skip_energy, file=sys.stderr)
     print('Enable LFB: ', enable_lfb, file=sys.stderr)
 
-    output_rows = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
-        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data)
+    mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else None
+    output_rows, new_mapping_df = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
+        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df)
 
     outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.to_csv(outputfile, index=False)
+
+    if new_mapping_df is not None:
+        outdir = os.path.dirname(outputfile)
+        out_new_mapping_file = os.path.join(outdir, os.path.splitext(os.path.basename(mapping_file))[0]+'.speedup.csv')
+        new_mapping_df.to_csv(out_new_mapping_file, index=False)
+        
 
     # if (outputfile == '-'):
     #     output_csvfile = sys.stdout
@@ -550,6 +580,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
+    parser.add_argument('-m', nargs='?', help='the input mapping/transition csv file for speedup computation', dest='mapping_file')
     parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
     parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
     parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
@@ -558,8 +589,10 @@ if __name__ == '__main__':
     parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
     parser.add_argument('--enable-meta', action='store_true', help='include meta data in the output', dest='enable_meta')
     args = parser.parse_args()
+    if (args.mapping_file is not None and not args.enable_meta):
+        parser.error("The -m argument requires the --enable-meta argument")
 
     summary_report(args.in_files, args.out_file, [args.in_file_format] * len(args.in_files), args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta)
+                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta, args.mapping_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)
