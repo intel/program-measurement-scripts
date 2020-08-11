@@ -33,16 +33,19 @@ def agg_fn(df, short_names_path):
             'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp]})
     getShortName(out_df, short_names_path)
 
+    keyMetrics = list(out_df.columns)
     # totalAppTime useful for many computations below
     totalAppTime = np.sum(df['AppTime (s)'])
 
     # Calculate potential speedups
-    for metric in ['Speedup[Vec]', 'Speedup[DL1]']:
+    speedupMetrics = ['Speedup[Vec]', 'Speedup[DL1]'] 
+    for metric in speedupMetrics:
         out_df[metric] = totalAppTime / (np.sum(df['AppTime (s)'] / df[metric]))
 
     # Calculate sum metrics 
-    for metric in ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', \
-        'Total PKG Energy (J)', 'Total DRAM Energy (J)', 'Total PKG+DRAM Energy (J)']:
+    sumMetrics = ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', 'Total PKG Energy (J)', 
+                  'Total DRAM Energy (J)', 'Total PKG+DRAM Energy (J)']
+    for metric in sumMetrics:
         try:
             out_df[metric] = np.sum(df[metric])
         except:
@@ -51,12 +54,13 @@ def agg_fn(df, short_names_path):
     # Calculate time weighted metrics like rate metrics
     # Note: for % metrics, they will be approximated by time weight manner although 
     # it will be more preicse, say for %Ops[..], we should use operation count weight
-    for metric in ['C=Inst. Rate (GI/s)', 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', \
+    timeWeightedMetrics = ['C=Inst. Rate (GI/s)', 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', \
         'L1 Rate (GB/s)', 'L2 Rate (GB/s)',	'L3 Rate (GB/s)', 'RAM Rate (GB/s)', \
             'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
             '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]', '%Inst[FMA]', '%Ops[DIV]', '%Inst[DIV]', \
                 '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]', \
-                    'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)']:
+                'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)', 'Time (s)']
+    for metric in timeWeightedMetrics:
         #out_df[metric] = np.dot(df['%Coverage'], df[metric])
         # FIX: Could just divide above dot product by total %Coverage but use a cleaner formula directly from AppTime
         try:
@@ -91,6 +95,15 @@ def agg_fn(df, short_names_path):
     scPercent = 1 - (xmmPercent + ymmPercent + zmmPercent)
 
     out_df['VecType[Ops]']=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
+
+    excludedMetrics = ['Source Name', 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
+    # For the rest, compute time weighted average
+    remainingMetrics = [x for x in df.columns if x not in list(out_df.columns) + excludedMetrics]
+    for metric in remainingMetrics:
+        try:
+            out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
+        except:
+            pass
 
     return out_df
 
