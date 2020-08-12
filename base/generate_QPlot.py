@@ -49,7 +49,9 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=Fals
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 	if not mappings.empty:
-		mappings.columns = succinctify(mappings.columns)
+		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
+		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
+	print("IN QPLOT MAPPING COLUMNS: \n", mappings.columns.tolist())
 
 	grouped = df.groupby('variant')
 	# Only show selected variants, default is 'ORIG'
@@ -223,7 +225,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	mytext= [str('({0}, {1})'.format( indices[i], memlevel[i] ))  for i in range(len(DATA))]  
 	texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
 	#adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-	ax.set(xlabel=x_axis if x_axis else r'OP Rate', ylabel=y_axis if y_axis else r'Memory Rate')
+	ax.set(xlabel=x_axis if x_axis else 'C_FLOP [GFlop/s]', ylabel=y_axis if y_axis else 'C_max [GB/s]')
 	ax.set_title(title, pad=40)
 				
 	# Legend

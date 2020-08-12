@@ -17,7 +17,8 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], mappings=pd.DataFrame()):
     df.columns = succinctify(df.columns)
     if not mappings.empty:
-        mappings.columns = succinctify(mappings.columns)
+        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
+        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
     df, fig, textData = compute_and_plot(
@@ -115,7 +116,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
     x_label, y_label = x_axis, y_axis
     if x_label == r'%coverage': x_label = x_label + ' (Fraction)'
     if y_label == r'%coverage': y_label = y_label + ' (Fraction)'
-    ax.set(xlabel=x_label if x_label else r'OP Rate', ylabel=y_label if y_label else r'%Coverage (Fraction)')
+    ax.set(xlabel=x_label if x_label else 'C_FLOP [GFlop/s]', ylabel=y_label if y_label else r'%coverage (Fraction)')
     ax.set_title(title, pad=40)
 
     # Legend

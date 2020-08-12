@@ -19,7 +19,8 @@ def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=Fa
     df.columns = succinctify(df.columns)
     df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:
-        mappings.columns = succinctify(mappings.columns)
+        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
+        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
     df, fig, textData = compute_and_plot(
@@ -105,7 +106,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
               for i in range(len(DATA))]
     texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
     #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    ax.set(xlabel=r'OP Rate', ylabel=r'% Coverage (Fraction)')
+    ax.set(xlabel='C_FLOP [GFlop/s]', ylabel=r'%coverage (Fraction)')
     ax.set_title(title, pad=40)
 
     patches = []

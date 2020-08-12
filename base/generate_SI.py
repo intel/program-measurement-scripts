@@ -67,7 +67,8 @@ def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, varian
     compute_and_plot('XFORM', df[~mask], outputfile, norm, title, chosen_node_set, target_df)
     rdf.columns = succinctify(rdf.columns)
     if not mappings.empty:
-        mappings.columns = succinctify(mappings.columns)
+        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
+        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     rdf = rdf.loc[rdf['variant'].isin(variants)]
     l_df = df
@@ -445,7 +446,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])),
             (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor='r',facecolor='none')
     ax.add_patch(rect)
-    ax.set(xlabel=r'$I$', ylabel=r'$S$')
+    ax.set(xlabel="Intensity", ylabel="Saturation")
     ax.set_title(title, pad=40)
     centerx = min(target_df['Intensity'])
     centery = min(target_df['Saturation'])
