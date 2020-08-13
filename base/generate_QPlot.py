@@ -51,7 +51,6 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=Fals
 	if not mappings.empty:
 		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
 		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-	print("IN QPLOT MAPPING COLUMNS: \n", mappings.columns.tolist())
 
 	grouped = df.groupby('variant')
 	# Only show selected variants, default is 'ORIG'

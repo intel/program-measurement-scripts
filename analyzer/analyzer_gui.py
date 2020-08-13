@@ -38,7 +38,6 @@ import multiprocessing
 import logging
 import copy
 from capelib import succinctify
-import clusters
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -94,6 +93,8 @@ class LoadedData(Observable):
         self.c_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.s_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.a_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
+        self.removedIntermediates = False
+        self.newMappings = pd.DataFrame()
 
     def resetTabValues(self):
         tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab]
@@ -455,7 +456,7 @@ class SIPlotData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=expanduser('~') + '\\AppData\\Roaming\\Cape\\Clusters\\FE_tier1.csv', title="FE_tier1", \
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv', title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear'):
         print("SIPlotData Notified from ", loadedData)
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
@@ -527,8 +528,6 @@ class DataSourcePanel(ScrolledTreePane):
             content_type = page.headers['content-type']
             # Webpage node
             if content_type == 'text/html':
-                gui.loadedData.UIUC = False
-                gui.loadedData.UIUCMap = pd.DataFrame()
                 self.open_webpage()
             # Directory node Oneview
             elif content_type == 'text/html;charset=ISO-8859-1':
@@ -536,17 +535,18 @@ class DataSourcePanel(ScrolledTreePane):
             # Directory or data node UIUC
             elif content_type == 'text/html;charset=UTF-8':
                 if re.search('\d{2}_\d{2}_\d{4}/', self.name):
-                    gui.loadedData.UIUC = True
-                    gui.loadedData.UIUCMap = pd.DataFrame()
                     self.open_data(page)
                 else:
                     self.open_directory(page)
 
         def open_data(self, page):
-            # Remove any OV HTML pages if they exist
-            gui.oneviewTab.removePages()
-            gui.loaded_url = None
+            gui.loadType = 'UIUC'
+            # Reset mapping/analytics files and remove any OV HTML pages if they exist
+            gui.loadedData.UIUC = True
+            gui.loadedData.UIUCMap = pd.DataFrame()
+            gui.loadedData.UIUCNames = pd.DataFrame()
             gui.loadedData.UIUCAnalytics = pd.DataFrame()
+            gui.loaded_url = None
             local_dir_path = self.cape_path + 'UIUC'
             for directory in self.path[8:].split('/'):
                 local_dir_path = local_dir_path + '\\' + directory
@@ -582,12 +582,6 @@ class DataSourcePanel(ScrolledTreePane):
                     gui.loadedData.UIUCAnalytics.columns = succinctify(gui.loadedData.UIUCAnalytics.columns)
             shortnameTab = ShortNameTab(root)
             shortnameTab.addShortNames(df)
-            # Remove any previous plots in Application/Source
-            tabs = [gui.s_customTab.window, gui.s_qplotTab.window, gui.s_siPlotTab.window, gui.s_trawlTab.window, \
-                    gui.a_customTab.window, gui.a_qplotTab.window, gui.a_siPlotTab.window, gui.a_trawlTab.window]
-            for tab in tabs:
-                for widget in tab.winfo_children():
-                    widget.destroy()
             print("local_file_path: ", local_data_path)
             self.container.openLocalFile(local_data_path)
 
@@ -605,8 +599,7 @@ class DataSourcePanel(ScrolledTreePane):
                     self.container.insertNode(self, DataSourcePanel.RemoteNode(fullpath, name, self.container, time_stamp=time_stamp))
 
         def open_webpage(self):
-            gui.loadedData.UIUCAnalytics = pd.DataFrame()
-            gui.loadedData.UIUC = False
+            gui.loadType = 'UVSQ'
             # Replicate remote directory structure
             local_dir_path = self.cape_path + 'Oneview'
             for directory in self.path[66:].split('/'):
@@ -616,11 +609,14 @@ class DataSourcePanel(ScrolledTreePane):
             # Download Corresponding Excel file if not already downloaded
             local_file_path = local_dir_path + '\\' + self.name[:-1] + '.xlsx'
             if not os.path.isdir(local_dir_path):
-                print("Downloading Excel File")
-                Path(local_dir_path).mkdir(parents=True, exist_ok=True)
                 excel_url = self.path[:-1] + '.xlsx'
                 excel = requests.get(excel_url)
-                open(local_file_path, 'wb').write(excel.content)
+                if excel.status_code == 200:
+                    Path(local_dir_path).mkdir(parents=True, exist_ok=True)
+                    print("Downloading Excel File")
+                    open(local_file_path, 'wb').write(excel.content)
+                else: # No matching excel file
+                    local_file_path = None
             # TODO: Download in background, currently just loading live HTML
             # Download Corresponding HTML files if they don't already exist
             # local_dir_path = local_dir_path + '\\HTML' 
@@ -673,7 +669,9 @@ class DataSourcePanel(ScrolledTreePane):
             gui.loadedData.UIUCAnalytics = pd.DataFrame()
             gui.loadedData.UIUCNames = pd.DataFrame()
             gui.loadedData.UIUCMap = pd.DataFrame()
+            gui.loadType = 'UVSQ'
             if self.UIUC:
+                gui.loadType = 'UIUC'
                 # Remove any OV HTML pages if they exist
                 gui.oneviewTab.removePages()
                 gui.loaded_url = None
@@ -885,8 +883,8 @@ class PlotInteraction():
         self.textData = textData
         self.adjusted = False
         self.adjusting = False
-        self.xlim = self.textData['ax'].get_xlim()
-        self.ylim = self.textData['ax'].get_ylim()
+        self.cur_xlim = self.home_xlim = self.textData['ax'].get_xlim()
+        self.cur_ylim = self.home_ylim = self.textData['ax'].get_ylim()
         # Create lists of tabs that need to be synchronized according to the level and update the plot with the saved state
         self.level = level
         if self.level == 'Codelet': 
@@ -921,6 +919,7 @@ class PlotInteraction():
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
+        if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu = self.buildFilter()
         # Plot/toolbar
         self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
         self.canvas.mpl_connect('button_press_event', self.onClick)
@@ -933,7 +932,8 @@ class PlotInteraction():
         self.pointSelector = ChecklistBox(self.plotFrame2, options, options, listType='pointSelector', tab=self, bd=1, relief="sunken", background="white")
         self.pointSelector.restoreState(self.stateDictionary)
         # Grid Layout
-        self.toolbar.grid(column=4, row=0, sticky=tk.S)
+        self.toolbar.grid(column=5, row=0, sticky=tk.S)
+        if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu.grid(column=4, row=0, sticky=tk.S)
         self.action_menu.grid(column=3, row=0, sticky=tk.S)
         # self.speedup_menu.grid(column=3, row=0, sticky=tk.S)
         self.show_markers_button.grid(column=2, row=0, sticky=tk.S, pady=2)
@@ -945,15 +945,40 @@ class PlotInteraction():
         self.toolbar.update()
         self.canvas.draw()
 
+    def buildFilter(self):
+        self.filter_selected = tk.StringVar(value='Choose Filter')
+        menubutton = tk.Menubutton(self.plotFrame3, textvariable=self.filter_selected, indicatoron=True, borderwidth=2, relief="raised", highlightthickness=2)
+        main_menu = tk.Menu(menubutton, tearoff=False)
+        menubutton.configure(menu=main_menu)
+        # TRAWL
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='Remove Optimal', menu=menu)
+        menu.add_radiobutton(value='SIDO', label='SIDO', variable=self.filter_selected)
+        menu.add_radiobutton(value='RHS=1', label='RHS=1', variable=self.filter_selected, command=self.optimal_rhs)
+        return menubutton
+
+    def optimal_rhs(self):
+        if not gui.loadedData.UIUCAnalytics.empty:
+            toRemove = self.df.loc[self.df['rhs_op_count']==1].reset_index(drop=True)
+            names = []
+            for i in toRemove.index:
+                names.append(toRemove['name'][i])
+            for name in names:
+                self.removePoint(self.textData['name:marker'][name])
+
     # def update_speedup(self, value):
     #     print(value)
 
     def restoreState(self, dictionary):
         for name in dictionary['hidden_names']:
+            try:
                 self.textData['name:marker'][name].set_alpha(0)
                 self.textData['name:text'][name].set_alpha(0)
+            except:
+                pass
         for name in dictionary['highlighted_names']:
-            self.highlight(self.textData['name:marker'][name])
+            try: self.highlight(self.textData['name:marker'][name])
+            except: pass
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -1065,11 +1090,12 @@ class PlotInteraction():
             tab.plotInteraction.canvas.draw()
 
     def onDraw(self, event):
-        if self.adjusted and (self.xlim != self.textData['ax'].get_xlim() or self.ylim != self.textData['ax'].get_ylim()) and \
+        if self.adjusted and (self.cur_xlim != self.textData['ax'].get_xlim() or self.cur_ylim != self.textData['ax'].get_ylim()) and \
+            (self.home_xlim != self.textData['ax'].get_xlim() or self.home_ylim != self.textData['ax'].get_ylim()) and \
             self.toolbar.mode != 'pan/zoom': 
             print("Ondraw adjusting")
-            self.xlim = self.textData['ax'].get_xlim()
-            self.ylim = self.textData['ax'].get_ylim() 
+            self.cur_xlim = self.textData['ax'].get_xlim()
+            self.cur_ylim = self.textData['ax'].get_ylim()
             self.adjustText()
 
     def thread_adjustText(self):
@@ -1090,7 +1116,8 @@ class PlotInteraction():
         # Only adjust texts that are in the current axes (in case of a zoom)
         to_adjust = []
         for i in range(len(self.textData['texts'])):
-            if self.textData['xs'][i] >= self.textData['ax'].get_xlim()[0] and self.textData['xs'][i] <= self.textData['ax'].get_xlim()[1] and \
+            if self.textData['texts'][i].get_alpha() and \
+                self.textData['xs'][i] >= self.textData['ax'].get_xlim()[0] and self.textData['xs'][i] <= self.textData['ax'].get_xlim()[1] and \
                 self.textData['ys'][i] >= self.textData['ax'].get_ylim()[0] and self.textData['ys'][i] <= self.textData['ax'].get_ylim()[1]:
                 to_adjust.append(self.textData['texts'][i])
         adjust_text(to_adjust, ax=self.textData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
@@ -1893,7 +1920,7 @@ class SIPlotTab(tk.Frame):
             siplotData.add_observers(self)
         self.level = level
         self.siplotData = siplotData
-        self.cluster = expanduser('~') + '\\AppData\\Roaming\\Cape\\Clusters\\FE_tier1.csv'
+        self.cluster = os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv'
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -2099,6 +2126,7 @@ class AnalyzerGui(tk.Frame):
         self.sources = []
         self.urls = []
         self.loaded_url = None
+        self.loadType = ''
         self.choice = ''
 
     def appendData(self):
@@ -2112,20 +2140,28 @@ class AnalyzerGui(tk.Frame):
     def cancelAction(self):
         self.choice = 'Cancel'
         self.win.destroy()
+    
+    def clearTabs(self, levels=['All']):
+        tabs = []
+        if 'Codelet' in levels or 'All' in levels:
+            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab])
+        if 'Source' in levels or 'All' in levels:
+            tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_siPlotTab, gui.s_customTab])
+        if 'Application' in levels or 'All' in levels:
+            tabs.extend([gui.a_trawlTab, gui.a_qplotTab, gui.a_siPlotTab, gui.a_customTab])
+        for tab in tabs:
+            for widget in tab.window.winfo_children():
+                widget.destroy()
 
     def loadDataSource(self, source):
-        if len(self.sources) >= 1:
+        if not source: # Load only the webpage and no plots (If the user opens another file it will overwrite this webpage) 
             self.win = tk.Toplevel()
             center(self.win)
             self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
-            self.win.title('Existing Data')
-            if len(self.sources) >= 2:
-                message = 'You have the max number of data files open.\nWould you like to overwrite with the new data?'
-            else:
-                message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
-                tk.Button(self.win, text='Append', command=self.appendData).grid(row=1, column=0, sticky=tk.E)
+            self.win.title('Missing Data')
+            message = 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?'
             tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-            tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
+            tk.Button(self.win, text='Open Webpage', command=self.overwriteData).grid(row=1, column=1)
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
             root.wait_window(self.win)
             if self.choice == 'Cancel':
@@ -2137,21 +2173,62 @@ class AnalyzerGui(tk.Frame):
                     self.urls = [self.loaded_url]
                     self.oneviewTab.loadFirstPage()
                 self.sources.clear()
-            elif self.choice == 'Append':
-                self.sources.append(source)
-                print("DATA source to be loaded", source)
-                if self.loaded_url:
-                    self.urls.append(self.loaded_url)
-                    self.oneviewTab.loadSecondPage()
-                self.loadedData.add_data(self.sources)
-                return
-        elif self.loaded_url:
-            self.urls.append(self.loaded_url)
-            self.oneviewTab.loadFirstPage()
+                gui.loadedData.resetTabValues()
+                gui.loadedData.resetStates()
+                gui.loadedData.UIUCAnalytics = pd.DataFrame()
+                gui.loadedData.UIUCMap = pd.DataFrame()
+                gui.loadedData.UIUCNames = pd.DataFrame()
+                gui.loadedData.UIUC = False
+                self.clearTabs()
+        else:
+            if len(self.sources) >= 1:
+                self.win = tk.Toplevel()
+                center(self.win)
+                self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+                self.win.title('Existing Data')
+                if len(self.sources) >= 2:
+                    message = 'You have the max number of data files open.\nWould you like to overwrite with the new data?'
+                elif not gui.loadedData.UIUC:
+                    message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+                    tk.Button(self.win, text='Append', command=self.appendData).grid(row=1, column=0, sticky=tk.E)
+                else: # TODO: Allow user to append UVSQ data to UIUC
+                    message = 'This tool currently doesn\'t support appending to\nUIUC data. Would you like to overwrite\nany existing plots with this new data?'
+                tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+                tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
+                tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
+                root.wait_window(self.win)
+                if self.choice == 'Cancel':
+                    self.loaded_url = None
+                    return
+                elif self.choice == 'Overwrite':
+                    gui.loadedData.source_order = [] # reset ordered list of timestamps if there were multiple files loaded before
+                    self.sources.clear()
+                    if gui.loadType == 'UIUC':
+                        gui.oneviewTab.removePages() # Remove any previous OV HTML
+                        self.clearTabs(levels=['Application', 'Source']) # Remove any previous plots at Source/Application levels
+                    else:
+                        if self.loaded_url:
+                            self.urls = [self.loaded_url]
+                            self.oneviewTab.loadFirstPage()
+                        gui.loadedData.UIUCAnalytics = pd.DataFrame()
+                        gui.loadedData.UIUCMap = pd.DataFrame()
+                        gui.loadedData.UIUCNames = pd.DataFrame()
+                        gui.loadedData.UIUC = False
+                elif self.choice == 'Append':
+                    self.sources.append(source)
+                    print("DATA source to be loaded", source)
+                    if self.loaded_url:
+                        self.urls.append(self.loaded_url)
+                        self.oneviewTab.loadSecondPage()
+                    self.loadedData.add_data(self.sources)
+                    return
+            elif self.loaded_url:
+                self.urls = [self.loaded_url]
+                self.oneviewTab.loadFirstPage()
 
-        self.sources.append(source)
-        print("DATA source to be loaded", source)
-        self.loadedData.add_data(self.sources)
+            self.sources.append(source)
+            print("DATA source to be loaded", source)
+            self.loadedData.add_data(self.sources)
 
     def buildTabs(self, parent):
         # 1st level notebook
