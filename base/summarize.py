@@ -267,7 +267,7 @@ def calculate_stall_percentages(res, row, skip_stalls):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
-        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM']:
+        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
             res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
         try:
             res['%FrontEnd'] = getter(row, StallDict[arch]['FrontEnd']) / unhlt
