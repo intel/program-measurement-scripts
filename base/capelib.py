@@ -56,15 +56,15 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts('CVTOP Rate (GCVTOP/s)', calculate_cvtops_counts_per_iter, True)
     memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts('MEMOP Rate (GMEMOP/s)', calculate_memops_counts_per_iter, True)
 
-    out_row['%Ops[Vec]'] = vec_ops / all_ops if all_ops else 0
-    out_row['%Inst[Vec]'] = vec_insts / all_insts if all_insts else 0
+    out_row['%Ops[Vec]'] = 100 * vec_ops / all_ops if all_ops else 0
+    out_row['%Inst[Vec]'] = 100 * vec_insts / all_insts if all_insts else 0
     for itype in itypes:
-        out_row['%Ops[{}]'.format(itype)] = ops_dict[itype] / all_ops if all_ops else 0
-        out_row['%Inst[{}]'.format(itype)] = inst_dict[itype] / all_insts if all_insts else 0
+        out_row['%Ops[{}]'.format(itype)] = 100 * ops_dict[itype] / all_ops if all_ops else 0
+        out_row['%Inst[{}]'.format(itype)] = 100 * inst_dict[itype] / all_insts if all_insts else 0
 
     try:
         # Check if CQA metric is available
-        cqa_vec_ratio=in_row['Vec._ratio_(%)_all']/100
+        cqa_vec_ratio=in_row['Vec._ratio_(%)_all']
         if not math.isclose(cqa_vec_ratio, out_row['%Inst[Vec]'], rel_tol=1e-8):
             warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}, AllIters={}".format \
                           (cqa_vec_ratio, out_row['%Inst[Vec]'], in_row['AllIterations']))
