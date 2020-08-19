@@ -177,7 +177,7 @@ echo -e "Meta repets\t'$META_REPETITIONS'"
 
 # Print out some version info
 ${MAQAO} -v
-${DECAN} -v
+#${DECAN} -v
 
 ################################################################################
 # Conf file reading

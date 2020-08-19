@@ -58,43 +58,43 @@ command_line_args=$(parameter_set_decoding "$binary_path" "$data_size" "$repetit
 # Ensure basic probe is used
 LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 
-if [[ "$USE_OLD_DECAN" == "0" ]]; then
+#if [[ "$USE_OLD_DECAN" == "0" ]]; then
 	# Filling new MAQAO implementation
 	# Get a list of loop id for the codelet
 	loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )
 	echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )" 1>&2
 	#echo ${loop_ids[*]}
-else
-	$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "${command_line_args}" "$function_name" "splitncount" "$UARCH" &>/dev/null
-	$DECAN "$DECAN_CONFIGURATION" &>/dev/null
-
-	echo HERE > /tmp/count.out.txt
-	echo $DECAN "$DECAN_CONFIGURATION" >> /tmp/count.out.txt
-	echo ${LD_LIBRARY_PATH} >> /tmp/count.out.txt
-	cat $PWD/$DECAN_REPORT >> /tmp/count.out.txt
-	decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
-
-	# Here decan_variants are the variants to count loop iterations , not DECAN varaint for CLS runs
-	# Also the loop ids are encoded to the decan variant names
-	if [[ "$decan_variants" == "" ]]; then
-		echo "ERROR! No loop could be identified!" 1>&2
-		exit -1
-	fi
-	rm -f $PWD/$DECAN_REPORT
-	echo DONE >> /tmp/count.out.txt
-	# This *is* used at the end in iterating to compute final_res
-	loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
-
-	#echo "$decan_variants" &>blabla
-	#for loop_id in $loop_ids
-	#do
-	#	echo "Found loop '$loop_id'" &> /tmp/blabli
-	#done
-fi
+#else
+#	$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "${command_line_args}" "$function_name" "splitncount" "$UARCH" &>/dev/null
+#	$DECAN "$DECAN_CONFIGURATION" &>/dev/null
+#
+#	echo HERE > /tmp/count.out.txt
+#	echo $DECAN "$DECAN_CONFIGURATION" >> /tmp/count.out.txt
+#	echo ${LD_LIBRARY_PATH} >> /tmp/count.out.txt
+#	cat $PWD/$DECAN_REPORT >> /tmp/count.out.txt
+#	decan_variants=$( grep generated $PWD/$DECAN_REPORT | cut -f2 -d' ' )
+#
+#	# Here decan_variants are the variants to count loop iterations , not DECAN varaint for CLS runs
+#	# Also the loop ids are encoded to the decan variant names
+#	if [[ "$decan_variants" == "" ]]; then
+#		echo "ERROR! No loop could be identified!" 1>&2
+#		exit -1
+#	fi
+#	rm -f $PWD/$DECAN_REPORT
+#	echo DONE >> /tmp/count.out.txt
+#	# This *is* used at the end in iterating to compute final_res
+#	loop_ids=$( echo "$decan_variants" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
+#
+#	#echo "$decan_variants" &>blabla
+#	#for loop_id in $loop_ids
+#	#do
+#	#	echo "Found loop '$loop_id'" &> /tmp/blabli
+#	#done
+#fi
 
 if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
 	# Get the count for each loop id
-	if [[ "$USE_OLD_DECAN" == "0" ]]; then
+#	if [[ "$USE_OLD_DECAN" == "0" ]]; then
 		for loop_id in $loop_ids; do
 			#$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
 			#count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
@@ -103,18 +103,18 @@ if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
 			count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path ${command_line_args} |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] )
 			echo "COUNT: " ${count_values[$loop_id]} 1>&2
 		done
-	else
-		for decan_variant in $decan_variants; do
-			#"./$decan_variant"
-			"./$decan_variant" &> "$decan_variant.dprof"
-			# TODO: DO true parallel run
-			loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
-			count_values[$loop_id]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
-			cat "$decan_variant.dprof" 1>&2
-			echo "COUNT: " ${count_values[$loop_id]} 1>&2
-			rm -f "$decan_variant" "$decan_variant.dprof"
-		done
-	fi
+#	else
+#		for decan_variant in $decan_variants; do
+#			#"./$decan_variant"
+#			"./$decan_variant" &> "$decan_variant.dprof"
+#			# TODO: DO true parallel run
+#			loop_id=$( echo "$decan_variant" | sed -e "s/.*_L\([[:digit:]]*\).*/\1/g" )
+#			count_values[$loop_id]=$( cat "$decan_variant.dprof" | grep TOTAL_LOOP_CALLS -A 1 | sed -n "2p" | cut -f 2 -d ',' )
+#			cat "$decan_variant.dprof" 1>&2
+#			echo "COUNT: " ${count_values[$loop_id]} 1>&2
+#			rm -f "$decan_variant" "$decan_variant.dprof"
+#		done
+#	fi
 
 	# Got all counts saved in ${count_values[*]}
 elif [[ "$LOOP_ITER_COUNTER" == "SEP" ]]; then
