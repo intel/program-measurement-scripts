@@ -2104,7 +2104,7 @@ class CustomTab(tk.Frame):
         if not gui.loadedData.UIUCAnalytics.empty:
             diagnosticDf = gui.loadedData.UIUCAnalytics.drop(columns=['name', 'timestamp#'])
             column_list.extend(diagnosticDf.columns.tolist())
-        if not gui.loadedData.UIUCMap.empty or not gui.loadedData.mappings.empty:
+        if self.level=='Codelet' and (not gui.loadedData.UIUCMap.empty or not gui.loadedData.mappings.empty):
             column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
         summaryDf = df[column_list]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
