@@ -171,7 +171,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
         out_df['C_{}'.format(node)]=formula(df)
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
-    out_df.to_csv(out_csv, index = False, header=True)
+    #out_df.to_csv(out_csv, index = False, header=True)
     indices = df['short_name']
     y = df['Saturation']
     z = df['Intensity']
@@ -188,7 +188,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
     today = datetime.date.today()
     outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
     f_outputfile='Final_{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-    tdf.to_csv('target_debug.csv', index = False, header=True)
+    #tdf.to_csv('target_debug.csv', index = False, header=True)
 
     plot_data_orig("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
                         str(sorted(list(chosen_node_set)))),
@@ -222,7 +222,7 @@ def compute_and_plot(variant, df,outputfile_prefix, norm, title, chosen_node_set
         out_df['C_{}'.format(node)]=formula(df)
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
-    out_df.to_csv(out_csv, index = False, header=True)
+    #out_df.to_csv(out_csv, index = False, header=True)
     indices = df['short_name']
     y = df['Saturation']
     z = df['Intensity']
@@ -303,7 +303,8 @@ def plot_magnified_data(title, filename, xs, ys, indices, speedups, floprates, N
     #ax.legend(loc="lower left",title="(name,flops)")
 
     if filename:
-        plt.savefig(filename)
+        pass
+        #plt.savefig(filename)
     else:
         plt.show()
 
@@ -354,7 +355,8 @@ def plot_data(title, filename, xs, ys, indices, speedups, floprates, Ns):
     ax.legend(loc="lower left",title="CG:(" + str(round(x_mean, 2)) + " , " + str(round(y_mean, 2)) + ")\n"
                                 + "SD:(" + str(round(x_stdev, 2)) + " , " + str(round(y_stdev, 2)) + ")")
     if filename:
-        plt.savefig(filename)
+        pass
+       #plt.savefig(filename)
     else:
         plt.show()
 
@@ -515,7 +517,8 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     }
 
     if filename:
-        plt.savefig(filename)
+        pass
+        #plt.savefig(filename)
     else:
         plt.show()
 
@@ -582,7 +585,8 @@ def plot_data_orig(title, filename, xs, ys, indices, speedups, floprates, Ns, ta
     #ax.add_artist(leg);
 
     if filename:
-        plt.savefig(filename)
+        pass
+        #plt.savefig(filename)
     else:
         plt.show()
 

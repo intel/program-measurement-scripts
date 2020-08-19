@@ -95,6 +95,10 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
         ax.set_ylim((ymin, ymax))
 
     (x, y) = zip(*DATA)
+
+    # Draw performance lines
+    plt.axvline(x=2)
+    plt.axvline(x=8)
     
     # Plot data points
     markers = []
@@ -170,7 +174,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
     }
 
     plt.tight_layout()
-    if filename:
-        plt.savefig(filename)
+    #if filename:
+        #plt.savefig(filename)
 
     return fig, plotData

@@ -176,7 +176,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
         'mappings' : mymappings
     }
 
-    if filename:
-        plt.savefig(filename)
+    #if filename:
+        #plt.savefig(filename)
 
     return fig, plotData

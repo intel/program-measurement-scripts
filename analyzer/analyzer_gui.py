@@ -42,6 +42,16 @@ from capelib import succinctify
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
+
 # Simple implementation of Observer Design Pattern
 class Observable:
     def __init__(self):
@@ -77,7 +87,7 @@ class LoadedData(Observable):
         super().__init__()
         self.data_items=[]
         self.source_order=[]
-        self.common_columns_start = ['name', 'short_name', r'%coverage', 'apptime_s', 'time_s', 'C_FLOP [GFlop/s]', 'variant']
+        self.common_columns_start = ['name', 'short_name', r'%coverage', 'apptime_s', 'time_s', 'C_FLOP [GFlop/s]', r'%ops[fma]', r'%inst[fma]', 'variant']
         self.common_columns_end = ['c=inst_rate_gi/s', 'timestamp#', 'color']
         self.mappings = pd.DataFrame()
         self.UIUCMap = pd.DataFrame()
@@ -168,12 +178,30 @@ class LoadedData(Observable):
                 #self.mappings = self.mappings.append(self.createMappings(self.srcDf), ignore_index=True) # Add default source mappings
         self.notify_observers()
 
+    def add_speedup(self, mappings):
+        speedup_time = []
+        speedup_apptime = []
+        speedup_gflop = []
+        for i in self.orig_summaryDf.index:
+            row = mappings.loc[mappings['before_name']==self.orig_summaryDf['Name'][i]]
+            speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
+            speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
+            speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
+        self.orig_summaryDf['Speedup[Time (s)]'] = speedup_time
+        self.orig_summaryDf['Speedup[AppTime (s)]'] = speedup_apptime
+        self.orig_summaryDf['Speedup[FLOP Rate (GFLOP/s)]'] = speedup_gflop
+        # TODO: Clean this up so you don't need both orig and other summaryDf
+        self.summaryDf['Speedup[Time (s)]'] = speedup_time
+        self.summaryDf['Speedup[AppTime (s)]'] = speedup_apptime
+        self.summaryDf['Speedup[FLOP Rate (GFLOP/s)]'] = speedup_gflop
+
     def get_speedups(self, mappings):
         newMappings = mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                                     'after_name':'After Name', 'after_timestamp#':'After Timestamp'})
         newMappings = compute_speedup(self.orig_summaryDf, newMappings)
         newMappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
+        self.add_speedup(newMappings)
         return newMappings
     
     def get_end2end(self, mappings):
@@ -242,6 +270,7 @@ class LoadedData(Observable):
             mappings = compute_speedup(self.orig_summaryDf, mappings)
             mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
+            self.add_speedup(mappings)
         return mappings
 
     def createMappings(self, df):
@@ -456,7 +485,9 @@ class SIPlotData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv', title="FE_tier1", \
+    # def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv', title="FE_tier1", \
+    #     filtering=False, filter_data=None, scale='linear'):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=resource_path('clusters\\FE_tier1.csv'), title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear'):
         print("SIPlotData Notified from ", loadedData)
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
@@ -703,13 +734,14 @@ class DataSourcePanel(ScrolledTreePane):
                     if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', d): # timestamp directory holding several files to be loaded
                         # Handle loading local Oneview and UIUC timestamp directories differently
                         if 'Oneview' in fullpath.split('\\'):
-                            html_path = fullpath + '\\HTML'
-                            for name in os.listdir(html_path): # add html files
-                                if name.endswith("__index.html"):
-                                    html_path = html_path + '\\' + name
-                                    break
+                            #html_path = fullpath + '\\HTML'
+                            #for name in os.listdir(html_path): # add html files
+                                #if name.endswith("__index.html"):
+                                    #html_path = html_path + '\\' + name
+                                    #break
                             fullpath = fullpath + '\\' + fullpath.split('\\')[-2] + '.xlsx' # open excel file
-                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container, html_path=html_path))
+                            #self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container, html_path=html_path))
+                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container))
                         elif 'UIUC' in fullpath.split('\\'):
                             mappingsDf=pd.DataFrame()
                             analyticsDf=pd.DataFrame()
@@ -773,6 +805,7 @@ class DataSourcePanel(ScrolledTreePane):
         home_dir=expanduser("~")
         self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(home_dir, 'Home', self) )
         cape_cache_path= os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
+        if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
         self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_cache_path, 'Previously Visited', self) )
 
     def setupRemoteRoots(self):
@@ -837,12 +870,12 @@ class SummaryTab(tk.Frame):
         summaryDf = df[column_list]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
-        full_summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        full_summary_pt = Table(self.summaryTab, dataframe=gui.loadedData.orig_summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
         table_button_frame.grid(row=3, column=1)
-        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(full_summary_pt)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summary_pt)).grid(row=0, column=0)
         tk.Button(table_button_frame, text="Export Summary", command=lambda: self.exportCSV()).grid(row=0, column=1)
 
         self.shortnameTab.buildLabelTable(df, self.shortnameTab, textData)
@@ -853,7 +886,7 @@ class SummaryTab(tk.Frame):
 
     def exportCSV(self):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
-        gui.loadedData.summaryDf.to_csv(export_file_path, index=False, header=True)
+        gui.loadedData.orig_summaryDf.to_csv(export_file_path, index=False, header=True)
     
     # Create tabs for data and labels
     def buildTableTabs(self):
@@ -910,7 +943,7 @@ class PlotInteraction():
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
-        self.custom_label = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
+        self.star_speedups_button = tk.Button(self.plotFrame3, text='Star Speedups', command=self.star_speedups)
         # self.speedup_selected = tk.StringVar(value='Choose Speedup')
         # speedup_options = ['Choose Speedup', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'None']
         # self.speedup_menu = tk.OptionMenu(self.plotFrame3, self.speedup_selected, *speedup_options, command=self.update_speedup)
@@ -932,10 +965,11 @@ class PlotInteraction():
         self.pointSelector = ChecklistBox(self.plotFrame2, options, options, listType='pointSelector', tab=self, bd=1, relief="sunken", background="white")
         self.pointSelector.restoreState(self.stateDictionary)
         # Grid Layout
-        self.toolbar.grid(column=5, row=0, sticky=tk.S)
-        if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu.grid(column=4, row=0, sticky=tk.S)
-        self.action_menu.grid(column=3, row=0, sticky=tk.S)
+        self.toolbar.grid(column=6, row=0, sticky=tk.S)
+        if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu.grid(column=5, row=0, sticky=tk.S)
+        self.action_menu.grid(column=4, row=0, sticky=tk.S)
         # self.speedup_menu.grid(column=3, row=0, sticky=tk.S)
+        if not gui.loadedData.UIUCMap.empty or not gui.loadedData.mappings.empty: self.star_speedups_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=1, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=0, row=0, sticky=tk.S, pady=2)
@@ -950,21 +984,40 @@ class PlotInteraction():
         menubutton = tk.Menubutton(self.plotFrame3, textvariable=self.filter_selected, indicatoron=True, borderwidth=2, relief="raised", highlightthickness=2)
         main_menu = tk.Menu(menubutton, tearoff=False)
         menubutton.configure(menu=main_menu)
-        # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='Remove Optimal', menu=menu)
-        menu.add_radiobutton(value='SIDO', label='SIDO', variable=self.filter_selected)
+        menu.add_radiobutton(value='SIDO', label='SIDO', variable=self.filter_selected, command=self.filter_speedups)
         menu.add_radiobutton(value='RHS=1', label='RHS=1', variable=self.filter_selected, command=self.optimal_rhs)
         return menubutton
 
-    def optimal_rhs(self):
-        if not gui.loadedData.UIUCAnalytics.empty:
-            toRemove = self.df.loc[self.df['rhs_op_count']==1].reset_index(drop=True)
+    def star_speedups(self):
+        df = gui.loadedData.orig_summaryDf
+        toRemove = df.loc[df['Speedup[Time (s)]']>1].reset_index(drop=True)
+        names = []
+        for i in toRemove.index:
+            names.append(toRemove['Name'][i])
+        for name in names:
+            try: self.highlightPoint(self.textData['name:marker'][name])
+            except: pass
+
+    def filter_speedups(self):
+        if not gui.loadedData.UIUCMap.empty:
+            df = gui.loadedData.orig_summaryDf
+            toRemove = df.loc[df['Speedup[Time (s)]']==1].reset_index(drop=True)
             names = []
             for i in toRemove.index:
-                names.append(toRemove['name'][i])
+                names.append(toRemove['Name'][i])
             for name in names:
-                self.removePoint(self.textData['name:marker'][name])
+                try: self.removePoint(self.textData['name:marker'][name])
+                except: pass
+
+    def optimal_rhs(self):
+        toRemove = self.df.loc[self.df['rhs_op_count']==1].reset_index(drop=True)
+        names = []
+        for i in toRemove.index:
+            names.append(toRemove['name'][i])
+        for name in names:
+            self.removePoint(self.textData['name:marker'][name])
 
     # def update_speedup(self, value):
     #     print(value)
@@ -1356,20 +1409,20 @@ class MappingsTab(tk.Frame):
 
     def addMapping(self):
         toAdd = pd.DataFrame()
-        toAdd['before_timestamp#'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0][:-1]]['timestamp#']
-        toAdd['before_name'] = self.before_selected.get().split('[')[0][:-1]
-        toAdd['before_short_name'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0][:-1]]['short_name']
-        toAdd['after_timestamp#'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0][:-1]].iloc[0]['timestamp#']
-        toAdd['after_name'] = self.after_selected.get().split('[')[0][:-1]
-        toAdd['after_short_name'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0][:-1]].iloc[0]['short_name']
+        toAdd['before_timestamp#'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]]['timestamp#']
+        toAdd['before_name'] = self.before_selected.get().split('[')[0]
+        toAdd['before_short_name'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]]['short_name']
+        toAdd['after_timestamp#'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].iloc[0]['timestamp#']
+        toAdd['after_name'] = self.after_selected.get().split('[')[0]
+        toAdd['after_short_name'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].iloc[0]['short_name']
         self.mappings = self.mappings.append(toAdd, ignore_index=True)
         self.updateTable()
     
     def removeMapping(self):
-        self.mappings.drop(self.mappings[(self.mappings['before_name']==self.before_selected.get().split('[')[0][:-1]) & \
-            (self.mappings['before_timestamp#']==(self.df.loc[self.df['name']==self.before_selected.get().split('[')[0][:-1]].reset_index(drop=True)['timestamp#'][0])) & \
-            (self.mappings['after_timestamp#']==(self.df.loc[self.df['name']==self.after_selected.get().split('[')[0][:-1]].reset_index(drop=True)['timestamp#'][0])) & \
-            (self.mappings['after_name']==self.after_selected.get().split('[')[0][:-1])].index, inplace=True)
+        self.mappings.drop(self.mappings[(self.mappings['before_name']==self.before_selected.get().split('[')[0]) & \
+            (self.mappings['before_timestamp#']==(self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]].reset_index(drop=True)['timestamp#'][0])) & \
+            (self.mappings['after_timestamp#']==(self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].reset_index(drop=True)['timestamp#'][0])) & \
+            (self.mappings['after_name']==self.after_selected.get().split('[')[0])].index, inplace=True)
         self.updateTable()
     
     def updateTable(self):
@@ -1398,13 +1451,16 @@ class MappingsTab(tk.Frame):
         self.table.redraw()
         before = df.loc[df['timestamp#'] == self.source_order[0]]
         after = df.loc[df['timestamp#'] == self.source_order[1]]
-        short_names = pd.read_csv(self.short_names_path)
-        for index in before.index:
-            before['name'][index] = before['name'][index] + ' [' + \
-                short_names.loc[short_names['name']==before['name'][index]].reset_index(drop=True)['short_name'][0] + ']'
-        for index in after.index:
-            after['name'][index] = after['name'][index] + ' [' + \
-                short_names.loc[short_names['name']==after['name'][index]].reset_index(drop=True)['short_name'][0] + ']'
+        if os.path.getsize(self.short_names_path) > 0:
+            short_names = pd.read_csv(self.short_names_path)
+            for index in before.index:
+                short_name = short_names.loc[short_names['name']==before['name'][index]].reset_index(drop=True)
+                if not short_name.empty: before['name'][index] = before['name'][index] + '[' + \
+                    short_name['short_name'][0] + ']'
+            for index in after.index:
+                short_name = short_names.loc[short_names['name']==after['name'][index]].reset_index(drop=True)
+                if not short_name.empty: after['name'][index] = after['name'][index] + '[' + \
+                    short_name['short_name'][0] + ']'
         tk.Button(self, text="Edit", command=lambda before=list(before['name']), after=list(after['name']) : \
             self.editMappings(before, after)).grid(row=10, column=0)
         tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
@@ -1438,8 +1494,7 @@ class ClusterTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.cluster_path = os.path.realpath(__file__).rsplit('\\', 1)[0]
-        self.cluster_path += '\\' + 'clusters' 
+        self.cluster_path = resource_path('clusters')
         self.cluster_selected = tk.StringVar(value='Choose Cluster')
         cluster_options = ['Choose Cluster']
         for cluster in os.listdir(self.cluster_path):
@@ -1503,7 +1558,7 @@ class ChecklistBox(tk.Frame):
 
     def updatePlot(self, name, index):
         selected = self.vars[index].get()
-        codelet_name = name.split(' ', 1)[-1]
+        codelet_name = name.split(']', 1)[-1][1:]
         if selected:
             for tab in self.tab.tabs:
                 tab.plotInteraction.pointSelector.vars[index].set(1)
@@ -1582,15 +1637,15 @@ class ChecklistBox(tk.Frame):
                         if gui.loadedData.UIUC:
                             tempDf = pd.DataFrame()
                             if not gui.loadedData.newMappings.empty: # End2end mappings
-                                tempDf = gui.loadedData.newMappings.loc[gui.loadedData.newMappings['after_name']==codeletName]
+                                tempDf = gui.loadedData.newMappings.loc[gui.loadedData.newMappings['before_name']==codeletName]
                             if tempDf.empty and not gui.loadedData.UIUCMap.empty: # UIUC Mappings
-                                tempDf = gui.loadedData.UIUCMap.loc[gui.loadedData.UIUCMap['after_name']==codeletName]
+                                tempDf = gui.loadedData.UIUCMap.loc[gui.loadedData.UIUCMap['before_name']==codeletName]
                             if tempDf.empty: 
                                 if choice == 'Difference': value = 'ORIG'
                                 else: value = 1
                             else: value = tempDf[choice].iloc[0]
                         elif len(gui.sources) > 1 and not gui.loadedData.mappings.empty: # UVSQ Mappings
-                            tempDf = gui.loadedData.mappings.loc[gui.loadedData.mappings['after_name']==codeletName]
+                            tempDf = gui.loadedData.mappings.loc[gui.loadedData.mappings['before_name']==codeletName]
                             if tempDf.empty: value = 1
                             else: value = tempDf[choice].iloc[0]
                     else:
@@ -1628,7 +1683,7 @@ class LabelTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        choices = ['C_FLOP [GFlop/s]', r'%coverage', 'apptime_s', 'time_s']
+        choices = ['C_FLOP [GFlop/s]', r'%coverage', 'apptime_s', 'time_s', r'%ops[fma]', r'%inst[fma]']
         if gui.loadedData.UIUC:
             if not gui.loadedData.newMappings.empty:
                 mappingDf = gui.loadedData.newMappings.drop(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#'])
@@ -1768,8 +1823,11 @@ class TrawlTab(tk.Frame):
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
-        tk.Button(self.summaryTab, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=3, column=1)
-        
+        table_button_frame = tk.Frame(self.summaryTab)
+        table_button_frame.grid(row=3, column=1)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
+
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
         if (self.level == 'Codelet') and gui.loadedData.UIUC and not gui.loadedData.UIUCMap.empty:
             self.mappingsTab.buildUIUCMappingsTab(mappings)
@@ -1860,7 +1918,10 @@ class QPlotTab(tk.Frame):
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
-        tk.Button(self.summaryTab, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=3, column=1)
+        table_button_frame = tk.Frame(self.summaryTab)
+        table_button_frame.grid(row=3, column=1)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
 
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
         if (self.level == 'Codelet') and gui.loadedData.UIUC and not gui.loadedData.UIUCMap.empty:
@@ -1920,7 +1981,8 @@ class SIPlotTab(tk.Frame):
             siplotData.add_observers(self)
         self.level = level
         self.siplotData = siplotData
-        self.cluster = os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv'
+        #self.cluster = os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv'
+        self.cluster = resource_path('clusters\\FE_tier1.csv')
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -1957,7 +2019,10 @@ class SIPlotTab(tk.Frame):
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
-        tk.Button(self.summaryTab, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=3, column=1)
+        table_button_frame = tk.Frame(self.summaryTab)
+        table_button_frame.grid(row=3, column=1)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summaryTable)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
         if (self.level == 'Codelet') and gui.loadedData.UIUC and not gui.loadedData.UIUCMap.empty:
             self.mappingsTab.buildUIUCMappingsTab(mappings)
@@ -2025,6 +2090,8 @@ class CustomTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
+        column_list.remove(r'%ops[fma]')
+        column_list.remove(r'%inst[fma]')
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
             'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', 'C_FLOP [GFlop/s]', 'speedup[vec]', 'speedup[dl1]', \
             'num_cores', 'dataset/size', 'prefetchers', 'repetitions', \
@@ -2037,12 +2104,17 @@ class CustomTab(tk.Frame):
         if not gui.loadedData.UIUCAnalytics.empty:
             diagnosticDf = gui.loadedData.UIUCAnalytics.drop(columns=['name', 'timestamp#'])
             column_list.extend(diagnosticDf.columns.tolist())
+        if not gui.loadedData.UIUCMap.empty or not gui.loadedData.mappings.empty:
+            column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
         summaryDf = df[column_list]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
-        tk.Button(self.summaryTab, text="Export", command=lambda: self.shortnameTab.exportCSV(summary_pt)).grid(row=3, column=1)
+        table_button_frame = tk.Frame(self.summaryTab)
+        table_button_frame.grid(row=3, column=1)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summary_pt)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
         
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
         if (self.level == 'Codelet') and gui.loadedData.UIUC and not gui.loadedData.UIUCMap.empty:

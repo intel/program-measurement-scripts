@@ -131,8 +131,8 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	#	compute_saturation(df, chosen_node_set)
 	#	compute_intensity(df, chosen_node_set)
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
-	print('Saving to '+output_data_source)
-	df[['name', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', op_node_name]].to_csv(output_data_source, index = False, header=True)
+	#print('Saving to '+output_data_source)
+	#df[['name', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', op_node_name]].to_csv(output_data_source, index = False, header=True)
 	
 	# Used to create a legend of file names to color for multiple plots
 	color_labels = compute_color_labels(df)
@@ -290,8 +290,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 		'mappings' : mymappings
 	}
 
-	if filename:
-		plt.savefig(filename)
+	#if filename:
+		#plt.savefig(filename)
 
 	return fig, plotData
 
