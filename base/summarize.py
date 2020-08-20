@@ -267,13 +267,13 @@ def calculate_stall_percentages(res, row, skip_stalls):
     try:
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
-        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM']:
-            res['%'+buf] = getter(row, StallDict[arch][buf]) / unhlt
+        for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
+            res['%'+buf] = 100 * getter(row, StallDict[arch][buf]) / unhlt
         try:
-            res['%FrontEnd'] = getter(row, StallDict[arch]['FrontEnd']) / unhlt
+            res['%FrontEnd'] = 100 * getter(row, StallDict[arch]['FrontEnd']) / unhlt
         except:
             warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
-            res['%FrontEnd'] = (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
+            res['%FrontEnd'] = 100 * (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
             
     except:
         pass
@@ -310,11 +310,11 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 
 def calculate_speculation_ratios(out_row, in_row):
     try:
-        out_row['%Misp. Branches']=getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
+        out_row['%Misp. Branches'] = 100 * getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
     except:
         pass
     try:
-        out_row['Executed/Retired Uops']=getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
+        out_row['Executed/Retired Uops'] = getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
@@ -329,9 +329,9 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
         for x in range(1,11): 
             i = ("0x%x" if x > 9 else "%x") % x 
             cnt = fmt % i
-            out_row[ofmt % (x-1)] = max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
+            out_row[ofmt % (x-1)] = 100 * max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
             prv = cnt
-        out_row[ofmt % x] = getter(row, prv) / getter(row, clk)
+        out_row[ofmt % x] = 100 * getter(row, prv) / getter(row, clk)
     except:
         pass
 
@@ -339,17 +339,17 @@ def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
     # Note: need to use .values to be more robust and not index dependent
     if 'Time(Second)' in in_cols:
-        out_rows['AppTime (s)']=in_rows['Time(Second)'].values
+        out_rows['AppTime (s)'] = in_rows['Time(Second)'].values
     else:
         # Just use codelet time if no App time provided from measurement (e.g. CapeScripts measurements)
-        out_rows['AppTime (s)']=out_rows['Time (s)'].values
+        out_rows['AppTime (s)'] = out_rows['Time (s)'].values
     if 'Coverage(Percent)' in in_cols:
         # Coverage info provide, go ahead to use it
-        out_rows['%Coverage']=in_rows['Coverage(Percent)'].values/100
+        out_rows['%Coverage'] = in_rows['Coverage(Percent)'].values
     else:
         # No coverage info provided, try to compute using AppTime
         totalAppTime = sum(out_rows['AppTime (s)'].values)
-        out_rows['%Coverage']=out_rows['AppTime (s)'].values/totalAppTime
+        out_rows['%Coverage'] = 100 * out_rows['AppTime (s)'].values/totalAppTime
 
 def add_trawl_data(out_rows, in_rows):
     # initialize to None and set to correct values
