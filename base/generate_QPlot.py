@@ -10,6 +10,7 @@ import numpy as np
 import warnings
 import datetime
 from capelib import succinctify
+from capelib import add_mem_max_level_columns
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
@@ -72,13 +73,16 @@ def compute_capacity(df, chosen_node_set):
 		formula=capacity_formula[node]
 		df['C_{}'.format(node)]=formula(df)
 
-	df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
-	df = df[df['C_max [GB/s]'].notna()]
-	df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-	# Remove the first two characters which is 'C_'
-	df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
-	# Drop the unit
-	df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
+    node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
+    metric_to_memlevel = lambda v: re.sub(r" \[.*\\]", "", v[2:])
+	add_mem_max_level_columns(df, node_list, 'C_max [GB/s]')
+	# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
+	# df = df[df['C_max [GB/s]'].notna()]
+	# df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+	# # Remove the first two characters which is 'C_'
+	# df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
+	# # Drop the unit
+	# df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
 	print ("<=====compute_capacity======>")
 #	print(df['C_max'])
 

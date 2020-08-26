@@ -16,6 +16,18 @@ def succinctify(value):
     else:
         return list(map(helper,value))
 
+def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
+	inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
+    # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
+	# inout_df = inout_df[inout_df[max_rate_name].notna()]
+	inout_df['memlevel']=inout_df[node_list].idxmax(axis=1)
+	inout_df['memlevel'] = inout_df['memlevel'].apply(metric_to_memlevel_lambda)
+    # Old stuff below to be deleted
+	# Remove the first two characters which is 'C_'
+    # inout_df['memlevel'] = inout_df['memlevel'].apply((lambda v: v[2:]))
+	# Drop the unit
+	# inout_df['memlevel'] = inout_df['memlevel'].str.replace(" \[.*\]","", regex=True)
+
 # For CQA metrics
 def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     vec_ops = all_ops = vec_insts = all_insts = fma_ops = fma_insts = 0
