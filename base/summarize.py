@@ -11,6 +11,7 @@ from capelib import succinctify
 from capelib import calculate_all_rate_and_counts
 from capelib import getter
 from capelib import calculate_energy_derived_metrics
+from capelib import add_mem_max_level_columns
 from collections import OrderedDict
 
 from argparse import ArgumentParser
@@ -504,7 +505,9 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
 
     # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
-    
+    node_list = ['L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)']
+    metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
+    add_mem_max_level_columns(output_rows, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
