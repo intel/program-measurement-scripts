@@ -511,7 +511,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     calculate_app_time_coverage(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
-
+    # Retain rows with non-empty performance measurments (provided by "Time (s)"")
+    output_rows = output_rows[~output_rows['Time (s)'].isnull()]
     new_mapping_df = compute_speedup(output_rows, mapping_df) if mapping_df is not None else None
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
     return output_rows, new_mapping_df
