@@ -48,14 +48,11 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     except:
         indices = df['name']
 
-    if x_axis:
-        xs = df[x_axis]
-    else:
-        xs = df['C_FLOP [GFlop/s]']
-    if y_axis:
-        ys = df[y_axis]
-    else:
-        ys = df['speedup[vec]']
+    if x_axis: xs = df[x_axis]
+    else: xs = df['C_FLOP [GFlop/s]']
+    if y_axis: ys = df[y_axis]
+    else: ys = df['speedup[vec]']
+    
     today = datetime.date.today()
     if gui:
         outputfile = None

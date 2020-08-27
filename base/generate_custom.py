@@ -16,10 +16,13 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], mappings=pd.DataFrame()):
     df.columns = succinctify(df.columns)
+    chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+    df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         df.rename(columns={'speedup[time_s':'Speedup[Time (s)]', 'speedup[apptime_s':'Speedup[AppTime (s)]', 'speedup[flop_rate_gflop/s':'Speedup[FLOP Rate (GFLOP/s)]'}, inplace=True)
+    df['C_FLOP [GFlop/s]'] = df['flop_rate_gflop/s']
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
     df, fig, textData = compute_and_plot(
@@ -39,10 +42,6 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if df.empty:
         return None, None, None  # Nothing to do
 
-    # Get QPlot metrics
-    chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-    df, op_node_name = compute_capacity(df, chosen_node_set)
-
     # Used to create a legend of file names to color for multiple plots
     color_labels = compute_color_labels(df)
     if no_plot:
@@ -56,7 +55,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if x_axis:
         xs = df[x_axis]
     else:
-        xs = df[op_node_name]
+        xs = df['C_FLOP [GFlop/s]']
     if y_axis:
         ys = df[y_axis]
     else:
@@ -69,11 +68,11 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         outputfile = '{}-{}-{}-{}.png'.format(outputfile_prefix,
                                           variant, scale, today)
     fig, textData = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
-        xs), list(ys), list(indices), scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings, op_node_name=op_node_name)
+        xs), list(ys), list(indices), scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
     return df, fig, textData
 
 # Set filename to [] for GUI output
-def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None, mappings=pd.DataFrame(), op_node_name=None):
+def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_axis=None, y_axis=None, mappings=pd.DataFrame()):
     DATA = tuple(zip(xs, ys))
 
     fig, ax = plt.subplots()
@@ -115,9 +114,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
 
     #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
     x_label, y_label = x_axis, y_axis
-    if x_label == r'%coverage': x_label = x_label + ' (Fraction)'
-    if y_label == r'%coverage': y_label = y_label + ' (Fraction)'
-    ax.set(xlabel=x_label if x_label else 'C_FLOP [GFlop/s]', ylabel=y_label if y_label else r'%coverage (Fraction)')
+    ax.set(xlabel=x_label if x_label else 'C_FLOP [GFlop/s]', ylabel=y_label if y_label else r'%coverage')
     ax.set_title(title, pad=40)
 
     # Legend
@@ -141,7 +138,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
             before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
             after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
             if not before_row.empty and not after_row.empty:
-                x_axis = x_axis if x_axis else op_node_name
+                x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
                 y_axis = y_axis if y_axis else r'%coverage'
                 xyA = (before_row[x_axis][0], before_row[y_axis][0])
                 xyB = (after_row[x_axis][0], after_row[y_axis][0])
