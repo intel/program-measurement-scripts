@@ -8,6 +8,7 @@ import os
 from argparse import ArgumentParser
 from capelib import calculate_energy_derived_metrics
 from capelib import vector_ext_str
+from capelib import add_mem_max_level_columns
 
 # Try to extract the data from text
 # which is of the format vecType1=x;vecType2=y etc
@@ -97,6 +98,10 @@ def agg_fn(df, short_names_path):
     out_df['VecType[Ops]']=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
 
     excludedMetrics = ['Source Name', 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
+    # Caclulate aggregate memlevel
+    node_list = ['L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)']
+    metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
+    add_mem_max_level_columns(out_df, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
     # For the rest, compute time weighted average
     remainingMetrics = [x for x in df.columns if x not in list(out_df.columns) + excludedMetrics]
     for metric in remainingMetrics:
