@@ -14,17 +14,17 @@ from generate_QPlot import compute_capacity
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, mappings=pd.DataFrame(), variants=['ORIG']):
+def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG']):
     # Normalize the column names
     df.columns = succinctify(df.columns)
     df, op_metric_name = compute_capacity(df, chosen_node_set)
+    df['memlevel'] = df['memlevel'].str[:2] # Get rid of [GB/s] after memlevel as it crowds the summary plot
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
-    df, fig, textData = compute_and_plot(
-        'ORIG', df, outputfile, scale, title, no_plot, gui, mappings=mappings)
+    df, fig, textData = compute_and_plot('ORIG', df, outputfile, scale, title, no_plot, gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
     # Return dataframe and figure for GUI
     return (df, fig, textData)
 
@@ -36,23 +36,25 @@ def compute_color_labels(df):
         color_labels.append((codelet.split(':')[0], color))
     return color_labels
 
-def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, mappings=pd.DataFrame()):
+def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame()):
     if df.empty:
-        return None, None  # Nothing to do
+        return None, None, None  # Nothing to do
 
     # Used to create a legend of file names to color for multiple plots
     color_labels = compute_color_labels(df)
 
     if no_plot:
-        return None, None
+        return None, None, None
 
     try:
         indices = df['short_name']
     except:
         indices = df['name']
 
-    xs = df['C_FLOP [GFlop/s]']
-    ys = df[r'%coverage']
+    if x_axis: xs = df[x_axis]
+    else: xs = df['C_FLOP [GFlop/s]']
+    if y_axis: ys = df[y_axis]
+    else: ys = df[r'%coverage']
 
     mem_level = df['memlevel']
     today = datetime.date.today()
@@ -62,11 +64,11 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         outputfile = '{}-{}-{}-{}.png'.format(outputfile_prefix,
                                           variant, scale, today)
     fig, textData = plot_data("{}\nvariant={}, scale={}".format(title, variant, scale), outputfile, list(
-        xs), list(ys), list(indices), list(mem_level), scale, df, color_labels, mappings=mappings)
+        xs), list(ys), list(indices), list(mem_level), scale, df, color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
     return df, fig, textData
 
 # Set filename to [] for GUI output
-def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_labels=None, mappings=pd.DataFrame()):
+def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_labels=None, x_axis=None, y_axis=None, mappings=pd.DataFrame()):
     DATA = tuple(zip(xs, ys))
     plt.rcParams.update({'font.size': 7})
     fig, ax = plt.subplots()
@@ -110,7 +112,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
               for i in range(len(DATA))]
     texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
     #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    ax.set(xlabel='C_FLOP [GFlop/s]', ylabel=r'%coverage (Fraction)')
+    ax.set(xlabel=x_axis if x_axis else 'C_FLOP [GFlop/s]', ylabel=y_axis if y_axis else r'%coverage')
     ax.set_title(title, pad=40)
 
     patches = []
@@ -133,8 +135,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
             before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
             after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
             if not before_row.empty and not after_row.empty:
-                x_axis = 'C_FLOP [GFlop/s]'
-                y_axis = r'%coverage'
+                x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
+                y_axis = y_axis if y_axis else r'%coverage'
                 xyA = (before_row[x_axis][0], before_row[y_axis][0])
                 xyB = (after_row[x_axis][0], after_row[y_axis][0])
                 # Check which way to curve the arrow to avoid going out of the axes
