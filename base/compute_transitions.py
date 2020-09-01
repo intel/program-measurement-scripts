@@ -76,7 +76,7 @@ def eq_transitions(trans1, trans2):
 
     # Now compute different kinds of transitions
     # Max speedup transitions capturing transitions deliverying max speedup excluding all intermediate ones
-def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup"):
+def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup[FLOP Rate (GFLOP/s)]", dests=None):
     # Some mockup speedup code only for debugging purpose (commented out)
     #rng = np.random.RandomState(seed=5)
     #numRows = in_transitions.shape[0]
@@ -87,9 +87,11 @@ def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup"):
     # Also, additive -log(speedup) <==> multiplicative speedup
     in_transitions['Before']=list(zip(in_transitions['Before Name'], in_transitions['Before Timestamp']))
     in_transitions['After']=list(zip(in_transitions['After Name'], in_transitions['After Timestamp']))
+    # All speedup columns except the chosen one
+    other_speedup_columns = [s for s in in_transitions.columns if s.startswith('Speedup[') and s != speedup_name]
     in_transitions['log_inv_speedup'] = -np.log(in_transitions[speedup_name])
-    G = nx.from_pandas_edgelist(in_transitions, 'Before', 'After', [speedup_name, 'log_inv_speedup', 'Difference'], \
-        create_using=nx.DiGraph())
+    G = nx.from_pandas_edgelist(in_transitions, 'Before', 'After', \
+        [speedup_name, 'log_inv_speedup', 'Difference']+other_speedup_columns, create_using=nx.DiGraph())
 
     # Some drawing code for debugging purpose as well.
     #pos = nx.planar_layout(G)
@@ -102,14 +104,21 @@ def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup"):
     path_predecessors, path_lengths = nx.floyd_warshall_predecessor_and_distance(G, weight = 'log_inv_speedup')
     srcs = get_sources(in_transitions)
     srcs['Src']=list(zip(srcs['Before Name'], srcs['Before Timestamp']))
+    if dests is not None:
+        dests['Dest']=list(zip(dests['After Name'], dests['After Timestamp']))
+
     soln_src_names = []
     soln_src_timestamps = []
     soln_dest_names = []
     soln_dest_timestamps = []
     soln_dest_speedups = []
     soln_diffs = []
+    # This will be a list of array - each row is for codelet
+    soln_other_speedups = []
     for src in list(srcs['Src']):
         dest_lengths = path_lengths[src]
+        if dests is not None:
+            dest_lengths = {k:dest_lengths[k] for k in dests['Dest']}
         min_dest, min_inv_speedup = min(dest_lengths.items(), key=lambda x: x[1])
         min_dest_name, min_dest_timestamp = min_dest
         src_name, src_timestamp = src
@@ -122,29 +131,34 @@ def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup"):
         soln_path = nx.reconstruct_path(src, min_dest, path_predecessors)
         # Need to reconstruct the Difference by going along the path
         soln_diff = ''
+        # This will be a list of list - each element is a row of speedups
+        all_speedups = []
         for bf, af in zip(soln_path[:-1], soln_path[1:]):
             soln_diff += (G[bf][af]['Difference']+';')
-
-        # reove last ';'
+            all_speedups.append([G[bf][af].get(key) for key in other_speedup_columns])
+        soln_other_speedups.append(np.array(all_speedups).prod(axis=0))
+        # remove last ';'
         soln_diffs.append(soln_diff[:-1])
     results = pd.DataFrame({'Before Name': soln_src_names, 'Before Timestamp': soln_src_timestamps, \
         'After Name': soln_dest_names, 'After Timestamp': soln_dest_timestamps, 'Difference' : soln_diffs, \
             speedup_name : soln_dest_speedups })
-    return results
+    soln_other_speedups_df = pd.DataFrame(data=np.array(soln_other_speedups), columns=other_speedup_columns)
+    return pd.concat([results, soln_other_speedups_df], axis=1)
 
     # End-to-end transitions capturing very beginning to very end transitions excluding all intermediate ones
-def compute_end2end_transitions(in_transitions):
-    srcs = get_sources(in_transitions)
+def compute_end2end_transitions(in_transitions, speedup_name="Speedup[FLOP Rate (GFLOP/s)]"):
     dests = get_dests(in_transitions)
-    cur_transitions = limit_sources(in_transitions, srcs)
-    while True:
-        prv_transitions = cur_transitions
-        cur_transitions = adv_transitions(cur_transitions, in_transitions)
-        if eq_transitions(prv_transitions, cur_transitions):
-            break
-    cur_transitions = limit_sources(cur_transitions, srcs)
-    cur_transitions = limit_dests(cur_transitions, dests)
-    return cur_transitions
+    return compute_maxspeedup_transitions(in_transitions, speedup_name, dests)
+    # srcs = get_sources(in_transitions)
+    # cur_transitions = limit_sources(in_transitions, srcs)
+    # while True:
+    #     prv_transitions = cur_transitions
+    #     cur_transitions = adv_transitions(cur_transitions, in_transitions)
+    #     if eq_transitions(prv_transitions, cur_transitions):
+    #         break
+    # cur_transitions = limit_sources(cur_transitions, srcs)
+    # cur_transitions = limit_dests(cur_transitions, dests)
+    # return cur_transitions
 
     # Collect all n-steps transitions (if n = Inf, this will compute a transitive clousure - all transitions inferable)
 def compute_nsteps_transitions(in_transitions, nsteps):
@@ -167,7 +181,9 @@ def select_transitions_by_difference(in_transitions, difference):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Compute transition given input codelet mapping file.')
-    parser.add_argument('-i', nargs='+', help='the input mapping csv file', required=True, dest='in_files')
+    parser.add_argument('-i', nargs='+', help='the input mapping csv file (with speedups)', required=True, dest='in_files')
+    parser.add_argument('-s', nargs='?', default='Speedup[FLOP Rate (GFLOP/s)]', \
+        help='Speedup metric to use (default Speedup[FLOP Rate (GFLOP/s)])', dest='speedup_name')
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output mapping csv file (default out.csv)', \
         dest='out_file')
     group = parser.add_mutually_exclusive_group(required=True)
@@ -181,7 +197,7 @@ if __name__ == '__main__':
     if args.end_to_end:
         out_transitions = compute_end2end_transitions(transitions)
     elif args.max_speedup:
-        out_transitions = compute_maxspeedup_transitions(transitions)
+        out_transitions = compute_maxspeedup_transitions(transitions, args.speedup_name)
     elif args.nsteps:
         out_transitions = compute_nsteps_transitions(transitions, args.nsteps)
     else:
