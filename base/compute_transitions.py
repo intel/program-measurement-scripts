@@ -85,6 +85,13 @@ def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup[FLOP Ra
     # For shortest path algorithm applied to max speedup, compute log(1/speedup) = -log(speedup)
     # then shortest path => minimize -log(speedup) => maximize log(speedup) => maximize speedup
     # Also, additive -log(speedup) <==> multiplicative speedup
+    # Fix the erroneous speedups before proceeding
+    # For Inf => Use a big floating point (e.g. 1e9)
+    # For nan => Use 1
+    BIG_SPEEDUP = 1e9
+    in_transitions.loc[in_transitions[speedup_name].isnull(), speedup_name] = 1
+    in_transitions.loc[~np.isfinite(in_transitions[speedup_name]), speedup_name] = BIG_SPEEDUP
+
     in_transitions['Before']=list(zip(in_transitions['Before Name'], in_transitions['Before Timestamp']))
     in_transitions['After']=list(zip(in_transitions['After Name'], in_transitions['After Timestamp']))
     # All speedup columns except the chosen one
@@ -195,7 +202,7 @@ if __name__ == '__main__':
     
     transitions = read_transitions(args.in_files)
     if args.end_to_end:
-        out_transitions = compute_end2end_transitions(transitions)
+        out_transitions = compute_end2end_transitions(transitions, args.speedup_name)
     elif args.max_speedup:
         out_transitions = compute_maxspeedup_transitions(transitions, args.speedup_name)
     elif args.nsteps:
