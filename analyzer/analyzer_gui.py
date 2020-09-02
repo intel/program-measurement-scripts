@@ -252,12 +252,14 @@ class LoadedData(Observable):
         self.add_speedup(newMappings)
         return newMappings
     
-    def get_end2end(self, mappings):
+    def get_end2end(self, mappings, metric='Speedup[FLOP Rate (GFLOP/s)]'):
         newMappings = mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                                     'after_name':'After Name', 'after_timestamp#':'After Timestamp'})
-        newMappings = compute_end2end_transitions(newMappings)
+        newMappings = compute_end2end_transitions(newMappings, metric)
         newMappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
+        newMappings['before_timestamp#'] = newMappings['before_timestamp#'].astype(int)
+        newMappings['after_timestamp#'] = newMappings['after_timestamp#'].astype(int)
         self.add_speedup(newMappings)
         return newMappings
     
@@ -387,7 +389,7 @@ class CustomData(Observable):
             self.variants = df['Variant'].dropna().unique()
         # codelet custom plot
         if level == 'All' or level == 'Codelet':
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.mappings)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.mappings, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -397,7 +399,7 @@ class CustomData(Observable):
         # source custom plot
         if (level == 'All' or level == 'Source') and not gui.loadedData.UIUC:
             df = loadedData.srcDf
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -407,7 +409,7 @@ class CustomData(Observable):
         # application custom plot
         if (level == 'All' or level == 'Application') and not gui.loadedData.UIUC:
             df = loadedData.appDf
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -443,7 +445,7 @@ class TRAWLData(Observable):
             self.variants = df['Variant'].dropna().unique()
         if level == 'All' or level == 'Codelet':
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -454,7 +456,7 @@ class TRAWLData(Observable):
         if (level == 'All' or level == 'Source') and not gui.loadedData.UIUC:
             df = loadedData.srcDf
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -465,7 +467,7 @@ class TRAWLData(Observable):
         if (level == 'All' or level == 'Application') and not gui.loadedData.UIUC:
             df = loadedData.appDf
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -500,7 +502,8 @@ class CoverageData(Observable):
             else: # Get UIUC Mappings
                 if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
                 else: self.mappings = loadedData.UIUCMap
-        df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, variants=variants)
+        df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
+            variants=variants, short_names_path=gui.loadedData.short_names_path)
         self.df = df
         self.fig = fig
         self.textData = texts
@@ -540,7 +543,7 @@ class QPlotData(Observable):
             df = loadedData.summaryDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             # TODO: Need to settle how to deal with multiple plots/dataframes
             # May want to let user to select multiple plots to look at within this tab
             # Currently just save the ORIG data
@@ -555,7 +558,7 @@ class QPlotData(Observable):
             df = loadedData.srcDf
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -567,7 +570,7 @@ class QPlotData(Observable):
             df = loadedData.appDf
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, variants=variants)
+                    source_order=loadedData.source_order, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -605,7 +608,7 @@ class SIPlotData(Observable):
         if not update:
             self.variants = df['Variant'].dropna().unique()
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
-            (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale)
+            (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
         if not self.loadedData.UIUCAnalytics.empty: # Merge diagnostic variables with SIPlot dataframe
                 self.df.drop(columns=['ddg_artifical_cyclic', 'limits', 'ddg_true_cyclic', 'init_only', 'rhs_op_count'], inplace=True)
@@ -1757,14 +1760,35 @@ class MappingsTab(tk.Frame):
         for data, tab in data_tab_pairs:
             data.notify(gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
     
+    def cancelAction(self):
+        self.choice = 'cancel'
+        self.win.destroy()
+
+    def selectAction(self, metric):
+        self.choice = metric
+        self.win.destroy()
+    
     def removeIntermediates(self):
-        newMappings = gui.loadedData.get_end2end(gui.loadedData.UIUCMap)
-        newMappings = gui.loadedData.get_speedups(newMappings)
-        gui.loadedData.newMappings = newMappings
-        gui.loadedData.removedIntermediates = True
-        data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
-        for data, tab in data_tab_pairs:
-            data.notify(gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
+        # Ask the user which speedup metric they'd like to use for end2end transitions
+        self.win = tk.Toplevel()
+        center(self.win)
+        self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+        self.win.title('Select Speedup')
+        message = 'Select the speedup to maximize for\nend-to-end transitions.'
+        tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        for index, metric in enumerate(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]']):
+            b = tk.Button(self.win, text=metric)
+            b['command'] = lambda metric=metric : self.selectAction(metric) 
+            b.grid(row=index+1, column=1, padx=20, pady=10)
+        root.wait_window(self.win)
+        if self.choice != 'cancel':
+            newMappings = gui.loadedData.get_end2end(gui.loadedData.UIUCMap, self.choice)
+            newMappings = gui.loadedData.get_speedups(newMappings)
+            gui.loadedData.newMappings = newMappings
+            gui.loadedData.removedIntermediates = True
+            data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
+            for data, tab in data_tab_pairs:
+                data.notify(gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
 
 class ClusterTab(tk.Frame):
     def __init__(self, parent, tab):
