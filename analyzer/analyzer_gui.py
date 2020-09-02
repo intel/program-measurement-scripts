@@ -1260,15 +1260,16 @@ class PlotInteraction():
             if not self.tab.mappings.empty: self.tab.mappings.to_excel(mappings_dest, index=False)
             if not gui.loadedData.UIUCAnalytics.empty: gui.loadedData.UIUCAnalytics.to_excel(analytics_dest, index=False)
         elif self.choice == 'Save Selected':
-            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(raw_visible_names)]
-            selected_summary.to_excel(summary_dest, index=False)
             if not self.tab.mappings.empty: 
-                selected_mappings = self.getSelectedMappings(raw_visible_names)
+                selected_mappings, raw_visible_names = self.getSelectedMappings(raw_visible_names)
+                print(raw_visible_names)
                 selected_mappings.to_excel(mappings_dest, index=False)
             if not gui.loadedData.UIUCAnalytics.empty:
                 a_df = gui.loadedData.UIUCAnalytics
                 selected_analytics = a_df.loc[(a_df['name']+a_df['timestamp#'].astype(str)).isin(raw_visible_names)]
                 selected_analytics.to_excel(analytics_dest, index=False)
+            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(raw_visible_names)]
+            selected_summary.to_excel(summary_dest, index=False)
         # Store current selected variants at this level
         variants = gui.summaryTab.current_variants
         codelet['variants'] = variants
@@ -1347,13 +1348,15 @@ class PlotInteraction():
     def getSelectedMappings(self, names):
         if self.tab.mappings.empty or not names: return
         mappings = pd.DataFrame()
+        all_names = copy.deepcopy(names)
         for name in names:
             row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
             while not row.empty:
                 mappings = mappings.append(row, ignore_index=True)
                 name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
+                all_names.append(name)
                 row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
-        return mappings
+        return mappings, all_names
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -2742,6 +2745,7 @@ class AnalyzerGui(tk.Frame):
             tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
             root.wait_window(self.win)
+        if self.choice == 'Cancel': return
         self.source_order = []
         self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
         self.loadedData.add_saved_data(df, mappings=mappings, analytics=analytics, data=data)
