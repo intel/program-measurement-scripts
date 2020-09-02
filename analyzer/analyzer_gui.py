@@ -103,6 +103,10 @@ class LoadedData(Observable):
         self.UIUC = False
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
+        if not os.path.isfile(self.short_names_path):
+            Path(self.cape_path).mkdir(parents=True, exist_ok=True)
+            open(self.short_names_path, 'wb') 
+            pd.DataFrame(columns=['name', 'short_name', 'timestamp#']).to_csv(self.short_names_path, index=False)
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
         self.analysis_results_path = os.path.join(self.cape_path, 'Analysis Results')
         self.resetStates()
@@ -1262,7 +1266,6 @@ class PlotInteraction():
         elif self.choice == 'Save Selected':
             if not self.tab.mappings.empty: 
                 selected_mappings, raw_visible_names = self.getSelectedMappings(raw_visible_names)
-                print(raw_visible_names)
                 selected_mappings.to_excel(mappings_dest, index=False)
             if not gui.loadedData.UIUCAnalytics.empty:
                 a_df = gui.loadedData.UIUCAnalytics
@@ -2721,26 +2724,26 @@ class AnalyzerGui(tk.Frame):
     def cancelAction(self):
         self.choice = 'Cancel'
         self.win.destroy()
-    
-    def clearTabs(self, levels=['All']):
-        tabs = []
-        if 'Codelet' in levels or 'All' in levels:
-            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab])
-        if 'Source' in levels or 'All' in levels:
-            tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_siPlotTab, gui.s_customTab])
-        if 'Application' in levels or 'All' in levels:
-            tabs.extend([gui.a_trawlTab, gui.a_qplotTab, gui.a_siPlotTab, gui.a_customTab])
-        for tab in tabs:
-            for widget in tab.window.winfo_children():
-                widget.destroy()
+
+    def appendAnalysisData(self, df, mappings, analytics, data):
+        # need to combine df with current orig_summaryDf
+        self.loadedData.orig_summaryDf = pd.concat([self.loadedData.orig_summaryDf, df]).drop_duplicates(keep='last').reset_index(drop=True)
+        print(self.loadedData.orig_summaryDf)
+        assert(False)
+        # need to combine mappings with current mappings and add speedups
+        
 
     def loadSavedState(self, df=pd.DataFrame(), mappings=pd.DataFrame(), analytics=pd.DataFrame(), data={}):
+        print("restore: ", self.loadedData.restore)
         if len(self.sources) >= 1:
             self.win = tk.Toplevel()
             center(self.win)
             self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
             self.win.title('Existing Data')
-            message = 'This tool currently doesn\'t support appending with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            else: 
+                message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+                tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
             tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
             tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
@@ -2786,7 +2789,7 @@ class AnalyzerGui(tk.Frame):
                 if len(self.sources) >= 2:
                     message = 'You have the max number of data files open.\nWould you like to overwrite with the new data?'
                 elif gui.loadedData.restore:
-                    message = 'This tool currently doesn\'t support appending to\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+                    message = 'This tool currently doesn\'t support appending server data to\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
                 elif not gui.loadedData.UIUC:
                     message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
                     tk.Button(self.win, text='Append', command=self.appendData).grid(row=1, column=0, sticky=tk.E)
@@ -2828,6 +2831,18 @@ class AnalyzerGui(tk.Frame):
             self.sources.append(source)
             print("DATA source to be loaded", source)
             self.loadedData.add_data(self.sources)
+
+    def clearTabs(self, levels=['All']):
+        tabs = []
+        if 'Codelet' in levels or 'All' in levels:
+            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab])
+        if 'Source' in levels or 'All' in levels:
+            tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_siPlotTab, gui.s_customTab])
+        if 'Application' in levels or 'All' in levels:
+            tabs.extend([gui.a_trawlTab, gui.a_qplotTab, gui.a_siPlotTab, gui.a_customTab])
+        for tab in tabs:
+            for widget in tab.window.winfo_children():
+                widget.destroy()
 
     def buildTabs(self, parent):
         # 1st level notebook
