@@ -1193,59 +1193,96 @@ class PlotInteraction():
             self.restoreState(gui.loadedData.data['Codelet'])
             self.pointSelector.restoreState(gui.loadedData.data['Codelet'])
 
+    def cancelAction(self):
+        self.choice = 'cancel'
+        self.win.destroy()
+
+    def selectAction(self, option):
+        self.choice = option
+        self.win.destroy()
+
     def saveState(self):
+        # Create popup dialog that asks user to select either save selected or save all
+        self.win = tk.Toplevel()
+        center(self.win)
+        self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+        self.win.title('Save State')
+        message = 'Would you like to save data for all of the codelets\nor just for those selected?'
+        tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        for index, option in enumerate(['Save All', 'Save Selected']):
+            b = tk.Button(self.win, text=option)
+            b['command'] = lambda metric=option : self.selectAction(option) 
+            b.grid(row=index+1, column=1, padx=20, pady=10)
+        root.wait_window(self.win)
+        if self.choice == 'cancel': return
         # Create Analysis Results folder in Cape directory
         if not os.path.isdir(gui.loadedData.analysis_results_path):
             Path(gui.loadedData.analysis_results_path).mkdir(parents=True, exist_ok=True)
         # Ask user to name the directory for this state to be saved
-        name = tk.simpledialog.askstring('Analysis Result', 'Provide a name for this analysis result')
-        if name:
-            # Save full summary sheet and then you will use this to notify observers later
-            dest = os.path.join(gui.loadedData.analysis_results_path, name)
-            if not os.path.isdir(dest):
-                Path(dest).mkdir(parents=True, exist_ok=True)
-            summary_dest = os.path.join(dest, 'summary.xlsx')
-            gui.loadedData.orig_summaryDf.to_excel(summary_dest, index=False)
-            # Save any mappings if there are any TODO: Handle removed intermediates mappings
-            mappings_dest = os.path.join(dest, 'mappings.xlsx')
-            if not gui.loadedData.UIUCMap.empty: gui.loadedData.UIUCMap.to_excel(mappings_dest, index=False)
-            elif not gui.loadedData.mappings.empty: gui.loadedData.mappings.to_excel(mappings_dest, index=False)
-            analytics_dest = os.path.join(dest, 'analytics.xlsx')
+        dest_name = tk.simpledialog.askstring('Analysis Result', 'Provide a name for this analysis result')
+        if not dest_name: return
+        # Store hidden/highlighted points for each level
+        # Codelet
+        # Each level has its set of tabs, hidden/highlighted points, and variants
+        # Each tab has its axes, scales
+        data = {}
+        data['UIUC'] = gui.loadedData.UIUC
+        codelet = {}
+        source = {}
+        application = {}
+        # Store hidden/highlighted points at the Codelet level
+        hidden_names = []
+        highlighted_names = []
+        visible_names = []
+        raw_visible_names = []
+        df = gui.summaryTab.plotInteraction.df
+        for index in df.index:
+            name = df['name'][index]+df['timestamp#'][index].astype(str)
+            marker = gui.summaryTab.plotInteraction.textData['name:marker'][name]
+            if not marker.get_alpha() and self.choice == 'Save All': hidden_names.append(name)
+            elif marker.get_alpha() and self.choice == 'Save Selected': 
+                visible_names.append((df['name'][index], df['timestamp#'][index]))
+                raw_visible_names.append(name)
+            if marker.get_marker() == '*': highlighted_names.append(name)
+        codelet['hidden_names'] = hidden_names
+        codelet['highlighted_names'] = highlighted_names
+        # Save either full or selected codelets in dataframes to notify observers upon restoring
+        dest = os.path.join(gui.loadedData.analysis_results_path, dest_name)
+        if not os.path.isdir(dest):
+            Path(dest).mkdir(parents=True, exist_ok=True)
+        summary_dest = os.path.join(dest, 'summary.xlsx')
+        mappings_dest = os.path.join(dest, 'mappings.xlsx')
+        analytics_dest = os.path.join(dest, 'analytics.xlsx')
+        df = gui.loadedData.orig_summaryDf
+        if self.choice == 'Save All':
+            df.to_excel(summary_dest, index=False)
+            # TODO: Handle removed intermediates mappings
+            if not self.tab.mappings.empty: self.tab.mappings.to_excel(mappings_dest, index=False)
             if not gui.loadedData.UIUCAnalytics.empty: gui.loadedData.UIUCAnalytics.to_excel(analytics_dest, index=False)
-            # Store hidden/highlighted points for each level
-            # Codelet
-            # Each level has its set of tabs, hidden/highlighted points, and variants
-            # Each tab has its axes, scales
-            data = {}
-            data['UIUC'] = gui.loadedData.UIUC
-            codelet = {}
-            source = {}
-            application = {}
-            # Store hidden/highlighted points at the Codelet level
-            hidden_names = []
-            highlighted_names = []
-            df = gui.summaryTab.plotInteraction.df
-            for index in df.index:
-                name = df['name'][index]+df['timestamp#'][index].astype(str)
-                marker = gui.summaryTab.plotInteraction.textData['name:marker'][name]
-                if not marker.get_alpha(): hidden_names.append(name)
-                if marker.get_marker() == '*': highlighted_names.append(name)
-            codelet['hidden_names'] = hidden_names
-            codelet['highlighted_names'] = highlighted_names
-            # Store current selected variants at this level
-            variants = gui.summaryTab.current_variants
-            codelet['variants'] = variants
-            # Each tab has it's own nested dictionary with it's current plot selections
-            for tab in self.codelet_tabs:
-                codelet[tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
-            # Save the all the stored data into a nested dictionary
-            data['Codelet'] = codelet
-            data['Source'] = source
-            data['Application'] = application
-            data_dest = os.path.join(dest, 'data.pkl')
-            data_file = open(data_dest, 'wb')
-            pickle.dump(data, data_file)
-            data_file.close()
+        elif self.choice == 'Save Selected':
+            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(raw_visible_names)]
+            selected_summary.to_excel(summary_dest, index=False)
+            if not self.tab.mappings.empty: 
+                selected_mappings = self.getSelectedMappings(raw_visible_names)
+                selected_mappings.to_excel(mappings_dest, index=False)
+            if not gui.loadedData.UIUCAnalytics.empty:
+                a_df = gui.loadedData.UIUCAnalytics
+                selected_analytics = a_df.loc[(a_df['name']+a_df['timestamp#'].astype(str)).isin(raw_visible_names)]
+                selected_analytics.to_excel(analytics_dest, index=False)
+        # Store current selected variants at this level
+        variants = gui.summaryTab.current_variants
+        codelet['variants'] = variants
+        # Each tab has it's own nested dictionary with it's current plot selections
+        for tab in self.codelet_tabs:
+            codelet[tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+        # Save the all the stored data into a nested dictionary
+        data['Codelet'] = codelet
+        data['Source'] = source
+        data['Application'] = application
+        data_dest = os.path.join(dest, 'data.pkl')
+        data_file = open(data_dest, 'wb')
+        pickle.dump(data, data_file)
+        data_file.close()
         # Need to save: save the whole current dataframe 
         # - add (true/false) columns: highlighted, visible, 
         # Need to save axes/scales for each plot and variants for all plots
@@ -1296,7 +1333,6 @@ class PlotInteraction():
                 if self.textData['name:marker'][name].get_marker() != '*': self.highlight(self.textData['name:marker'][name])
             except: pass
         
-
     def filterArrows(self, names):
         if self.tab.mappings.empty or not names: return
         transitions = pd.DataFrame()
@@ -1305,8 +1341,19 @@ class PlotInteraction():
             while not row.empty:
                 self.togglePoint(self.textData['name:marker'][name], visible=False)
                 transitions = transitions.append(row, ignore_index=True)
-                name = str(row['after_name'])
+                name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
                 row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
+
+    def getSelectedMappings(self, names):
+        if self.tab.mappings.empty or not names: return
+        mappings = pd.DataFrame()
+        for name in names:
+            row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
+            while not row.empty:
+                mappings = mappings.append(row, ignore_index=True)
+                name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
+                row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
+        return mappings
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -1781,14 +1828,14 @@ class MappingsTab(tk.Frame):
             b['command'] = lambda metric=metric : self.selectAction(metric) 
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
-        if self.choice != 'cancel':
-            newMappings = gui.loadedData.get_end2end(gui.loadedData.UIUCMap, self.choice)
-            newMappings = gui.loadedData.get_speedups(newMappings)
-            gui.loadedData.newMappings = newMappings
-            gui.loadedData.removedIntermediates = True
-            data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
-            for data, tab in data_tab_pairs:
-                data.notify(gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
+        if self.choice == 'cancel': return
+        newMappings = gui.loadedData.get_end2end(gui.loadedData.UIUCMap, self.choice)
+        newMappings = gui.loadedData.get_speedups(newMappings)
+        gui.loadedData.newMappings = newMappings
+        gui.loadedData.removedIntermediates = True
+        data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
+        for data, tab in data_tab_pairs:
+            data.notify(gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
 
 class ClusterTab(tk.Frame):
     def __init__(self, parent, tab):
