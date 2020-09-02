@@ -46,7 +46,7 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df = pd.read_csv(input_data_source)
 	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 
-def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame()):
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
 	df.columns = succinctify(df.columns)
 	if not mappings.empty:
@@ -58,7 +58,7 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=Fals
 	df = df.loc[df['variant'].isin(variants)]
 	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
 	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings)
-	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings)
+	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
 	# Return dataframe and figure for GUI
 	return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
 	#for variant, group in grouped:
@@ -100,8 +100,6 @@ def compute_capacity(df, chosen_node_set):
 	df[op_metric_name]=formula(df)
 	return df, op_metric_name
 
-
-
 def compute_saturation(df, chosen_node_set):
 	nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
 	print ("<=====compute_saturation======>")
@@ -120,15 +118,21 @@ def compute_intensity(df, chosen_node_set):
 	df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
 	print(df['Intensity'])
 
-def compute_color_labels(df):
+def compute_color_labels(df, short_names_path=''):
 	color_labels = []
 	for color in df['color'].unique():
 		colorDf = df.loc[df['color']==color].reset_index()
-		codelet = (colorDf['name'][0])
-		color_labels.append((codelet.split(':')[0], color))
+		codelet = colorDf['name'][0]
+		timestamp = colorDf['timestamp#'][0]
+		app_name = codelet.split(':')[0]
+		if short_names_path:
+			short_names = pd.read_csv(short_names_path)
+			row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
+			if not row.empty: app_name = row['short_name'][0]
+		color_labels.append((app_name, color))
 	return color_labels
 
-def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame()):
+def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
 	if df.empty:
 		return None, None, None # Nothing to do
 	df, op_node_name = compute_capacity(df, chosen_node_set)
@@ -139,7 +143,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	#df[['name', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', op_node_name]].to_csv(output_data_source, index = False, header=True)
 	
 	# Used to create a legend of file names to color for multiple plots
-	color_labels = compute_color_labels(df)
+	color_labels = compute_color_labels(df, short_names_path)
 
 	if no_plot:
 		return df, None, None

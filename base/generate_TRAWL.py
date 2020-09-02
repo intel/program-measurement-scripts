@@ -13,7 +13,7 @@ import copy
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame()):
+def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
     df.columns = succinctify(df.columns)
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
@@ -22,24 +22,30 @@ def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
     df, fig, plotData = compute_and_plot(
-        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings)
+        'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
     # Return dataframe and figure for GUI
     return (df, fig, plotData)
 
-def compute_color_labels(df):
+def compute_color_labels(df, short_names_path=''):
     color_labels = []
     for color in df['color'].unique():
-        colorDf = df.loc[df['color'] == color].reset_index()
-        codelet = (colorDf['name'][0])
-        color_labels.append((codelet.split(':')[0], color))
+        colorDf = df.loc[df['color']==color].reset_index()
+        codelet = colorDf['name'][0]
+        timestamp = colorDf['timestamp#'][0]
+        app_name = codelet.split(':')[0]
+        if short_names_path:
+            short_names = pd.read_csv(short_names_path)
+            row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
+            if not row.empty: app_name = row['short_name'][0]
+        color_labels.append((app_name, color))
     return color_labels
 
-def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame()):
+def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
     if df.empty:
         return None, None  # Nothing to do
 
     # Used to create a legend of file names to color for multiple plots
-    color_labels = compute_color_labels(df)
+    color_labels = compute_color_labels(df, short_names_path)
     if no_plot:
         return None, None
 

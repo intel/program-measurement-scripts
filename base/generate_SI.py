@@ -56,7 +56,7 @@ def concat_ordered_columns(frames):
     final_df = pd.concat(frames)
     return final_df[columns_ordered]
 
-def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
+def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     df = pd.read_csv(inputfile)
     grouped = df.groupby('variant')
     # Generate SI plot for each variant
@@ -81,7 +81,7 @@ def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, varian
     dfs = [l_df,data]
     full_df = concat_ordered_columns(dfs)
 
-    return compute_and_plot_orig('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, short_name, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)
+    return compute_and_plot_orig('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, short_name, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
@@ -150,15 +150,21 @@ def compute_intensity(df, chosen_node_set, out_df):
     #print(df['Intensity'])
     out_df['Intensity'] = df['Intensity']
 
-def compute_color_labels(df):
+def compute_color_labels(df, short_names_path=''):
     color_labels = []
     for color in df['color'].unique():
         colorDf = df.loc[df['color']==color].reset_index()
-        codelet = (colorDf['name'][0])
-        color_labels.append((codelet.split(':')[0], color))
+        codelet = colorDf['name'][0]
+        timestamp = colorDf['timestamp#'][0]
+        app_name = codelet.split(':')[0]
+        if short_names_path:
+            short_names = pd.read_csv(short_names_path)
+            row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
+            if not row.empty: app_name = row['short_name'][0]
+        color_labels.append((app_name, color))
     return color_labels
 
-def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_node_set, tdf, orig_name, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
+def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_node_set, tdf, orig_name, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
     #print (out_csv)
     out_df = pd.DataFrame()
@@ -199,7 +205,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
     if not orig_name.empty:
         l_df = df.dropna(subset=['color']) # User selected data will have color column while FE_tier1.csv will not
         #l_df = df.loc[df['short_name'].isin(orig_name)]
-        color_labels = compute_color_labels(l_df)
+        color_labels = compute_color_labels(l_df, short_names_path)
         fig, textData = plot_data_point("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
                             str(sorted(list(chosen_node_set)))),
                             f_outputfile, l_df, orig_name, list(z), list(y), len(chosen_node_set), tdf, k_avg, color_labels, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)

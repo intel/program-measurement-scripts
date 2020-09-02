@@ -14,7 +14,7 @@ from generate_QPlot import compute_capacity
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG']):
+def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG'], short_names_path=''):
     # Normalize the column names
     df.columns = succinctify(df.columns)
     df, op_metric_name = compute_capacity(df, chosen_node_set)
@@ -24,24 +24,30 @@ def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=Fa
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
-    df, fig, textData = compute_and_plot('ORIG', df, outputfile, scale, title, no_plot, gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
+    df, fig, textData = compute_and_plot('ORIG', df, outputfile, scale, title, no_plot, gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
     # Return dataframe and figure for GUI
     return (df, fig, textData)
 
-def compute_color_labels(df):
+def compute_color_labels(df, short_names_path=''):
     color_labels = []
     for color in df['color'].unique():
-        colorDf = df.loc[df['color'] == color].reset_index()
-        codelet = (colorDf['name'][0])
-        color_labels.append((codelet.split(':')[0], color))
+        colorDf = df.loc[df['color']==color].reset_index()
+        codelet = colorDf['name'][0]
+        timestamp = colorDf['timestamp#'][0]
+        app_name = codelet.split(':')[0]
+        if short_names_path:
+            short_names = pd.read_csv(short_names_path)
+            row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
+            if not row.empty: app_name = row['short_name'][0]
+        color_labels.append((app_name, color))
     return color_labels
 
-def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame()):
+def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
     if df.empty:
         return None, None, None  # Nothing to do
 
     # Used to create a legend of file names to color for multiple plots
-    color_labels = compute_color_labels(df)
+    color_labels = compute_color_labels(df, short_names_path)
 
     if no_plot:
         return None, None, None
