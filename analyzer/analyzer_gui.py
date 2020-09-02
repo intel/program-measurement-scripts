@@ -41,6 +41,7 @@ import operator
 from capelib import succinctify
 from generate_QPlot import compute_capacity
 import pickle
+from datetime import datetime
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -107,6 +108,7 @@ class LoadedData(Observable):
         self.resetStates()
         self.data = {}
         self.restore = False
+        self.transitions = 'disabled'
     
     def resetStates(self):
         # Track points/labels that have been hidden/highlighted by the user
@@ -153,6 +155,10 @@ class LoadedData(Observable):
         # Add memlabels to summary
         self.summaryDf = self.orig_summaryDf.copy(deep=True) # Keep original to compute speedups for mappings later (succinct changes metric names)
         if not self.UIUCMap.empty: self.UIUCMap = self.get_speedups(self.UIUCMap)
+        # Add short names to cape file
+        if not gui.loadedData.UIUCNames.empty:
+            shortnameTab = ShortNameTab(root)
+            shortnameTab.addShortNames(gui.loadedData.UIUCNames)
         if self.UIUC: 
             # Add variants from UIUC .names.csv
             nameDf = self.UIUCNames[['name', 'variant']]
@@ -174,7 +180,7 @@ class LoadedData(Observable):
         if not self.UIUC:
             self.appDf = aggregate_runs_df(self.summaryDf, level='app', name_file=short_names_path)
         # Multiple files setup
-        if len(sources) > 1 and not update: # Ask user for the before and after order of the files
+        if len(self.sources) > 1 and not update: # Ask user for the before and after order of the files
             self.source_order = []
             self.get_order()
         # Generate color column
@@ -208,26 +214,27 @@ class LoadedData(Observable):
             self.UIUCAnalytics = analytics
         else: 
             self.mappings = mappings
+        if not mappings.empty: self.add_speedup(mappings)
         self.data = data
         self.sources = []
         self.restore = True
         # Notify the data for all the plots with the saved data
         for observer in self.observers:
             observer.notify(self, x_axis=data['Codelet'][observer.name]['x_axis'], y_axis=data['Codelet'][observer.name]['y_axis'], \
-                scale=data['Codelet'][observer.name]['x_scale'] + data['Codelet'][observer.name]['y_scale'], level='Codelet')
+                scale=data['Codelet'][observer.name]['x_scale'] + data['Codelet'][observer.name]['y_scale'], level='Codelet', mappings=mappings)
             if data['Source']:
                 observer.notify(self, x_axis=data['Source'][observer.name]['x_axis'], y_axis=data['Source'][observer.name]['y_axis'], \
-                scale=data['Source'][observer.name]['x_scale'] + data['Source'][observer.name]['y_scale'], level='Source')
+                scale=data['Source'][observer.name]['x_scale'] + data['Source'][observer.name]['y_scale'], level='Source', mappings=mappings)
             if data['Application']:
                 observer.notify(self, x_axis=data['Application'][observer.name]['x_axis'], y_axis=data['Application'][observer.name]['y_axis'], \
-                scale=data['Application'][observer.name]['x_scale'] + data['Application'][observer.name]['y_scale'], level='Application')
+                scale=data['Application'][observer.name]['x_scale'] + data['Application'][observer.name]['y_scale'], level='Application', mappings=mappings)
 
     def add_speedup(self, mappings):
         speedup_time = []
         speedup_apptime = []
         speedup_gflop = []
         for i in self.orig_summaryDf.index:
-            row = mappings.loc[mappings['before_name']==self.orig_summaryDf['Name'][i]]
+            row = mappings.loc[(mappings['before_name']==self.orig_summaryDf['Name'][i]) & (mappings['before_timestamp#']==self.orig_summaryDf['Timestamp#'][i])]
             speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
             speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
             speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
@@ -259,8 +266,8 @@ class LoadedData(Observable):
         self.source_order = list(self.summaryDf['Timestamp#'].unique())
         self.win.destroy()
 
-    def orderAction(self, button, df):
-        self.source_order.append(df['Timestamp#'][0])
+    def orderAction(self, button, ts):
+        self.source_order.append(ts)
         button.destroy()
         if len(self.source_order) == len(self.sources):
             self.win.destroy()
@@ -272,11 +279,16 @@ class LoadedData(Observable):
         self.win.title('Order Data')
         message = 'Select the order of data files from oldest to newest'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        for index, timestamp in enumerate(self.summaryDf['Timestamp#'].unique()):
-            curDf = self.summaryDf.loc[self.summaryDf['Timestamp#']==timestamp].reset_index()
-            b = tk.Button(self.win, text=curDf['Name'][0].split(':')[0])
-            b['command'] = lambda b=b, df=curDf : self.orderAction(b, df) 
-            b.grid(row=index+1, column=1, padx=5, pady=10)
+        # Need to link the datafile name with the timestamp
+        for index, source in enumerate(self.sources):
+            expr_summ_df = pd.read_excel(source, sheet_name='Experiment_Summary')
+            ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
+            ts_string = ts_row.iloc[0,1]
+            date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
+            ts = int(date_time_obj.timestamp())
+            b = tk.Button(self.win, text=source.split('\\')[-1].split('.')[0])
+            b['command'] = lambda b=b, ts=ts : self.orderAction(b, ts) 
+            b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
 
     def compute_colors(self, df):
@@ -335,14 +347,15 @@ class LoadedData(Observable):
         return mappings
 
     def addShortNames(self, mappings):
+        # TODO: Currently not using this function
         # Add before and after short names to mappings table displayed in the GUI
         if os.path.isfile(self.short_names_path) and os.path.getsize(self.short_names_path) > 0:
             shortNamesDf = pd.read_csv(self.short_names_path)
             before_shortNames = []
             after_shortNames = []
             for index in mappings.index:
-                before_match = shortNamesDf.loc[shortNamesDf['name'] == mappings['before_name'][index]].reset_index(drop=True) 
-                after_match = shortNamesDf.loc[shortNamesDf['name'] == mappings['after_name'][index]].reset_index(drop=True) 
+                before_match = shortNamesDf.loc[(shortNamesDf['name'] == mappings['before_name'][index]) & (shortNamesDf['timestamp#'] == mappings['before_timestamp#'][index])].reset_index(drop=True) 
+                after_match = shortNamesDf.loc[(shortNamesDf['name'] == mappings['after_name'][index]) & (shortNamesDf['timestamp#'] == mappings['after_timestamp#'][index])].reset_index(drop=True) 
                 if not before_match.empty: before_shortNames.append(before_match['short_name'].iloc[0])
                 else: before_shortNames.append(mappings['before_name'][index])
                 if not after_match.empty: after_shortNames.append(after_match['short_name'].iloc[0])
@@ -350,7 +363,6 @@ class LoadedData(Observable):
             mappings['before_short_name'] = before_shortNames
             mappings['after_short_name'] = after_shortNames
         return mappings
-        #TODO: Continue implementing this
 
 class CustomData(Observable):
     def __init__(self, loadedData):
@@ -361,13 +373,16 @@ class CustomData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All'):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         df = loadedData.summaryDf.copy(deep=True)
-        if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
-            self.mappings = loadedData.mappings
+        # mappings
+        if not mappings.empty: self.mappings = mappings
         else:
-            if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
-            else: self.mappings = loadedData.UIUCMap
+            if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
+                self.mappings = loadedData.mappings
+            else:
+                if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
+                else: self.mappings = loadedData.UIUCMap
         if not update:
             self.variants = df['Variant'].dropna().unique()
         # codelet custom plot
@@ -411,14 +426,16 @@ class TRAWLData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All'):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("TRAWLData Notified from ", loadedData)
         # mappings
-        if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
-            self.mappings = loadedData.mappings
+        if not mappings.empty: self.mappings = mappings
         else:
-            if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
-            else: self.mappings = loadedData.UIUCMap
+            if not loadedData.UIUC and len(loadedData.sources) > 1:
+                self.mappings = loadedData.mappings
+            else:
+                if not loadedData.newMappings.empty: self.mappings = loadedData.newMappings
+                else: self.mappings = loadedData.UIUCMap
         
         # Codelet trawl plot
         df = loadedData.summaryDf.copy(deep=True)
@@ -467,18 +484,22 @@ class CoverageData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All'):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        plt.close('all')
         # use qplot dataframe to generate the coverage plot
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         if not update: # Get all unique variants upon first load
             self.variants = df['Variant'].dropna().unique()
-        if not gui.loadedData.UIUC and len(loadedData.sources) > 1: # Get default/custom mappings
-            if update: self.mappings = loadedData.getMappings()
-            else: self.mappings = loadedData.mappings
-        else: # Get UIUC Mappings
-            if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
-            else: self.mappings = loadedData.UIUCMap
+        # mappings
+        if not mappings.empty: self.mappings = mappings
+        else:
+            if not gui.loadedData.UIUC and len(loadedData.sources) > 1: # Get default/custom mappings
+                if update: self.mappings = loadedData.getMappings()
+                else: self.mappings = loadedData.mappings
+            else: # Get UIUC Mappings
+                if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
+                else: self.mappings = loadedData.UIUCMap
         df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, variants=variants)
         self.df = df
         self.fig = fig
@@ -500,22 +521,23 @@ class QPlotData(Observable):
         self.mappings = pd.DataFrame()
         self.name = 'QPlot'
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All'):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("QPlotData Notified from ", loadedData)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        # Mappings
-        if len(loadedData.sources) > 1:
-            if update: self.mappings = loadedData.getMappings()
-            else: self.mappings = loadedData.mappings
+        # mappings
+        if not mappings.empty: self.mappings = mappings
+        else:
+            if not loadedData.UIUC and len(loadedData.sources) > 1:
+                if update: self.mappings = loadedData.getMappings()
+                else: self.mappings = loadedData.mappings
+            else:
+                if not loadedData.newMappings.empty: self.mappings = loadedData.newMappings
+                else: self.mappings = loadedData.UIUCMap
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
         # Codelet plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
-            # Get UIUC Mappings if they exist
-            if gui.loadedData.UIUC: 
-                if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
-                else: self.mappings = loadedData.UIUCMap
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
                     source_order=loadedData.source_order, mappings=self.mappings, variants=variants)
@@ -567,15 +589,17 @@ class SIPlotData(Observable):
     # def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv', title="FE_tier1", \
     #     filtering=False, filter_data=None, scale='linear'):
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=resource_path('clusters\\FE_tier1.csv'), title="FE_tier1", \
-        filtering=False, filter_data=None, scale='linear', level='All'):
+        filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
         print("SIPlotData Notified from ", loadedData)
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
         # mappings
-        if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
-            self.mappings = loadedData.mappings
+        if not mappings.empty: self.mappings = mappings
         else:
-            if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
-            else: self.mappings = loadedData.UIUCMap
+            if not gui.loadedData.UIUC and len(loadedData.sources) > 1:
+                self.mappings = loadedData.mappings
+            else:
+                if not gui.loadedData.newMappings.empty: self.mappings = gui.loadedData.newMappings
+                else: self.mappings = loadedData.UIUCMap
         # Plot only at Codelet level for now
         df = loadedData.summaryDf.copy(deep=True)
         if not update:
@@ -690,8 +714,8 @@ class DataSourcePanel(ScrolledTreePane):
                     local_analytics_path = local_file_path + name
                     gui.loadedData.UIUCAnalytics = pd.read_csv(local_analytics_path)
                     gui.loadedData.UIUCAnalytics.columns = succinctify(gui.loadedData.UIUCAnalytics.columns)
-            shortnameTab = ShortNameTab(root)
-            shortnameTab.addShortNames(df)
+            # shortnameTab = ShortNameTab(root)
+            # shortnameTab.addShortNames(df)
             print("local_file_path: ", local_data_path)
             self.container.openLocalFile(local_data_path)
 
@@ -1019,7 +1043,7 @@ class SummaryTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         if coverageData is not None:
            coverageData.add_observers(self)
-        self.coverageData = coverageData
+        self.coverageData = self.data = coverageData
         self.name = 'Summary'
         self.level = level
         self.current_variants = ['ORIG']
@@ -1035,6 +1059,7 @@ class SummaryTab(tk.Frame):
 
     def update(self, df, fig, textData, mappings=pd.DataFrame(), variants=None):
         self.variants = variants
+        self.mappings = mappings
         # Plot Setup
         self.plotInteraction = PlotInteraction(self, df, fig, textData, self.level)
         # Data table/tabs setup
@@ -1071,7 +1096,7 @@ class SummaryTab(tk.Frame):
         self.tableNote = ttk.Notebook(self.tableFrame)
         self.summaryTab = tk.Frame(self.tableNote)
         self.shortnameTab = ShortNameTab(self.tableNote)
-        self.labelTab = LabelTab1(self.tableNote, self)
+        self.labelTab = LabelTab(self.tableNote, self)
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
@@ -1134,9 +1159,6 @@ class PlotInteraction():
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
-        #if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu = self.buildFilter()
-        self.SIDO = False
-        self.RHS = False
         # Plot/toolbar
         self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
         self.canvas.mpl_connect('button_press_event', self.onClick)
@@ -1145,16 +1167,14 @@ class PlotInteraction():
         # Point selection table
         options=[]
         for i in range(len(self.df['short_name'])):
-            options.append('[' + self.df['short_name'][i] + '] ' + self.df['name'][i])
+            options.append('[' + self.df['short_name'][i] + '] ' + self.df['name'][i] + ' [' + str(self.df['timestamp#'][i]) + ']')
         self.pointSelector = ChecklistBox(self.plotFrame2, options, options, listType='pointSelector', tab=self, bd=1, relief="sunken", background="white")
         self.pointSelector.restoreState(self.stateDictionary)
         # Check if we are loading an analysis result and restore if so
         if gui.loadedData.restore: self.restoreAnalysisState()
         # Grid Layout
         self.toolbar.grid(column=7, row=0, sticky=tk.S)
-        #if not gui.loadedData.UIUCAnalytics.empty: self.filter_menu.grid(column=6, row=0, sticky=tk.S)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
-        #if not gui.loadedData.UIUCMap.empty or not gui.loadedData.mappings.empty: self.star_speedups_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
@@ -1203,7 +1223,7 @@ class PlotInteraction():
             highlighted_names = []
             df = gui.summaryTab.plotInteraction.df
             for index in df.index:
-                name = df['name'][index]
+                name = df['name'][index]+df['timestamp#'][index].astype(str)
                 marker = gui.summaryTab.plotInteraction.textData['name:marker'][name]
                 if not marker.get_alpha(): hidden_names.append(name)
                 if marker.get_marker() == '*': highlighted_names.append(name)
@@ -1233,7 +1253,7 @@ class PlotInteraction():
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
     def A_filter(self, relate, metric, threshold, highlight, remove=False, show=False):
         df = gui.loadedData.orig_summaryDf
-        names = df.loc[relate(df[metric], threshold)]['Name'].tolist()
+        names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
         for name in names:
             try: 
                 marker = self.textData['name:marker'][name]
@@ -1243,6 +1263,22 @@ class PlotInteraction():
                 elif show: self.togglePoint(marker, visible=True)
             except: pass
         self.drawPlots()
+        return names
+
+    def save_plot_state(self):
+        # Get names of this tabs current hidden/highlighted data points
+        if self.level == 'Codelet': dictionary = gui.loadedData.c_plot_state
+        elif self.level == 'Source': dictionary = gui.loadedData.s_plot_state
+        elif self.level == 'Application': dictionary = gui.loadedData.a_plot_state
+        dictionary['hidden_names'] = []
+        dictionary['highlighted_names'] = []
+        try: dictionary['guide_A_state'] = gui.summaryTab.guideTab.aTab.aLabel['text']
+        except: pass
+        for marker in self.textData['markers']:
+            if not marker.get_alpha():
+                dictionary['hidden_names'].append(marker.get_label())
+            if marker.get_marker() == '*':
+                dictionary['highlighted_names'].append(marker.get_label())
 
     def restoreState(self, dictionary):
         for name in dictionary['hidden_names']:
@@ -1251,10 +1287,23 @@ class PlotInteraction():
                 self.textData['name:text'][name].set_alpha(0)
             except:
                 pass
+        self.filterArrows(dictionary['hidden_names'])
         for name in dictionary['highlighted_names']:
             try: 
                 if self.textData['name:marker'][name].get_marker() != '*': self.highlight(self.textData['name:marker'][name])
             except: pass
+        
+
+    def filterArrows(self, names):
+        if self.tab.mappings.empty or not names: return
+        transitions = pd.DataFrame()
+        for name in names:
+            row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
+            while not row.empty:
+                self.togglePoint(self.textData['name:marker'][name], visible=False)
+                transitions = transitions.append(row, ignore_index=True)
+                name = str(row['after_name'])
+                row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -1522,7 +1571,7 @@ class AxesTab(tk.Frame):
         if self.yscale_selected.get() != 'Choose Y Axis Scale':
             self.tab.y_scale = self.yscale_selected.get().lower()
         # Save current plot states
-        self.save_state()
+        self.tab.plotInteraction.save_plot_state()
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
@@ -1533,19 +1582,6 @@ class AxesTab(tk.Frame):
                 self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
                 self.tab.coverageData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
-
-    def save_state(self):
-        # Get names of this tabs current hidden/highlighted data points
-        if self.tab.level == 'Codelet': dictionary = gui.loadedData.c_plot_state
-        elif self.tab.level == 'Source': dictionary = gui.loadedData.s_plot_state
-        elif self.tab.level == 'Application': dictionary = gui.loadedData.a_plot_state
-        dictionary['hidden_names'] = []
-        dictionary['highlighted_names'] = []
-        for marker in self.tab.plotInteraction.textData['markers']:
-            if not marker.get_alpha():
-                dictionary['hidden_names'].append(marker.get_label())
-            if marker.get_marker() == '*':
-                dictionary['highlighted_names'].append(marker.get_label())
 
 class ShortNameTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -1561,21 +1597,13 @@ class ShortNameTab(tk.Frame):
 
     # Create table for Labels tab and update button
     def buildLabelTable(self, df, tab, texts=None):
-        table_labels = df[['name', r'%coverage', 'timestamp#', 'color']]
-        table_labels['short_name'] = table_labels['name']
-        if os.path.getsize(self.short_names_path) > 0:
-            short_names = pd.read_csv(self.short_names_path)
-            short_names = short_names[['name', 'short_name']]
-            inner = pd.merge(left=table_labels, right=short_names, left_on='name', right_on='name')
-            inner.rename(columns={'short_name_y':'short_name'}, inplace=True)
-            inner = inner[['name', 'short_name', 'timestamp#', 'color', r'%coverage']]
-            merged = pd.concat([table_labels, inner]).drop_duplicates('name', keep='last')
-        else:
-            merged = table_labels
+        short_name_table = df[['name', 'timestamp#']]
+        short_name_table['short_name'] = short_name_table['name']
+        merged = self.getShortNames(short_name_table)
+        merged = pd.merge(left=merged, right=df[['name', 'timestamp#', r'%coverage', 'color']], on=['name', 'timestamp#'], how='right')
         # sort label table by coverage to keep consistent with data table
-        merged = merged.sort_values(by=r'%coverage', ascending=False)
-        merged = merged[['name', 'short_name', 'timestamp#', 'color']]
-        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
+        merged.sort_values(by=r'%coverage', ascending=False, inplace=True)
+        table = Table(tab, dataframe=merged[['name', 'short_name', 'timestamp#', 'color']], showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
         table_button_frame = tk.Frame(tab)
@@ -1592,31 +1620,35 @@ class ShortNameTab(tk.Frame):
         else:
             self.addShortNames(df)
         gui.loadedData.add_data(gui.sources, update=True)
+    
+    def getShortNames(self, df):
+        if os.path.getsize(self.short_names_path) > 0:
+            existing_shorts = pd.read_csv(self.short_names_path)
+            current_shorts = df[['name', 'short_name', 'timestamp#']]
+            merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates(['name', 'timestamp#'], keep='last').reset_index(drop=True)
+        else: 
+            merged = df[['name', 'short_name', 'timestamp#']]
+        return merged
 
     def addShortNames(self, df):
         if os.path.getsize(self.short_names_path) > 0:
-            short_names = pd.read_csv(self.short_names_path)
-            short_names = short_names[['name', 'short_name']]
-            table_names = df[['name', 'short_name']]
-            outer = pd.merge(left=short_names, right=table_names, left_on='name', right_on='name', how='outer')
-            outer.rename(columns={'short_name_y':'short_name'}, inplace=True)
-            outer = outer[['name', 'short_name']].dropna()
-            merged = pd.concat([short_names, outer]).drop_duplicates('name', keep='last')
-        else:
-            merged = df[['name', 'short_name']]
-        merged.to_csv(self.short_names_path)
+            existing_shorts = pd.read_csv(self.short_names_path)
+            if 'timestamp#' not in df: # UIUC Names files don't have timestamp# in them, need to add it
+                df = pd.merge(left=df, right=gui.loadedData.summaryDf[['Name', 'Timestamp#']], how='left', left_on='name', right_on='Name')
+                df.rename(columns={'Timestamp#':'timestamp#'}, inplace=True)
+            new_shorts = df[['name', 'short_name', 'timestamp#']]
+            merged = pd.concat([existing_shorts, new_shorts]).drop_duplicates(['name', 'timestamp#'], keep='last').reset_index(drop=True)
+        else: 
+            merged = df[['name', 'short_name', 'timestamp#']]
+        merged.to_csv(self.short_names_path, index=False)
 
     def checkForDuplicates(self, df):
-        # Check if there are duplicates in short names for a single file
-        df = df.reset_index(drop=True)
-        duplicate_df = pd.DataFrame()
-        for color in df['color'].unique():
-            curfile = df.loc[df['color'] == color]
-            duplicates = curfile['short_name'].duplicated(keep=False)
-            duplicate_df = duplicate_df.append(curfile[duplicates])
-        if not duplicate_df.empty:
+        # Check if there are duplicates short names with the same timestamp
+        df.reset_index(drop=True, inplace=True)
+        duplicate_rows = df.duplicated(subset=['short_name', 'timestamp#'], keep=False)
+        if duplicate_rows.any():
             message = str()
-            for index, row in duplicate_df.iterrows():
+            for index, row in df[duplicate_rows].iterrows():
                 message = message + 'row: ' + str(index + 1) + ', short_name: ' + row['short_name'] + '\n'
             messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
                 + message)
@@ -1654,19 +1686,19 @@ class MappingsTab(tk.Frame):
 
     def addMapping(self):
         toAdd = pd.DataFrame()
-        toAdd['before_timestamp#'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]]['timestamp#']
+        toAdd['before_timestamp#'] = self.source_order[0]
         toAdd['before_name'] = self.before_selected.get().split('[')[0]
-        toAdd['before_short_name'] = self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]]['short_name']
-        toAdd['after_timestamp#'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].iloc[0]['timestamp#']
+        toAdd['before_short_name'] = self.before_selected.get().split('[')[1][:-1]
+        toAdd['after_timestamp#'] = self.source_order[1]
         toAdd['after_name'] = self.after_selected.get().split('[')[0]
-        toAdd['after_short_name'] = self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].iloc[0]['short_name']
+        toAdd['after_short_name'] = self.after_selected.get().split('[')[1][:-1]
         self.mappings = self.mappings.append(toAdd, ignore_index=True)
         self.updateTable()
     
     def removeMapping(self):
         self.mappings.drop(self.mappings[(self.mappings['before_name']==self.before_selected.get().split('[')[0]) & \
-            (self.mappings['before_timestamp#']==(self.df.loc[self.df['name']==self.before_selected.get().split('[')[0]].reset_index(drop=True)['timestamp#'][0])) & \
-            (self.mappings['after_timestamp#']==(self.df.loc[self.df['name']==self.after_selected.get().split('[')[0]].reset_index(drop=True)['timestamp#'][0])) & \
+            (self.mappings['before_timestamp#']==self.source_order[0]) & \
+            (self.mappings['after_timestamp#']==self.source_order[1]) & \
             (self.mappings['after_name']==self.after_selected.get().split('[')[0])].index, inplace=True)
         self.updateTable()
     
@@ -1699,11 +1731,11 @@ class MappingsTab(tk.Frame):
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             for index in before.index:
-                short_name = short_names.loc[short_names['name']==before['name'][index]].reset_index(drop=True)
-                if not short_name.empty: before['name'][index] = before['name'][index] + '[' + \
-                    short_name['short_name'][0] + ']'
+                short_name = short_names.loc[(short_names['name']==before['name'][index]) & (short_names['timestamp#']==self.source_order[0])].reset_index(drop=True)
+                if not short_name.empty: # Add short name to end of full codelet name in brackets
+                    before['name'][index] += '[' + short_name['short_name'][0] + ']'
             for index in after.index:
-                short_name = short_names.loc[short_names['name']==after['name'][index]].reset_index(drop=True)
+                short_name = short_names.loc[(short_names['name']==after['name'][index]) & (short_names['timestamp#']==self.source_order[1])].reset_index(drop=True)
                 if not short_name.empty: after['name'][index] = after['name'][index] + '[' + \
                     short_name['short_name'][0] + ']'
         tk.Button(self, text="Edit", command=lambda before=list(before['name']), after=list(after['name']) : \
@@ -1777,7 +1809,7 @@ class ChecklistBox(tk.Frame):
             if choice not in current_choices:
                 var.set(0)
             self.vars.append(var)
-            self.names.append(choice.split(' ', 1)[-1])
+            self.names.append(choice.split(' ', 1)[-1].rsplit(' ', 1)[0] + choice.rsplit(' ', 1)[-1][1:-1])
             cb = tk.Checkbutton(self, var=var, text=choice,
                                 onvalue=1, offvalue=0,
                                 anchor="w", width=100, background=bg,
@@ -1785,7 +1817,7 @@ class ChecklistBox(tk.Frame):
             )
             self.cbs.append(cb)
             if listType == 'pointSelector':
-                cb['command'] = lambda name=choice, index=index : self.updatePlot(name, index)
+                cb['command'] = lambda name=self.names[index], index=index : self.updatePlot(name, index)
             checklist.window_create("end", window=cb)
             checklist.insert("end", "\n")
         checklist.config(yscrollcommand=scrollbar.set)
@@ -1803,32 +1835,31 @@ class ChecklistBox(tk.Frame):
 
     def updatePlot(self, name, index):
         selected = self.vars[index].get()
-        codelet_name = name.split(']', 1)[-1][1:]
         if selected:
             for tab in self.tab.tabs:
                 tab.plotInteraction.pointSelector.vars[index].set(1)
-                marker = tab.plotInteraction.textData['name:marker'][codelet_name]
+                marker = tab.plotInteraction.textData['name:marker'][name]
                 marker.set_alpha(1)
                 text = tab.plotInteraction.textData['marker:text'][marker]
                 text.set_alpha(1)
                 try: tab.plotInteraction.textData['text:arrow'][text].set_visible(True)
                 except: pass
                 try: 
-                    for mapping in tab.plotInteraction.textData['name:mapping'][codelet_name]:
+                    for mapping in tab.plotInteraction.textData['name:mapping'][name]:
                         mapping.set_alpha(1)
                 except: pass
                 tab.plotInteraction.canvas.draw()
         else:
             for tab in self.tab.tabs:
                 tab.plotInteraction.pointSelector.vars[index].set(0)
-                marker = tab.plotInteraction.textData['name:marker'][codelet_name]
+                marker = tab.plotInteraction.textData['name:marker'][name]
                 marker.set_alpha(0)
                 text = tab.plotInteraction.textData['marker:text'][marker]
                 text.set_alpha(0)
                 try: tab.plotInteraction.textData['text:arrow'][text].set_visible(False)
                 except: pass
                 try: 
-                    for mapping in tab.plotInteraction.textData['name:mapping'][codelet_name]:
+                    for mapping in tab.plotInteraction.textData['name:mapping'][name]:
                         mapping.set_alpha(0)
                 except: pass
                 tab.plotInteraction.canvas.draw()
@@ -1841,6 +1872,17 @@ class ChecklistBox(tk.Frame):
                 values.append(cb['text'])
         return values
 
+    def showAllVariants(self):
+        for i, cb in enumerate(self.cbs):
+            self.vars[i].set(1)
+        self.updateVariants() 
+    
+    def showOrig(self):
+        for i, cb in enumerate(self.cbs):
+            if cb['text'] == 'ORIG': self.vars[i].set(1)
+            else: self.vars[i].set(0)
+        self.updateVariants()
+
     def updateVariants(self):
         self.parent.tab.current_variants = self.getCheckedItems()
         # Update the rest of the plots at the same level with the new checked variants
@@ -1848,70 +1890,10 @@ class ChecklistBox(tk.Frame):
             for i, cb in enumerate(self.cbs):
                 tab.variantTab.checkListBox.vars[i].set(self.vars[i].get())
             tab.current_variants = self.parent.tab.current_variants
-        gui.siplotData.notify(gui.loadedData, variants=self.parent.tab.current_variants, update=True, cluster=gui.c_siPlotTab.cluster, title=gui.c_siPlotTab.title)
-        gui.qplotData.notify(gui.loadedData, variants=self.parent.tab.current_variants, update=True)
-        gui.trawlData.notify(gui.loadedData, variants=self.parent.tab.current_variants, update=True)
-        gui.customData.notify(gui.loadedData, variants=self.parent.tab.current_variants, update=True)
-        gui.coverageData.notify(gui.loadedData, variants=self.parent.tab.current_variants, update=True)
-
-    def updateLabels(self):
-        self.parent.tab.current_labels = self.getCheckedItems()
-        textData = self.parent.tab.plotInteraction.textData
-
-        # TODO: Update the rest of the plots at the same level with the new checked variants
-        # for tab in self.parent.tab.plotInteraction.tabs:
-        #     for i, cb in enumerate(self.cbs):
-        #         tab.labelTab.checkListBox.vars[i].set(self.vars[i].get())
-        #     tab.current_labels = self.parent.tab.current_labels
-
-        # If nothing selected, revert labels and legend back to original
-        if not self.parent.tab.current_labels:
-            for i, text in enumerate(textData['texts']):
-                text.set_text(textData['orig_mytext'][i])
-                textData['mytext'] = copy.deepcopy(textData['orig_mytext'])
-                textData['legend'].get_title().set_text(textData['orig_legend'])
-        else: 
-            # Update existing plot texts by adding user specified metrics
-            df = self.parent.tab.plotInteraction.df
-            for i, text in enumerate(textData['texts']):
-                toAdd = textData['orig_mytext'][i][:-1]
-                for choice in self.parent.tab.current_labels:
-                    codeletName = textData['names'][i]
-                    # TODO: Clean this up so it's on the edges and not the data points
-                    if choice in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
-                        if gui.loadedData.UIUC:
-                            tempDf = pd.DataFrame()
-                            if not gui.loadedData.newMappings.empty: # End2end mappings
-                                tempDf = gui.loadedData.newMappings.loc[gui.loadedData.newMappings['before_name']==codeletName]
-                            if tempDf.empty and not gui.loadedData.UIUCMap.empty: # UIUC Mappings
-                                tempDf = gui.loadedData.UIUCMap.loc[gui.loadedData.UIUCMap['before_name']==codeletName]
-                            if tempDf.empty: 
-                                if choice == 'Difference': value = 'ORIG'
-                                else: value = 1
-                            else: value = tempDf[choice].iloc[0]
-                        elif len(gui.sources) > 1 and not gui.loadedData.mappings.empty: # UVSQ Mappings
-                            tempDf = gui.loadedData.mappings.loc[gui.loadedData.mappings['before_name']==codeletName]
-                            if tempDf.empty: value = 1
-                            else: value = tempDf[choice].iloc[0]
-                    else:
-                        value = df.loc[df['name']==codeletName][choice].iloc[0]
-                    if isinstance(value, int) or isinstance(value, float):
-                        toAdd += ', ' + str(round(value, 2))
-                    else:
-                        toAdd += ', ' + str(value)
-                toAdd += ')'
-                text.set_text(toAdd)
-                textData['mytext'][i] = toAdd
-            # Update legend for user to see order of metrics in the label
-            newTitle = textData['orig_legend'][:-1]
-            for choice in self.parent.tab.current_labels:
-                newTitle += ', ' + choice
-            newTitle += ')'
-            textData['legend'].get_title().set_text(newTitle)
-        self.parent.tab.plotInteraction.canvas.draw()
-        # Adjust labels if already adjusted
-        if self.parent.tab.plotInteraction.adjusted:
-            self.parent.tab.plotInteraction.adjustText()
+        self.parent.tab.plotInteraction.save_plot_state()
+        for tab in self.parent.tab.plotInteraction.tabs:
+            if tab.name == 'SIPlot': tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title)
+            else: tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True)
 
 class VariantTab(tk.Frame):
     def __init__(self, parent, tab, variants, current_variants):
@@ -1923,7 +1905,7 @@ class VariantTab(tk.Frame):
         self.checkListBox.pack(side=tk.LEFT)
         update.pack(side=tk.LEFT, anchor=tk.NW)
 
-class LabelTab1(tk.Frame):
+class LabelTab(tk.Frame):
     def __init__(self, parent, tab):
         tk.Frame.__init__(self, parent)
         self.parent = parent
@@ -1943,10 +1925,13 @@ class LabelTab1(tk.Frame):
         self.updateButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
         self.resetButton.grid(row=1, column=1, sticky=tk.NW)
 
-    def reset(self):
+    def resetMetrics(self):
         self.metric1.set('Metric 1')
         self.metric2.set('Metric 2')
         self.metric3.set('Metric 3')
+
+    def reset(self):
+        self.resetMetrics()
         textData = self.tab.plotInteraction.textData
         self.tab.current_labels = []
         for i, text in enumerate(textData['texts']):
@@ -1991,19 +1976,19 @@ class LabelTab1(tk.Frame):
                         if gui.loadedData.UIUC:
                             tempDf = pd.DataFrame()
                             if not gui.loadedData.newMappings.empty: # End2end mappings
-                                tempDf = gui.loadedData.newMappings.loc[gui.loadedData.newMappings['before_name']==codeletName]
+                                tempDf = gui.loadedData.newMappings.loc[(gui.loadedData.newMappings['before_name']+gui.loadedData.newMappings['before_timestamp#'].astype(str))==codeletName]
                             if tempDf.empty and not gui.loadedData.UIUCMap.empty: # UIUC Mappings
-                                tempDf = gui.loadedData.UIUCMap.loc[gui.loadedData.UIUCMap['before_name']==codeletName]
+                                tempDf = gui.loadedData.UIUCMap.loc[(gui.loadedData.UIUCMap['before_name']+gui.loadedData.UIUCMap['before_timestamp#'].astype(str))==codeletName]
                             if tempDf.empty: 
                                 if choice == 'Difference': value = 'ORIG'
                                 else: value = 1
                             else: value = tempDf[choice].iloc[0]
                         elif len(gui.sources) > 1 and not gui.loadedData.mappings.empty: # UVSQ Mappings
-                            tempDf = gui.loadedData.mappings.loc[gui.loadedData.mappings['before_name']==codeletName]
+                            tempDf = gui.loadedData.mappings.loc[(gui.loadedData.mappings['before_name']+gui.loadedData.mappings['before_timestamp#'].astype(str))==codeletName]
                             if tempDf.empty: value = 1
                             else: value = tempDf[choice].iloc[0]
                     else:
-                        value = df.loc[df['name']==codeletName][choice].iloc[0]
+                        value = df.loc[(df['name']+df['timestamp#'].astype(str))==codeletName][choice].iloc[0]
                     if isinstance(value, int) or isinstance(value, float):
                         toAdd += ', ' + str(round(value, 2))
                     else:
@@ -2021,32 +2006,6 @@ class LabelTab1(tk.Frame):
         # Adjust labels if already adjusted
         if self.tab.plotInteraction.adjusted:
             self.tab.plotInteraction.adjustText()
-
-
-class LabelTab(tk.Frame):
-    def __init__(self, parent, tab):
-        tk.Frame.__init__(self, parent)
-        self.parent = parent
-        self.tab = tab
-        choices = ['C_FLOP [GFlop/s]', r'%coverage', 'apptime_s', 'time_s', r'%ops[fma]', r'%inst[fma]', 'memlevel']
-        if gui.loadedData.UIUC:
-            if not gui.loadedData.newMappings.empty:
-                mappingDf = gui.loadedData.newMappings.drop(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#'])
-                choices.extend(mappingDf.columns.tolist())
-            elif not gui.loadedData.UIUCMap.empty: # TODO: Clean this up so it's an option for edges on the plot and not in the labels tab
-                mappingDf = gui.loadedData.UIUCMap.drop(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#'])
-                choices.extend(mappingDf.columns.tolist())
-            if not gui.loadedData.UIUCAnalytics.empty:
-                diagnosticDf = gui.loadedData.UIUCAnalytics.drop(columns=['name', 'timestamp#'])
-                choices.extend(diagnosticDf.columns.tolist())
-        elif len(gui.sources) > 1 and not gui.loadedData.mappings.empty:
-            mappingDf = gui.loadedData.mappings.drop(columns=['before_name', 'before_short_name', 'before_timestamp#', 'after_name', 'after_short_name', 'after_timestamp#'])
-            choices.extend(mappingDf.columns.tolist()) 
-        self.checkListBox = ChecklistBox(self, choices, tab.current_labels, bd=1, relief="sunken", background="white")
-        update = tk.Button(self, text='Update', command=self.checkListBox.updateLabels)
-        self.checkListBox.pack(side=tk.LEFT, anchor=tk.NW)
-        self.checkListBox.updateLabels()
-        update.pack(side=tk.LEFT, anchor=tk.NW)
 
 class FilteringTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -2093,6 +2052,7 @@ class GuideTab(tk.Frame):
             # Text for states
             self.a_state = 'State: All Codelets'
             self.a1_state = 'State: SIDO (A1)'
+            self.a1_trans_state = 'State: SIDO Transitions'
             self.a2_state = 'State: RHS=1 (A2)'
             self.a3_state = 'State: Final'
             # Labels for the current state of the plot
@@ -2101,46 +2061,86 @@ class GuideTab(tk.Frame):
             # Buttons: Next (go to next level of filtering), Previous, Transitions (show transitions for the current codelets)
             self.nextButton = tk.Button(self, text='Next State', command=self.nextState)
             self.prevButton = tk.Button(self, text='Previous State', command=self.prevState)
-            self.transButton = tk.Button(self, text='Show Transitions', command=self.showTrans)
+            self.transButton = tk.Button(self, text='Show Transitions', command=self.toggleTrans)
             # Grid layout
             self.aLabel.grid(row=0, column=0, pady=10, padx=10, sticky=tk.NW)
             self.nextButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
-        
+            if gui.loadedData.transitions == 'showing': self.show_trans_state()
+            elif gui.loadedData.transitions == 'hiding': self.hide_trans_state()
+
         def nextState(self):
             if self.aLabel['text'] == self.a_state: # Go to A1 (SIDO) state
                 self.aLabel['text'] = self.a1_state
                 self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
                 self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True) # Highlight SIDO codelets
+                self.tab.labelTab.resetMetrics()
+                self.updateLabels('Speedup[Time (s)]')
+                self.highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True) # Highlight SIDO codelets
             elif self.aLabel['text'] == self.a1_state: # Go to A2 (RHS=1) state
                 self.aLabel['text'] = self.a2_state
                 self.transButton.grid_remove()
+                self.updateLabels('rhs_op_count')
                 self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True)
             elif self.aLabel['text'] == self.a2_state: # Go to final state with 3 remaining
                 self.aLabel['text'] = self.a3_state
                 self.nextButton.grid_remove()
+                self.updateLabels(r'%ops[fma]')
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True)
-
+        
         def prevState(self):
             if self.aLabel['text'] == self.a1_state: # Go back to the starting view
                 self.aLabel['text'] = self.a_state
                 self.prevButton.grid_remove()
                 self.transButton.grid_remove()
+                self.tab.labelTab.reset()
                 self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False)
             elif self.aLabel['text'] == self.a2_state: # Go back to A1 (SIDO) state
                 self.aLabel['text'] = self.a1_state
                 self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
+                self.updateLabels('Speedup[Time (s)]')
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False)
                 self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True, show=True)
             elif self.aLabel['text'] == self.a3_state: # Go back to A2 (RHS=1) state
                 self.aLabel['text'] = self.a2_state
                 self.nextButton.grid()
+                self.updateLabels('rhs_op_count')
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True)
 
-        def showTrans(self):
-            # remove all points except those highlighted, and show mappings for them
-            pass
+        def toggleTrans(self):
+            if self.transButton['text'] == 'Show Transitions':
+                gui.loadedData.transitions = 'showing'
+                # Remove any points that aren't currently highglighted
+                for name in self.tab.plotInteraction.textData['names']:
+                    if name not in self.highlighted:
+                        self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
+                # Auto-check all variants and call update variants
+                self.tab.variantTab.checkListBox.showAllVariants()
+            else:
+                gui.loadedData.transitions = 'hiding'
+                self.tab.plotInteraction.showMarkers()
+                self.tab.variantTab.checkListBox.showOrig()
+
+        def show_trans_state(self):
+            self.nextButton.grid_remove()
+            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
+            self.aLabel['text'] = self.a1_trans_state
+            self.updateLabels('Speedup[Time (s)]')
+            self.transButton['text'] = 'Hide Transitions'
+        
+        def hide_trans_state(self):
+            self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
+            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
+            self.aLabel['text'] = self.a1_state
+            self.updateLabels('Speedup[Time (s)]')
+            self.highlighted = gui.loadedData.c_plot_state['highlighted_names']
+            self.transButton['text'] = 'Show Transitions'
+
+        def updateLabels(self, metric):
+            self.tab.labelTab.resetMetrics()
+            self.tab.labelTab.metric1.set(metric)
+            self.tab.labelTab.updateLabels()
+            
 
     class BTab(tk.Frame):
         def __init__(self, parent):
@@ -2220,7 +2220,7 @@ class TrawlTab(tk.Frame):
            trawlData.add_observers(self)
         self.name = 'TRAWL'
         self.level = level
-        self.trawlData = trawlData
+        self.trawlData = self.data = trawlData
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
@@ -2234,6 +2234,7 @@ class TrawlTab(tk.Frame):
 
     def update(self, df, fig, textData=None, mappings=pd.DataFrame(), variants=None):
         self.variants = variants
+        self.mappings = mappings
         # Plot setup
         self.plotInteraction = PlotInteraction(self, df, fig, textData, self.level)
         # Data table/tabs setup
@@ -2314,7 +2315,7 @@ class QPlotTab(tk.Frame):
            qplotData.add_observers(self)
         self.name = 'QPlot'
         self.level = level
-        self.qplotData = qplotData
+        self.qplotData = self.data = qplotData
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
@@ -2328,6 +2329,7 @@ class QPlotTab(tk.Frame):
 
     def update(self, df, fig, textData=None, mappings=pd.DataFrame(), variants=None):
         self.variants = variants
+        self.mappings = mappings
         # Plot/Table setup
         self.plotInteraction = PlotInteraction(self, df, fig, textData, self.level)
         self.tableFrame = tk.Frame(self.window)
@@ -2410,7 +2412,7 @@ class SIPlotTab(tk.Frame):
             siplotData.add_observers(self)
         self.name = 'SIPlot'
         self.level = level
-        self.siplotData = siplotData
+        self.siplotData = self.data = siplotData
         #self.cluster = os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv'
         self.cluster = resource_path('clusters\\FE_tier1.csv')
         self.title = 'FE_tier1'
@@ -2427,6 +2429,7 @@ class SIPlotTab(tk.Frame):
     
     def update(self, df, fig, textData=None, mappings=pd.DataFrame(), variants=None):
         self.variants = variants
+        self.mappings = mappings
         self.df = df
         # Plot/Table Setup
         self.plotInteraction = PlotInteraction(self, df, fig, textData, self.level)
@@ -2500,7 +2503,7 @@ class CustomTab(tk.Frame):
             customData.add_observers(self)
         self.name = 'Custom'
         self.level = level
-        self.customData = customData
+        self.customData = self.data = customData
         self.current_variants = ['ORIG']
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -2514,6 +2517,7 @@ class CustomTab(tk.Frame):
 
     def update(self, df, fig, textData, variants=None, mappings=pd.DataFrame()):
         self.variants = variants
+        self.mappings = mappings
         # Plot setup
         self.plotInteraction = PlotInteraction(self, df, fig, textData, self.level)
         # Data table/tabs under plot setup

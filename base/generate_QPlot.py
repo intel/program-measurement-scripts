@@ -221,7 +221,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	markers = []
 	df.reset_index(drop=True, inplace=True)
 	for i in range(len(x)):
-		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i], linestyle='', alpha=1))
+		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i]+str(df['timestamp#'][i]), linestyle='', alpha=1))
 	
 	# Point Labels
 	plt.rcParams.update({'font.size': 7})
@@ -246,11 +246,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	mymappings = []
 	if not mappings.empty:
 		for i in mappings.index:
-			name_mapping[mappings['before_name'][i]] = []
-			name_mapping[mappings['after_name'][i]] = []
+			name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
+			name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
 		for index in mappings.index:
-			before_row = df.loc[df['name']==mappings['before_name'][index]].reset_index(drop=True)
-			after_row = df.loc[df['name']==mappings['after_name'][index]].reset_index(drop=True)
+			before_row = df.loc[(df['name']==mappings['before_name'][index]) & (df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
+			after_row = df.loc[(df['name']==mappings['after_name'][index]) & (df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
 			if not before_row.empty and not after_row.empty:
 				x_axis = x_axis if x_axis else op_node_name
 				y_axis = y_axis if y_axis else 'C_max [GB/s]'
@@ -267,11 +267,12 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
 						connectionstyle='arc3,rad=-0.3', alpha=1)
 				ax.add_artist(con)
-				name_mapping[before_row['name'][0]].append(con)
-				name_mapping[after_row['name'][0]].append(con)
+				name_mapping[before_row['name'][0] + str(before_row['timestamp#'][0])].append(con)
+				name_mapping[after_row['name'][0] + str(after_row['timestamp#'][0])].append(con)
 				mymappings.append(con)
 	plt.tight_layout()
 
+	names = [name + timestamp for name,timestamp in zip(df['name'], df['timestamp#'].astype(str))]
 	plotData = {
 		'xs' : xs,
 		'ys' : ys,
@@ -283,13 +284,14 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 		'title' : title,
 		'texts' : texts,
 		'markers' : markers,
-		'names' : df['name'].values.tolist(),
+		'names' : names,
+		'timestamps' : df['timestamp#'].values.tolist(),
 		'marker:text' : dict(zip(markers,texts)),
-		'marker:name' : dict(zip(markers,df['name'].values.tolist())),
-		'name:marker' : dict(zip(df['name'].values.tolist(), markers)),
-		'name:text' : dict(zip(df['name'].values.tolist(), texts)),
+		'marker:name' : dict(zip(markers,names)),
+		'name:marker' : dict(zip(names, markers)),
+		'name:text' : dict(zip(names, texts)),
 		'text:arrow' : {},
-		'text:name' : dict(zip(texts, df['name'].values.tolist())),
+		'text:name' : dict(zip(texts, names)),
 		'name:mapping' : name_mapping,
 		'mappings' : mymappings
 	}

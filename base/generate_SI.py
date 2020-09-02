@@ -436,7 +436,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     markers = []
     orig_df.reset_index(drop=True, inplace=True)
     for i in range(len(DATA)):
-        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['color'][i][0], label=orig_df['name'][i], linestyle='', alpha=1))
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['color'][i][0], label=orig_df['name'][i]+str(orig_df['timestamp#'][i]), linestyle='', alpha=1))
 
     plt.rcParams.update({'font.size': 7})
     #mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_speedup[i] ))  for i in range(len(DATA))]
@@ -467,11 +467,11 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     mymappings = []
     if not mappings.empty:
         for i in mappings.index:
-            name_mapping[mappings['before_name'][i]] = []
-            name_mapping[mappings['after_name'][i]] = []
+            name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
+            name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
         for index in mappings.index:
-            before_row = orig_df.loc[orig_df['name']==mappings['before_name'][index]].reset_index(drop=True)
-            after_row = orig_df.loc[orig_df['name']==mappings['after_name'][index]].reset_index(drop=True)
+            before_row = orig_df.loc[(orig_df['name']==mappings['before_name'][index]) & (orig_df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
+            after_row = orig_df.loc[(orig_df['name']==mappings['after_name'][index]) & (orig_df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
             if not before_row.empty and not after_row.empty:
                 x_axis = 'Intensity'
                 y_axis = 'Saturation'
@@ -488,15 +488,16 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
                         connectionstyle='arc3,rad=-0.3', alpha=1)
                 ax.add_artist(con)
-                name_mapping[before_row['name'][0]].append(con)
-                name_mapping[after_row['name'][0]].append(con)
+                name_mapping[before_row['name'][0] + str(before_row['timestamp#'][0])].append(con)
+                name_mapping[after_row['name'][0] + str(after_row['timestamp#'][0])].append(con)
                 mymappings.append(con)
     plt.tight_layout()
     #ax.add_artist(leg);
 
+    names = [name + timestamp for name,timestamp in zip(orig_df['name'], orig_df['timestamp#'].astype(str))]
     plotData = {
-        'xs' : x,
-        'ys' : y,
+        'xs' : xs,
+        'ys' : ys,
         'mytext' : mytext,
         'orig_mytext' : copy.deepcopy(mytext),
         'ax' : ax,
@@ -505,13 +506,14 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         'title' : title,
         'texts' : texts,
         'markers' : markers,
-        'names' : orig_df['name'].values.tolist(),
+        'names' : names,
+        'timestamps' : orig_df['timestamp#'].values.tolist(),
         'marker:text' : dict(zip(markers,texts)),
-        'marker:name' : dict(zip(markers,orig_df['name'].values.tolist())),
-        'name:marker' : dict(zip(orig_df['name'].values.tolist(), markers)),
-        'name:text' : dict(zip(orig_df['name'].values.tolist(), texts)),
+        'marker:name' : dict(zip(markers,names)),
+        'name:marker' : dict(zip(names, markers)),
+        'name:text' : dict(zip(names, texts)),
         'text:arrow' : {},
-        'text:name' : dict(zip(texts, orig_df['name'].values.tolist())),
+        'text:name' : dict(zip(texts, names)),
         'name:mapping' : name_mapping,
         'mappings' : mymappings
     }
