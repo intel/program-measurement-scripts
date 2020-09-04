@@ -292,7 +292,8 @@ class LoadedData(Observable):
             ts_string = ts_row.iloc[0,1]
             date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
             ts = int(date_time_obj.timestamp())
-            b = tk.Button(self.win, text=source.split('\\')[-1].split('.')[0])
+            path, source_file = os.path.split(source)
+            b = tk.Button(self.win, text=source_file.split('.')[0])
             b['command'] = lambda b=b, ts=ts : self.orderAction(b, ts) 
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
@@ -593,9 +594,7 @@ class SIPlotData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    # def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv', title="FE_tier1", \
-    #     filtering=False, filter_data=None, scale='linear'):
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=resource_path('clusters\\FE_tier1.csv'), title="FE_tier1", \
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
         print("SIPlotData Notified from ", loadedData)
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
@@ -660,7 +659,7 @@ class DataSourcePanel(ScrolledTreePane):
     class RemoteNode(RemoteTreeNode):
         def __init__(self, path, name, container, time_stamp=None):
             super().__init__(path, name, container, time_stamp)
-            self.cape_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\'
+            self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
             self.children = []
 
         def open(self):
@@ -688,12 +687,11 @@ class DataSourcePanel(ScrolledTreePane):
             gui.loadedData.UIUCNames = pd.DataFrame()
             gui.loadedData.UIUCAnalytics = pd.DataFrame()
             gui.loaded_url = None
-            local_dir_path = self.cape_path + 'UIUC'
+            local_dir_path = os.path.join(self.cape_path, 'UIUC')
             for directory in self.path[8:].split('/'):
-                local_dir_path = local_dir_path + '\\' + directory
-            local_dir_path = local_dir_path + self.time_stamp
+                local_dir_path = os.path.join(local_dir_path, directory)
+            local_dir_path = os.path.join(local_dir_path, self.time_stamp)
             # Download .csv files if not already downloaded
-            local_file_path = local_dir_path + '\\'
             if not os.path.isdir(local_dir_path):
                 Path(local_dir_path).mkdir(parents=True, exist_ok=True)
                 tree = html.fromstring(page.content)
@@ -705,25 +703,25 @@ class DataSourcePanel(ScrolledTreePane):
                 for file_name in csv_file_names:
                     csv_url = self.path + file_name
                     csv = requests.get(csv_url)
-                    open(local_file_path + file_name, 'wb').write(csv.content)
+                    open(os.path.join(local_dir_path, file_name), 'wb').write(csv.content)
                 print("Done downloading csv files")
-            for name in os.listdir(local_file_path):
+            for name in os.listdir(local_dir_path):
                 if name.endswith(".names.csv"):
-                    local_short_names_path = local_file_path + name
+                    local_short_names_path = os.path.join(local_dir_path, name)
                     df = pd.read_csv(local_short_names_path)
                     gui.loadedData.UIUCNames = df
                 elif name.endswith('.raw.csv'):
-                    local_data_path = local_file_path + name
+                    local_data_path = os.path.join(local_dir_path, name)
                 elif name.endswith('.mapping.csv'):
-                    local_meta_path = local_file_path + name
+                    local_meta_path = os.path.join(local_dir_path, name)
                     gui.loadedData.UIUCMap = pd.read_csv(local_meta_path)
                 elif name.endswith('.analytics.csv'):
-                    local_analytics_path = local_file_path + name
+                    local_analytics_path = os.path.join(local_dir_path, name)
                     gui.loadedData.UIUCAnalytics = pd.read_csv(local_analytics_path)
                     gui.loadedData.UIUCAnalytics.columns = succinctify(gui.loadedData.UIUCAnalytics.columns)
-            # shortnameTab = ShortNameTab(root)
-            # shortnameTab.addShortNames(df)
-            print("local_file_path: ", local_data_path)
+            shortnameTab = ShortNameTab(root)
+            shortnameTab.addShortNames(df)
+            print("local_data_path: ", local_data_path)
             self.container.openLocalFile(local_data_path)
 
         def open_directory(self, page):
@@ -742,13 +740,13 @@ class DataSourcePanel(ScrolledTreePane):
         def open_webpage(self):
             gui.loadType = 'UVSQ'
             # Replicate remote directory structure
-            local_dir_path = self.cape_path + 'Oneview'
+            local_dir_path = os.path.join(self.cape_path, 'Oneview')
             for directory in self.path[66:].split('/'):
-                local_dir_path = local_dir_path + '\\' + directory
+                local_dir_path = os.path.join(local_dir_path, directory)
             # Each file has its own directory with versions of that file labeled by time stamp
-            local_dir_path = local_dir_path + self.time_stamp
+            local_dir_path = os.path.join(local_dir_path, self.time_stamp)
             # Download Corresponding Excel file if not already downloaded
-            local_file_path = local_dir_path + '\\' + self.name[:-1] + '.xlsx'
+            local_file_path = os.path.join(local_dir_path, self.name[:-1] + '.xlsx')
             if not os.path.isdir(local_dir_path):
                 excel_url = self.path[:-1] + '.xlsx'
                 excel = requests.get(excel_url)
@@ -843,30 +841,37 @@ class DataSourcePanel(ScrolledTreePane):
                     fullpath= os.path.join(self.path, d)
                     if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', d): # timestamp directory holding several files to be loaded
                         # Handle loading local Oneview and UIUC timestamp directories differently
-                        if 'Oneview' in fullpath.split('\\'):
+                        # TODO: Clean this up so tool doesn't care what server the data comes from
+                        temp_path, directory = os.path.split(fullpath)
+                        dirs = []
+                        while directory != '':
+                            dirs.append(directory)
+                            temp_path, directory = os.path.split(temp_path)
+                        if 'Oneview' in dirs:
                             #html_path = fullpath + '\\HTML'
                             #for name in os.listdir(html_path): # add html files
                                 #if name.endswith("__index.html"):
                                     #html_path = html_path + '\\' + name
                                     #break
-                            fullpath = fullpath + '\\' + fullpath.split('\\')[-2] + '.xlsx' # open excel file
+                            for i in range(2): fullpath, directory = os.path.split(fullpath) 
+                            fullpath = directory + 'xlsx' # open excel file which has same name as the directory 2 levels up
                             #self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container, html_path=html_path))
                             self.container.insertNode(self, DataSourcePanel.LocalFileNode(fullpath, d, self.container))
-                        elif 'UIUC' in fullpath.split('\\'):
+                        elif 'UIUC' in dirs:
                             mappingsDf=pd.DataFrame()
                             analyticsDf=pd.DataFrame()
                             for name in os.listdir(fullpath): # add html files
                                 if name.endswith(".raw.csv"):
-                                    datapath = fullpath + '\\' + name
+                                    datapath = os.path.join(fullpath, name)
                                 elif name.endswith('.mapping.csv'):
-                                    metapath = fullpath + '\\' + name
+                                    metapath = os.path.join(fullpath, name)
                                     mappingsDf = pd.read_csv(metapath)
                                 elif name.endswith('.analytics.csv'):
-                                    analyticspath = fullpath + '\\' + name
+                                    analyticspath = os.path.join(fullpath, name)
                                     analyticsDf = pd.read_csv(analyticspath)
                                     analyticsDf.columns = succinctify(analyticsDf.columns)
                                 elif name.endswith(".names.csv"):
-                                    shortnamespath = fullpath + '\\' + name
+                                    shortnamespath = os.path.join(fullpath, name)
                                     namesDf = pd.read_csv(shortnamespath)
                             self.container.insertNode(self, DataSourcePanel.LocalFileNode(datapath, d, self.container, mappingsDf=mappingsDf, analyticsDf=analyticsDf, namesDf=namesDf, UIUC=True))
                     elif os.path.isdir(fullpath): # Normal directory
@@ -1644,12 +1649,9 @@ class ShortNameTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.level = level
-        self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
-        self.short_names_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
-        self.mappings_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\mappings.csv'
-        if not os.path.isfile(self.short_names_path):
-            Path(self.short_names_dir_path).mkdir(parents=True, exist_ok=True)
-            open(self.short_names_path, 'wb')
+        self.cape_path = gui.loadedData.cape_path
+        self.short_names_path = gui.loadedData.short_names_path
+        self.mappings_path = gui.loadedData.mappings_path
 
     # Create table for Labels tab and update button
     def buildLabelTable(self, df, tab, texts=None):
@@ -1721,9 +1723,8 @@ class MappingsTab(tk.Frame):
         self.parent = parent
         self.tab = tab
         self.level = level
-        self.mappings_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\mappings.csv'
-        self.mappings_dir_path = expanduser('~') + '\\AppData\\Roaming\\Cape'
-        self.short_names_path = expanduser('~') + '\\AppData\\Roaming\\Cape\\short_names.csv'
+        self.mappings_path = gui.loadedData.mappings_path
+        self.short_names_path = gui.loadedData.short_names_path
 
     def editMappings(self, before_names, after_names):
         self.win = tk.Toplevel()
@@ -1861,7 +1862,7 @@ class ClusterTab(tk.Frame):
     
     def update(self):
         if self.cluster_selected.get() != 'Choose Cluster':
-            path = self.cluster_path + '\\' + self.cluster_selected.get() + '.csv'
+            path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
             self.tab.cluster = path
             self.tab.title = self.cluster_selected.get()
             self.tab.siplotData.notify(gui.loadedData, variants=self.tab.current_variants, update=True, cluster=path, title=self.cluster_selected.get())
@@ -2490,8 +2491,7 @@ class SIPlotTab(tk.Frame):
         self.name = 'SIPlot'
         self.level = level
         self.siplotData = self.data = siplotData
-        #self.cluster = os.path.realpath(__file__).rsplit('\\', 1)[0] + '\\clusters\\FE_tier1.csv'
-        self.cluster = resource_path('clusters\\FE_tier1.csv')
+        self.cluster = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -2937,8 +2937,8 @@ if __name__ == '__main__':
         appSettings = {
             'cache_path': tempfile.gettempdir(),
             'resources_dir_path': sys._MEIPASS,
-            'locales_dir_path': sys._MEIPASS + os.sep + 'locales',
-            'browser_subprocess_path': sys._MEIPASS + os.sep + 'subprocess.exe',
+            'locales_dir_path': os.path.join(sys._MEIPASS, 'locales'),
+            'browser_subprocess_path': os.path.join(sys._MEIPASS, 'subprocess.exe')
         }
     else:
         appSettings = {
