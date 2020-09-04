@@ -74,7 +74,7 @@ def compute_capacity(df, chosen_node_set):
 		df['C_{}'.format(node)]=formula(df)
 
 	node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
-	metric_to_memlevel = lambda v: re.sub(r" \[.*\\]", "", v[2:])
+	metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
 	add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
 	# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
 	# df = df[df['C_max [GB/s]'].notna()]
