@@ -28,7 +28,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'VecType[Ops]', 'Time (s)',
+field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'VecType[Ops]', 'Time (s)', 'RecipTime (MHz)'
                 'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
                 'Total PKG Energy (J)', 'Total PKG Power (W)',
                 'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
@@ -119,7 +119,9 @@ def calculate_time(out_row, in_row, iterations_per_rep, use_cpi):
         time = getter(in_row, 'CPI')
     else:
         time = getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') / getter(in_row, 'decan_experimental_configuration.num_core')
-    out_row['Time (s)'] = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
+    time_s = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
+    out_row['Time (s)'] = time_s
+    out_row['RecipTime (MHz)'] = (1 / time_s) / 1e6 
     return out_row['Time (s)']
 
 def print_time_formula(formula_file):
