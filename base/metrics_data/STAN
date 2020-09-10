@@ -341,3 +341,8 @@ Nb_insn_PD2DQ_ZMM
 Nb_insn_PD2QQ_XMM
 Nb_insn_PD2QQ_YMM
 Nb_insn_PD2QQ_ZMM
+Nb_streams_stride_0
+Nb_streams_stride_1
+Nb_streams_stride_n
+Nb_streams_unknown_stride
+Nb_streams_indirect

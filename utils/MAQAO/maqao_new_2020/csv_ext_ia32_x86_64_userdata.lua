@@ -52,7 +52,7 @@ __cqa_user_data = {
       "cycles L1 if FP arith vectorized", "cycles if clean",
       "cycles if only FP", "cycles if only FP arith",
       "SP/DP conversion instructions", "INT/FP conversion instructions",
-      "bytes moved GP registers", "bytes moved SIMD registers",
+      "bytes moved GP registers", "bytes moved SIMD registers", "streams stride nb",
    },
 
    path_metrics = {}
