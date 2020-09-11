@@ -1,5 +1,6 @@
 import enum
-from transitions import Machine
+#from transitions import Machine
+from transitions.extensions import GraphMachine as Machine
 from abc import ABC, abstractmethod
 
 
@@ -94,10 +95,9 @@ transitions = [['proceed', States.INIT, States.Astart],
 # Uses transitions package to implement the finite machine taking care of state transition
 # and then use State design pattern to handle different behaviour of different states
 
-import pandas as pd
 
 if __name__ == '__main__':
-    m = Machine(states=States, transitions=transitions, initial=States.INIT)
+    m = Machine(states=States, transitions=transitions, initial=States.INIT, use_pygraphviz=False)
     assert m.is_INIT()
     assert m.state is States.INIT
     state = m.get_state(States.INIT)  # get transitions.State object
