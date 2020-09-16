@@ -117,6 +117,7 @@ class Observer:
 class FiniteStateMachine(Observable):
     def __init__(self):
         super().__init__()
+        # Below after_state_change call back could make it another method to call notify_observers and invoke action methods in states as well.
         m = Machine(self, states=States, transitions=transitions, initial=States.INIT, use_pygraphviz=False, after_state_change=self.notify_observers)
         self.fsm = m
         self.file = 'c:/users/cwong29/AppData/Local/Temp/my_state_diagram1.png'
