@@ -18,7 +18,6 @@ def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=Fa
     # Normalize the column names
     df.columns = succinctify(df.columns)
     df, op_metric_name = compute_capacity(df, chosen_node_set)
-    df['memlevel'] = df['memlevel'].str[:2] # Get rid of [GB/s] after memlevel as it crowds the summary plot
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
