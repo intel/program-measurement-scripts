@@ -86,6 +86,12 @@ def graph_to_df(graph):
     transitions['After Name'], transitions['After Timestamp']=zip(*transitions['target'])
     return transitions
 
+def get_out_labels(G, node):
+    out = G[node]
+    next_nodes = list(out)
+    labels = {out[n]['Difference'] for n in next_nodes}
+    return labels
+
 def aggregate_transitions(in_transitions, aggregated_summary):
     G = df_to_graph(in_transitions, ['Difference'])
     rename_map = {}
@@ -94,11 +100,16 @@ def aggregate_transitions(in_transitions, aggregated_summary):
         agg_timestamp = row[1]
         from_name_timestamps = row[2][0]
         first_node = from_name_timestamps[0]
+        labels = get_out_labels(G, first_node)
         for idx in range(1, len(from_name_timestamps)):
-            print(idx)
-            G=nx.contracted_nodes(G, first_node, from_name_timestamps[idx], self_loops=False)
+            cur_node = from_name_timestamps[idx]
+            labels.update(get_out_labels(G, cur_node))
+            G=nx.contracted_nodes(G, first_node, cur_node, self_loops=False)
         rename_map[first_node]=(agg_name, agg_timestamp)
-    pass
+        # If there are more than 1 kind of "Difference" reset all to ""
+        if len(labels) > 1:
+            for n in G[first_node]:
+                G[first_node][n]['Difference']=''
     return graph_to_df(nx.relabel_nodes(G, rename_map)).drop(columns=['source', 'target'])
     
 
