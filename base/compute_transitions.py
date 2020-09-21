@@ -74,6 +74,34 @@ def eq_transitions(trans1, trans2):
     # Return True if all True
     return mask.all()
 
+def df_to_graph(in_transitions, edge_value_columns):
+    in_transitions['Before']=list(zip(in_transitions['Before Name'], in_transitions['Before Timestamp']))
+    in_transitions['After']=list(zip(in_transitions['After Name'], in_transitions['After Timestamp']))
+    return nx.from_pandas_edgelist(in_transitions, 'Before', 'After', edge_value_columns, create_using=nx.DiGraph())
+
+def graph_to_df(graph):
+    # Before in 'source' column, 'After' in 'target' column
+    transitions = nx.to_pandas_edgelist(graph)
+    transitions['Before Name'], transitions['Before Timestamp']=zip(*transitions['source'])
+    transitions['After Name'], transitions['After Timestamp']=zip(*transitions['target'])
+    return transitions
+
+def aggregate_transitions(in_transitions, aggregated_summary):
+    G = df_to_graph(in_transitions, ['Difference'])
+    rename_map = {}
+    for row in aggregated_summary[['Name', 'Timestamp#', 'From Name/Timestamp#']].itertuples(index=False, name=None):
+        agg_name = row[0] 
+        agg_timestamp = row[1]
+        from_name_timestamps = row[2][0]
+        first_node = from_name_timestamps[0]
+        for idx in range(1, len(from_name_timestamps)):
+            print(idx)
+            G=nx.contracted_nodes(G, first_node, from_name_timestamps[idx], self_loops=False)
+        rename_map[first_node]=(agg_name, agg_timestamp)
+    pass
+    return graph_to_df(nx.relabel_nodes(G, rename_map)).drop(columns=['source', 'target'])
+    
+
     # Now compute different kinds of transitions
     # Max speedup transitions capturing transitions deliverying max speedup excluding all intermediate ones
 def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup[FLOP Rate (GFLOP/s)]", dests=None):
@@ -92,13 +120,12 @@ def compute_maxspeedup_transitions(in_transitions, speedup_name="Speedup[FLOP Ra
     in_transitions.loc[in_transitions[speedup_name].isnull(), speedup_name] = 1
     in_transitions.loc[~np.isfinite(in_transitions[speedup_name]), speedup_name] = BIG_SPEEDUP
 
-    in_transitions['Before']=list(zip(in_transitions['Before Name'], in_transitions['Before Timestamp']))
-    in_transitions['After']=list(zip(in_transitions['After Name'], in_transitions['After Timestamp']))
     # All speedup columns except the chosen one
     other_speedup_columns = [s for s in in_transitions.columns if s.startswith('Speedup[') and s != speedup_name]
     in_transitions['log_inv_speedup'] = -np.log(in_transitions[speedup_name])
-    G = nx.from_pandas_edgelist(in_transitions, 'Before', 'After', \
-        [speedup_name, 'log_inv_speedup', 'Difference']+other_speedup_columns, create_using=nx.DiGraph())
+    G = df_to_graph(in_transitions, [speedup_name, 'log_inv_speedup', 'Difference']+other_speedup_columns)
+    #G = nx.from_pandas_edgelist(in_transitions, 'Before', 'After', \
+    #    [speedup_name, 'log_inv_speedup', 'Difference']+other_speedup_columns, create_using=nx.DiGraph())
 
     # Some drawing code for debugging purpose as well.
     #pos = nx.planar_layout(G)

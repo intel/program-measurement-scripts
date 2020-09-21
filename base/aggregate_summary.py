@@ -9,6 +9,8 @@ from argparse import ArgumentParser
 from capelib import calculate_energy_derived_metrics
 from capelib import vector_ext_str
 from capelib import add_mem_max_level_columns
+from capelib import compute_speedup
+from compute_transitions import aggregate_transitions
 
 # Try to extract the data from text
 # which is of the format vecType1=x;vecType2=y etc
@@ -30,9 +32,12 @@ def getShortName(df, short_names_path):
 def agg_fn(df, short_names_path):
     app_name, variant, numCores, ds, prefetchers, repetitions, timestamp = df.name
 
+    from_name_timestamps = [list(df[['Name','Timestamp#']].itertuples(index=False, name=None))]
+
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp]})
+            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp], \
+            'From Name/Timestamp#': [from_name_timestamps]})
     getShortName(out_df, short_names_path)
 
     keyMetrics = list(out_df.columns)
@@ -116,7 +121,7 @@ def agg_fn(df, short_names_path):
 
     return out_df
 
-def aggregate_runs_df(df, level="app", name_file=None):
+def aggregate_runs_df(df, level="app", name_file=None, mapping_df = None):
     df[['AppName', 'codelet_name']] = df.Name.str.split(pat=": ", expand=True)
     if level == "app":
         newNameColumn='AppName'
@@ -136,20 +141,40 @@ def aggregate_runs_df(df, level="app", name_file=None):
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
     grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Timestamp#'])
     aggregated = grouped.apply(agg_fn, short_names_path=name_file)
-    return aggregated
+    # Flatten the Multiindex
+    aggregated.reset_index(drop=True, inplace=True)
+    aggregated_mapping_df = None
+    if mapping_df is not None:
+        # Only select mapping with nodes in current summary data
+        mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['Before Name', 'Before Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
+        mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['After Name', 'After Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
+        aggregated_mapping_df = aggregate_transitions(mapping_df, aggregated) 
+        aggregated_mapping_df = compute_speedup(aggregated, aggregated_mapping_df)
+    return aggregated, aggregated_mapping_df
 
-def aggregate_runs(inputfiles, outputfile, level="app", name_file=None):
+def aggregate_runs(inputfiles, outputfile, level="app", name_file=None, mapping_file=None):
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
     print('Short name file: ', name_file, file=sys.stderr)
+    print('Mapping file: ', mapping_file, file=sys.stderr)
 
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for inputfile in inputfiles:
         print(inputfile, file=sys.stderr)
         cur_df = pd.read_csv(inputfile, delimiter=',')
         df = df.append(cur_df, ignore_index=True)
-    aggregated = aggregate_runs_df(df, level=level, name_file=name_file)
+
+    mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else None
+
+    aggregated, aggregated_mapping = aggregate_runs_df(df, level=level, name_file=name_file, mapping_df = mapping_df)
     aggregated.to_csv(outputfile, index=False)
+
+    if aggregated_mapping is not None:
+        root, ext = os.path.splitext(outputfile)
+        dirname = os.path.dirname(root)
+        basename = os.path.basename(root)
+        aggregated_mapping.to_csv(os.path.join(dirname, basename+'.mapping'+ext), index=False)
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Aggregate summary sheets into source or app level.')
@@ -158,5 +183,6 @@ if __name__ == '__main__':
         choices=['app', 'src'], dest='level')
     parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
+    parser.add_argument('-m', nargs='?', help='the input mapping csv file', dest='mapping_file')
     args = parser.parse_args()
-    aggregate_runs(args.in_files, args.out_file, args.level, args.name_file)
+    aggregate_runs(args.in_files, args.out_file, args.level, args.name_file, args.mapping_file )

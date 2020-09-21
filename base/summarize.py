@@ -12,6 +12,7 @@ from capelib import calculate_all_rate_and_counts
 from capelib import getter
 from capelib import calculate_energy_derived_metrics
 from capelib import add_mem_max_level_columns
+from capelib import compute_speedup
 from collections import OrderedDict
 
 from argparse import ArgumentParser
@@ -427,26 +428,27 @@ def enforce(d, field_names):
 def unify_column_names(colnames):
     return colnames.map(lambda x: x.replace('ADD/SUB','ADD_SUB'))
 
-def compute_speedup(output_rows, mapping_df):
-    keyColumns=['Name', 'Timestamp#']
-    timeColumns=['Time (s)', 'AppTime (s)']
-    rateColumns=['FLOP Rate (GFLOP/s)']
-    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+# moved to capelib.py
+# def compute_speedup(output_rows, mapping_df):
+#     keyColumns=['Name', 'Timestamp#']
+#     timeColumns=['Time (s)', 'AppTime (s)']
+#     rateColumns=['FLOP Rate (GFLOP/s)']
+#     perf_df = output_rows[keyColumns + timeColumns + rateColumns]
 
-    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
-                              right_on=keyColumns, how='left')
-    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
-                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
-    for timeColumn in timeColumns: 
-        new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
-            new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
-    for rateColumn in rateColumns: 
-        new_mapping_df['Speedup[{}]'.format(rateColumn)] = \
-            new_mapping_df['{}_after'.format(rateColumn)] / new_mapping_df['{}_before'.format(rateColumn)]
-    # Remove those _after and _before columns
-    retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
-    retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
-    return new_mapping_df[retainColumns]
+#     new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+#                               right_on=keyColumns, how='left')
+#     new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+#                               right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+#     for timeColumn in timeColumns: 
+#         new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
+#             new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
+#     for rateColumn in rateColumns: 
+#         new_mapping_df['Speedup[{}]'.format(rateColumn)] = \
+#             new_mapping_df['{}_after'.format(rateColumn)] / new_mapping_df['{}_before'.format(rateColumn)]
+#     # Remove those _after and _before columns
+#     retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
+#     retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
+#     return new_mapping_df[retainColumns]
     
 def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
                    skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df):
