@@ -121,7 +121,7 @@ def agg_fn(df, short_names_path):
 
     return out_df
 
-def aggregate_runs_df(df, level="app", name_file=None, mapping_df = None):
+def aggregate_runs_df(df, level="app", name_file=None, mapping_df = pd.DataFrame()):
     df[['AppName', 'codelet_name']] = df.Name.str.split(pat=": ", expand=True)
     if level == "app":
         newNameColumn='AppName'
@@ -143,8 +143,8 @@ def aggregate_runs_df(df, level="app", name_file=None, mapping_df = None):
     aggregated = grouped.apply(agg_fn, short_names_path=name_file)
     # Flatten the Multiindex
     aggregated.reset_index(drop=True, inplace=True)
-    aggregated_mapping_df = None
-    if mapping_df is not None:
+    aggregated_mapping_df = pd.DataFrame()
+    if not mapping_df.empty:
         # Only select mapping with nodes in current summary data
         mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['Before Name', 'Before Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
         mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['After Name', 'After Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
@@ -164,12 +164,12 @@ def aggregate_runs(inputfiles, outputfile, level="app", name_file=None, mapping_
         cur_df = pd.read_csv(inputfile, delimiter=',')
         df = df.append(cur_df, ignore_index=True)
 
-    mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else None
+    mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else pd.DataFrame()
 
     aggregated, aggregated_mapping = aggregate_runs_df(df, level=level, name_file=name_file, mapping_df = mapping_df)
     aggregated.to_csv(outputfile, index=False)
 
-    if aggregated_mapping is not None:
+    if not aggregated_mapping.empty:
         root, ext = os.path.splitext(outputfile)
         dirname = os.path.dirname(root)
         basename = os.path.basename(root)
