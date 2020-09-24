@@ -96,24 +96,31 @@ class LoadedData(Observable):
         self.common_columns_end = ['c=inst_rate_gi/s', 'timestamp#', 'color']
         self.mappings = pd.DataFrame()
         self.mapping = pd.DataFrame()
+        self.src_mapping = pd.DataFrame()
+        self.app_mapping = pd.DataFrame()
         self.analytics = pd.DataFrame()
         self.names = pd.DataFrame()
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
-        if not os.path.isfile(self.short_names_path):
-            Path(self.cape_path).mkdir(parents=True, exist_ok=True)
-            open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=['name', 'short_name', 'timestamp#']).to_csv(self.short_names_path, index=False)
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
-        if not os.path.isfile(self.mappings_path):
-            open(self.mappings_path, 'wb')
-            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
         self.analysis_results_path = os.path.join(self.cape_path, 'Analysis Results')
+        self.check_cape_paths()
         self.resetStates()
         self.data = {}
         self.restore = False
         self.removedIntermediates = False
         self.transitions = 'disabled'
+
+    def check_cape_paths(self):
+        if not os.path.isfile(self.short_names_path):
+            Path(self.cape_path).mkdir(parents=True, exist_ok=True)
+            open(self.short_names_path, 'wb') 
+            pd.DataFrame(columns=['name', 'short_name', 'timestamp#']).to_csv(self.short_names_path, index=False)
+        if not os.path.isfile(self.mappings_path):
+            open(self.mappings_path, 'wb')
+            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
+        if not os.path.isdir(self.analysis_results_path):
+            Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
     def set_meta_data(self, data_dir):
         for name in os.listdir(data_dir):
@@ -130,6 +137,8 @@ class LoadedData(Observable):
         self.srcDf = pd.DataFrame()
         self.appDf = pd.DataFrame()
         self.mapping = pd.DataFrame()
+        self.src_mapping = pd.DataFrame()
+        self.app_mapping = pd.DataFrame()
 
     def resetTabValues(self):
         tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab]
@@ -167,18 +176,21 @@ class LoadedData(Observable):
         self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path, \
             False, True, self.mapping)
-        # Add speedups to the summaryDf
-        if not self.mapping.empty: 
-            self.add_speedup(self.mapping)
-            self.orig_mapping = self.mapping.copy(deep=True) # Used to restore original mappings after viewing end2end
         # Add variants from namesDf
         if not self.names.empty: self.add_variants(self.names)
         # Add diagnostic variables from analyticsDf
         if not self.analytics.empty: self.add_analytics(self.analytics)
         # Source summary
-        self.srcDf = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
+        self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
         # Application summary
-        self.appDf = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
+        #self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path, mapping_df=self.mapping)
+        self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
+        # Add speedups to the corresponding dfs at each level
+        if not self.mapping.empty: 
+            self.add_speedup(self.mapping, self.summaryDf)
+            self.orig_mapping = self.mapping.copy(deep=True) # Used to restore original mappings after viewing end2end
+        if not self.src_mapping.empty: self.add_speedup(self.src_mapping, self.srcDf)
+        if not self.app_mapping.empty: self.add_speedup(self.app_mapping, self.appDf)
         # Multiple files setup (Currently not using because the mapping generation algorithm isn't good enough)
         if False and len(self.sources) > 1 and not update: # Ask user for the before and after order of the files
             self.source_order = []
@@ -199,7 +211,7 @@ class LoadedData(Observable):
         self.mappings = pd.DataFrame()
         self.summaryDf = df
         self.mapping = mappings
-        if not mappings.empty: self.add_speedup(mappings)
+        if not mappings.empty: self.add_speedup(mappings, self.summaryDf)
         self.data = data
         self.sources = []
         self.restore = True
@@ -223,21 +235,21 @@ class LoadedData(Observable):
         analyticsDf = analyticsDf.rename(columns={'name':'Name', 'timestamp#':'Timestamp#'})
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=['Name', 'Timestamp#'], how='left')
 
-    def add_speedup(self, mappings):
+    def add_speedup(self, mappings, df):
         # TODO: Figure out naming convention
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         speedup_time = []
         speedup_apptime = []
         speedup_gflop = []
-        for i in self.summaryDf.index:
-            row = mappings.loc[(mappings['before_name']==self.summaryDf['Name'][i]) & (mappings['before_timestamp#']==self.summaryDf['Timestamp#'][i])]
+        for i in df.index:
+            row = mappings.loc[(mappings['before_name']==df['Name'][i]) & (mappings['before_timestamp#']==df['Timestamp#'][i])]
             speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
             speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
             speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
         speedup_metric = [(speedup_time, 'Speedup[Time (s)]'), (speedup_apptime, 'Speedup[AppTime (s)]'), (speedup_gflop, 'Speedup[FLOP Rate (GFLOP/s)]')]
         for pair in speedup_metric:
-            self.summaryDf[pair[1]] = pair[0]
+            df[pair[1]] = pair[0]
 
     def get_speedups(self, mappings):
         mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
@@ -255,7 +267,7 @@ class LoadedData(Observable):
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         newMappings['before_timestamp#'] = newMappings['before_timestamp#'].astype(int)
         newMappings['after_timestamp#'] = newMappings['after_timestamp#'].astype(int)
-        self.add_speedup(newMappings)
+        self.add_speedup(newMappings, self.summaryDf)
         return newMappings
     
     def cancelAction(self):
@@ -318,7 +330,7 @@ class LoadedData(Observable):
             #mappings = before_mappings.loc[before_mappings['after_timestamp#']==self.source_order[1]]
         #if mappings.empty: # Currently not using our mapping generation function as it needs to be improved
             #mappings = self.createMappings(self.summaryDf)
-        if not mappings.empty: self.add_speedup(mappings)
+        if not mappings.empty: self.add_speedup(mappings, gui.loadedData.summaryDf)
         return mappings
 
     def createMappings(self, df):
@@ -356,12 +368,16 @@ class CustomData(Observable):
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         # mappings
         self.mappings = loadedData.mapping
+        self.src_mapping = loadedData.src_mapping
+        self.app_mapping = loadedData.app_mapping
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
+        if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
+        if not update: self.app_variants = loadedData.appDf['Variant'].dropna().unique()
         # codelet custom plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.mappings, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.variants, mappings=self.mappings, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -371,7 +387,7 @@ class CustomData(Observable):
         # source custom plot
         if (level == 'All' or level == 'Source'):
             df = loadedData.srcDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.src_variants, mappings=self.src_mapping, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -381,7 +397,7 @@ class CustomData(Observable):
         # application custom plot
         if (level == 'All' or level == 'Application'):
             df = loadedData.appDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.app_variants, mappings=self.app_mapping, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -404,13 +420,17 @@ class TRAWLData(Observable):
         print("TRAWLData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
+        self.src_mapping = loadedData.src_mapping
+        self.app_mapping = loadedData.app_mapping
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
+        if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
+        if not update: self.app_variants = loadedData.appDf['Variant'].dropna().unique()
         # Codelet trawl plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -421,7 +441,7 @@ class TRAWLData(Observable):
         if level == 'All' or level == 'Source':
             df = loadedData.srcDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.src_mapping, variants=self.src_variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -432,7 +452,7 @@ class TRAWLData(Observable):
         if level == 'All' or level == 'Application':
             df = loadedData.appDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.app_mapping, variants=self.app_variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -486,14 +506,18 @@ class QPlotData(Observable):
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         # mappings
         self.mappings = loadedData.mapping
+        self.src_mapping = loadedData.src_mapping
+        self.app_mapping = loadedData.app_mapping
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
+        if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
+        if not update: self.app_variants = loadedData.appDf['Variant'].dropna().unique()
         # Codelet plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=gui.loadedData.short_names_path)
             # TODO: Need to settle how to deal with multiple plots/dataframes
             # May want to let user to select multiple plots to look at within this tab
             # Currently just save the ORIG data
@@ -508,7 +532,7 @@ class QPlotData(Observable):
             df = loadedData.srcDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.src_mapping, variants=self.src_variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -520,7 +544,7 @@ class QPlotData(Observable):
             df = loadedData.appDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, variants=variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.app_mapping, variants=self.app_variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -546,9 +570,13 @@ class SIPlotData(Observable):
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
         # mappings
         self.mappings = loadedData.mapping
+        self.src_mapping = loadedData.src_mapping
+        self.app_mapping = loadedData.app_mapping
         # Plot only at Codelet level for now
-        if not update:
-            self.variants = df['Variant'].dropna().unique()
+        if not update: self.variants = df['Variant'].dropna().unique()
+        if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
+        if not update: self.app_variants = loadedData.appDf['Variant'].dropna().unique()
+
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
             (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
@@ -1101,17 +1129,16 @@ class PlotInteraction():
         message = 'Would you like to save data for all of the codelets\nor just for those selected?'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
         for index, option in enumerate(['Save All', 'Save Selected']):
-            b = tk.Button(self.win, text=option)
-            b['command'] = lambda metric=option : self.selectAction(option) 
+            b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(option))
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
-        if self.choice == 'cancel': return
-        # Create Analysis Results folder in Cape directory
-        if not os.path.isdir(gui.loadedData.analysis_results_path):
-            Path(gui.loadedData.analysis_results_path).mkdir(parents=True, exist_ok=True)
+        if self.choice == 'cancel': return        
         # Ask user to name the directory for this state to be saved
         dest_name = tk.simpledialog.askstring('Analysis Result', 'Provide a name for this analysis result')
         if not dest_name: return
+        dest = os.path.join(gui.loadedData.analysis_results_path, dest_name)
+        if not os.path.isdir(dest):
+            Path(dest).mkdir(parents=True, exist_ok=True)
         # Store hidden/highlighted points for each level
         # Codelet
         # Each level has its set of tabs, hidden/highlighted points, and variants
@@ -1124,33 +1151,29 @@ class PlotInteraction():
         hidden_names = []
         highlighted_names = []
         visible_names = []
-        raw_visible_names = []
-        df = gui.summaryTab.plotInteraction.df
-        for index in df.index:
-            name = df['name'][index]+df['timestamp#'][index].astype(str)
-            marker = gui.summaryTab.plotInteraction.textData['name:marker'][name]
-            if not marker.get_alpha() and self.choice == 'Save All': hidden_names.append(name)
-            elif marker.get_alpha() and self.choice == 'Save Selected': 
-                visible_names.append((df['name'][index], df['timestamp#'][index]))
-                raw_visible_names.append(name)
-            if marker.get_alpha() and marker.get_marker() == '*': highlighted_names.append(name)
+        for marker in self.textData['markers']:
+            name = self.textData['marker:name'][marker]
+            if marker.get_alpha():
+                visible_names.append(name)
+                if marker.get_marker() == '*': # Highlighted point
+                    highlighted_names.append(name)
+            elif self.choice == 'Save All':
+                hidden_names.append(name)
         codelet['hidden_names'] = hidden_names
         codelet['highlighted_names'] = highlighted_names
         # Save either full or selected codelets in dataframes to notify observers upon restoring
-        dest = os.path.join(gui.loadedData.analysis_results_path, dest_name)
-        if not os.path.isdir(dest):
-            Path(dest).mkdir(parents=True, exist_ok=True)
         summary_dest = os.path.join(dest, 'summary.xlsx')
         mappings_dest = os.path.join(dest, 'mappings.xlsx')
+        end2end_mappings_dest = os.path.join(dest, 'end2end_mappings.xlsx')
         analytics_dest = os.path.join(dest, 'analytics.xlsx')
         df = gui.loadedData.summaryDf
         if self.choice == 'Save All':
             df.to_excel(summary_dest, index=False)
-            # TODO: Handle removed intermediates mappings
-            if not self.tab.mappings.empty: self.tab.mappings.to_excel(mappings_dest, index=False)
+            if not gui.loadedData.orig_mapping.empty: gui.loadedData.orig_mapping.to_excel(mappings_dest, index=False)
+            if gui.loadedData.removedIntermediates: gui.loadedData.mapping.to_excel(end2end_mappings_dest, index=False)
             if not gui.loadedData.analytics.empty: gui.loadedData.analytics.to_excel(analytics_dest, index=False)
         elif self.choice == 'Save Selected':
-            if not self.tab.mappings.empty: 
+            if not self.tab.mappings.empty:
                 selected_mappings, raw_visible_names = self.getSelectedMappings(raw_visible_names)
                 selected_mappings.to_excel(mappings_dest, index=False)
             if not gui.loadedData.analytics.empty:
@@ -1436,7 +1459,7 @@ class AxesTab(tk.Frame):
         for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Speedups (If mappings):
-        if parent.tab.level=='Codelet' and not gui.loadedData.mapping.empty:
+        if not parent.tab.mappings.empty:
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Speedups', menu=menu)
             for metric in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
@@ -1697,7 +1720,7 @@ class MappingsTab(tk.Frame):
 
     def showIntermediates(self):
         gui.loadedData.mapping = gui.loadedData.orig_mapping.copy(deep=True)
-        gui.loadedData.add_speedup(gui.loadedData.mapping)
+        gui.loadedData.add_speedup(gui.loadedData.mapping, gui.loadedData.summaryDf)
         gui.loadedData.removedIntermediates = False
         data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
         for data, tab in data_tab_pairs:
@@ -1727,7 +1750,7 @@ class MappingsTab(tk.Frame):
         if self.choice == 'cancel': return
         gui.loadedData.mapping = gui.loadedData.get_end2end(gui.loadedData.mapping, self.choice)
         gui.loadedData.mapping = gui.loadedData.get_speedups(gui.loadedData.mapping)
-        gui.loadedData.add_speedup(gui.loadedData.mapping)
+        gui.loadedData.add_speedup(gui.loadedData.mapping, gui.loadedData.summaryDf)
         gui.loadedData.removedIntermediates = True
         data_tab_pairs = [(gui.qplotData, gui.c_qplotTab), (gui.trawlData, gui.c_trawlTab), (gui.siplotData, gui.c_siPlotTab), (gui.customData, gui.c_customTab), (gui.coverageData, gui.summaryTab)]
         for data, tab in data_tab_pairs:
@@ -1941,11 +1964,11 @@ class LabelTab(tk.Frame):
                     # TODO: Clean this up so it's on the edges and not the data points
                     if choice in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
                         tempDf = pd.DataFrame()
-                        if not gui.loadedData.mapping.empty: # Mapping
-                            tempDf = gui.loadedData.mapping.loc[(gui.loadedData.mapping['before_name']+gui.loadedData.mapping['before_timestamp#'].astype(str))==codeletName]
+                        if not self.tab.mappings.empty: # Mapping
+                            tempDf = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==codeletName]
                         if tempDf.empty: 
                             if choice == 'Difference': 
-                                tempDf = gui.loadedData.mapping.loc[(gui.loadedData.mapping['after_name']+gui.loadedData.mapping['after_timestamp#'].astype(str))==codeletName]
+                                tempDf = self.tab.mappings.loc[(self.tab.mappings['after_name']+self.tab.mappings['after_timestamp#'].astype(str))==codeletName]
                                 if tempDf.empty:
                                     value = 'Same'
                             else: value = 1
@@ -2254,7 +2277,7 @@ class TrawlTab(tk.Frame):
         tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
 
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
-        if (self.level == 'Codelet') and not gui.loadedData.mapping.empty:
+        if not mappings.empty:
             self.mappingsTab.buildMappingsTab(df, mappings)
 
     # Create tabs for TRAWL Summary, Labels, and Axes
@@ -2276,11 +2299,11 @@ class TrawlTab(tk.Frame):
 
     # plot data to be updated
     def notify(self, trawlData):
-        variants = trawlData.variants
-        mappings = trawlData.mappings
         if self.level == 'Codelet':
             df = trawlData.df
             fig = trawlData.fig
+            mappings = trawlData.mappings
+            variants = trawlData.variants
             textData = trawlData.textData
             for w in self.window.winfo_children():
                 w.destroy()
@@ -2289,18 +2312,22 @@ class TrawlTab(tk.Frame):
         elif self.level == 'Source':
             df = trawlData.srcDf
             fig = trawlData.srcFig
+            mappings = trawlData.src_mapping
+            variants = trawlData.src_variants
             textData = trawlData.srcTextData
             for w in self.window.winfo_children():
                 w.destroy()
-            self.update(df, fig, textData=textData, variants=variants)
+            self.update(df, fig, textData=textData, mappings=mappings, variants=variants)
 
         elif self.level == 'Application':
             df = trawlData.appDf
             fig = trawlData.appFig
+            mappings = trawlData.app_mapping
+            variants = trawlData.app_variants
             textData = trawlData.appTextData
             for w in self.window.winfo_children():
                 w.destroy()
-            self.update(df, fig, textData=textData, variants=variants)
+            self.update(df, fig, textData=textData, mappings=mappings, variants=variants)
 
 class QPlotTab(tk.Frame):
     def __init__(self, parent, qplotData, level):
@@ -2348,7 +2375,7 @@ class QPlotTab(tk.Frame):
         tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
 
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
-        if (self.level == 'Codelet') and not gui.loadedData.mapping.empty:
+        if not mappings.empty:
             self.mappingsTab.buildMappingsTab(df, mappings)
 
     # Create tabs for QPlot Summary, Labels, and Axes
@@ -2370,11 +2397,11 @@ class QPlotTab(tk.Frame):
 
     # plot data to be updated
     def notify(self, qplotData):
-        variants = qplotData.variants
-        mappings = qplotData.mappings
         if self.level == 'Codelet':
             df = qplotData.df
             fig = qplotData.fig
+            mappings = qplotData.mappings
+            variants = qplotData.variants
             textData = qplotData.textData
             for w in self.window.winfo_children():
                 w.destroy()
@@ -2383,6 +2410,8 @@ class QPlotTab(tk.Frame):
         elif self.level == 'Source':
             df = qplotData.srcDf
             fig = qplotData.srcFig
+            mappings = qplotData.src_mapping
+            variants = qplotData.src_variants
             textData = qplotData.srcTextData
             for w in self.window.winfo_children():
                 w.destroy()
@@ -2391,10 +2420,12 @@ class QPlotTab(tk.Frame):
         elif self.level == 'Application':
             df = qplotData.appDf
             fig = qplotData.appFig
+            mappings = qplotData.app_mapping
+            variants = qplotData.app_variants
             textData = qplotData.appTextData
             for w in self.window.winfo_children():
                 w.destroy()
-            self.update(df, fig, textData, variants=variants)
+            self.update(df, fig, textData, mappings, variants=variants)
 
 class SIPlotTab(tk.Frame):
     def __init__(self, parent, siplotData, level):
@@ -2516,7 +2547,7 @@ class CustomTab(tk.Frame):
         if not gui.loadedData.analytics.empty:
             diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
             column_list.extend(diagnosticDf.columns.tolist())
-        if self.level=='Codelet' and not gui.loadedData.mapping.empty:
+        if not mappings.empty:
             column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
         summaryDf = df[column_list]
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
@@ -2529,7 +2560,7 @@ class CustomTab(tk.Frame):
         tk.Button(table_button_frame, text="Export Summary", command=lambda: gui.summaryTab.exportCSV()).grid(row=0, column=1)
         
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
-        if (self.level == 'Codelet') and not gui.loadedData.mapping.empty:
+        if not mappings.empty:
             self.mappingsTab.buildMappingsTab(df, mappings)
     
     # Create tabs for Custom Summary, Labels, and Axes
@@ -2551,11 +2582,11 @@ class CustomTab(tk.Frame):
 
     # plot data to be updated
     def notify(self, customData):
-        variants = customData.variants
-        mappings = customData.mappings
         if self.level == 'Codelet':
             df = customData.df
             fig = customData.fig
+            mappings = customData.mappings
+            variants = customData.variants
             textData = customData.textData
             for w in self.window.winfo_children():
                 w.destroy()
@@ -2564,18 +2595,22 @@ class CustomTab(tk.Frame):
         elif self.level == 'Source':
             df = customData.srcDf
             fig = customData.srcFig
+            mappings = customData.src_mapping
+            variants = customData.src_variants
             textData = customData.srcTextData
             for w in self.window.winfo_children():
                 w.destroy()
-            self.update(df, fig, textData, variants=variants)
+            self.update(df, fig, textData, variants=variants, mappings=mappings)
 
         elif self.level == 'Application':
             df = customData.appDf
             fig = customData.appFig
+            mappings = customData.app_mapping
+            variants = customData.app_variants
             textData = customData.appTextData
             for w in self.window.winfo_children():
                 w.destroy()
-            self.update(df, fig, textData, variants=variants)
+            self.update(df, fig, textData, variants=variants, mappings=mappings)
 
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
