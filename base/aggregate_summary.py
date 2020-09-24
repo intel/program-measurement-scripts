@@ -30,13 +30,13 @@ def getShortName(df, short_names_path):
                 #    df['Short Name'] = row['short_name']
 
 def agg_fn(df, short_names_path):
-    app_name, variant, numCores, ds, prefetchers, repetitions, timestamp = df.name
+    app_name, variant, numCores, ds, prefetchers, timestamp = df.name
 
     from_name_timestamps = [list(df[['Name','Timestamp#']].itertuples(index=False, name=None))]
 
     out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
         'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Repetitions': [repetitions], 'Timestamp#': [timestamp], \
+            'prefetchers': [prefetchers], 'Timestamp#': [timestamp], \
             'From Name/Timestamp#': [from_name_timestamps]})
     getShortName(out_df, short_names_path)
 
@@ -139,7 +139,7 @@ def aggregate_runs_df(df, level="app", name_file=None, mapping_df = None):
     # Need to fix datasize being nan's because groupby does not work
     dsMask = pd.isnull(df['DataSet/Size'])
     df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Repetitions', 'Timestamp#'])
+    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Timestamp#'])
     aggregated = grouped.apply(agg_fn, short_names_path=name_file)
     # Flatten the Multiindex
     aggregated.reset_index(drop=True, inplace=True)
