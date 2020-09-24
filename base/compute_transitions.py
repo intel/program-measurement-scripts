@@ -100,6 +100,8 @@ def aggregate_transitions(in_transitions, aggregated_summary):
         agg_timestamp = row[1]
         from_name_timestamps = row[2][0]
         first_node = from_name_timestamps[0]
+        if not G.has_node(first_node):
+            continue
         labels = get_out_labels(G, first_node)
         for idx in range(1, len(from_name_timestamps)):
             cur_node = from_name_timestamps[idx]
