@@ -104,6 +104,8 @@ class LoadedData(Observable):
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
         self.analysis_results_path = os.path.join(self.cape_path, 'Analysis Results')
+        self.test_mapping_path = os.path.join(self.cape_path, 'demo_mappins.csv')
+        self.test_summary_path = os.path.join(self.cape_path, 'demo_summary.csv')
         self.check_cape_paths()
         self.resetStates()
         self.data = {}
@@ -127,7 +129,10 @@ class LoadedData(Observable):
             local_path = os.path.join(data_dir, name)
             if name.endswith('.names.csv'): self.names = pd.read_csv(local_path)
             elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
-            elif name.endswith('.analytics.csv'): self.analytics = pd.read_csv(local_path)
+            elif name.endswith('.analytics.csv'): 
+                # TODO: Ask for naming in analytics to be lowercase timestamp
+                self.analytics = pd.read_csv(local_path)
+                self.analytics.rename(columns={'Timestamp#':'timestamp#'}, inplace=True)
     
     def resetStates(self):
         # Track points/labels that have been hidden/highlighted by the user
@@ -181,10 +186,11 @@ class LoadedData(Observable):
         # Add diagnostic variables from analyticsDf
         if not self.analytics.empty: self.add_analytics(self.analytics)
         # Source summary
-        self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
+        self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path, mapping_df=self.mapping)
+        #self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
         # Application summary
-        #self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path, mapping_df=self.mapping)
-        self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
+        self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path, mapping_df=self.mapping)
+        #self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
         # Add speedups to the corresponding dfs at each level
         if not self.mapping.empty: 
             self.add_speedup(self.mapping, self.summaryDf)
@@ -194,7 +200,7 @@ class LoadedData(Observable):
         # Multiple files setup (Currently not using because the mapping generation algorithm isn't good enough)
         if False and len(self.sources) > 1 and not update: # Ask user for the before and after order of the files
             self.source_order = []
-            self.get_order()
+            # self.get_order()
             # Check if we have custom mappings stored in the Cape directory
             self.mapping = self.getMappings()
         # Generate color column (Currently doesn't support multiple UIUC files because each file doesn't have a unique timestamp like UVSQ)
@@ -1022,14 +1028,14 @@ class SummaryTab(tk.Frame):
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        # if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
+        if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.shortnameTab, text="Short Names")
         self.tableNote.add(self.labelTab, text='Labels')
         self.tableNote.add(self.axesTab, text="Axes")
         self.tableNote.add(self.variantTab, text="Variants")
         self.tableNote.add(self.mappingsTab, text="Mappings")
-        # if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
+        if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
     def notify(self, coverageData):
@@ -1173,14 +1179,17 @@ class PlotInteraction():
             if gui.loadedData.removedIntermediates: gui.loadedData.mapping.to_excel(end2end_mappings_dest, index=False)
             if not gui.loadedData.analytics.empty: gui.loadedData.analytics.to_excel(analytics_dest, index=False)
         elif self.choice == 'Save Selected':
-            if not self.tab.mappings.empty:
-                selected_mappings, raw_visible_names = self.getSelectedMappings(raw_visible_names)
+            if not gui.loadedData.orig_mapping.empty and visible_names:
+                selected_mappings, visible_names = self.getSelectedMappings(visible_names, gui.loadedData.orig_mapping)
                 selected_mappings.to_excel(mappings_dest, index=False)
+                if gui.loadedData.removedIntermediates:
+                    selected_mappings, visible_names = self.getSelectedMappings(visible_names, gui.loadedData.mapping)
+                    selected_mappings.to_excel(end2end_mappings_dest, index=False)
             if not gui.loadedData.analytics.empty:
                 a_df = gui.loadedData.analytics
-                selected_analytics = a_df.loc[(a_df['name']+a_df['timestamp#'].astype(str)).isin(raw_visible_names)]
+                selected_analytics = a_df.loc[(a_df['name']+a_df['timestamp#'].astype(str)).isin(visible_names)]
                 selected_analytics.to_excel(analytics_dest, index=False)
-            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(raw_visible_names)]
+            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(visible_names)]
             selected_summary.to_excel(summary_dest, index=False)
         # Store current selected variants at this level
         variants = gui.summaryTab.current_variants
@@ -1261,18 +1270,18 @@ class PlotInteraction():
                 name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
                 row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
 
-    def getSelectedMappings(self, names):
-        if self.tab.mappings.empty or not names: return
-        mappings = pd.DataFrame()
+    def getSelectedMappings(self, names, mappings):
+        if mappings.empty or not names: return
+        selected_mappings = pd.DataFrame()
         all_names = copy.deepcopy(names)
         for name in names:
-            row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
+            row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
             while not row.empty:
-                mappings = mappings.append(row, ignore_index=True)
+                selected_mappings = selected_mappings.append(row, ignore_index=True)
                 name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
                 all_names.append(name)
-                row = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==name]
-        return mappings, all_names
+                row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
+        return selected_mappings, list(set(all_names))
 
     def toggleLabels(self):
         if self.toggle_labels_button['text'] == 'Hide Labels':
@@ -1443,6 +1452,7 @@ class PlotInteraction():
             threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
 class AxesTab(tk.Frame):
+    @staticmethod
     def custom_axes(parent, var):
         menubutton = tk.Menubutton(parent, textvariable=var, indicatoron=True,
                            borderwidth=2, relief="raised", highlightthickness=2)
@@ -2045,7 +2055,7 @@ class GuideTab(tk.Frame):
             self.a3_state = 'State: A3'
             # self.a3_state = 'State: B-End'
             self.a_end_state = 'State: A-End'
-            self.a_end_state = 'State: End'
+            # self.a_end_state = 'State: End'
             self.title = self.tab.plotInteraction.textData['title']
             # Initial Title
             self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_state, pad=40)
@@ -2202,6 +2212,10 @@ class OneviewTab(tk.Frame):
         self.window.pack(fill=tk.BOTH,expand=True)
         self.browser1 = None
         self.browser2 = None
+
+    def loadPage(self):
+        if len(gui.urls) == 1: self.loadFirstPage()
+        elif len(gui.urls) > 1: self.loadSecondPage()
     
     def loadFirstPage(self):
         self.removePages()
@@ -2687,18 +2701,18 @@ class AnalyzerGui(tk.Frame):
         if choice == 'Open Webpage':
             self.overwrite()
             self.urls = [url]
-            self.oneviewTab.loadFirstPage()
+            self.oneviewTab.loadPage()
             return
         elif choice == 'Overwrite':
             self.overwrite()
             if url: 
                 self.urls = [url]
-                self.oneviewTab.loadFirstPage()
+                self.oneviewTab.loadPage()
             self.sources = [source]
         elif choice == 'Append':
             if url: 
                 self.urls.append(url)
-                self.oneviewTab.loadSecondPage()
+                self.oneviewTab.loadPage()
             self.sources.append(source)
         self.loadedData.add_data(self.sources, data_dir)
 
