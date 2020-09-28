@@ -82,8 +82,8 @@ def df_to_graph(in_transitions, edge_value_columns):
 def graph_to_df(graph):
     # Before in 'source' column, 'After' in 'target' column
     transitions = nx.to_pandas_edgelist(graph)
-    transitions['Before Name'], transitions['Before Timestamp']=zip(*transitions['source'])
-    transitions['After Name'], transitions['After Timestamp']=zip(*transitions['target'])
+    transitions['Before Name'], transitions['Before Timestamp'], transitions['Before Variant']=zip(*transitions['source'])
+    transitions['After Name'], transitions['After Timestamp'], transitions['After Variant']=zip(*transitions['target'])
     return transitions
 
 def get_out_labels(G, node):
@@ -95,10 +95,11 @@ def get_out_labels(G, node):
 def aggregate_transitions(in_transitions, aggregated_summary):
     G = df_to_graph(in_transitions, ['Difference'])
     rename_map = {}
-    for row in aggregated_summary[['Name', 'Timestamp#', 'From Name/Timestamp#']].itertuples(index=False, name=None):
+    for row in aggregated_summary[['Name', 'Timestamp#', 'Variant', 'From Name/Timestamp#']].itertuples(index=False, name=None):
         agg_name = row[0] 
         agg_timestamp = row[1]
-        from_name_timestamps = row[2][0]
+        agg_variant = row[2]
+        from_name_timestamps = row[3][0]
         first_node = from_name_timestamps[0]
         if not G.has_node(first_node):
             continue
@@ -107,7 +108,7 @@ def aggregate_transitions(in_transitions, aggregated_summary):
             cur_node = from_name_timestamps[idx]
             labels.update(get_out_labels(G, cur_node))
             G=nx.contracted_nodes(G, first_node, cur_node, self_loops=False)
-        rename_map[first_node]=(agg_name, agg_timestamp)
+        rename_map[first_node]=(agg_name, agg_timestamp, agg_variant)
         # If there are more than 1 kind of "Difference" reset all to ""
         if len(labels) > 1:
             for n in G[first_node]:
