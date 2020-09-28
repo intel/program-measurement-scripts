@@ -517,7 +517,7 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     add_trawl_data(output_rows, df)
     # Retain rows with non-empty performance measurments (provided by "Time (s)"")
     output_rows = output_rows[~output_rows['Time (s)'].isnull()]
-    new_mapping_df = compute_speedup(output_rows, mapping_df) if not mapping_df.empty else mapping_df
+    new_mapping_df = compute_speedup(output_rows, mapping_df) if mapping_df is not None and not mapping_df.empty else mapping_df
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
     return output_rows, new_mapping_df
 
