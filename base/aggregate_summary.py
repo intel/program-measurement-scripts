@@ -59,7 +59,7 @@ def agg_fn(df, short_names_path):
             'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
             '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]', '%Inst[FMA]', '%Ops[DIV]', '%Inst[DIV]', \
                 '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]', \
-                    'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)', 'Time (s)']
+                    'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)', 'Time (s)', '%ArrayEfficiency']
     for metric in timeWeightedMetrics:
         #out_df[metric] = np.dot(df['%Coverage'], df[metric])
         # FIX: Could just divide above dot product by total %Coverage but use a cleaner formula directly from AppTime
