@@ -1027,14 +1027,14 @@ class SummaryTab(tk.Frame):
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
+        #if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.shortnameTab, text="Short Names")
         self.tableNote.add(self.labelTab, text='Labels')
         self.tableNote.add(self.axesTab, text="Axes")
         self.tableNote.add(self.variantTab, text="Variants")
         self.tableNote.add(self.mappingsTab, text="Mappings")
-        if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
+        #if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
     def notify(self, coverageData):
@@ -1077,7 +1077,7 @@ class PlotInteraction():
         self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         # Plot interacting buttons
-        self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.saveState)
+        #self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.saveState)
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
@@ -1105,7 +1105,7 @@ class PlotInteraction():
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
-        self.save_state_button.grid(column=0, row=0, sticky=tk.S, pady=2)
+        #self.save_state_button.grid(column=0, row=0, sticky=tk.S, pady=2)
         self.plotFrame3.grid_rowconfigure(0, weight=1)
         self.pointSelector.pack(side=tk.RIGHT, anchor=tk.N, fill=tk.Y)
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
@@ -1686,8 +1686,8 @@ class MappingsTab(tk.Frame):
         self.table = Table(self, dataframe=mappings, showtoolbar=False, showstatusbar=True)
         self.table.show()
         self.table.redraw()
-        if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
-        else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
+        #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
+        #else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
         # Add options for custom mapppings if multiple files loaded
         if len(self.source_order) > 1: self.addCustomOptions(df)
 
