@@ -181,16 +181,15 @@ class LoadedData(Observable):
         self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path, \
             False, True, self.mapping)
-        # Add variants from namesDf
+        # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
+        #if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
         # Add diagnostic variables from analyticsDf
         if not self.analytics.empty: self.add_analytics(self.analytics)
         # Source summary
         self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path, mapping_df=self.mapping)
-        #self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
         # Application summary
         self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path, mapping_df=self.mapping)
-        #self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
         # Add speedups to the corresponding dfs at each level
         if not self.mapping.empty: 
             self.add_speedup(self.mapping, self.summaryDf)
@@ -383,7 +382,7 @@ class CustomData(Observable):
         # codelet custom plot
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.variants, mappings=self.mappings, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.mappings, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -393,7 +392,7 @@ class CustomData(Observable):
         # source custom plot
         if (level == 'All' or level == 'Source'):
             df = loadedData.srcDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.src_variants, mappings=self.src_mapping, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.src_mapping, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -403,7 +402,7 @@ class CustomData(Observable):
         # application custom plot
         if (level == 'All' or level == 'Application'):
             df = loadedData.appDf.copy(deep=True)
-            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=self.app_variants, mappings=self.app_mapping, short_names_path=gui.loadedData.short_names_path)
+            df, fig, textData = custom_plot(df, 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, variants=variants, mappings=self.app_mapping, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -436,7 +435,7 @@ class TRAWLData(Observable):
         if level == 'All' or level == 'Codelet':
             df = loadedData.summaryDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.df = df
             self.fig = fig
             self.textData = textData
@@ -447,7 +446,7 @@ class TRAWLData(Observable):
         if level == 'All' or level == 'Source':
             df = loadedData.srcDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.src_mapping, variants=self.src_variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.src_mapping, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df
             self.srcFig = fig
             self.srcTextData = textData
@@ -458,7 +457,7 @@ class TRAWLData(Observable):
         if level == 'All' or level == 'Application':
             df = loadedData.appDf.copy(deep=True)
             df, fig, textData = trawl_plot(df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.app_mapping, variants=self.app_variants, short_names_path=gui.loadedData.short_names_path)
+                source_order=loadedData.source_order, mappings=self.app_mapping, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df
             self.appFig = fig
             self.appTextData = textData
@@ -523,7 +522,7 @@ class QPlotData(Observable):
             df = loadedData.summaryDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.mappings, variants=variants, short_names_path=gui.loadedData.short_names_path)
             # TODO: Need to settle how to deal with multiple plots/dataframes
             # May want to let user to select multiple plots to look at within this tab
             # Currently just save the ORIG data
@@ -538,7 +537,7 @@ class QPlotData(Observable):
             df = loadedData.srcDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.src_mapping, variants=self.src_variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.src_mapping, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.srcDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.srcFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.srcTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -550,7 +549,7 @@ class QPlotData(Observable):
             df = loadedData.appDf.copy(deep=True)
             df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
                 (df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.app_mapping, variants=self.app_variants, short_names_path=gui.loadedData.short_names_path)
+                    source_order=loadedData.source_order, mappings=self.app_mapping, variants=variants, short_names_path=gui.loadedData.short_names_path)
             self.appDf = df_ORIG if df_ORIG is not None else df_XFORM
             self.appFig = fig_ORIG if fig_ORIG is not None else fig_XFORM
             self.appTextData = textData_ORIG if textData_ORIG is not None else textData_XFORM
@@ -1135,7 +1134,7 @@ class PlotInteraction():
         message = 'Would you like to save data for all of the codelets\nor just for those selected?'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
         for index, option in enumerate(['Save All', 'Save Selected']):
-            b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(option))
+            b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(metric))
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
         if self.choice == 'cancel': return        
@@ -1145,72 +1144,53 @@ class PlotInteraction():
         dest = os.path.join(gui.loadedData.analysis_results_path, dest_name)
         if not os.path.isdir(dest):
             Path(dest).mkdir(parents=True, exist_ok=True)
-        # Store hidden/highlighted points for each level
-        # Codelet
-        # Each level has its set of tabs, hidden/highlighted points, and variants
-        # Each tab has its axes, scales
-        data = {}
-        codelet = {}
-        source = {}
-        application = {}
-        # Store hidden/highlighted points at the Codelet level
-        hidden_names = []
-        highlighted_names = []
-        visible_names = []
-        for marker in self.textData['markers']:
-            name = self.textData['marker:name'][marker]
-            if marker.get_alpha():
-                visible_names.append(name)
-                if marker.get_marker() == '*': # Highlighted point
-                    highlighted_names.append(name)
-            elif self.choice == 'Save All':
-                hidden_names.append(name)
-        codelet['hidden_names'] = hidden_names
-        codelet['highlighted_names'] = highlighted_names
-        # Save either full or selected codelets in dataframes to notify observers upon restoring
-        summary_dest = os.path.join(dest, 'summary.xlsx')
-        mappings_dest = os.path.join(dest, 'mappings.xlsx')
-        end2end_mappings_dest = os.path.join(dest, 'end2end_mappings.xlsx')
-        analytics_dest = os.path.join(dest, 'analytics.xlsx')
-        df = gui.loadedData.summaryDf
-        if self.choice == 'Save All':
-            df.to_excel(summary_dest, index=False)
-            if not gui.loadedData.orig_mapping.empty: gui.loadedData.orig_mapping.to_excel(mappings_dest, index=False)
-            if gui.loadedData.removedIntermediates: gui.loadedData.mapping.to_excel(end2end_mappings_dest, index=False)
-            if not gui.loadedData.analytics.empty: gui.loadedData.analytics.to_excel(analytics_dest, index=False)
-        elif self.choice == 'Save Selected':
-            if not gui.loadedData.orig_mapping.empty and visible_names:
-                selected_mappings, visible_names = self.getSelectedMappings(visible_names, gui.loadedData.orig_mapping)
-                selected_mappings.to_excel(mappings_dest, index=False)
-                if gui.loadedData.removedIntermediates:
-                    selected_mappings, visible_names = self.getSelectedMappings(visible_names, gui.loadedData.mapping)
-                    selected_mappings.to_excel(end2end_mappings_dest, index=False)
-            if not gui.loadedData.analytics.empty:
-                a_df = gui.loadedData.analytics
-                selected_analytics = a_df.loc[(a_df['name']+a_df['timestamp#'].astype(str)).isin(visible_names)]
-                selected_analytics.to_excel(analytics_dest, index=False)
-            selected_summary = df.loc[(df['Name']+df['Timestamp#'].astype(str)).isin(visible_names)]
-            selected_summary.to_excel(summary_dest, index=False)
-        # Store current selected variants at this level
-        variants = gui.summaryTab.current_variants
-        codelet['variants'] = variants
-        # Each tab has it's own nested dictionary with it's current plot selections
-        for tab in self.codelet_tabs:
-            codelet[tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+        # Store data for all levels
+        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : gui.loadedData.summaryDf, 'mapping' : gui.loadedData.mapping, \
+            'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'summary.xlsx'), \
+            'tabs' : self.codelet_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
+        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : gui.loadedData.srcDf, 'mapping' : gui.loadedData.src_mapping, \
+            'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcSummary.xlsx'), \
+            'tabs' : self.source_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
+        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : gui.loadedData.appDf, 'mapping' : gui.loadedData.app_mapping, \
+            'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appSummary.xlsx'), \
+            'tabs' : self.application_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
+        levels = [codelet, source, app]
+        for level in levels:
+            # Store hidden/highlighted points for each level
+            for marker in level['textData']['markers']:
+                name = level['textData']['marker:name'][marker]
+                if marker.get_alpha():
+                    level['data']['visible_names'].append(name)
+                    if marker.get_marker() == '*': # Highlighted point
+                        level['data']['highlighted_names'].append(name)
+                elif self.choice == 'Save All':
+                    level['data']['hidden_names'].append(name)
+            # Save either full or selected codelets in dataframes to notify observers upon restoring
+            if self.choice == 'Save All':
+                level['df'].to_excel(level['summary_dest'], index=False)
+                if not level['mapping'].empty: level['mapping'].to_excel(level['mapping_dest'], index=False)
+            elif self.choice == 'Save Selected':
+                if not level['mapping'].empty and level['data']['visible_names']:
+                    selected_mappings, level['data']['visible_names'] = self.getSelectedMappings(level['data']['visible_names'], level['mapping'])
+                    selected_mappings.to_excel(level['mapping_dest'], index=False)
+                selected_summary = level['df'].loc[(level['df']['Name']+level['df']['Timestamp#'].astype(str)).isin(level['data']['visible_names'])]
+                selected_summary.to_excel(level['summary_dest'], index=False)
+            # variants apply to all levels
+            level['data']['variants'] = gui.summaryTab.current_variants
+            # Each tab has its own dictionary with it's current plot selections
+            for tab in level['tabs']:
+                level['data'][tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
         # Save the all the stored data into a nested dictionary
+        data = {}
         data['Codelet'] = codelet
         data['Source'] = source
-        data['Application'] = application
+        data['Application'] = app
         data_dest = os.path.join(dest, 'data.pkl')
         data_file = open(data_dest, 'wb')
         pickle.dump(data, data_file)
         data_file.close()
-        # Need to save: save the whole current dataframe 
-        # - add (true/false) columns: highlighted, visible, 
-        # Need to save axes/scales for each plot and variants for all plots
-        # - save 3 pickle nested dictionaries (Application, Source, Codelet)
-        # - Ex. {'Summary' : {'x_axis' : 'GFLOPS', 'y_axis' : '%coverage', 'x_scale': 'linear', 'y_scale':'linear', 'variants':['ORIG']}, 'TRAWL' : {} ...}
-        # create all the plots as usual, except now there is a flag in plotInteraction that restores the state.
+        # TODO: Figure out way to never need analytics file after first load and combine into summary sheet (remove checks)
+        if not gui.loadedData.analytics.empty: gui.loadedData.analytics.to_excel(os.path.join(dest, 'analytics.xlsx'), index=False)
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
     def A_filter(self, relate, metric, threshold, highlight, remove=False, show=False, points=[]):
