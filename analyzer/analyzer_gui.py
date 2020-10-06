@@ -98,6 +98,9 @@ class LoadedData(Observable):
         self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
         self.app_mapping = pd.DataFrame()
+        self.summaryDf = pd.DataFrame()
+        self.srcDf = pd.DataFrame()
+        self.appDf = pd.DataFrame()
         self.analytics = pd.DataFrame()
         self.names = pd.DataFrame()
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
@@ -139,6 +142,7 @@ class LoadedData(Observable):
         self.c_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.s_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.a_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
+        self.summaryDf = pd.DataFrame()
         self.srcDf = pd.DataFrame()
         self.appDf = pd.DataFrame()
         self.mapping = pd.DataFrame()
@@ -146,7 +150,9 @@ class LoadedData(Observable):
         self.app_mapping = pd.DataFrame()
 
     def resetTabValues(self):
-        tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab]
+        tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab,
+                gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
+                 gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
         for tab in tabs:
             tab.x_scale = tab.orig_x_scale
             tab.y_scale = tab.orig_y_scale
@@ -208,29 +214,27 @@ class LoadedData(Observable):
         self.appDf = self.compute_colors(self.appDf)
         self.notify_observers()
 
-    def add_saved_data(self, df, mappings=pd.DataFrame(), analytics=pd.DataFrame(), data={}):
+    def add_saved_data(self, levels=[], analytics=pd.DataFrame()):
         gui.oneviewTab.removePages()
         gui.loaded_url = None
         self.resetTabValues()
         self.resetStates()
-        self.mappings = pd.DataFrame()
-        self.summaryDf = df
-        self.mapping = mappings
-        if not mappings.empty: self.add_speedup(mappings, self.summaryDf)
-        self.data = data
+        self.levels = {'Codelet' : levels[0], 'Source' : levels[1], 'Application' : levels[2]}
+        self.summaryDf = self.levels['Codelet']['summary']
+        self.srcDf = self.levels['Source']['summary']
+        self.appDf = self.levels['Application']['summary']
+        self.mapping = self.levels['Codelet']['mapping']
+        self.src_mapping = self.levels['Source']['mapping']
+        self.app_mapping = self.levels['Application']['mapping']
         self.sources = []
         self.restore = True
-        # Notify the data for all the plots with the saved data
-        for observer in self.observers:
-            observer.notify(self, x_axis=data['Codelet'][observer.name]['x_axis'], y_axis=data['Codelet'][observer.name]['y_axis'], \
-                scale=data['Codelet'][observer.name]['x_scale'] + data['Codelet'][observer.name]['y_scale'], level='Codelet', mappings=mappings)
-            if data['Source']:
-                observer.notify(self, x_axis=data['Source'][observer.name]['x_axis'], y_axis=data['Source'][observer.name]['y_axis'], \
-                scale=data['Source'][observer.name]['x_scale'] + data['Source'][observer.name]['y_scale'], level='Source', mappings=mappings)
-            if data['Application']:
-                observer.notify(self, x_axis=data['Application'][observer.name]['x_axis'], y_axis=data['Application'][observer.name]['y_axis'], \
-                scale=data['Application'][observer.name]['x_scale'] + data['Application'][observer.name]['y_scale'], level='Application', mappings=mappings)
-
+        # Notify the data for all the plots with the saved data 
+        for level in self.levels:
+            for observer in self.observers:
+                if observer.name in self.levels[level]['data']:
+                    observer.notify(self, x_axis=self.levels[level]['data'][observer.name]['x_axis'], y_axis=self.levels[level]['data'][observer.name]['y_axis'], \
+                        scale=self.levels[level]['data'][observer.name]['x_scale'] + self.levels[level]['data'][observer.name]['y_scale'], level=level, mappings=self.levels[level]['mapping'])
+    
     def add_variants(self, namesDf):
         namesDf = namesDf.rename(columns={'name':'Name', 'variant':'Variant', 'timestamp#':'Timestamp#'})
         self.summaryDf.drop(columns=['Variant'], inplace=True)
@@ -241,6 +245,8 @@ class LoadedData(Observable):
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=['Name', 'Timestamp#'], how='left')
 
     def add_speedup(self, mappings, df):
+        if mappings.empty or df.empty:
+            return
         # TODO: Figure out naming convention
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
@@ -481,7 +487,8 @@ class CoverageData(Observable):
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         if not update: # Get all unique variants upon first load
-            self.variants = df['Variant'].dropna().unique()
+            try: self.variants = df['Variant'].dropna().unique()
+            except: self.variants = df['variant'].dropna().unique()
         # mappings
         self.mappings = loadedData.mapping
         df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
@@ -877,47 +884,59 @@ class AnalysisResultsPanel(ScrolledTreePane):
             self.path = path
 
     class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container, df=pd.DataFrame(), mappings=pd.DataFrame(), analytics=pd.DataFrame(), data={}):
+        def __init__(self, path, name, container, df=pd.DataFrame(), srcDf=pd.DataFrame(), appDf=pd.DataFrame(), \
+            mapping=pd.DataFrame(), srcMapping=pd.DataFrame(), appMapping=pd.DataFrame(), \
+            analytics=pd.DataFrame(), data={}):
             super().__init__(path, name, container)
-            self.summary_df = df
-            self.mappings = mappings
-            self.analytics = analytics
-            self.data = data
 
         def open(self):
             print("file node open:", self.name, self.id) 
-            # Remove any previous plots in Application/Source
-            tabs = [gui.s_customTab.window, gui.s_qplotTab.window, gui.s_siPlotTab.window, gui.s_trawlTab.window, \
-                gui.a_customTab.window, gui.a_qplotTab.window, gui.a_siPlotTab.window, gui.a_trawlTab.window]
-            for tab in tabs:
-                for widget in tab.winfo_children():
-                    widget.destroy()
-            self.container.openLocalFile(self.summary_df, self.mappings, self.analytics, self.data)
 
     class LocalDirNode(LocalTreeNode):
         def __init__(self, path, name, container):
             super().__init__(path, name+'/', container)
             self.children = []
+            self.analysis_result = False
+            self.df = pd.DataFrame()
+            self.srcDf = pd.DataFrame()
+            self.appDf = pd.DataFrame()
+            self.mapping = pd.DataFrame()
+            self.srcMapping = pd.DataFrame()
+            self.appMapping = pd.DataFrame()
+            self.analytics = pd.DataFrame()
+            self.data = {}
 
         def open(self):
             print("dir node open:", self.name, self.id) 
             for d in os.listdir(self.path):
                 if d not in self.children:
                     self.children.append(d)
-                    fullpath= os.path.join(self.path, d)
-                    df = pd.DataFrame()
-                    mappings = pd.DataFrame()
-                    analytics = pd.DataFrame()
-                    data = {}
-                    for name in os.listdir(fullpath): # get saved data
-                        if name == 'summary.xlsx': df = pd.read_excel(os.path.join(fullpath, name))
-                        if name == 'mappings.xlsx': mappings = pd.read_excel(os.path.join(fullpath, name))
-                        if name == 'analytics.xlsx': analytics = pd.read_excel(os.path.join(fullpath, name))
-                        if name == 'data.pkl': 
-                            data_file = open(os.path.join(fullpath, name), 'rb')
-                            data = pickle.load(data_file)
+                    fullpath = os.path.join(self.path, d)
+                    # Just display directory names 
+                    if os.path.isdir(fullpath):
+                        self.analysis_result = False
+                        self.container.insertNode(self, AnalysisResultsPanel.LocalDirNode(fullpath, d, self.container))
+                    # Load analysis results directory
+                    else:
+                        self.analysis_result = True
+                        if d == 'summary.xlsx': self.df = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'srcSummary.xlsx': self.srcDf = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'appSummary.xlsx': self.appDf = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'mapping.xlsx': self.mapping = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'srcMapping.xlsx': self.srcMapping = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'appMapping.xlsx': self.appMapping = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'analytics.xlsx': self.analytics = pd.read_excel(os.path.join(self.path, d))
+                        if d == 'data.pkl': 
+                            data_file = open(os.path.join(self.path, d), 'rb')
+                            self.data = pickle.load(data_file)
                             data_file.close()
-                    self.container.insertNode(self, AnalysisResultsPanel.LocalFileNode(fullpath, d, self.container, df=df, mappings=mappings, analytics=analytics, data=data))
+
+            if self.analysis_result:
+                codelet = {'summary':self.df, 'mapping':self.mapping, 'data':self.data['Codelet']}
+                source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
+                app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
+                self.levels = [codelet, source, app]
+                self.container.openLocalFile(self.levels, self.analytics)
 
     def __init__(self, parent, loadSavedStateFn):
         ScrolledTreePane.__init__(self, parent)
@@ -933,8 +952,8 @@ class AnalysisResultsPanel(ScrolledTreePane):
         parent_str = parent.id if parent else ''
         self.treeview.insert(parent_str,'end',node.id,text=node.name) 
 
-    def openLocalFile(self, df=pd.DataFrame(), mappings=pd.DataFrame(), analytics=pd.DataFrame(), data={}):
-        self.loadSavedStateFn(df, mappings, analytics, data)
+    def openLocalFile(self, levels=[], analytics=pd.DataFrame()):
+        self.loadSavedStateFn(levels, analytics)
 
     def handleOpenEvent(self, event):
         if not self.opening: # finish opening one file before another is started
@@ -1113,9 +1132,8 @@ class PlotInteraction():
         self.canvas.draw()
 
     def restoreAnalysisState(self):
-        if gui.loadedData.data['Codelet']: 
-            self.restoreState(gui.loadedData.data['Codelet'])
-            self.pointSelector.restoreState(gui.loadedData.data['Codelet'])
+        self.restoreState(gui.loadedData.levels[self.level]['data'])
+        self.pointSelector.restoreState(gui.loadedData.levels[self.level]['data'])
 
     def cancelAction(self):
         self.choice = 'cancel'
@@ -1146,13 +1164,13 @@ class PlotInteraction():
             Path(dest).mkdir(parents=True, exist_ok=True)
         # Store data for all levels
         codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : gui.loadedData.summaryDf, 'mapping' : gui.loadedData.mapping, \
-            'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'summary.xlsx'), \
+            'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'mapping.xlsx'), \
             'tabs' : self.codelet_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : gui.loadedData.srcDf, 'mapping' : gui.loadedData.src_mapping, \
-            'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcSummary.xlsx'), \
+            'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcMapping.xlsx'), \
             'tabs' : self.source_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : gui.loadedData.appDf, 'mapping' : gui.loadedData.app_mapping, \
-            'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appSummary.xlsx'), \
+            'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appMapping.xlsx'), \
             'tabs' : self.application_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         levels = [codelet, source, app]
         for level in levels:
@@ -1168,7 +1186,8 @@ class PlotInteraction():
             # Save either full or selected codelets in dataframes to notify observers upon restoring
             if self.choice == 'Save All':
                 level['df'].to_excel(level['summary_dest'], index=False)
-                if not level['mapping'].empty: level['mapping'].to_excel(level['mapping_dest'], index=False)
+                if not level['mapping'].empty: 
+                    level['mapping'].to_excel(level['mapping_dest'], index=False)
             elif self.choice == 'Save Selected':
                 if not level['mapping'].empty and level['data']['visible_names']:
                     selected_mappings, level['data']['visible_names'] = self.getSelectedMappings(level['data']['visible_names'], level['mapping'])
@@ -1182,9 +1201,9 @@ class PlotInteraction():
                 level['data'][tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
         # Save the all the stored data into a nested dictionary
         data = {}
-        data['Codelet'] = codelet
-        data['Source'] = source
-        data['Application'] = app
+        data['Codelet'] = codelet['data']
+        data['Source'] = source['data']
+        data['Application'] = app['data']
         data_dest = os.path.join(dest, 'data.pkl')
         data_file = open(data_dest, 'wb')
         pickle.dump(data, data_file)
@@ -1253,14 +1272,16 @@ class PlotInteraction():
     def getSelectedMappings(self, names, mappings):
         if mappings.empty or not names: return
         selected_mappings = pd.DataFrame()
+        temp_mappings = mappings.copy(deep=True)
         all_names = copy.deepcopy(names)
         for name in names:
-            row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
+            row = temp_mappings.loc[(temp_mappings['before_name']+temp_mappings['before_timestamp#'].astype(str))==name]
             while not row.empty:
+                temp_mappings.drop(row.index, inplace=True)
                 selected_mappings = selected_mappings.append(row, ignore_index=True)
                 name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
                 all_names.append(name)
-                row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
+                row = temp_mappings.loc[(temp_mappings['before_name']+temp_mappings['before_timestamp#'].astype(str))==name]
         return selected_mappings, list(set(all_names))
 
     def toggleLabels(self):
@@ -1855,7 +1876,7 @@ class ChecklistBox(tk.Frame):
     def showAllVariants(self):
         for i, cb in enumerate(self.cbs):
             self.vars[i].set(1)
-        self.updateVariants() 
+        self.updateVariants()
     
     def showOrig(self):
         for i, cb in enumerate(self.cbs):
@@ -1873,7 +1894,7 @@ class ChecklistBox(tk.Frame):
         self.parent.tab.plotInteraction.save_plot_state()
         for tab in self.parent.tab.plotInteraction.tabs:
             if tab.name == 'SIPlot': tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title)
-            else: tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True)
+            else: tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True, level=tab.level)
 
 class VariantTab(tk.Frame):
     def __init__(self, parent, tab, variants, current_variants):
@@ -2657,17 +2678,18 @@ class AnalyzerGui(tk.Frame):
         self.loadedData.summaryDf = pd.concat([self.loadedData.summaryDf, df]).drop_duplicates(keep='last').reset_index(drop=True)
         # need to combine mappings with current mappings and add speedups
         
-    def loadSavedState(self, df=pd.DataFrame(), mappings=pd.DataFrame(), analytics=pd.DataFrame(), data={}):
+    def loadSavedState(self, levels=[], analytics=pd.DataFrame()):
         print("restore: ", self.loadedData.restore)
         if len(self.sources) >= 1:
             self.win = tk.Toplevel()
             center(self.win)
             self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
             self.win.title('Existing Data')
-            if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
-            else: 
-                message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
-                tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
+            message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            #if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            #else: 
+                #message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+                #tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
             tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
             tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
@@ -2675,7 +2697,7 @@ class AnalyzerGui(tk.Frame):
         if self.choice == 'Cancel': return
         self.source_order = []
         self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
-        self.loadedData.add_saved_data(df, mappings=mappings, analytics=analytics, data=data)
+        self.loadedData.add_saved_data(levels, analytics)
 
     def loadFile(self, choice, data_dir, source, url):
         if choice == 'Open Webpage':
@@ -2709,9 +2731,9 @@ class AnalyzerGui(tk.Frame):
         if 'Codelet' in levels or 'All' in levels:
             tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab])
         if 'Source' in levels or 'All' in levels:
-            tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_siPlotTab, gui.s_customTab])
+            tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab])
         if 'Application' in levels or 'All' in levels:
-            tabs.extend([gui.a_trawlTab, gui.a_qplotTab, gui.a_siPlotTab, gui.a_customTab])
+            tabs.extend([gui.a_trawlTab, gui.a_qplotTab, gui.a_customTab])
         for tab in tabs:
             for widget in tab.window.winfo_children():
                 widget.destroy()
@@ -2751,21 +2773,21 @@ class AnalyzerGui(tk.Frame):
         # Source Tabs
         self.s_trawlTab = TrawlTab(source_note, self.trawlData, 'Source')
         self.s_qplotTab = QPlotTab(source_note, self.qplotData, 'Source')
-        self.s_siPlotTab = SIPlotTab(source_note, self.siplotData, 'Source')
+        #self.s_siPlotTab = SIPlotTab(source_note, self.siplotData, 'Source')
         self.s_customTab = CustomTab(source_note, self.customData, 'Source')
         source_note.add(self.s_trawlTab, text="TRAWL")
         source_note.add(self.s_qplotTab, text="QPlot")
-        source_note.add(self.s_siPlotTab, text="SI Plot")
+        #source_note.add(self.s_siPlotTab, text="SI Plot")
         source_note.add(self.s_customTab, text="Custom")
         source_note.pack(fill=tk.BOTH, expand=True)
         # Application tabs
         self.a_trawlTab = TrawlTab(application_note, self.trawlData, 'Application')
         self.a_qplotTab = QPlotTab(application_note, self.qplotData, 'Application')
-        self.a_siPlotTab = SIPlotTab(application_note, self.siplotData, 'Application')
+        #self.a_siPlotTab = SIPlotTab(application_note, self.siplotData, 'Application')
         self.a_customTab = CustomTab(application_note, self.customData, 'Application')
         application_note.add(self.a_trawlTab, text="TRAWL")
         application_note.add(self.a_qplotTab, text="QPlot")
-        application_note.add(self.a_siPlotTab, text="SI Plot")
+        #application_note.add(self.a_siPlotTab, text="SI Plot")
         application_note.add(self.a_customTab, text="Custom")
         application_note.pack(fill=tk.BOTH, expand=True)
         return self.main_note
