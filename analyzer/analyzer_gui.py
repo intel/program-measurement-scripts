@@ -94,6 +94,7 @@ class LoadedData(Observable):
         self.source_order=[]
         self.common_columns_start = ['name', 'short_name', r'%coverage', 'apptime_s', 'time_s', 'C_FLOP [GFlop/s]', r'%ops[fma]', r'%inst[fma]', 'variant', 'memlevel']
         self.common_columns_end = ['c=inst_rate_gi/s', 'timestamp#', 'color']
+        self.analytic_columns = ['rating', 'advice', 'ddg_true_cyclic', 'ddg_artifical_cyclic', 'limits', 'rhs_op_count', 'init_only', 'scalar_reduction', 'recurrence', 'offsets', 'info_url']
         self.mappings = pd.DataFrame()
         self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
@@ -214,7 +215,7 @@ class LoadedData(Observable):
         self.appDf = self.compute_colors(self.appDf)
         self.notify_observers()
 
-    def add_saved_data(self, levels=[], analytics=pd.DataFrame()):
+    def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
         gui.loaded_url = None
         self.resetTabValues()
@@ -226,6 +227,7 @@ class LoadedData(Observable):
         self.mapping = self.levels['Codelet']['mapping']
         self.src_mapping = self.levels['Source']['mapping']
         self.app_mapping = self.levels['Application']['mapping']
+        self.analytics = pd.DataFrame()
         self.sources = []
         self.restore = True
         # Notify the data for all the plots with the saved data 
@@ -593,10 +595,6 @@ class SIPlotData(Observable):
             (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
         # TODO: Figure out why we need to merge the diagnostic variables again, parse_ip_siplot_df probably removes those columns
-        if not self.loadedData.analytics.empty: # Merge diagnostic variables with SIPlot dataframe
-                self.df.drop(columns=['ddg_artifical_cyclic', 'limits', 'ddg_true_cyclic', 'init_only', 'rhs_op_count'], inplace=True)
-                diagnosticDf = self.loadedData.analytics.drop(columns=['timestamp#'])
-                self.df = pd.merge(left=self.df, right=diagnosticDf, on='name', how='left')
         self.fig = fig_ORIG
         self.textData = textData_ORIG
 
@@ -925,7 +923,6 @@ class AnalysisResultsPanel(ScrolledTreePane):
                         if d == 'mapping.xlsx': self.mapping = pd.read_excel(os.path.join(self.path, d))
                         if d == 'srcMapping.xlsx': self.srcMapping = pd.read_excel(os.path.join(self.path, d))
                         if d == 'appMapping.xlsx': self.appMapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'analytics.xlsx': self.analytics = pd.read_excel(os.path.join(self.path, d))
                         if d == 'data.pkl': 
                             data_file = open(os.path.join(self.path, d), 'rb')
                             self.data = pickle.load(data_file)
@@ -936,7 +933,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
                 source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
                 app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
                 self.levels = [codelet, source, app]
-                self.container.openLocalFile(self.levels, self.analytics)
+                self.container.openLocalFile(self.levels)
 
     def __init__(self, parent, loadSavedStateFn):
         ScrolledTreePane.__init__(self, parent)
@@ -952,8 +949,8 @@ class AnalysisResultsPanel(ScrolledTreePane):
         parent_str = parent.id if parent else ''
         self.treeview.insert(parent_str,'end',node.id,text=node.name) 
 
-    def openLocalFile(self, levels=[], analytics=pd.DataFrame()):
-        self.loadSavedStateFn(levels, analytics)
+    def openLocalFile(self, levels=[]):
+        self.loadSavedStateFn(levels)
 
     def handleOpenEvent(self, event):
         if not self.opening: # finish opening one file before another is started
@@ -1016,11 +1013,11 @@ class SummaryTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        # Add diagnostic variables to summary data table
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
-            column_list.extend(diagnosticDf.columns.tolist())
         summaryDf = df[column_list]
+        try: # See if we have analytic variables
+            column_list.extend(gui.loadedData.analytic_columns)
+            summaryDf = df[column_list]
+        except: pass
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
@@ -1096,7 +1093,7 @@ class PlotInteraction():
         self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         # Plot interacting buttons
-        #self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.saveState)
+        self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.saveState)
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
@@ -1124,7 +1121,7 @@ class PlotInteraction():
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
-        #self.save_state_button.grid(column=0, row=0, sticky=tk.S, pady=2)
+        self.save_state_button.grid(column=0, row=0, sticky=tk.S, pady=2)
         self.plotFrame3.grid_rowconfigure(0, weight=1)
         self.pointSelector.pack(side=tk.RIGHT, anchor=tk.N, fill=tk.Y)
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
@@ -1208,8 +1205,6 @@ class PlotInteraction():
         data_file = open(data_dest, 'wb')
         pickle.dump(data, data_file)
         data_file.close()
-        # TODO: Figure out way to never need analytics file after first load and combine into summary sheet (remove checks)
-        if not gui.loadedData.analytics.empty: gui.loadedData.analytics.to_excel(os.path.join(dest, 'analytics.xlsx'), index=False)
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
     def A_filter(self, relate, metric, threshold, highlight, remove=False, show=False, points=[]):
@@ -1476,11 +1471,10 @@ class AxesTab(tk.Frame):
             for metric in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
+        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Diagnostics', menu=menu)
-            for metric in diagnosticDf.columns.tolist():
+            for metric in gui.loadedData.analytic_columns:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
@@ -2277,11 +2271,12 @@ class TrawlTab(tk.Frame):
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend(['speedup[vec]', 'speedup[dl1]'])
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
-            column_list.extend(diagnosticDf.columns.tolist())
         column_list.extend(gui.loadedData.common_columns_end)
         summaryDf = df[column_list]
+        try: # See if we have analytic variables
+            column_list.extend(gui.loadedData.analytic_columns)
+            summaryDf = df[column_list]
+        except: pass
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
@@ -2375,11 +2370,12 @@ class QPlotTab(tk.Frame):
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
-            column_list.extend(diagnosticDf.columns.tolist())
         column_list.extend(gui.loadedData.common_columns_end)
         summaryDf = df[column_list]
+        try: # See if we have analytic variables
+            column_list.extend(gui.loadedData.analytic_columns)
+            summaryDf = df[column_list]
+        except: pass
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
@@ -2473,14 +2469,14 @@ class SIPlotTab(tk.Frame):
         # Summary Data table
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend(['Saturation', 'Intensity', 'SI'])
-        # Add diagnostic variables to summary data table
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
-            column_list.extend(diagnosticDf.columns.tolist())
         # column_list.extend(['Saturation', 'Intensity', 'SI', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
         #       'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
         self.summaryDf = df[column_list]
+        try: # See if we have analytic variables
+            column_list.extend(gui.loadedData.analytic_columns)
+            self.summaryDf = df[column_list]
+        except: pass
         self.buildTableTabs()
         self.summaryDf = self.summaryDf.sort_values(by=r'%coverage', ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
@@ -2559,12 +2555,13 @@ class CustomTab(tk.Frame):
             r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
             r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
             'timestamp#', 'color'])
-        if not gui.loadedData.analytics.empty:
-            diagnosticDf = gui.loadedData.analytics.drop(columns=['name', 'timestamp#'])
-            column_list.extend(diagnosticDf.columns.tolist())
         if not mappings.empty:
             column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
         summaryDf = df[column_list]
+        try: # See if we have analytic variables
+            column_list.extend(gui.loadedData.analytic_columns)
+            summaryDf = df[column_list]
+        except: pass
         summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
@@ -2678,7 +2675,7 @@ class AnalyzerGui(tk.Frame):
         self.loadedData.summaryDf = pd.concat([self.loadedData.summaryDf, df]).drop_duplicates(keep='last').reset_index(drop=True)
         # need to combine mappings with current mappings and add speedups
         
-    def loadSavedState(self, levels=[], analytics=pd.DataFrame()):
+    def loadSavedState(self, levels=[]):
         print("restore: ", self.loadedData.restore)
         if len(self.sources) >= 1:
             self.win = tk.Toplevel()
@@ -2697,7 +2694,7 @@ class AnalyzerGui(tk.Frame):
         if self.choice == 'Cancel': return
         self.source_order = []
         self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
-        self.loadedData.add_saved_data(levels, analytics)
+        self.loadedData.add_saved_data(levels)
 
     def loadFile(self, choice, data_dir, source, url):
         if choice == 'Open Webpage':
