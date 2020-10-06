@@ -1272,14 +1272,16 @@ class PlotInteraction():
     def getSelectedMappings(self, names, mappings):
         if mappings.empty or not names: return
         selected_mappings = pd.DataFrame()
+        temp_mappings = mappings.copy(deep=True)
         all_names = copy.deepcopy(names)
         for name in names:
-            row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
+            row = temp_mappings.loc[(temp_mappings['before_name']+temp_mappings['before_timestamp#'].astype(str))==name]
             while not row.empty:
+                temp_mappings.drop(row.index, inplace=True)
                 selected_mappings = selected_mappings.append(row, ignore_index=True)
                 name = str(row['after_name'].iloc[0]+row['after_timestamp#'].iloc[0].astype(str))
                 all_names.append(name)
-                row = mappings.loc[(mappings['before_name']+mappings['before_timestamp#'].astype(str))==name]
+                row = temp_mappings.loc[(temp_mappings['before_name']+temp_mappings['before_timestamp#'].astype(str))==name]
         return selected_mappings, list(set(all_names))
 
     def toggleLabels(self):
