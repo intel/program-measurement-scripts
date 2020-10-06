@@ -2685,10 +2685,11 @@ class AnalyzerGui(tk.Frame):
             center(self.win)
             self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
             self.win.title('Existing Data')
-            if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
-            else: 
-                message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
-                tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
+            message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            #if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+            #else: 
+                #message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+                #tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
             tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
             tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
