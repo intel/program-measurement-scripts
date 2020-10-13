@@ -17,11 +17,12 @@ def succinctify(value):
         return list(map(helper,value))
 
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
-	inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
+    inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
-	# inout_df = inout_df[inout_df[max_rate_name].notna()]
-	inout_df['memlevel']=inout_df[node_list].idxmax(axis=1)
-	inout_df['memlevel'] = inout_df['memlevel'].apply(metric_to_memlevel_lambda)
+    # inout_df = inout_df[inout_df[max_rate_name].notna()]
+    inout_df['memlevel']=inout_df[node_list].idxmax(axis=1)
+    nonnullMask = ~inout_df['memlevel'].isnull()
+    inout_df.loc[nonnullMask, 'memlevel'] = inout_df.loc[nonnullMask, 'memlevel'].apply(metric_to_memlevel_lambda)
     # Old stuff below to be deleted
 	# Remove the first two characters which is 'C_'
     # inout_df['memlevel'] = inout_df['memlevel'].apply((lambda v: v[2:]))
@@ -327,3 +328,24 @@ def getter(in_row, *argv, **kwargs):
             # should use None test because 0 is valid number and considered False in Python.
             return type_(in_row[arg] if in_row[arg] is not None else default_)
     raise IndexError(', '.join(map(str, argv)))
+
+def compute_speedup(output_rows, mapping_df):
+    keyColumns=['Name', 'Timestamp#', 'Variant']
+    timeColumns=['Time (s)', 'AppTime (s)']
+    rateColumns=['FLOP Rate (GFLOP/s)']
+    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
+                              right_on=keyColumns, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
+                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    for timeColumn in timeColumns: 
+        new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
+            new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
+    for rateColumn in rateColumns: 
+        new_mapping_df['Speedup[{}]'.format(rateColumn)] = \
+            new_mapping_df['{}_after'.format(rateColumn)] / new_mapping_df['{}_before'.format(rateColumn)]
+    # Remove those _after and _before columns
+    retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
+    retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
+    return new_mapping_df[retainColumns]

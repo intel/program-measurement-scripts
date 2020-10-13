@@ -26,7 +26,6 @@ elif platform.system() == "Darwin":
 elif platform.system() == "Linux":
     EXE_EXT = ""
 
-
 def main():
     # Platforms supported
     if platform.system() not in ["Windows", "Darwin", "Linux"]:

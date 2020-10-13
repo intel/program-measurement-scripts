@@ -45,6 +45,7 @@ a = Analysis(
     hookspath=["."],  # To find "hook-cefpython3.py"
     win_private_assemblies=True,
     win_no_prefer_redirects=True,
+    datas=[('..\\clusters', 'clusters')],
 )
 
 if not os.environ.get("PYINSTALLER_CEFPYTHON3_HOOK_SUCCEEDED", None):
@@ -62,7 +63,7 @@ exe = EXE(pyz,
           name="Cape",
           strip=False,
           upx=False,
-          console=False)
+          console=True)
 
 #COLLECT(exe,
 #        a.binaries,
