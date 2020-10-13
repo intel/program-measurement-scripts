@@ -42,7 +42,8 @@ field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','pr
                 'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
                 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
                 '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Speedup[Vec]', 'Speedup[DL1]' ]
+                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Speedup[Vec]', 'Speedup[DL1]',
+                '%ArrayEfficiency' ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -339,6 +340,13 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
     except:
         pass
 
+def calculate_array_efficiency(out_rows, in_rows):
+    num_all_streams = in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
+        + in_rows['Nb_streams_stride_n'].values + in_rows['Nb_streams_unknown_stride'].values + in_rows['Nb_streams_indirect'].values
+    out_rows['%ArrayEfficiency'] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
+        + 0.75 * in_rows['Nb_streams_stride_n'].values + 0.5 * in_rows['Nb_streams_unknown_stride'].values \
+            + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams
+
 def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
     # Note: need to use .values to be more robust and not index dependent
@@ -513,7 +521,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
     add_mem_max_level_columns(output_rows, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
-    # Add y-value data for TRAWL Plot
+    calculate_array_efficiency(output_rows, df)
+   # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
     # Retain rows with non-empty performance measurments (provided by "Time (s)"")
     output_rows = output_rows[~output_rows['Time (s)'].isnull()]
