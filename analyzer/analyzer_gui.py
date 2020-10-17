@@ -26,6 +26,7 @@ import pkg_resources.py2_warn
 from web_browser import BrowserFrame
 from cefpython3 import cefpython as cef
 import sys
+from sys import platform
 import requests
 from lxml import html
 import time
@@ -42,6 +43,8 @@ from capelib import succinctify
 from generate_QPlot import compute_capacity
 import pickle
 from datetime import datetime
+from transitions.extensions import GraphMachine as Machine
+from transitions import State
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -671,6 +674,7 @@ class DataSourcePanel(ScrolledTreePane):
                 self.download_data()
 
         def download_data(self):
+            print("Downloading Data")
             local_dir = os.path.dirname(self.path)
             dir_url = self.url.rsplit('/', 1)[0] + '/' # Get the data directory to download any corresponding files
             dir_page = requests.get(dir_url)
@@ -1043,19 +1047,24 @@ class SummaryTab(tk.Frame):
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        #if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
+        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+            self.guideTab = GuideTab(self.tableNote, self)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.shortnameTab, text="Short Names")
         self.tableNote.add(self.labelTab, text='Labels')
         self.tableNote.add(self.axesTab, text="Axes")
         self.tableNote.add(self.variantTab, text="Variants")
         self.tableNote.add(self.mappingsTab, text="Mappings")
-        #if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
+        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns): 
+            self.tableNote.add(self.guideTab, text='Guide')
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
     def notify(self, coverageData):
         for w in self.window.winfo_children():
             w.destroy()
+        try: self.guideTab.destroy()
+        except: pass
+
         self.update(coverageData.df, coverageData.fig, coverageData.textData, coverageData.mappings, coverageData.variants)
 
 class PlotInteraction():
@@ -1097,6 +1106,7 @@ class PlotInteraction():
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
+        self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight', command=self.unhighlightPoints)
         #self.star_speedups_button = tk.Button(self.plotFrame3, text='Star Speedups', command=self.star_speedups)
         self.action_selected = tk.StringVar(value='Choose Action')
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
@@ -1118,6 +1128,7 @@ class PlotInteraction():
         # Grid Layout
         self.toolbar.grid(column=7, row=0, sticky=tk.S)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
+        self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
@@ -1207,12 +1218,13 @@ class PlotInteraction():
         data_file.close()
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
-    def A_filter(self, relate, metric, threshold, highlight, remove=False, show=False, points=[]):
+    def A_filter(self, relate, metric, threshold, highlight=True, remove=False, show=False, points=[], getNames=False):
         df = gui.loadedData.summaryDf
         names = []
         if metric: names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
         # Temporary hardcoded option while Dave works on specific formulas
         names.extend(points)
+        if getNames: return names
         for name in names:
             try: 
                 marker = self.textData['name:marker'][name]
@@ -1392,6 +1404,17 @@ class PlotInteraction():
             otherMarker = tab.plotInteraction.textData['name:marker'][self.textData['marker:name'][marker]]
             otherText = tab.plotInteraction.textData['marker:text'][otherMarker]
             self.highlight(otherMarker, otherText)
+
+    def unhighlightPoints(self):
+        for tab in self.tabs:
+            for marker in tab.plotInteraction.textData['markers']:
+                text = tab.plotInteraction.textData['marker:text'][marker]
+                if marker.get_marker() == '*':
+                    marker.set_marker('o')
+                    marker.set_markeredgecolor(marker.get_markerfacecolor())
+                    marker.set_markersize(6.0)
+                    text.set_color('k')
+        self.drawPlots()
     
     def drawPlots(self):
         for tab in self.tabs:
@@ -2035,160 +2058,166 @@ class FilteringTab(tk.Frame):
                 filtering=True, filter_data=filter_data)
 
 class GuideTab(tk.Frame):
-    class ATab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-            self.parent = parent
-            self.tab = parent.tab
-            # Text for states
-            self.a_state = 'State: A-Start'
-            self.a1_state = 'State: A1'
-            # self.a1_state = 'State: B1'
-            self.a1_trans_state = 'State: A11'
-            self.a2_state = 'State: A2'
-            # self.a2_state = 'State: B2'
-            self.a3_state = 'State: A3'
-            # self.a3_state = 'State: B-End'
-            self.a_end_state = 'State: A-End'
-            # self.a_end_state = 'State: End'
-            self.title = self.tab.plotInteraction.textData['title']
-            # Initial Title
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_state, pad=40)
-            # Temporary hardcoded points for each state
-            self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
-            self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
-            # Labels for the current state of the plot
-            self.customFont = tk.font.Font(family="Helvetica", size=11)
-            self.aLabel = tk.Label(self, text=self.a_state, borderwidth=2, relief="solid", font=self.customFont, padx=10)
-            # Buttons: Next (go to next level of filtering), Previous, Transitions (show transitions for the current codelets)
-            self.nextButton = tk.Button(self, text='Next State', command=self.nextState)
-            self.prevButton = tk.Button(self, text='Previous State', command=self.prevState)
-            self.transButton = tk.Button(self, text='Show Transitions', command=self.toggleTrans)
-            # Grid layout
-            self.aLabel.grid(row=0, column=0, pady=10, padx=10, sticky=tk.NW)
-            self.nextButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
-            if gui.loadedData.transitions == 'showing': self.show_trans_state()
-            elif gui.loadedData.transitions == 'hiding': self.hide_trans_state()
-
-
-        def nextState(self):
-            if self.aLabel['text'] == self.a_state: # Go to A1 (SIDO) state
-                self.aLabel['text'] = self.a1_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-                self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
-                self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True) # Highlight SIDO codelets
-                self.updateLabels('Speedup[Time (s)]')
-            elif self.aLabel['text'] == self.a1_state: # Go to A2 (RHS=1) state
-                self.aLabel['text'] = self.a2_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
-                self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
-                self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, points=self.a2_points) # Highlight RHS codelets
-                self.updateLabels('rhs_op_count')
-            elif self.aLabel['text'] == self.a2_state: # Go to A3 (FMA) state
-                self.aLabel['text'] = self.a3_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
-                self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, points=self.a3_points) # Highlight FMA codelets
-                self.updateLabels(r'%ops[fma]')
-            elif self.aLabel['text'] == self.a3_state: # Go to A_END state
-                self.aLabel['text'] = self.a_end_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_end_state, pad=40)
-                self.nextButton.grid_remove()
-                self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
-                self.updateLabels('advice')
-        
-        def prevState(self):
-            if self.aLabel['text'] == self.a1_state: # Go back to the starting view
-                self.aLabel['text'] = self.a_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title, pad=40)
-                self.prevButton.grid_remove()
-                self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False)
-                self.tab.labelTab.reset()
-            elif self.aLabel['text'] == self.a2_state: # Go back to A1 (SIDO) state
-                self.aLabel['text'] = self.a1_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-                self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, points=self.a2_points)
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True, show=True)
-                self.updateLabels('Speedup[Time (s)]')
-            elif self.aLabel['text'] == self.a3_state: # Go back to A2 (RHS=1) state
-                self.aLabel['text'] = self.a2_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
-                self.nextButton.grid()
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=False, points=self.a3_points)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True, points=self.a2_points)
-                self.updateLabels('rhs_op_count')
-            elif self.aLabel['text'] == self.a_end_state: # Go back to A3 (FMA) state
-                self.aLabel['text'] = self.a3_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=False, remove=True, points=self.all_highlighted)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points)
-                self.updateLabels(r'%ops[fma]')
-
-        def toggleTrans(self):
-            if self.transButton['text'] == 'Show Transitions':
-                gui.loadedData.transitions = 'showing'
-                # Remove any points that aren't currently highglighted
-                for name in self.tab.plotInteraction.textData['names']:
-                    if name not in self.a1_highlighted:
-                        self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
-                # Auto-check all variants and call update variants
-                self.tab.variantTab.checkListBox.showAllVariants()
-            else:
-                gui.loadedData.transitions = 'hiding'
-                self.tab.plotInteraction.showMarkers()
-                self.tab.variantTab.checkListBox.showOrig()
-
-        def show_trans_state(self):
-            self.nextButton.grid_remove()
-            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-            self.aLabel['text'] = self.a1_trans_state
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_trans_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
-            self.transButton['text'] = 'Hide Transitions'
-        
-        def hide_trans_state(self):
-            self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
-            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-            self.aLabel['text'] = self.a1_state
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
-            self.a1_highlighted = gui.loadedData.c_plot_state['highlighted_names']
-            self.transButton['text'] = 'Show Transitions'
-
-        def updateLabels(self, metric):
-            self.tab.labelTab.resetMetrics()
-            self.tab.labelTab.metric1.set(metric)
-            self.tab.labelTab.updateLabels()
-            
-
-    class BTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-
-    class CTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-
     def __init__(self, parent, tab):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.guideNote = ttk.Notebook(self)
-        # A, B, C are tabs in the GuideTab (Currently only have A tab defined)
-        self.aTab = GuideTab.ATab(self)
-        self.bTab = GuideTab.BTab(self)
-        self.cTab = GuideTab.CTab(self)
-        # Add buttons to Guide Tab
-        self.guideNote.add(self.aTab, text="A")
-        self.guideNote.add(self.bTab, text="B")
-        self.guideNote.add(self.cTab, text="C")
-        self.guideNote.pack(fill=tk.BOTH, expand=True)
+        # State GUI
+        self.canvas = tk.Canvas(self, width=500, height=250)
+        self.canvas.pack(side=tk.LEFT)
+        self.fsm = FSM(self)
+        self.fsm.add_observers(self)
+        self.img = tk.PhotoImage(file=self.fsm.file)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 
+        bottomframe = tk.Frame(self)
+        bottomframe.pack(side=tk.BOTTOM)
+
+        proceedButton = tk.Button(self, text="Proceed", command=self.fsm.proceed)
+        proceedButton.pack(side=tk.TOP)
+        detailsButton = tk.Button(self, text="Details", command=self.fsm.details)
+        detailsButton.pack(side=tk.TOP)
+        prevButton = tk.Button(self, text="Previous", command=self.fsm.previous)
+        prevButton.pack(side=tk.TOP)
+
+    def notify(self, observable):
+        self.fsm.save_graph()
+        self.img = tk.PhotoImage(file=self.fsm.file)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
+
+class FSM(Observable):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.tab = self.parent.tab
+        self.title = self.tab.plotInteraction.textData['title']
+        self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
+        # Temporary hardcoded points for each state
+        self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
+        self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
+        transitions = [{'trigger':'proceed', 'source':'INIT', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'details', 'source':'AStart', 'dest':'A1', 'after':'A1'},
+                {'trigger':'details', 'source':'A1', 'dest':'A11', 'after':'A11'},
+                {'trigger':'proceed', 'source':'A1', 'dest':'A2', 'after':'A2'},
+                {'trigger':'proceed', 'source':'A2', 'dest':'A3', 'after':'A3'},
+                {'trigger':'proceed', 'source':'A3', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'proceed', 'source':'AStart', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'proceed', 'source':'AEnd', 'dest':'B1', 'after':'B1'},
+                {'trigger':'proceed', 'source':'B1', 'dest':'B2', 'after':'B2'},
+                {'trigger':'proceed', 'source':'B2', 'dest':'BEnd', 'after':'BEnd'},
+                {'trigger':'proceed', 'source':'BEnd', 'dest':'End', 'after':'End'},
+                {'trigger':'previous', 'source':'End', 'dest':'BEnd', 'after':'BEnd'},
+                {'trigger':'previous', 'source':'BEnd', 'dest':'B2', 'after':'B2'},
+                {'trigger':'previous', 'source':'B2', 'dest':'B1', 'after':'B1'},
+                {'trigger':'previous', 'source':'B1', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'previous', 'source':'AEnd', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'previous', 'source':'AStart', 'dest':'INIT', 'after':'INIT'},
+                {'trigger':'previous', 'source':'A3', 'dest':'A2', 'after':'A2'},
+                {'trigger':'previous', 'source':'A2', 'dest':'A1', 'after':'A1'},
+                {'trigger':'previous', 'source':'A1', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'previous', 'source':'A11', 'dest':'A1', 'after':'A1'}]
+        states = ['INIT', 'AStart', State('A1', ignore_invalid_triggers=True), State('A11', ignore_invalid_triggers=True), 'A2', 'A3', 'AEnd', 'B1', 'B2', 'BEnd', 'End']
+
+        if gui.loadedData.transitions == 'showing':
+            self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
+        elif gui.loadedData.transitions == 'hiding':
+            gui.loadedData.transitions = 'disabled'
+            self.machine = Machine(model=self, states=states, initial='A1', transitions=transitions)
+        else:
+            self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
+        self.save_graph()
+        # Get points that we want to save for each state
+        self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, getNames=True) # Highlight SIDO codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, points=self.a2_points, getNames=True) # Highlight RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, points=self.a3_points, getNames=True) # Highlight FMA codelets
+
+    def INIT(self):
+        print("In INIT")
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'INIT', pad=40)
+        self.notify_observers()
+    
+    def AStart(self):
+        print("In AStart")
+        self.tab.plotInteraction.showMarkers()
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.labelTab.reset()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-Start', pad=40)
+        self.notify_observers()
+
+    def A1(self):
+        print("In A1")
+        if gui.loadedData.transitions == 'showing':
+            print("going back to orig variants")
+            gui.loadedData.transitions = 'hiding'
+            self.tab.plotInteraction.showMarkers()
+            self.tab.variantTab.checkListBox.showOrig()
+        else:
+            print("A1 state after orig variants")
+            self.tab.plotInteraction.showMarkers()
+            self.tab.plotInteraction.unhighlightPoints()
+            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
+            self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, show=True, highlight=True) # Highlight SIDO codelets
+            self.updateLabels('Speedup[Time (s)]')
+            self.notify_observers()
+
+    def A11(self):
+        print("In A11")
+        if gui.loadedData.transitions != 'showing':
+            gui.loadedData.transitions = 'showing'
+            for name in self.tab.plotInteraction.textData['names']:
+                if name not in self.a1_highlighted:
+                    self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
+            self.tab.variantTab.checkListBox.showAllVariants()
+
+    def A2(self):
+        print("In A2")
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
+        self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True, points=self.a2_points) # Highlight RHS codelets
+        self.updateLabels('rhs_op_count')
+        self.notify_observers()
+
+    def A3(self):
+        print("In A3")
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points) # Highlight FMA codelets
+        self.updateLabels(r'%ops[fma]')
+        self.notify_observers()
+
+    def AEnd(self):
+        print("In AEnd")
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-End', pad=40)
+        self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
+        self.updateLabels('advice')
+        self.notify_observers()
+
+    def B1(self):
+        print("In B1")
+        self.notify_observers()
+
+    def B2(self):
+        print("In B2")
+        self.notify_observers()
+
+    def BEnd(self):
+        print("In BEnd")
+        self.notify_observers()
+
+    def End(self):
+        print("In End")
+        self.notify_observers()
+
+    def save_graph(self):
+        self.machine.get_graph(show_roi=True).draw(self.file, prog='dot')
+    
+    def updateLabels(self, metric):
+        self.tab.labelTab.resetMetrics()
+        self.tab.labelTab.metric1.set(metric)
+        self.tab.labelTab.updateLabels()
 
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
@@ -2700,18 +2729,18 @@ class AnalyzerGui(tk.Frame):
         if choice == 'Open Webpage':
             self.overwrite()
             self.urls = [url]
-            self.oneviewTab.loadPage()
+            if platform != 'darwin': self.oneviewTab.loadPage()
             return
         elif choice == 'Overwrite':
             self.overwrite()
             if url: 
                 self.urls = [url]
-                self.oneviewTab.loadPage()
+                if platform != 'darwin': self.oneviewTab.loadPage()
             self.sources = [source]
         elif choice == 'Append':
             if url: 
                 self.urls.append(url)
-                self.oneviewTab.loadPage()
+                if platform != 'darwin': self.oneviewTab.loadPage()
             self.sources.append(source)
         self.loadedData.add_data(self.sources, data_dir)
 
