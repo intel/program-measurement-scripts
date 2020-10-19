@@ -8,14 +8,12 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
-from capelib import succinctify
 from generate_QPlot import compute_capacity
 import copy
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], mappings=pd.DataFrame(), short_names_path=''):
-    df.columns = succinctify(df.columns)
     chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
     df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:

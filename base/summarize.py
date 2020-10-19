@@ -7,7 +7,6 @@ from datetime import datetime
 from operator import attrgetter
 from openpyxl import Workbook
 from openpyxl import load_workbook
-from capelib import succinctify
 from capelib import calculate_all_rate_and_counts
 from capelib import getter
 from capelib import calculate_energy_derived_metrics
@@ -34,7 +33,7 @@ assert sys.version_info >= (3,6)
 args = None
 variants = {}
 short_names = {}
-field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPETITIONS, 'VecType[Ops]', TIME_LOOP_S, RECIP_TIME_LOOP_MHZ,
+field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPETITIONS, COUNT_VEC_TYPE_OPS_PCT, TIME_LOOP_S, RECIP_TIME_LOOP_MHZ,
                 COUNT_INSTS_GI, RATE_INST_GI_P_S,
                 E_PKG_J, P_PKG_W,
                 EPO_PKG_INST_J_P_GI, RPE_INST_PKG_GI_P_JS, ROPE_INST_PKG_GI2_P_JS,
@@ -57,13 +56,13 @@ L3R_TrafficDict={'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FIL
 L3W_TrafficDict={'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
 
 StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
+                    'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'HSW': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
+                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'IVB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' },
+                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FrontEnd':'Front_end_(cycles)' }}
+                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' }}
 
 LFBFields = ['%lfb:k{}'.format(i) for i in range(0,11)]
 field_names = field_names + LFBFields
@@ -280,7 +279,7 @@ def calculate_stall_percentages(res, row, skip_stalls):
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
             res[MetricName.stallPct(buf)] = 100 * getter(row, StallDict[arch][buf]) / unhlt
         try:
-            res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FrontEnd']) / unhlt
+            res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FE']) / unhlt
         except:
             warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
             res[STALL_FE_PCT] = 100 * (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
@@ -390,7 +389,7 @@ def add_trawl_data(out_rows, in_rows):
         out_rows[SPEEDUP_DL1] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
-        skip_stalls, succinct, enable_lfb, incl_meta_data):
+        skip_stalls, enable_lfb, incl_meta_data):
     out_row = {}
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
@@ -468,7 +467,7 @@ def unify_column_names(colnames):
 #     return new_mapping_df[retainColumns]
     
 def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df):
+                   skip_stalls, name_file, enable_lfb, incl_meta_data, mapping_df):
     if name_file:
         read_short_names(name_file)
 
@@ -522,13 +521,14 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
         
     output_rows = pd.DataFrame(list(df.apply(build_row_output, user_op_column_name_dict=user_op_col_name_dict, \
                 use_cpi=use_cpi, axis=1, skip_energy=skip_energy, \
-                skip_stalls=skip_stalls, succinct=succinct, enable_lfb=enable_lfb, incl_meta_data=incl_meta_data)))
+                skip_stalls=skip_stalls, enable_lfb=enable_lfb, incl_meta_data=incl_meta_data)))
 
     # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
     node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
-    metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
-    add_mem_max_level_columns(output_rows, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
+    #metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
+    metric_to_memlevel = lambda v: v.extractComponent()
+    add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
     # Add y-value data for TRAWL Plot
@@ -547,12 +547,11 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
                 left_on=['After Name', 'After Timestamp'], right_on=[NAME, TIMESTAMP],  \
                 how='inner').drop(columns=[NAME, TIMESTAMP]).rename(columns={VARIANT:'After Variant'})
         new_mapping_df = compute_speedup(output_rows, mapping_df)
-    output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
     return output_rows, new_mapping_df
 
 
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
-                   skip_stalls, succinct, name_file, enable_lfb=False, incl_meta_data=False, mapping_file=None):
+                   skip_stalls, name_file, enable_lfb=False, incl_meta_data=False, mapping_file=None):
     print('Inputfile Format: ', input_format, file=sys.stderr)
     print('Inputfiles: ', inputfiles, file=sys.stderr)
     print('Outputfile: ', outputfile, file=sys.stderr)
@@ -564,7 +563,7 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
 
     mapping_df = pd.read_csv(mapping_file, delimiter=',') if mapping_file is not None else None
     output_rows, new_mapping_df = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
-        skip_stalls, succinct, name_file, enable_lfb, incl_meta_data, mapping_df)
+        skip_stalls, name_file, enable_lfb, incl_meta_data, mapping_df)
 
     outputfile = sys.stdout if outputfile == '-' else outputfile
     output_rows.to_csv(outputfile, index=False)
@@ -579,8 +578,6 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     #     output_csvfile = sys.stdout
     # else:
     #     output_csvfile = open (outputfile, 'w', newline='')
-
-    # output_fields = succinctify(field_names) if succinct else field_names
 
     # output_fields = list(filter(field_has_values(output_rows), output_fields))
     # csvwriter = csv.DictWriter(output_csvfile, fieldnames=output_fields)
@@ -620,7 +617,6 @@ if __name__ == '__main__':
     parser.add_argument('-m', nargs='?', help='the input mapping/transition csv file for speedup computation', dest='mapping_file')
     parser.add_argument('--skip-stalls', action='store_true', help='skips calculating stall-related fields', dest='skip_stalls')
     parser.add_argument('--skip-energy', action='store_true', help='skips calculating power/energy-related fields', dest='skip_energy')
-    parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
     parser.add_argument('--no-cqa', action='store_true', help='ignore CQA metrics in raw data')
     parser.add_argument('--use-cpi', action='store_true', help='use CPI metrics to compute time')
     parser.add_argument('--enable-lfb', action='store_true', help='include lfb counters in the output', dest='enable_lfb')
@@ -630,6 +626,6 @@ if __name__ == '__main__':
         parser.error("The -m argument requires the --enable-meta argument")
 
     summary_report(args.in_files, args.out_file, [args.in_file_format] * len(args.in_files), args.user_op_file, args.no_cqa, args.use_cpi, args.skip_energy, args.skip_stalls,
-                   args.succinct, args.name_file, args.enable_lfb, args.enable_meta, args.mapping_file)
+                   args.name_file, args.enable_lfb, args.enable_meta, args.mapping_file)
 formula_file_name = 'Formulas_used.txt'
 summary_formulas(formula_file_name)

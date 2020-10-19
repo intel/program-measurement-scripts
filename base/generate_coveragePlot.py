@@ -9,14 +9,12 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 import copy
-from capelib import succinctify
 from generate_QPlot import compute_capacity
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG'], short_names_path=''):
     # Normalize the column names
-    df.columns = succinctify(df.columns)
     df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
@@ -61,7 +59,7 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
     if y_axis: ys = df[y_axis]
     else: ys = df[r'%coverage']
 
-    mem_level = df['memlevel']
+    mem_level = df[MEM_LEVEL]
     today = datetime.date.today()
     if gui:
         outputfile = None

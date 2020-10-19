@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import warnings
 import datetime
-from capelib import succinctify
 from capelib import add_mem_max_level_columns
 from argparse import ArgumentParser
 
@@ -19,6 +18,10 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 import copy
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -26,18 +29,18 @@ MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
 OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}
 BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET
 
-BUFFER_NODE_SET={'FrontEnd'}
+BUFFER_NODE_SET={'FE'}
 DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]', 'FLOP [GFlop/s]'}
 
-# For node using derived metrics (e.g. FrontEnd), make sure the depended metrics are computed
+# For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 capacity_formula= {
-	'L1 [GB/s]': (lambda df : df['l1_rate_gb/s']),
-	'L2 [GB/s]': (lambda df : df['l2_rate_gb/s']),
-	'L3 [GB/s]': (lambda df : df['l3_rate_gb/s']),
-	'FLOP [GFlop/s]': (lambda df : df['flop_rate_gflop/s']),
-	'SIMD [GB/s]': (lambda df : df['register_simd_rate_gb/s']),
-	'RAM [GB/s]': (lambda df : df['ram_rate_gb/s']),
-	'FrontEnd [GB/s]': (lambda df : df['%frontend']*df['C_max'])	
+	'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
+	'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
+	'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
+	'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
+	'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
+	'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
+	'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
 	}
 
 def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None):
@@ -48,14 +51,13 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 
 def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
-	df.columns = succinctify(df.columns)
 	if not mappings.empty:
 		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
 		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
 
-	grouped = df.groupby('variant')
+	grouped = df.groupby(VARIANT)
 	# Only show selected variants, default is 'ORIG'
-	df = df.loc[df['variant'].isin(variants)]
+	df = df.loc[df[VARIANT].isin(variants)]
 	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
 	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings)
 	df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
@@ -78,11 +80,11 @@ def compute_capacity(df, chosen_node_set):
 	add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
 	# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
 	# df = df[df['C_max [GB/s]'].notna()]
-	# df['memlevel']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+	# df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
 	# # Remove the first two characters which is 'C_'
-	# df['memlevel'] = df['memlevel'].apply((lambda v: v[2:]))
+	# df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
 	# # Drop the unit
-	# df['memlevel'] = df['memlevel'].str.replace(" \[.*\]","", regex=True)
+	# df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 	print ("<=====compute_capacity======>")
 #	print(df['C_max'])
 
@@ -122,13 +124,13 @@ def compute_color_labels(df, short_names_path=''):
 	color_labels = []
 	for color in df['color'].unique():
 		colorDf = df.loc[df['color']==color].reset_index()
-		codelet = colorDf['name'][0]
-		timestamp = colorDf['timestamp#'][0]
+		codelet = colorDf[NAME][0]
+		timestamp = colorDf[TIMESTAMP][0]
 		app_name = codelet.split(':')[0]
 		if short_names_path:
 			short_names = pd.read_csv(short_names_path)
-			row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
-			if not row.empty: app_name = row['short_name'][0]
+			row = short_names.loc[(short_names[NAME]==app_name) & (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
+			if not row.empty: app_name = row[SHORT_NAME][0]
 		color_labels.append((app_name, color))
 	return color_labels
 
@@ -149,9 +151,9 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 		return df, None, None
 
 	try:
-		indices = df['short_name']
+		indices = df[SHORT_NAME]
 	except:
-		indices = df['name']
+		indices = df[NAME]
 
 
 	if x_axis:
@@ -163,7 +165,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	else:
 		ys = df['C_max [GB/s]']
 		
-	mem_level=df['memlevel']
+	mem_level=df[MEM_LEVEL]
 	today = datetime.date.today()
 	if gui:
 		outputfile=None
@@ -253,8 +255,8 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 			name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
 			name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
 		for index in mappings.index:
-			before_row = df.loc[(df['name']==mappings['before_name'][index]) & (df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
-			after_row = df.loc[(df['name']==mappings['after_name'][index]) & (df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
+			before_row = df.loc[(df[NAME]==mappings['before_name'][index]) & (df[TIMESTAMP]==mappings['before_timestamp#'][index])].reset_index(drop=True)
+			after_row = df.loc[(df[NAME]==mappings['after_name'][index]) & (df[TIMESTAMP]==mappings['after_timestamp#'][index])].reset_index(drop=True)
 			if not before_row.empty and not after_row.empty:
 				x_axis = x_axis if x_axis else op_node_name
 				y_axis = y_axis if y_axis else 'C_max [GB/s]'
@@ -271,12 +273,12 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 					con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
 						connectionstyle='arc3,rad=-0.3', alpha=1)
 				ax.add_artist(con)
-				name_mapping[before_row['name'][0] + str(before_row['timestamp#'][0])].append(con)
-				name_mapping[after_row['name'][0] + str(after_row['timestamp#'][0])].append(con)
+				name_mapping[before_row[NAME][0] + str(before_row[TIMESTAMP][0])].append(con)
+				name_mapping[after_row[NAME][0] + str(after_row[TIMESTAMP][0])].append(con)
 				mymappings.append(con)
 	plt.tight_layout()
 
-	names = [name + timestamp for name,timestamp in zip(df['name'], df['timestamp#'].astype(str))]
+	names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
 	plotData = {
 		'xs' : xs,
 		'ys' : ys,
@@ -289,7 +291,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 		'texts' : texts,
 		'markers' : markers,
 		'names' : names,
-		'timestamps' : df['timestamp#'].values.tolist(),
+		'timestamps' : df[TIMESTAMP].values.tolist(),
 		'marker:text' : dict(zip(markers,texts)),
 		'marker:name' : dict(zip(markers,names)),
 		'name:marker' : dict(zip(names, markers)),

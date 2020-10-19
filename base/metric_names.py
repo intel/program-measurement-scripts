@@ -1,41 +1,62 @@
 from enum import Enum
+import re
 
 def _instsPctStr(type): 
-    return '%Inst[{}]'.format(type)
+    return 'Count[Insts[{}]]_%'.format(type)
 
 def _opsPctStr(type): 
-    return '%Ops[{}]'.format(type)
+    return 'Count[Ops[{}]]_%'.format(type)
 
+def _stallPctStr(stall):
+    return 'Stall[{}]_%'.format(stall)
+
+def _energyStr(type):
+    return 'E[{}]_J'.format(type)
+
+def _powerStr(type):
+    return 'P[{}]_W'.format(type)
+
+
+def _epoStr(ekind, ikind):
+    return 'EPerOp[{},{}]_J/GI'.format(ekind, ikind)
+
+def _rpeStr(ekind, ikind):
+    return 'RatePerE[{},{}]_GI/Js'.format(ikind, ekind)
+
+def _ropeStr(ekind, ikind):
+    return 'RateOpsPerE[{},{}]_GI2/Js'.format(ikind, ekind)
 
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class MetricName(str, Enum):
     NAME = "Name"
-    SHORT_NAME = "Short Name"
-    SRC_NAME = "Source Name"
+    SHORT_NAME = "ShortName"
+    SRC_NAME = "SourceName"
     TIMESTAMP = "Timestamp#"
     VARIANT = 'Variant'
-    NUM_CORES = 'Num. Cores'
-    DATA_SET = 'DataSet/Size'
-    PREFETCHERS = 'prefetchers'
+    NUM_CORES = 'NumCores'
+    DATA_SET = 'DataSet'
+    MEM_LEVEL = 'Memlevel'
+    PREFETCHERS = 'Prefetchers'
     REPETITIONS = 'Repetitions'
-    TIME_LOOP_S = 'Time (s)'
-    TIME_APP_S = 'AppTime (s)'
-    RECIP_TIME_LOOP_MHZ = 'RecipTime (MHz)'
-    COVERAGE_PCT = '%Coverage'
-    RATE_REG_ADDR_GB_P_S = 'Register ADDR Rate (GB/s)'
-    RATE_REG_DATA_GB_P_S = 'Register DATA Rate (GB/s)'
-    RATE_REG_SIMD_GB_P_S = 'Register SIMD Rate (GB/s)'
-    RATE_REG_GB_P_S = 'Register Rate (GB/s)'
-    RATE_L1_GB_P_S = 'L1 Rate (GB/s)'
-    RATE_L2_GB_P_S = 'L2 Rate (GB/s)'
-    RATE_L3_GB_P_S = 'L3 Rate (GB/s)'
-    RATE_RAM_GB_P_S = 'RAM Rate (GB/s)'
-    RATE_LDST_GI_P_S = 'Load+Store Rate (GI/s)'
-    RATE_FP_GFLOP_P_S = 'FLOP Rate (GFLOP/s)'
-    RATE_INT_GIOP_P_S = 'IOP Rate (GIOP/s)'
-    RATE_INST_GI_P_S = 'C=Inst. Rate (GI/s)'
+    TIME_LOOP_S = 'Time[Loop]_s'
+    TIME_APP_S = 'Time[App]_s'
+    RECIP_TIME_LOOP_MHZ = 'RecipTime[Loop]_MHz'
+    COVERAGE_PCT = 'Coverage_%'
+    RATE_REG_ADDR_GB_P_S = 'Rate[Reg[Addr]]_GB/s'
+    RATE_REG_DATA_GB_P_S = 'Rate[Reg[Data]]_GB/s'
+    RATE_REG_SIMD_GB_P_S = 'Rate[Reg[Simd]]_GB/s'
+    RATE_REG_GB_P_S = 'Rate[Reg]_GB/s'
+    RATE_L1_GB_P_S = 'Rate[L1]_GB/s'
+    RATE_L2_GB_P_S = 'Rate[L2]_GB/s'
+    RATE_L3_GB_P_S = 'Rate[L3]_GB/s'
+    RATE_RAM_GB_P_S = 'Rate[RAM]_GB/s'
+    RATE_MAXMEM_GB_P_S = 'Rate[MaxMem]_GB/s'
+    RATE_LDST_GI_P_S = 'Rate[Ld+St]_GI/s'
+    RATE_FP_GFLOP_P_S = 'Rate[Fp]_GFLOP/s'
+    RATE_INT_GIOP_P_S = 'Rate[Int]_GIOP/s'
+    RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
                 
-    COUNT_INSTS_GI = 'O=Inst. Count (GI)'
+    COUNT_INSTS_GI = 'Count[Insts]_GI'
     COUNT_OPS_VEC_PCT = _opsPctStr('Vec')
     COUNT_INSTS_VEC_PCT = _instsPctStr('Vec')
     #COUNT_INSTS_VEC_PCT = '%Inst[Vec]'
@@ -53,40 +74,40 @@ class MetricName(str, Enum):
     COUNT_INSTS_CVT_PCT = _instsPctStr('CVT')
     COUNT_VEC_TYPE_OPS_PCT = 'VecType[Ops]'
 
-    STALL_PRF_PCT = '%PRF'
-    STALL_SB_PCT = '%SB'
-    STALL_RS_PCT = '%RS'
-    STALL_LB_PCT = '%LB'
-    STALL_ROB_PCT = '%ROB'
-    STALL_LM_PCT = '%LM'
-    STALL_ANY_PCT = '%ANY'
-    STALL_FE_PCT = '%FrontEnd'
+    STALL_PRF_PCT = _stallPctStr('PRF')
+    STALL_SB_PCT = _stallPctStr('SB')
+    STALL_RS_PCT = _stallPctStr('RS')
+    STALL_LB_PCT = _stallPctStr('LB')
+    STALL_ROB_PCT = _stallPctStr('ROB')
+    STALL_LM_PCT = _stallPctStr('LM')
+    STALL_ANY_PCT = _stallPctStr('ANY')
+    STALL_FE_PCT = _stallPctStr('FE')
     
     SPEEDUP_VEC = 'Speedup[Vec]'
     SPEEDUP_DL1 = 'Speedup[DL1]'
-    E_PKG_J = 'Total PKG Energy (J)'
-    P_PKG_W = 'Total PKG Power (W)'
-    E_DRAM_J = 'Total DRAM Energy (J)'
-    P_DRAM_W = 'Total DRAM Power (W)'
-    E_PKGDRAM_J = 'Total PKG+DRAM Energy (J)'
-    P_PKGDRAM_W = 'Total PKG+DRAM Power (W)'
+    E_PKG_J = _energyStr('PKG')
+    P_PKG_W = _powerStr('PKG')
+    E_DRAM_J = _energyStr('DRAM')
+    P_DRAM_W = _powerStr('DRAM')
+    E_PKGDRAM_J = _energyStr('PKG+DRAM')
+    P_PKGDRAM_W = _powerStr('PKG+DRAM')
 
 # EPO - Energy per Op, RPE - Rate per Energy, ROPE - (Rate * Op) per Energy
 # Then the next two part e.g. PKG_INST is refering to specifiy what energy/power/rate/operation is about
-    EPO_PKG_INST_J_P_GI = 'E[PKG]/O (J/GI)'
-    RPE_INST_PKG_GI_P_JS = 'C/E[PKG] (GI/Js)'
-    ROPE_INST_PKG_GI2_P_JS = 'CO/E[PKG] (GI2/Js)'
-    EPO_DRAM_INST_J_P_GI = 'E[DRAM]/O (J/GI)'
-    RPE_INST_DRAM_GI_P_JS = 'C/E[DRAM] (GI/Js)'
-    ROPE_INST_DRAM_GI2_P_JS = 'CO/E[DRAM] (GI2/Js)'
-    EPO_PKGDRAM_INST_J_P_GI = 'E[PKG+DRAM]/O (J/GI)'
-    RPE_INST_PKGDRAM_GI_P_JS = 'C/E[PKG+DRAM] (GI/Js)'
-    ROPE_INST_PKGDRAM_GI2_P_JS = 'CO/E[PKG+DRAM] (GI2/Js)',
+    EPO_PKG_INST_J_P_GI = _epoStr('PKG', 'Inst')
+    RPE_INST_PKG_GI_P_JS = _rpeStr('PKG', 'Inst')
+    ROPE_INST_PKG_GI2_P_JS = _ropeStr('PKG', 'Inst')
+    EPO_DRAM_INST_J_P_GI = _epoStr('DRAM', 'Inst')
+    RPE_INST_DRAM_GI_P_JS = _rpeStr('DRAM', 'Inst')
+    ROPE_INST_DRAM_GI2_P_JS = _ropeStr('DRAM', 'Inst')
+    EPO_PKGDRAM_INST_J_P_GI = _epoStr('PKG+DRAM', 'Inst')
+    RPE_INST_PKGDRAM_GI_P_JS = _rpeStr('PKG+DRAM', 'Inst')
+    ROPE_INST_PKGDRAM_GI2_P_JS = _ropeStr('PKG+DRAM', 'Inst')
 
-    BRANCHES_MISP_PCT = '%Misp. Branches'
-    EXE_PER_RET_UOPS = 'Executed/Retired Uops',
+    BRANCHES_MISP_PCT = 'Branches[Misp]_%'
+    EXE_PER_RET_UOPS = 'ExeRetUopsRatio',
 
-    ARRAY_EFFICIENCY_PCT = '%ArrayEfficiency'
+    ARRAY_EFFICIENCY_PCT = 'ArrayEfficiency_%'
 
     @classmethod
     def opsPct(cls, type):
@@ -97,24 +118,34 @@ class MetricName(str, Enum):
         return cls(_instsPctStr(type))
     @classmethod
     def stallPct(cls, stall):
-        return cls('%'+stall)
+        return cls(_stallPctStr(stall))
 
     @classmethod
     def energy(cls, kind):
-        return cls('Total {} Energy (J)'.format(kind))
+        return cls(_energyStr(kind))
 
     @classmethod
     def power(cls, kind):
-        return cls('Total {} Power (W)'.format(kind))
+        return cls(_powerStr(kind))
 
     @classmethod
-    def epo(cls, ekind, ikind='INST'):
-        return cls('E[{}]/O (J/GI)'.format(ekind))
+    def epo(cls, ekind, ikind='Inst'):
+        return cls(_epoStr(ekind, ikind))
 
     @classmethod
-    def rpe(cls, ekind, ikind='INST'):
-        return cls('C/E[{}] (GI/Js)'.format(ekind))
+    def rpe(cls, ekind, ikind='Inst'):
+        return cls(_rpeStr(ekind, ikind))
 
     @classmethod
-    def rope(cls, ekind, ikind='INST'):
-        return cls('CO/E[{}] (GI2/Js)'.format(ekind))
+    def rope(cls, ekind, ikind='Inst'):
+        return cls(_ropeStr(ekind, ikind))
+
+
+    # With metric pattern <MetricType>[<Component>]_<UNIT>
+    # extract the <Component> part
+    def extractComponent(self):
+        matched = re.match(r"([^_]*)_(.*)", self)
+        metricAndComp = matched.group(1)
+        matched = re.match(r"([^\[]*)\[(.*)\]$", metricAndComp)
+        return matched.group(2)
+        

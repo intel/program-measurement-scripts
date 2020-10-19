@@ -95,10 +95,10 @@ def agg_fn(df, short_names_path):
     # Finally compute VecType which is the most complicated field to aggregate due to the need to parse strings
     # First reconstruct the sc, xmm, ymm, zmm metrics
     # more precise to just compute scPercent from other vector percentage (see below)
-    # scPercent = parseVecType(df['VecType[Ops]'], 'SC')
-    xmmPercent = parseVecType(df['VecType[Ops]'], 'XMM')
-    ymmPercent = parseVecType(df['VecType[Ops]'], 'YMM')
-    zmmPercent = parseVecType(df['VecType[Ops]'], 'ZMM')
+    # scPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'SC')
+    xmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'XMM')
+    ymmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'YMM')
+    zmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'ZMM')
     # Aggregate them 
     # Don't bother to compute scPercent because coverage may not sum to 1
     # Just compute aggregated xmm, ymm, zmm percentage and assume the rest as sc
@@ -108,13 +108,13 @@ def agg_fn(df, short_names_path):
     zmmPercent = np.dot(df[TIME_APP_S], zmmPercent)/totalAppTime
     scPercent = 1 - (xmmPercent + ymmPercent + zmmPercent)
 
-    out_df['VecType[Ops]']=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
+    out_df[COUNT_VEC_TYPE_OPS_PCT]=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
 
     excludedMetrics = [SRC_NAME, 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
-    # Caclulate aggregate memlevel
+    # Caclulate aggregate MEM_LEVEL
     node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
     metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
-    add_mem_max_level_columns(out_df, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
+    add_mem_max_level_columns(out_df, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     # For the rest, compute time weighted average
     remainingMetrics = [x for x in df.columns if x not in list(out_df.columns) + excludedMetrics]
     for metric in remainingMetrics:

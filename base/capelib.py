@@ -12,27 +12,18 @@ globals().update(MetricName.__members__)
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
 
-def succinctify(value):
-    def helper(x):
-        x = x[:x.index(')')] if ')' in x else x
-        return x.lower().strip().replace(' ', '_').replace('_(', '_').replace('._','_')
-    if isinstance(value, str):
-        return helper(value)
-    else:
-        return list(map(helper,value))
-
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
     inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
     # inout_df = inout_df[inout_df[max_rate_name].notna()]
-    inout_df['memlevel']=inout_df[node_list].idxmax(axis=1)
-    nonnullMask = ~inout_df['memlevel'].isnull()
-    inout_df.loc[nonnullMask, 'memlevel'] = inout_df.loc[nonnullMask, 'memlevel'].apply(metric_to_memlevel_lambda)
+    inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
+    nonnullMask = ~inout_df[MEM_LEVEL].isnull()
+    inout_df.loc[nonnullMask, MEM_LEVEL] = inout_df.loc[nonnullMask, MEM_LEVEL].apply(metric_to_memlevel_lambda)
     # Old stuff below to be deleted
 	# Remove the first two characters which is 'C_'
-    # inout_df['memlevel'] = inout_df['memlevel'].apply((lambda v: v[2:]))
+    # inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].apply((lambda v: v[2:]))
 	# Drop the unit
-	# inout_df['memlevel'] = inout_df['memlevel'].str.replace(" \[.*\]","", regex=True)
+	# inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
 # Simple function to convert nan's to 0
 def nan2zero(v):
@@ -94,7 +85,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             out_row[COUNT_INSTS_VEC_PCT] = cqa_vec_ratio
     except:
         pass
-    out_row['VecType[Ops]']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
+    out_row[COUNT_VEC_TYPE_OPS_PCT]=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
 
 
 def calculate_flops_counts_per_iter(in_row):

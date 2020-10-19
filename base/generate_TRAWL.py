@@ -8,17 +8,15 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
-from capelib import succinctify
 import copy
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-    df.columns = succinctify(df.columns)
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-    df['C_FLOP [GFlop/s]'] = df['flop_rate_gflop/s']
+    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df['variant'].isin(variants)]
     df, fig, plotData = compute_and_plot(
@@ -50,14 +48,14 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         return None, None
 
     try:
-        indices = df['short_name']
+        indices = df[SHORT_NAME]
     except:
-        indices = df['name']
+        indices = df[NAME]
 
     if x_axis: xs = df[x_axis]
     else: xs = df['C_FLOP [GFlop/s]']
     if y_axis: ys = df[y_axis]
-    else: ys = df['speedup[vec]']
+    else: ys = df[SPEEDUP_DL1]']
     
     today = datetime.date.today()
     if gui:
@@ -134,11 +132,11 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
             name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
             name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
         for index in mappings.index:
-            before_row = df.loc[(df['name']==mappings['before_name'][index]) & (df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
-            after_row = df.loc[(df['name']==mappings['after_name'][index]) & (df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
+            before_row = df.loc[(df[NAME]==mappings['before_name'][index]) & (df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
+            after_row = df.loc[(df[NAME]==mappings['after_name'][index]) & (df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
             if not before_row.empty and not after_row.empty:
                 x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
-                y_axis = y_axis if y_axis else 'speedup[vec]'
+                y_axis = y_axis if y_axis else SPEEDUP_VEC
                 xyA = (before_row[x_axis][0], before_row[y_axis][0])
                 xyB = (after_row[x_axis][0], after_row[y_axis][0])
                 # Check which way to curve the arrow to avoid going out of the axes
@@ -157,7 +155,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
                 mymappings.append(con)
     plt.tight_layout()
     
-    names = [name + timestamp for name,timestamp in zip(df['name'], df['timestamp#'].astype(str))]
+    names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
     plotData = {
         'xs' : xs,
         'ys' : ys,
@@ -170,7 +168,7 @@ def plot_data(title, filename, xs, ys, indices, scale, df, color_labels=None, x_
         'texts' : texts,
         'markers' : markers,
         'names' : names,
-        'timestamps' : df['timestamp#'].values.tolist(),
+        'timestamps' : df[TIMESTAMP].values.tolist(),
         'marker:text' : dict(zip(markers,texts)),
         'marker:name' : dict(zip(markers,names)),
         'name:marker' : dict(zip(names, markers)),

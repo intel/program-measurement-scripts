@@ -10,7 +10,6 @@ from argparse import ArgumentParser
 # Metric list: {advisor_dir}/pythonapi/examples/columns.txt
 import advisor
 
-#from capelib import succinctify
 #from capelib import calculate_all_rate_and_counts
 import capelib
 from metric_names import MetricName
@@ -344,7 +343,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
-    parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
     args = parser.parse_args()
 
 
