@@ -23,27 +23,32 @@ import os
 import pandas as pd
 import warnings
 
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
+
 # At least Python version 3.6 is required
 assert sys.version_info >= (3,6)
 
 args = None
 variants = {}
 short_names = {}
-field_names = [ 'Name', 'Short Name', 'Variant', 'Num. Cores','DataSet/Size','prefetchers','Repetitions', 'VecType[Ops]', 'Time (s)', 'RecipTime (MHz)'
-                'O=Inst. Count (GI)', 'C=Inst. Rate (GI/s)',
-                'Total PKG Energy (J)', 'Total PKG Power (W)',
-                'E[PKG]/O (J/GI)', 'C/E[PKG] (GI/Js)', 'CO/E[PKG] (GI2/Js)',
-                'Total DRAM Energy (J)', 'Total DRAM Power (W)',
-                'E[DRAM]/O (J/GI)', 'C/E[DRAM] (GI/Js)', 'CO/E[DRAM] (GI2/Js)',
-                'Total PKG+DRAM Energy (J)', 'Total PKG+DRAM Power (W)',
-                'E[PKG+DRAM]/O (J/GI)', 'C/E[PKG+DRAM] (GI/Js)', 'CO/E[PKG+DRAM] (GI2/Js)',
-                '%Misp. Branches', 'Executed/Retired Uops',
-                'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
-                'L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)', 'Load+Store Rate (GI/s)',
-                'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]','%Inst[FMA]',
-                '%Ops[DIV]', '%Inst[DIV]', '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]',
-                '%PRF','%SB','%PRF','%RS','%LB','%ROB','%LM','%ANY','%FrontEnd', 'AppTime (s)', '%Coverage', 'Speedup[Vec]', 'Speedup[DL1]',
-                '%ArrayEfficiency' ]
+field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPETITIONS, 'VecType[Ops]', TIME_LOOP_S, RECIP_TIME_LOOP_MHZ,
+                COUNT_INSTS_GI, RATE_INST_GI_P_S,
+                E_PKG_J, P_PKG_W,
+                EPO_PKG_INST_J_P_GI, RPE_INST_PKG_GI_P_JS, ROPE_INST_PKG_GI2_P_JS,
+                E_DRAM_J, P_DRAM_W,
+                EPO_DRAM_INST_J_P_GI, RPE_INST_DRAM_GI_P_JS, ROPE_INST_DRAM_GI2_P_JS,
+                E_PKGDRAM_J, P_PKGDRAM_W,
+                EPO_PKGDRAM_INST_J_P_GI, RPE_INST_PKGDRAM_GI_P_JS, ROPE_INST_PKGDRAM_GI2_P_JS,
+                BRANCHES_MISP_PCT, EXE_PER_RET_UOPS,
+                RATE_REG_ADDR_GB_P_S, RATE_REG_DATA_GB_P_S, RATE_REG_SIMD_GB_P_S, RATE_REG_GB_P_S,
+                RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, RATE_LDST_GI_P_S,
+                RATE_FP_GFLOP_P_S, RATE_INT_GIOP_P_S, COUNT_OPS_VEC_PCT, COUNT_INSTS_VEC_PCT, COUNT_OPS_FMA_PCT,COUNT_INSTS_FMA_PCT,
+                COUNT_OPS_DIV_PCT, COUNT_INSTS_DIV_PCT, COUNT_OPS_SQRT_PCT, COUNT_INSTS_SQRT_PCT, COUNT_OPS_RSQRT_PCT, COUNT_INSTS_RSQRT_PCT, COUNT_OPS_RCP_PCT, COUNT_INSTS_RCP_PCT,
+                STALL_PRF_PCT, STALL_SB_PCT, STALL_RS_PCT, STALL_LB_PCT, STALL_ROB_PCT, STALL_LM_PCT, STALL_ANY_PCT, STALL_FE_PCT, TIME_APP_S, COVERAGE_PCT, SPEEDUP_VEC, SPEEDUP_DL1,
+                ARRAY_EFFICIENCY_PCT ]
 
 
 L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
@@ -84,31 +89,31 @@ def arch_helper(row):
 
 
 def calculate_codelet_name(out_row, in_row):
-    out_row['Name'] = '{0}: {1}'.format(
+    out_row[NAME] = '{0}: {1}'.format(
         getter(in_row, 'application.name', type=str),
         getter(in_row, 'codelet.name', type=str))
-    name_key = (out_row['Name'], in_row['Timestamp#'])
-    name_key = name_key if name_key in short_names else out_row['Name']
+    name_key = (out_row[NAME], in_row[TIMESTAMP])
+    name_key = name_key if name_key in short_names else out_row[NAME]
     # Short Name is default set to actual name
-    out_row['Short Name'] = short_names.get(name_key, out_row['Name'])
-    out_row['Variant'] = variants.get(name_key, getter(in_row, 'decan_variant.name', type=str))        
+    out_row[SHORT_NAME] = short_names.get(name_key, out_row[NAME])
+    out_row[VARIANT] = variants.get(name_key, getter(in_row, 'decan_variant.name', type=str))        
 
 
 def calculate_expr_settings(out_row, in_row):
-    out_row['Num. Cores']=getter(in_row, 'decan_experimental_configuration.num_core')
-    out_row['DataSet/Size']=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
+    out_row[NUM_CORES]=getter(in_row, 'decan_experimental_configuration.num_core')
+    out_row[DATA_SET]=getter(in_row, 'decan_experimental_configuration.data_size', type=str)
     try:
-        out_row['prefetchers']=getter(in_row, 'prefetchers')
+        out_row[PREFETCHERS]=getter(in_row, 'prefetchers')
     except:
-        out_row['prefetchers']='unknown'
+        out_row[PREFETCHERS]='unknown'
     try:
-        out_row['Repetitions']=getter(in_row, 'Repetitions')
+        out_row[REPETITIONS]=getter(in_row, REPETITIONS)
     except:        
-        out_row['Repetitions']=1
+        out_row[REPETITIONS]=1
 
 def calculate_iterations_per_rep(in_row):
     try:
-        return getter(in_row, 'Iterations') / getter(in_row, 'Repetitions')
+        return getter(in_row, 'Iterations') / getter(in_row, REPETITIONS)
     except:
         # For Oneview there is no Repetitions just return Iterations
         return getter(in_row, 'Iterations') 
@@ -122,9 +127,9 @@ def calculate_time(out_row, in_row, iterations_per_rep, use_cpi):
     else:
         time = getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') / getter(in_row, 'decan_experimental_configuration.num_core')
     time_s = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
-    out_row['Time (s)'] = time_s
-    out_row['RecipTime (MHz)'] = (1 / time_s) / 1e6 
-    return out_row['Time (s)']
+    out_row[TIME_LOOP_S] = time_s
+    out_row[RECIP_TIME_LOOP_MHZ] = (1 / time_s) / 1e6 
+    return out_row[TIME_LOOP_S]
 
 def print_time_formula(formula_file):
     formula_file.write('Time (s) = (CPU_CLK_UNHALTED_THREAD * iterations_per_rep) /' +
@@ -157,9 +162,9 @@ def calculate_user_op_rate(out_row, in_row, time_per_rep, user_op_column_name_di
 
 def calculate_num_insts(out_row, in_row, iterations_per_rep, time):
     insts_per_rep = ((getter(in_row, 'INST_RETIRED_ANY') * iterations_per_rep) / (1e9))
-    out_row['O=Inst. Count (GI)'] = insts_per_rep
+    out_row[COUNT_INSTS_GI] = insts_per_rep
     ops_per_sec = insts_per_rep / time
-    out_row['C=Inst. Rate (GI/s)'] = ops_per_sec
+    out_row[RATE_INST_GI_P_S] = ops_per_sec
 
     calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time)
     return (insts_per_rep, ops_per_sec)
@@ -223,9 +228,9 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
         L3_rwb_per_it  = (L3_rc_per_it  + L3_wc_per_it) * 64
         ram_rwb_per_it = (ram_rc_per_it + ram_wc_per_it) * 64
 
-        out_row['L2 Rate (GB/s)']  = (L2_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
-        out_row['L3 Rate (GB/s)']  = (L3_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
-        out_row['RAM Rate (GB/s)'] = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
+        out_row[RATE_L2_GB_P_S]  = (L2_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+        out_row[RATE_L3_GB_P_S]  = (L3_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+        out_row[RATE_RAM_GB_P_S] = (ram_rwb_per_it * iterations_per_rep) / (1E9 * time_per_rep)
         out_row['Load+Store Rate (GI/S)'] = calculate_load_store_rate()
     except:
         pass
@@ -234,16 +239,16 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
         L1_rb_per_it  = getter(in_row, 'Bytes_loaded') * getter(in_row, 'decan_experimental_configuration.num_core')
         L1_wb_per_it  = getter(in_row, 'Bytes_stored') * getter(in_row, 'decan_experimental_configuration.num_core')
         L1_rwb_per_it  = (L1_rb_per_it  + L1_wb_per_it)
-        out_row['L1 Rate (GB/s)']  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
+        out_row[RATE_L1_GB_P_S]  = (L1_rwb_per_it  * iterations_per_rep) / (1E9 * time_per_rep)
     except:
         # This is just estimation an load if fetching 8B (64 bit)
         warnings.warn("No CQA L1 metrics, use LS instruction rate instead.")
-        out_row['L1 Rate (GB/s)']  = out_row['Load+Store Rate (GI/S)'] * 8
+        out_row[RATE_L1_GB_P_S]  = out_row['Load+Store Rate (GI/S)'] * 8
 
     
     try:
-        out_row['Register ADDR Rate (GB/s)'], out_row['Register DATA Rate (GB/s)'], \
-        out_row['Register SIMD Rate (GB/s)'], out_row['Register Rate (GB/s)'] = calculate_register_bandwidth()
+        out_row[RATE_REG_ADDR_GB_P_S], out_row[RATE_REG_DATA_GB_P_S], \
+        out_row[RATE_REG_SIMD_GB_P_S], out_row[RATE_REG_GB_P_S] = calculate_register_bandwidth()
     except:
         pass
 
@@ -255,14 +260,14 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
 
 # def shorten_stall_counter(field):
 #     if field == 'RESOURCE_STALLS2_ALL_PRF_CONTROL':
-#         return '%PRF'
+#         return STALL_PRF_PCT
 #     field = field[(len('RESOURCE_STALLS') + 1):]
 #     if field == '_ALL_PRF_CONTROL':
-#         return '%PRF'
+#         return STALL_PRF_PCT
 #     elif field == '_PHT_FULL':
 #         return '%PHT'
 #     elif field == 'LOAD_MATRIX':
-#         return '%LM'
+#         return STALL_LM_PCT
 #     else:
 #         return '%' + field.upper()
 
@@ -273,12 +278,12 @@ def calculate_stall_percentages(res, row, skip_stalls):
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
-            res['%'+buf] = 100 * getter(row, StallDict[arch][buf]) / unhlt
+            res[MetricName.stallPct(buf)] = 100 * getter(row, StallDict[arch][buf]) / unhlt
         try:
-            res['%FrontEnd'] = 100 * getter(row, StallDict[arch]['FrontEnd']) / unhlt
+            res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FrontEnd']) / unhlt
         except:
             warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
-            res['%FrontEnd'] = 100 * (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
+            res[STALL_FE_PCT] = 100 * (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
             
     except:
         pass
@@ -296,8 +301,8 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
         return calculate_from_counter('UNC_DDR_ENERGY_STATUS', 'FREERUN_DRAM_ENERGY_STATUS')
 
     def calculate_derived_metrics(kind, energy):
-        out_row['Total {} Energy (J)'.format(kind)] = energy
-        out_row['Total {} Power (W)'.format(kind)] = energy / time
+        out_row[MetricName.energy(kind)] = energy
+        out_row[MetricName.power(kind)] = energy / time
         calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec)
 
     # Can extend to report PP0, PP1 but ignore for now.
@@ -315,11 +320,11 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 
 def calculate_speculation_ratios(out_row, in_row):
     try:
-        out_row['%Misp. Branches'] = 100 * getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
+        out_row[BRANCHES_MISP_PCT] = 100 * getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
     except:
         pass
     try:
-        out_row['Executed/Retired Uops'] = getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
+        out_row[EXE_PER_RET_UOPS] = getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
         return
 
@@ -341,45 +346,48 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
         pass
 
 def calculate_array_efficiency(out_rows, in_rows):
-    num_all_streams = in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
-        + in_rows['Nb_streams_stride_n'].values + in_rows['Nb_streams_unknown_stride'].values + in_rows['Nb_streams_indirect'].values
-    out_rows['%ArrayEfficiency'] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
-        + 0.75 * in_rows['Nb_streams_stride_n'].values + 0.5 * in_rows['Nb_streams_unknown_stride'].values \
-            + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams
+    try:
+        num_all_streams = in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
+            + in_rows['Nb_streams_stride_n'].values + in_rows['Nb_streams_unknown_stride'].values + in_rows['Nb_streams_indirect'].values
+        out_rows[ARRAY_EFFICIENCY_PCT] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
+            + 0.75 * in_rows['Nb_streams_stride_n'].values + 0.5 * in_rows['Nb_streams_unknown_stride'].values \
+                + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams
+    except:
+        pass
 
 def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
     # Note: need to use .values to be more robust and not index dependent
     if 'Time(Second)' in in_cols:
-        out_rows['AppTime (s)'] = in_rows['Time(Second)'].values
+        out_rows[TIME_APP_S] = in_rows['Time(Second)'].values
     else:
         # Just use codelet time if no App time provided from measurement (e.g. CapeScripts measurements)
-        out_rows['AppTime (s)'] = out_rows['Time (s)'].values
+        out_rows[TIME_APP_S] = out_rows[TIME_LOOP_S].values
     if 'Coverage(Percent)' in in_cols:
         # Coverage info provide, go ahead to use it
-        out_rows['%Coverage'] = in_rows['Coverage(Percent)'].values
+        out_rows[COVERAGE_PCT] = in_rows['Coverage(Percent)'].values
     else:
         # No coverage info provided, try to compute using AppTime
-        totalAppTime = sum(out_rows['AppTime (s)'].values)
-        out_rows['%Coverage'] = 100 * out_rows['AppTime (s)'].values/totalAppTime
+        totalAppTime = sum(out_rows[TIME_APP_S].values)
+        out_rows[COVERAGE_PCT] = 100 * out_rows[TIME_APP_S].values/totalAppTime
 
 def add_trawl_data(out_rows, in_rows):
     # initialize to None and set to correct values
-    out_rows['Speedup[Vec]'] = None
-    out_rows['Speedup[DL1]'] = None
+    out_rows[SPEEDUP_VEC] = None
+    out_rows[SPEEDUP_DL1] = None
     try:
-        out_rows['Speedup[Vec]'] = in_rows['potential_speedup.if_fully_vectorized'].values
+        out_rows[SPEEDUP_VEC] = in_rows['potential_speedup.if_fully_vectorized'].values
     except:
         if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'].values + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'].values)/2
         dl1_cycles = (in_rows['(L1)_Nb_cycles_min'].values + in_rows['(L1)_Nb_cycles_max'].values)/2
-        out_rows['Speedup[Vec]'] = dl1_cycles / if_fully_cycles
+        out_rows[SPEEDUP_VEC] = dl1_cycles / if_fully_cycles
 
     try:
-        out_rows['Speedup[DL1]'] = in_rows['time(ORIG) / time(DL1)'].values
+        out_rows[SPEEDUP_DL1] = in_rows['time(ORIG) / time(DL1)'].values
     except:
         # Go ahead to use the dl1_cycles (assuming exception was thrown when computing what-if vectorization speedup)
         # use core cycles instead of ref or CPI so timing not affected by TurboBoost
-        out_rows['Speedup[DL1]'] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
+        out_rows[SPEEDUP_DL1] = in_rows['CPU_CLK_UNHALTED_THREAD'].values / dl1_cycles
 
 def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
         skip_stalls, succinct, enable_lfb, incl_meta_data):
@@ -400,10 +408,11 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
 
     calculate_lfb_histogram(out_row, in_row, enable_lfb)
     if incl_meta_data:
-        out_row['Timestamp#'] = in_row['Timestamp#']
-        out_row['Source Name'] = in_row['Source Name']
+        out_row[TIMESTAMP] = in_row['Timestamp#']
+        out_row[SRC_NAME] = in_row['Source Name']
     return out_row
 
+# TODO: Delete this as likely out of sync with updated metric names and formula calculation.
 def print_formulas(formula_file):
     print_iterations_per_rep_formula(formula_file)
     print_time_formula(formula_file)
@@ -438,9 +447,9 @@ def unify_column_names(colnames):
 
 # moved to capelib.py
 # def compute_speedup(output_rows, mapping_df):
-#     keyColumns=['Name', 'Timestamp#']
-#     timeColumns=['Time (s)', 'AppTime (s)']
-#     rateColumns=['FLOP Rate (GFLOP/s)']
+#     keyColumns=[NAME, TIMESTAMP]
+#     timeColumns=[TIME_LOOP_S, TIME_APP_S]
+#     rateColumns=[RATE_FP_GFLOP_P_S]
 #     perf_df = output_rows[keyColumns + timeColumns + rateColumns]
 
 #     new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
@@ -517,26 +526,26 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
 
     # Compute App Time and Coverage.  Need to do it here after build_row_output() computed Codelet Time
     # For CapeScript runs, will add up Codelet Time and consider it AppTime.
-    node_list = ['L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)']
+    node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
     metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
     add_mem_max_level_columns(output_rows, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
-    # Retain rows with non-empty performance measurments (provided by "Time (s)"")
-    output_rows = output_rows[~output_rows['Time (s)'].isnull()]
+    # Retain rows with non-empty performance measurments (provided by TIME_LOOP_S")
+    output_rows = output_rows[~output_rows[TIME_LOOP_S].isnull()]
     new_mapping_df = mapping_df
     if mapping_df is not None and not mapping_df.empty:
         # Make sure Variant columns are in mapping_df
         if not 'Before Variant' in mapping_df.columns:
-            mapping_df = pd.merge(mapping_df, output_rows[['Name', 'Timestamp#', 'Variant']], \
-                left_on=['Before Name', 'Before Timestamp'], right_on=['Name', 'Timestamp#'], \
-                how='inner').drop(columns=['Name', 'Timestamp#']).rename(columns={'Variant':'Before Variant'})
+            mapping_df = pd.merge(mapping_df, output_rows[[NAME, TIMESTAMP, VARIANT]], \
+                left_on=['Before Name', 'Before Timestamp'], right_on=[NAME, TIMESTAMP], \
+                how='inner').drop(columns=[NAME, TIMESTAMP]).rename(columns={VARIANT:'Before Variant'})
         if not 'After Variant' in mapping_df.columns:
-            mapping_df = pd.merge(mapping_df, output_rows[['Name', 'Timestamp#', 'Variant']], \
-                left_on=['After Name', 'After Timestamp'], right_on=['Name', 'Timestamp#'],  \
-                how='inner').drop(columns=['Name', 'Timestamp#']).rename(columns={'Variant':'After Variant'})
+            mapping_df = pd.merge(mapping_df, output_rows[[NAME, TIMESTAMP, VARIANT]], \
+                left_on=['After Name', 'After Timestamp'], right_on=[NAME, TIMESTAMP],  \
+                how='inner').drop(columns=[NAME, TIMESTAMP]).rename(columns={VARIANT:'After Variant'})
         new_mapping_df = compute_speedup(output_rows, mapping_df)
     output_rows.columns = list(map(succinctify, output_rows.columns)) if succinct else output_rows.columns
     return output_rows, new_mapping_df
@@ -589,15 +598,15 @@ def read_short_names(filename):
     with open(filename, 'r', encoding='utf-8-sig') as infile:
         rows = list(csv.DictReader(infile, delimiter=','))
         for row in rows:
-            name = getter(row, 'Name', 'name', type=str)
-            timestamp = row.get('Timestamp#', None)
+            name = getter(row, NAME, 'name', type=str)
+            timestamp = row.get(TIMESTAMP, None)
             name_key = (name, timestamp) if timestamp is not None else name
             try:
-                short_names[name_key] = getter(row, 'short_name', 'Short Name', type=str)
+                short_names[name_key] = getter(row, 'short_name', SHORT_NAME, type=str)
             except:
                 pass
             try:
-                variants[name_key] = getter(row, 'variant', 'Variant', type=str)
+                variants[name_key] = getter(row, 'variant', VARIANT, type=str)
             except:
                 pass             
 

@@ -95,7 +95,7 @@ def get_out_labels(G, node):
 def aggregate_transitions(in_transitions, aggregated_summary):
     G = df_to_graph(in_transitions, ['Difference'])
     rename_map = {}
-    for row in aggregated_summary[['Name', 'Timestamp#', 'Variant', 'From Name/Timestamp#']].itertuples(index=False, name=None):
+    for row in aggregated_summary[[NAME, TIMESTAMP, VARIANT, 'From Name/Timestamp#']].itertuples(index=False, name=None):
         agg_name = row[0] 
         agg_timestamp = row[1]
         agg_variant = row[2]
