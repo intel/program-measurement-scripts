@@ -10,6 +10,10 @@ from matplotlib import style
 from adjustText import adjust_text
 import copy
 from generate_QPlot import compute_capacity
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -20,22 +24,22 @@ def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=Fa
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
-    df = df.loc[df['variant'].isin(variants)]
+    df = df.loc[df[VARIANT].isin(variants)]
     df, fig, textData = compute_and_plot('ORIG', df, outputfile, scale, title, no_plot, gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
     # Return dataframe and figure for GUI
     return (df, fig, textData)
 
 def compute_color_labels(df, short_names_path=''):
     color_labels = []
-    for color in df['color'].unique():
-        colorDf = df.loc[df['color']==color].reset_index()
-        codelet = colorDf['name'][0]
-        timestamp = colorDf['timestamp#'][0]
+    for color in df['Color'].unique():
+        colorDf = df.loc[df['Color']==color].reset_index()
+        codelet = colorDf[NAME][0]
+        timestamp = colorDf[TIMESTAMP][0]
         app_name = codelet.split(':')[0]
         if short_names_path:
             short_names = pd.read_csv(short_names_path)
-            row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
-            if not row.empty: app_name = row['short_name'][0]
+            row = short_names.loc[(short_names[NAME]==app_name) & (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
+            if not row.empty: app_name = row[SHORT_NAME][0]
         color_labels.append((app_name, color))
     return color_labels
 
@@ -50,14 +54,14 @@ def compute_and_plot(variant, df, outputfile_prefix, scale, title, no_plot, gui=
         return None, None, None
 
     try:
-        indices = df['short_name']
+        indices = df[SHORT_NAME]
     except:
-        indices = df['name']
+        indices = df[NAME]
 
     if x_axis: xs = df[x_axis]
     else: xs = df['C_FLOP [GFlop/s]']
     if y_axis: ys = df[y_axis]
-    else: ys = df[r'%coverage']
+    else: ys = df[COVERAGE_PCT]
 
     mem_level = df[MEM_LEVEL]
     today = datetime.date.today()
@@ -109,13 +113,13 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
     markers = []
     df.reset_index(drop=True, inplace=True)
     for i in range(len(x)):
-        markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i]+str(df['timestamp#'][i]), linestyle='', alpha=1))
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=df['Color'][i][0], label=df[NAME][i]+str(df[TIMESTAMP][i]), linestyle='', alpha=1))
 
     mytext = [str('({0}, {1})'.format(indices[i], memlevel[i]))
               for i in range(len(DATA))]
     texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
     #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-    ax.set(xlabel=x_axis if x_axis else 'C_FLOP [GFlop/s]', ylabel=y_axis if y_axis else r'%coverage')
+    ax.set(xlabel=x_axis if x_axis else 'C_FLOP [GFlop/s]', ylabel=y_axis if y_axis else COVERAGE_PCT)
     ax.set_title(title, pad=40)
 
     patches = []
@@ -135,11 +139,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
             name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
             name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
         for index in mappings.index:
-            before_row = df.loc[(df['name']==mappings['before_name'][index]) & (df['timestamp#']==mappings['before_timestamp#'][index])].reset_index(drop=True)
-            after_row = df.loc[(df['name']==mappings['after_name'][index]) & (df['timestamp#']==mappings['after_timestamp#'][index])].reset_index(drop=True)
+            before_row = df.loc[(df[NAME]==mappings['before_name'][index]) & (df[TIMESTAMP]==mappings['before_timestamp#'][index])].reset_index(drop=True)
+            after_row = df.loc[(df[NAME]==mappings['after_name'][index]) & (df[TIMESTAMP]==mappings['after_timestamp#'][index])].reset_index(drop=True)
             if not before_row.empty and not after_row.empty:
                 x_axis = x_axis if x_axis else 'C_FLOP [GFlop/s]'
-                y_axis = y_axis if y_axis else r'%coverage'
+                y_axis = y_axis if y_axis else COVERAGE_PCT
                 xyA = (before_row[x_axis][0], before_row[y_axis][0])
                 xyB = (after_row[x_axis][0], after_row[y_axis][0])
                 # Check which way to curve the arrow to avoid going out of the axes
@@ -153,11 +157,11 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
                     con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
                         connectionstyle='arc3,rad=-0.3', alpha=1)
                 ax.add_artist(con)
-                name_mapping[before_row['name'][0] + str(before_row['timestamp#'][0])].append(con)
-                name_mapping[after_row['name'][0] + str(after_row['timestamp#'][0])].append(con)
+                name_mapping[before_row[NAME][0] + str(before_row[TIMESTAMP][0])].append(con)
+                name_mapping[after_row[NAME][0] + str(after_row[TIMESTAMP][0])].append(con)
                 mymappings.append(con)
 
-    names = [name + timestamp for name,timestamp in zip(df['name'], df['timestamp#'].astype(str))]
+    names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
     plotData = {
         'xs' : xs,
         'ys' : ys,
@@ -170,7 +174,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df=None, color_
         'texts' : texts,
         'markers' : markers,
         'names' : names,
-        'timestamps' : df['timestamp#'].values.tolist(),
+        'timestamps' : df[TIMESTAMP].values.tolist(),
         'marker:text' : dict(zip(markers,texts)),
         'marker:name' : dict(zip(markers,names)),
         'name:marker' : dict(zip(names, markers)),

@@ -38,10 +38,13 @@ import multiprocessing
 import logging
 import copy
 import operator
-from capelib import succinctify
 from generate_QPlot import compute_capacity
 import pickle
 from datetime import datetime
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -92,8 +95,8 @@ class LoadedData(Observable):
         self.data_items=[]
         self.sources=[]
         self.source_order=[]
-        self.common_columns_start = ['name', 'short_name', r'%coverage', 'apptime_s', 'time_s', 'C_FLOP [GFlop/s]', r'%ops[fma]', r'%inst[fma]', 'variant', 'memlevel']
-        self.common_columns_end = ['c=inst_rate_gi/s', 'timestamp#', 'color']
+        self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, 'C_FLOP [GFlop/s]', COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
+        self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         self.analytic_columns = ['rating', 'advice', 'ddg_true_cyclic', 'ddg_artifical_cyclic', 'limits', 'rhs_op_count', 'init_only', 'scalar_reduction', 'recurrence', 'offsets', 'info_url']
         self.mappings = pd.DataFrame()
         self.mapping = pd.DataFrame()
@@ -121,7 +124,7 @@ class LoadedData(Observable):
         if not os.path.isfile(self.short_names_path):
             Path(self.cape_path).mkdir(parents=True, exist_ok=True)
             open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=['name', 'short_name', 'timestamp#']).to_csv(self.short_names_path, index=False)
+            pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP]).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
             pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
@@ -136,7 +139,6 @@ class LoadedData(Observable):
             elif name.endswith('.analytics.csv'): 
                 # TODO: Ask for naming in analytics to be lowercase timestamp
                 self.analytics = pd.read_csv(local_path)
-                self.analytics.rename(columns={'Timestamp#':'timestamp#'}, inplace=True)
     
     def resetStates(self):
         # Track points/labels that have been hidden/highlighted by the user
@@ -182,11 +184,10 @@ class LoadedData(Observable):
         request_use_cpi = False
         request_skip_energy = False
         request_skip_stalls = False
-        request_succinct = False
         short_names_path = self.short_names_path if os.path.isfile(self.short_names_path) else None
         # Codelet summary
         self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
-            request_use_cpi, request_skip_energy, request_skip_stalls, request_succinct, short_names_path, \
+            request_use_cpi, request_skip_energy, request_skip_stalls, short_names_path, \
             False, True, self.mapping)
         # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
@@ -238,13 +239,11 @@ class LoadedData(Observable):
                         scale=self.levels[level]['data'][observer.name]['x_scale'] + self.levels[level]['data'][observer.name]['y_scale'], level=level, mappings=self.levels[level]['mapping'])
     
     def add_variants(self, namesDf):
-        namesDf = namesDf.rename(columns={'name':'Name', 'variant':'Variant', 'timestamp#':'Timestamp#'})
-        self.summaryDf.drop(columns=['Variant'], inplace=True)
-        self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[['Name', 'Variant', 'Timestamp#']], on=['Name', 'Timestamp#'], how='left')
+        self.summaryDf.drop(columns=[VARIANT], inplace=True)
+        self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
     def add_analytics(self, analyticsDf):
-        analyticsDf = analyticsDf.rename(columns={'name':'Name', 'timestamp#':'Timestamp#'})
-        self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=['Name', 'Timestamp#'], how='left')
+        self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
 
     def add_speedup(self, mappings, df):
         if mappings.empty or df.empty:
@@ -490,7 +489,7 @@ class CoverageData(Observable):
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         if not update: # Get all unique variants upon first load
             try: self.variants = df['Variant'].dropna().unique()
-            except: self.variants = df['variant'].dropna().unique()
+            except: self.variants = df[VARIANT].dropna().unique()
         # mappings
         self.mappings = loadedData.mapping
         df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
@@ -996,7 +995,7 @@ class SummaryTab(tk.Frame):
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
-        self.y_axis = self.orig_y_axis = r'%coverage'
+        self.y_axis = self.orig_y_axis = COVERAGE_PCT
         self.current_labels = []
         self.parent = parent
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -1018,7 +1017,7 @@ class SummaryTab(tk.Frame):
             column_list.extend(gui.loadedData.analytic_columns)
             summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
@@ -1109,8 +1108,8 @@ class PlotInteraction():
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame3)
         # Point selection table
         options=[]
-        for i in range(len(self.df['short_name'])):
-            options.append('[' + self.df['short_name'][i] + '] ' + self.df['name'][i] + ' [' + str(self.df['timestamp#'][i]) + ']')
+        for i in range(len(self.df[SHORT_NAME])):
+            options.append('[' + self.df[SHORT_NAME][i] + '] ' + self.df[NAME][i] + ' [' + str(self.df[TIMESTAMP][i]) + ']')
         self.pointSelector = ChecklistBox(self.plotFrame2, options, options, listType='pointSelector', tab=self, bd=1, relief="sunken", background="white")
         self.pointSelector.restoreState(self.stateDictionary)
         # Check if we are loading an analysis result and restore if so
@@ -1457,12 +1456,12 @@ class AxesTab(tk.Frame):
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in ['speedup[vec]', 'speedup[dl1]', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+        for metric in [SPEEDUP_VEC, SPEEDUP_DL1, 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # QPlot
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='QPlot', menu=menu)
-        for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']:
+        for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Speedups (If mappings):
         if not parent.tab.mappings.empty:
@@ -1479,14 +1478,14 @@ class AxesTab(tk.Frame):
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='Summary', menu=summary_menu)
-        metrics = [[r'%coverage', 'apptime_s', 'time_s'],
+        metrics = [[COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S],
                     ['num_cores', 'dataset/size', 'prefetchers', 'repetitions'],
                     ['total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j'], 
                     ['total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w'],
-                    ['o=inst_count_gi', 'c=inst_rate_gi/s'],
-                    ['l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s', 'flop_rate_gflop/s', 'c=inst_rate_gi/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s'],
-                    [r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]'],
-                    [r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]']]
+                    [COUNT_INSTS_GI, RATE_INST_GI_P_S],
+                    [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, 'flop_rate_gflop/s', RATE_INST_GI_P_S, 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s'],
+                    [r'%ops[vec]', COUNT_OPS_FMA_PCT, r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]'],
+                    [r'%inst[vec]', COUNT_INSTS_FMA_PCT, r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]']]
         categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst']
         for index, category in enumerate(categories):
             menu = tk.Menu(summary_menu, tearoff=False)
@@ -1504,7 +1503,7 @@ class AxesTab(tk.Frame):
         metric_label = tk.Label(self, text='Metrics:')
         self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
         self.x_selected = tk.StringVar(value='Choose X Axis Metric')
-        x_options = ['Choose X Axis Metric', 'C_FLOP [GFlop/s]', 'c=inst_rate_gi/s']
+        x_options = ['Choose X Axis Metric', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]
         if self.plotType == 'Custom':
             x_menu = AxesTab.custom_axes(self, self.x_selected)
             y_menu = AxesTab.custom_axes(self, self.y_selected)
@@ -1512,10 +1511,10 @@ class AxesTab(tk.Frame):
             if self.plotType == 'QPlot':
                 y_options = ['Choose Y Axis Metric', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
             elif self.plotType == 'TRAWL':
-                y_options = ['Choose Y Axis Metric', 'speedup[vec]', 'speedup[dl1]']
+                y_options = ['Choose Y Axis Metric', SPEEDUP_VEC, SPEEDUP_DL1]
             elif self.plotType == 'Summary':
-                x_options.append('reciptime_mhz')
-                y_options = ['Choose Y Axis Metric', r'%coverage', 'time_s', 'apptime_s', 'reciptime_mhz']
+                x_options.append(RECIP_TIME_LOOP_MHZ)
+                y_options = ['Choose Y Axis Metric', COVERAGE_PCT, TIME_LOOP_S, TIME_APP_S, RECIP_TIME_LOOP_MHZ]
             y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
             x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
             y_menu['menu'].insert_separator(1)
@@ -1576,13 +1575,13 @@ class ShortNameTab(tk.Frame):
 
     # Create table for Labels tab and update button
     def buildLabelTable(self, df, tab):
-        short_name_table = df[['name', 'timestamp#']]
-        short_name_table['short_name'] = short_name_table['name']
+        short_name_table = df[[NAME, TIMESTAMP]]
+        short_name_table[SHORT_NAME] = short_name_table[NAME]
         merged = self.getShortNames(short_name_table)
-        merged = pd.merge(left=merged, right=df[['name', 'timestamp#', r'%coverage', 'color']], on=['name', 'timestamp#'], how='right')
+        merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT, 'Color']], on=[NAME, TIMESTAMP], how='right')
         # sort label table by coverage to keep consistent with data table
-        merged.sort_values(by=r'%coverage', ascending=False, inplace=True)
-        table = Table(tab, dataframe=merged[['name', 'short_name', 'timestamp#', 'color']], showtoolbar=False, showstatusbar=True)
+        merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
+        table = Table(tab, dataframe=merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
         table_button_frame = tk.Frame(tab)
@@ -1603,29 +1602,29 @@ class ShortNameTab(tk.Frame):
     def getShortNames(self, df):
         if os.path.getsize(self.short_names_path) > 0:
             existing_shorts = pd.read_csv(self.short_names_path)
-            current_shorts = df[['name', 'short_name', 'timestamp#']]
-            merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates(['name', 'timestamp#'], keep='last').reset_index(drop=True)
+            current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP]]
+            merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
         else: 
-            merged = df[['name', 'short_name', 'timestamp#']]
+            merged = df[[NAME, SHORT_NAME, TIMESTAMP]]
         return merged
 
     def addShortNames(self, namesDf):
         if os.path.getsize(self.short_names_path) > 0:
             existing_shorts = pd.read_csv(self.short_names_path)
-            new_shorts = namesDf[['name', 'short_name', 'timestamp#']]
-            merged = pd.concat([existing_shorts, new_shorts]).drop_duplicates(['name', 'timestamp#'], keep='last').reset_index(drop=True)
+            new_shorts = namesDf[[NAME, SHORT_NAME, TIMESTAMP]]
+            merged = pd.concat([existing_shorts, new_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
         else: 
-            merged = namesDf[['name', 'short_name', 'timestamp#']]
+            merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP]]
         merged.to_csv(self.short_names_path, index=False)
 
     def checkForDuplicates(self, df):
         # Check if there are duplicates short names with the same timestamp
         df.reset_index(drop=True, inplace=True)
-        duplicate_rows = df.duplicated(subset=['short_name', 'timestamp#'], keep=False)
+        duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
         if duplicate_rows.any():
             message = str()
             for index, row in df[duplicate_rows].iterrows():
-                message = message + 'row: ' + str(index + 1) + ', short_name: ' + row['short_name'] + '\n'
+                message = message + 'row: ' + str(index + 1) + ', short_name: ' + row[SHORT_NAME] + '\n'
             messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
                 + message)
             return True
@@ -1707,19 +1706,19 @@ class MappingsTab(tk.Frame):
         if len(self.source_order) > 1: self.addCustomOptions(df)
 
     def addCustomOptions(self, df):
-        before = df.loc[df['timestamp#'] == self.source_order[0]]
-        after = df.loc[df['timestamp#'] == self.source_order[1]]
+        before = df.loc[df[TIMESTAMP] == self.source_order[0]]
+        after = df.loc[df[TIMESTAMP] == self.source_order[1]]
         if os.path.getsize(self.short_names_path) > 0:
             short_names = pd.read_csv(self.short_names_path)
             for index in before.index:
-                short_name = short_names.loc[(short_names['name']==before['name'][index]) & (short_names['timestamp#']==self.source_order[0])].reset_index(drop=True)
+                short_name = short_names.loc[(short_names[NAME]==before[NAME][index]) & (short_names[TIMESTAMP]==self.source_order[0])].reset_index(drop=True)
                 if not short_name.empty: # Add short name to end of full codelet name in brackets
-                    before['name'][index] += '[' + short_name['short_name'][0] + ']'
+                    before[NAME][index] += '[' + short_name[SHORT_NAME][0] + ']'
             for index in after.index:
-                short_name = short_names.loc[(short_names['name']==after['name'][index]) & (short_names['timestamp#']==self.source_order[1])].reset_index(drop=True)
-                if not short_name.empty: after['name'][index] = after['name'][index] + '[' + \
-                    short_name['short_name'][0] + ']'
-        tk.Button(self, text="Edit", command=lambda before=list(before['name']), after=list(after['name']) : \
+                short_name = short_names.loc[(short_names[NAME]==after[NAME][index]) & (short_names[TIMESTAMP]==self.source_order[1])].reset_index(drop=True)
+                if not short_name.empty: after[NAME][index] = after[NAME][index] + '[' + \
+                    short_name[SHORT_NAME][0] + ']'
+        tk.Button(self, text="Edit", command=lambda before=list(before[NAME]), after=list(after[NAME]) : \
             self.editMappings(before, after)).grid(row=10, column=0)
         tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
 
@@ -1979,7 +1978,7 @@ class LabelTab(tk.Frame):
                             else: value = 1
                         else: value = tempDf[choice].iloc[0]
                     else:
-                        value = df.loc[(df['name']+df['timestamp#'].astype(str))==codeletName][choice].iloc[0]
+                        value = df.loc[(df[NAME]+df[TIMESTAMP].astype(str))==codeletName][choice].iloc[0]
                     if isinstance(value, int) or isinstance(value, float):
                         toAdd += ', ' + str(round(value, 2))
                     else:
@@ -2005,7 +2004,7 @@ class FilteringTab(tk.Frame):
         self.tab = tab
         # Metric drop down menu
         self.metric_selected = tk.StringVar(value='Choose Metric')
-        to_remove = ['name', 'short_name', 'variant', 'timestamp#', 'color']
+        to_remove = [NAME, SHORT_NAME, VARIANT, TIMESTAMP, 'Color']
         metric_options = [metric for metric in tab.summaryDf.columns.tolist() if metric not in to_remove]
         metric_options.insert(0, 'Choose Metric')
         self.metric_menu = tk.OptionMenu(self, self.metric_selected, *metric_options)
@@ -2091,7 +2090,7 @@ class GuideTab(tk.Frame):
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
                 self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, points=self.a3_points) # Highlight FMA codelets
-                self.updateLabels(r'%ops[fma]')
+                self.updateLabels(COUNT_OPS_FMA_PCT)
             elif self.aLabel['text'] == self.a3_state: # Go to A_END state
                 self.aLabel['text'] = self.a_end_state
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_end_state, pad=40)
@@ -2127,7 +2126,7 @@ class GuideTab(tk.Frame):
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=False, remove=True, points=self.all_highlighted)
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points)
-                self.updateLabels(r'%ops[fma]')
+                self.updateLabels(COUNT_OPS_FMA_PCT)
 
         def toggleTrans(self):
             if self.transButton['text'] == 'Show Transitions':
@@ -2252,7 +2251,7 @@ class TrawlTab(tk.Frame):
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
-        self.y_axis = self.orig_y_axis = 'speedup[vec]'
+        self.y_axis = self.orig_y_axis = SPEEDUP_VEC
         self.current_variants = ['ORIG']
         self.current_labels = []
         # TRAWL tab has a paned window with the data tables and trawl plot
@@ -2270,14 +2269,14 @@ class TrawlTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        column_list.extend(['speedup[vec]', 'speedup[dl1]'])
+        column_list.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         column_list.extend(gui.loadedData.common_columns_end)
         summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
             summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2376,7 +2375,7 @@ class QPlotTab(tk.Frame):
             column_list.extend(gui.loadedData.analytic_columns)
             summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2478,7 +2477,7 @@ class SIPlotTab(tk.Frame):
             self.summaryDf = df[column_list]
         except: pass
         self.buildTableTabs()
-        self.summaryDf = self.summaryDf.sort_values(by=r'%coverage', ascending=False)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2527,7 +2526,7 @@ class CustomTab(tk.Frame):
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
-        self.y_axis = self.orig_y_axis = r'%coverage'
+        self.y_axis = self.orig_y_axis = COVERAGE_PCT
         self.current_labels = []
         # TRAWL tab has a paned window with the data tables and trawl plot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -2544,17 +2543,17 @@ class CustomTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        column_list.remove(r'%ops[fma]')
-        column_list.remove(r'%inst[fma]')
+        column_list.remove(COUNT_OPS_FMA_PCT)
+        column_list.remove(COUNT_INSTS_FMA_PCT)
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', 'speedup[vec]', 'speedup[dl1]', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', SPEEDUP_VEC, SPEEDUP_DL1, \
             'num_cores', 'dataset/size', 'prefetchers', 'repetitions', \
             'total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j', 'total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w', \
-            'o=inst_count_gi', 'c=inst_rate_gi/s', \
-            'l1_rate_gb/s', 'l2_rate_gb/s', 'l3_rate_gb/s', 'ram_rate_gb/s', 'flop_rate_gflop/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s', \
-            r'%ops[vec]', r'%ops[fma]', r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
-            r'%inst[vec]', r'%inst[fma]', r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
-            'timestamp#', 'color'])
+            COUNT_INSTS_GI, RATE_INST_GI_P_S, \
+            RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, 'flop_rate_gflop/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s', \
+            r'%ops[vec]', COUNT_OPS_FMA_PCT, r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
+            r'%inst[vec]', COUNT_INSTS_FMA_PCT, r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
+            TIMESTAMP, 'Color'])
         if not mappings.empty:
             column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
         summaryDf = df[column_list]
@@ -2562,7 +2561,7 @@ class CustomTab(tk.Frame):
             column_list.extend(gui.loadedData.analytic_columns)
             summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=r'%coverage', ascending=False)
+        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()

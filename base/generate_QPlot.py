@@ -122,8 +122,8 @@ def compute_intensity(df, chosen_node_set):
 
 def compute_color_labels(df, short_names_path=''):
 	color_labels = []
-	for color in df['color'].unique():
-		colorDf = df.loc[df['color']==color].reset_index()
+	for color in df['Color'].unique():
+		colorDf = df.loc[df['Color']==color].reset_index()
 		codelet = colorDf[NAME][0]
 		timestamp = colorDf[TIMESTAMP][0]
 		app_name = codelet.split(':')[0]
@@ -142,7 +142,7 @@ def compute_and_plot(variant, df,outputfile_prefix, scale, title, chosen_node_se
 	#	compute_intensity(df, chosen_node_set)
 	output_data_source = sys.stdout if (outputfile_prefix == '-') else outputfile_prefix+variant+'_export_dataframe.csv'
 	#print('Saving to '+output_data_source)
-	#df[['name', 'variant','C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'memlevel', op_node_name]].to_csv(output_data_source, index = False, header=True)
+	#df[[NAME, VARIANT,'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', MEM_LEVEL, op_node_name]].to_csv(output_data_source, index = False, header=True)
 	
 	# Used to create a legend of file names to color for multiple plots
 	color_labels = compute_color_labels(df, short_names_path)
@@ -227,7 +227,7 @@ def plot_data(title, filename, xs, ys, indices, memlevel, scale, df, op_node_nam
 	markers = []
 	df.reset_index(drop=True, inplace=True)
 	for i in range(len(x)):
-		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['color'][i][0], label=df['name'][i]+str(df['timestamp#'][i]), linestyle='', alpha=1))
+		markers.extend(ax.plot(x[i], y[i], marker='o', color=df['Color'][i][0], label=df[NAME][i]+str(df[TIMESTAMP][i]), linestyle='', alpha=1))
 	
 	# Point Labels
 	plt.rcParams.update({'font.size': 7})

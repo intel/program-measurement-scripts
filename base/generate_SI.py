@@ -60,9 +60,9 @@ def concat_ordered_columns(frames):
 
 def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     df = pd.read_csv(inputfile)
-    grouped = df.groupby('variant')
+    grouped = df.groupby(VARIANT)
     # Generate SI plot for each variant
-    mask = df['variant'] == "ORIGG"
+    mask = df[VARIANT] == "ORIGG"
     #if not df.empty
     short_name=''
     target_df = pd.DataFrame()
@@ -71,12 +71,12 @@ def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, varian
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
-    rdf = rdf.loc[rdf['variant'].isin(variants)]
+    rdf = rdf.loc[rdf[VARIANT].isin(variants)]
     l_df = df
     column_list = df.columns.tolist()
-    column_list.extend(['apptime_s', 'timestamp#', r'%coverage', 'color'])
+    column_list.extend([TIME_APP_S, TIMESTAMP, COVERAGE_PCT, 'Color'])
     data = pd.DataFrame(columns=column_list)
-    short_name = rdf['short_name']
+    short_name = rdf[SHORT_NAME]
     data = data.append(rdf, ignore_index=False)[column_list]
     #data = data.append(rdf, ignore_index=False)[df.columns.tolist()]
     dfs = [l_df,data]
@@ -153,15 +153,15 @@ def compute_intensity(df, chosen_node_set, out_df):
 
 def compute_color_labels(df, short_names_path=''):
     color_labels = []
-    for color in df['color'].unique():
-        colorDf = df.loc[df['color']==color].reset_index()
-        codelet = colorDf['name'][0]
-        timestamp = colorDf['timestamp#'][0]
+    for color in df['Color'].unique():
+        colorDf = df.loc[df['Color']==color].reset_index()
+        codelet = colorDf[NAME][0]
+        timestamp = colorDf[TIMESTAMP][0]
         app_name = codelet.split(':')[0]
         if short_names_path:
             short_names = pd.read_csv(short_names_path)
-            row = short_names.loc[(short_names['name']==app_name) & (short_names['timestamp#']==timestamp)].reset_index(drop=True)
-            if not row.empty: app_name = row['short_name'][0]
+            row = short_names.loc[(short_names[NAME]==app_name) & (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
+            if not row.empty: app_name = row[SHORT_NAME][0]
         color_labels.append((app_name, color))
     return color_labels
 
@@ -169,7 +169,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
     out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
     #print (out_csv)
     out_df = pd.DataFrame()
-    out_df[['name', 'short_name', 'variant']] = df[['name', 'short_name', 'variant']]
+    out_df[[NAME, SHORT_NAME, VARIANT]] = df[[NAME, SHORT_NAME, VARIANT]]
     compute_capacity(df, norm, chosen_node_set, out_df)
     compute_saturation(df, chosen_node_set, out_df)
     compute_intensity(df, chosen_node_set, out_df)
@@ -179,7 +179,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
     #out_df.to_csv(out_csv, index = False, header=True)
-    indices = df['short_name']
+    indices = df[SHORT_NAME]
     y = df['Saturation']
     z = df['Intensity']
     df['SI']=df['Saturation'] * df['Intensity'] 
@@ -204,8 +204,8 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
     l_df = None
     # Used to create a legend of file names to color for multiple plots
     if not orig_name.empty:
-        l_df = df.dropna(subset=['color']) # User selected data will have color column while FE_tier1.csv will not
-        #l_df = df.loc[df['short_name'].isin(orig_name)]
+        l_df = df.dropna(subset=['Color']) # User selected data will have color column while FE_tier1.csv will not
+        #l_df = df.loc[df[SHORT_NAME].isin(orig_name)]
         color_labels = compute_color_labels(l_df, short_names_path)
         fig, textData = plot_data_point("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
                             str(sorted(list(chosen_node_set)))),
@@ -219,7 +219,7 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
 
 def compute_and_plot(variant, df,outputfile_prefix, norm, title, chosen_node_set, out_df):
     out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
-    out_df[['name', 'short_name', 'variant']] = df[[NAME, SHORT_NAME, VARIANT]]
+    out_df[[NAME, SHORT_NAME, VARIANT]] = df[[NAME, SHORT_NAME, VARIANT]]
 
     compute_capacity(df, norm, chosen_node_set, out_df)
     compute_saturation(df, chosen_node_set, out_df)
@@ -230,7 +230,7 @@ def compute_and_plot(variant, df,outputfile_prefix, norm, title, chosen_node_set
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
     #out_df.to_csv(out_csv, index = False, header=True)
-    indices = df['short_name']
+    indices = df[SHORT_NAME]
     y = df['Saturation']
     z = df['Intensity']
     df['SI']=df['Saturation'] * df['Intensity'] 
@@ -443,7 +443,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     markers = []
     orig_df.reset_index(drop=True, inplace=True)
     for i in range(len(DATA)):
-        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['color'][i][0], label=orig_df['name'][i]+str(orig_df['timestamp#'][i]), linestyle='', alpha=1))
+        markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['Color'][i][0], label=orig_df[NAME][i]+str(orig_df[TIMESTAMP][i]), linestyle='', alpha=1))
 
     plt.rcParams.update({'font.size': 7})
     #mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_speedup[i] ))  for i in range(len(DATA))]

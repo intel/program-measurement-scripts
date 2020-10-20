@@ -29,8 +29,8 @@ def getShortName(df, short_names_path):
         with open(short_names_path, 'r', encoding='utf-8-sig') as infile:
             rows = list(csv.DictReader(infile, delimiter=','))
             for row in rows:
-                df.loc[(df[NAME]==row['name']) & (df[TIMESTAMP].astype(str)==row['timestamp#']), SHORT_NAME] = row['short_name']
-                #if df[NAME][0] == row['name']:
+                df.loc[(df[NAME]==row[NAME]) & (df[TIMESTAMP].astype(str)==row[TIMESTAMP]), SHORT_NAME] = row[SHORT_NAME]
+                #if df[NAME][0] == row[NAME]:
                 #    df[SHORT_NAME] = row['short_name']
 
 def agg_fn(df, short_names_path):
