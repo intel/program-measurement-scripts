@@ -95,7 +95,9 @@ def calculate_codelet_name(out_row, in_row):
     name_key = name_key if name_key in short_names else out_row[NAME]
     # Short Name is default set to actual name
     out_row[SHORT_NAME] = short_names.get(name_key, out_row[NAME])
-    out_row[VARIANT] = variants.get(name_key, getter(in_row, 'decan_variant.name', type=str))        
+    default_variant = getter(in_row, 'decan_variant.name', type=str)
+    default_variant = 'ORIG' if default_variant == 'ORG' else default_variant
+    out_row[VARIANT] = variants.get(name_key, default_variant)        
 
 
 def calculate_expr_settings(out_row, in_row):
