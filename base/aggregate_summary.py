@@ -11,6 +11,10 @@ from capelib import vector_ext_str
 from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from compute_transitions import aggregate_transitions
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 # Try to extract the data from text
 # which is of the format vecType1=x;vecType2=y etc
@@ -25,36 +29,36 @@ def getShortName(df, short_names_path):
         with open(short_names_path, 'r', encoding='utf-8-sig') as infile:
             rows = list(csv.DictReader(infile, delimiter=','))
             for row in rows:
-                df.loc[(df['Name']==row['name']) & (df['Timestamp#'].astype(str)==row['timestamp#']), 'Short Name'] = row['short_name']
-                #if df['Name'][0] == row['name']:
-                #    df['Short Name'] = row['short_name']
+                df.loc[(df[NAME]==row[NAME]) & (df[TIMESTAMP].astype(str)==row[TIMESTAMP]), SHORT_NAME] = row[SHORT_NAME]
+                #if df[NAME][0] == row[NAME]:
+                #    df[SHORT_NAME] = row['short_name']
 
 def agg_fn(df, short_names_path):
     app_name, variant, numCores, ds, prefetchers, timestamp = df.name
 
-    from_name_timestamps = [list(df[['Name','Timestamp#']].itertuples(index=False, name=None))]
+    from_name_timestamps = [list(df[[NAME,TIMESTAMP]].itertuples(index=False, name=None))]
 
-    out_df = pd.DataFrame({'Name':[app_name], 'Short Name': [app_name], \
-        'Variant': [variant], 'Num. Cores': [numCores], 'DataSet/Size': [ds], \
-            'prefetchers': [prefetchers], 'Timestamp#': [timestamp], \
+    out_df = pd.DataFrame({NAME:[app_name], SHORT_NAME: [app_name], \
+        VARIANT: [variant], NUM_CORES: [numCores], DATA_SET: [ds], \
+            PREFETCHERS: [prefetchers], TIMESTAMP: [timestamp], \
             'From Name/Timestamp#': [from_name_timestamps]})
     getShortName(out_df, short_names_path)
 
     keyMetrics = list(out_df.columns)
     # totalAppTime useful for many computations below
-    totalAppTime = np.sum(df['AppTime (s)'])
+    totalAppTime = np.sum(df[TIME_APP_S])
 
     # Calculate potential speedups
-    speedupMetrics = ['Speedup[Vec]', 'Speedup[DL1]', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]' ] 
+    speedupMetrics = [SPEEDUP_VEC, SPEEDUP_DL1, 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]' ] 
     for metric in speedupMetrics:
         try:
-            out_df[metric] = totalAppTime / (np.sum(df['AppTime (s)'] / df[metric]))
+            out_df[metric] = totalAppTime / (np.sum(df[TIME_APP_S] / df[metric]))
         except:
             pass
 
     # Calculate sum metrics 
-    sumMetrics = ['O=Inst. Count (GI)', '%Coverage', 'AppTime (s)', 'Total PKG Energy (J)', 
-                  'Total DRAM Energy (J)', 'Total PKG+DRAM Energy (J)']
+    sumMetrics = [COUNT_INSTS_GI, COVERAGE_PCT, TIME_APP_S, E_PKG_J, 
+                  E_DRAM_J, E_PKGDRAM_J]
     for metric in sumMetrics:
         try:
             out_df[metric] = np.sum(df[metric])
@@ -64,23 +68,23 @@ def agg_fn(df, short_names_path):
     # Calculate time weighted metrics like rate metrics
     # Note: for % metrics, they will be approximated by time weight manner although 
     # it will be more preicse, say for %Ops[..], we should use operation count weight
-    timeWeightedMetrics = ['C=Inst. Rate (GI/s)', 'FLOP Rate (GFLOP/s)', 'IOP Rate (GIOP/s)', \
-        'L1 Rate (GB/s)', 'L2 Rate (GB/s)',	'L3 Rate (GB/s)', 'RAM Rate (GB/s)', \
-            'Register ADDR Rate (GB/s)', 'Register DATA Rate (GB/s)', 'Register SIMD Rate (GB/s)', 'Register Rate (GB/s)',
-            '%Ops[Vec]', '%Inst[Vec]', '%Ops[FMA]', '%Inst[FMA]', '%Ops[DIV]', '%Inst[DIV]', \
-                '%Ops[SQRT]', '%Inst[SQRT]', '%Ops[RSQRT]', '%Inst[RSQRT]', '%Ops[RCP]', '%Inst[RCP]', \
-                    'Total PKG Power (W)', 'Total DRAM Power (W)', 'Total PKG+DRAM Power (W)', 'Time (s)']
+    timeWeightedMetrics = [RATE_INST_GI_P_S, RATE_FP_GFLOP_P_S, RATE_INT_GIOP_P_S, \
+        RATE_L1_GB_P_S, RATE_L2_GB_P_S,	RATE_L3_GB_P_S, RATE_RAM_GB_P_S, \
+            RATE_REG_ADDR_GB_P_S, RATE_REG_DATA_GB_P_S, RATE_REG_SIMD_GB_P_S, RATE_REG_GB_P_S,
+            COUNT_OPS_VEC_PCT, COUNT_INSTS_VEC_PCT, COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, COUNT_OPS_DIV_PCT, COUNT_INSTS_DIV_PCT, \
+                COUNT_OPS_SQRT_PCT, COUNT_INSTS_SQRT_PCT, COUNT_OPS_RSQRT_PCT, COUNT_INSTS_RSQRT_PCT, COUNT_OPS_RCP_PCT, COUNT_INSTS_RCP_PCT, \
+                    P_PKG_W, P_DRAM_W, P_PKGDRAM_W, TIME_LOOP_S, ARRAY_EFFICIENCY_PCT]
     for metric in timeWeightedMetrics:
-        #out_df[metric] = np.dot(df['%Coverage'], df[metric])
+        #out_df[metric] = np.dot(df[COVERAGE_PCT], df[metric])
         # FIX: Could just divide above dot product by total %Coverage but use a cleaner formula directly from AppTime
         try:
-            out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
+            out_df[metric] = np.dot(df[TIME_APP_S], df[metric]) / totalAppTime
         except:
             pass
     
     # For energy derived, go ahead to compute using aggregated metrics
-    num_ops = out_df['O=Inst. Count (GI)']
-    ops_per_sec = out_df['C=Inst. Rate (GI/s)'] 
+    num_ops = out_df[COUNT_INSTS_GI]
+    ops_per_sec = out_df[RATE_INST_GI_P_S] 
     for kind in ['PKG', 'DRAM', 'PKG+DRAM']:
         try:
             energy = out_df['Total {} Energy (J)'.format(kind)]
@@ -91,31 +95,31 @@ def agg_fn(df, short_names_path):
     # Finally compute VecType which is the most complicated field to aggregate due to the need to parse strings
     # First reconstruct the sc, xmm, ymm, zmm metrics
     # more precise to just compute scPercent from other vector percentage (see below)
-    # scPercent = parseVecType(df['VecType[Ops]'], 'SC')
-    xmmPercent = parseVecType(df['VecType[Ops]'], 'XMM')
-    ymmPercent = parseVecType(df['VecType[Ops]'], 'YMM')
-    zmmPercent = parseVecType(df['VecType[Ops]'], 'ZMM')
+    # scPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'SC')
+    xmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'XMM')
+    ymmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'YMM')
+    zmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'ZMM')
     # Aggregate them 
     # Don't bother to compute scPercent because coverage may not sum to 1
     # Just compute aggregated xmm, ymm, zmm percentage and assume the rest as sc
-    #scPercent = np.dot(df['%Coverage'], scPercent)
-    xmmPercent = np.dot(df['AppTime (s)'], xmmPercent)/totalAppTime
-    ymmPercent = np.dot(df['AppTime (s)'], ymmPercent)/totalAppTime
-    zmmPercent = np.dot(df['AppTime (s)'], zmmPercent)/totalAppTime
+    #scPercent = np.dot(df[COVERAGE_PCT], scPercent)
+    xmmPercent = np.dot(df[TIME_APP_S], xmmPercent)/totalAppTime
+    ymmPercent = np.dot(df[TIME_APP_S], ymmPercent)/totalAppTime
+    zmmPercent = np.dot(df[TIME_APP_S], zmmPercent)/totalAppTime
     scPercent = 1 - (xmmPercent + ymmPercent + zmmPercent)
 
-    out_df['VecType[Ops]']=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
+    out_df[COUNT_VEC_TYPE_OPS_PCT]=vector_ext_str(zip(['SC', 'XMM', 'YMM', 'ZMM'],[scPercent, xmmPercent, ymmPercent, zmmPercent]))
 
-    excludedMetrics = ['Source Name', 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
-    # Caclulate aggregate memlevel
-    node_list = ['L1 Rate (GB/s)', 'L2 Rate (GB/s)', 'L3 Rate (GB/s)', 'RAM Rate (GB/s)']
+    excludedMetrics = [SRC_NAME, 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
+    # Caclulate aggregate MEM_LEVEL
+    node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
     metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
-    add_mem_max_level_columns(out_df, node_list, 'MaxMem Rate (GB/s)', metric_to_memlevel)
+    add_mem_max_level_columns(out_df, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     # For the rest, compute time weighted average
     remainingMetrics = [x for x in df.columns if x not in list(out_df.columns) + excludedMetrics]
     for metric in remainingMetrics:
         try:
-            out_df[metric] = np.dot(df['AppTime (s)'], df[metric]) / totalAppTime
+            out_df[metric] = np.dot(df[TIME_APP_S], df[metric]) / totalAppTime
         except:
             pass
 
@@ -131,23 +135,23 @@ def aggregate_runs_df(df, level="app", name_file=None, mapping_df = pd.DataFrame
         # Need to store output into splitInfo first because optional group introduced an extra column
         df[['LoopId', 'SrcInfo']] = splitInfo[['LoopId', 'SrcInfo']]
         df['AppNameWithSrcInfo'] = df['AppName']+': ' + df['SrcInfo']
-        srcNameNullMask = df['Source Name'].isnull()
-#        df.loc[srcNameNullMask]['AppNameWithSrcInfo'] = df['AppNameWithSrcInfo'] +': '+df['Source Name']
+        srcNameNullMask = df[SRC_NAME].isnull()
+#        df.loc[srcNameNullMask]['AppNameWithSrcInfo'] = df['AppNameWithSrcInfo'] +': '+df[SRC_NAME]
         df.loc[~srcNameNullMask, 'AppNameWithSrcInfo'] = \
-            df.loc[~srcNameNullMask, 'AppNameWithSrcInfo'] + ': ' + df.loc[~srcNameNullMask, 'Source Name']
+            df.loc[~srcNameNullMask, 'AppNameWithSrcInfo'] + ': ' + df.loc[~srcNameNullMask, SRC_NAME]
         newNameColumn = 'AppNameWithSrcInfo'
     # Need to fix datasize being nan's because groupby does not work
-    dsMask = pd.isnull(df['DataSet/Size'])
-    df.loc[dsMask, 'DataSet/Size'] = 'unknown'
-    grouped = df.groupby([newNameColumn, 'Variant', 'Num. Cores', 'DataSet/Size', 'prefetchers', 'Timestamp#'])
+    dsMask = pd.isnull(df[DATA_SET])
+    df.loc[dsMask, DATA_SET] = 'unknown'
+    grouped = df.groupby([newNameColumn, VARIANT, NUM_CORES, DATA_SET, PREFETCHERS, TIMESTAMP])
     aggregated = grouped.apply(agg_fn, short_names_path=name_file)
     # Flatten the Multiindex
     aggregated.reset_index(drop=True, inplace=True)
     aggregated_mapping_df = pd.DataFrame()
     if not mapping_df.empty:
         # Only select mapping with nodes in current summary data
-        mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['Before Name', 'Before Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
-        mapping_df = pd.merge(mapping_df, df[['Name', 'Timestamp#']], left_on=['After Name', 'After Timestamp'], right_on=['Name', 'Timestamp#'], how='inner')
+        mapping_df = pd.merge(mapping_df, df[[NAME, TIMESTAMP]], left_on=['Before Name', 'Before Timestamp'], right_on=[NAME, TIMESTAMP], how='inner')
+        mapping_df = pd.merge(mapping_df, df[[NAME, TIMESTAMP]], left_on=['After Name', 'After Timestamp'], right_on=[NAME, TIMESTAMP], how='inner')
         aggregated_mapping_df = aggregate_transitions(mapping_df, aggregated) 
         aggregated_mapping_df = compute_speedup(aggregated, aggregated_mapping_df)
     return aggregated, aggregated_mapping_df
