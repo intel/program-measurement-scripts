@@ -10,6 +10,10 @@ from matplotlib import style
 from adjustText import adjust_text
 import copy
 from capeplot import CapePlot
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
@@ -31,9 +35,7 @@ def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_
     #plot = TrawlPlot('ORIG', df, outputfile, scale, title, no_plot, gui=gui, \
     #    x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
     #plot.compute_and_plot()
-    return (plot.df, plot.fig, plot.plotData)
-
-    
+    # return (plot.df, plot.fig, plot.plotData)
 
     return (df, fig, plotData)
 

@@ -599,7 +599,7 @@ def read_short_names(filename):
             timestamp = row.get(TIMESTAMP, None)
             name_key = (name, timestamp) if timestamp is not None else name
             try:
-                short_names[name_key] = getter(row, 'short_name', SHORT_NAME, type=str)
+                short_names[name_key] = getter(row, 'ShortName', SHORT_NAME, type=str)
             except:
                 pass
             try:

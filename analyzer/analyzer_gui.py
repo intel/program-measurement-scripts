@@ -1624,7 +1624,7 @@ class ShortNameTab(tk.Frame):
         if duplicate_rows.any():
             message = str()
             for index, row in df[duplicate_rows].iterrows():
-                message = message + 'row: ' + str(index + 1) + ', short_name: ' + row[SHORT_NAME] + '\n'
+                message = message + 'row: ' + str(index + 1) + ', ShortName: ' + row[SHORT_NAME] + '\n'
             messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
                 + message)
             return True
@@ -2543,26 +2543,28 @@ class CustomTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        column_list.remove(COUNT_OPS_FMA_PCT)
-        column_list.remove(COUNT_INSTS_FMA_PCT)
-        column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-            'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', SPEEDUP_VEC, SPEEDUP_DL1, \
-            'num_cores', 'dataset/size', 'prefetchers', 'repetitions', \
-            'total_pkg_energy_j', 'total_dram_energy_j', 'total_pkg+dram_energy_j', 'total_pkg_power_w', 'total_dram_power_w', 'total_pkg+dram_power_w', \
+        #column_list.remove(COUNT_OPS_FMA_PCT)
+        #column_list.remove(COUNT_INSTS_FMA_PCT)
+        metric_list = ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+            'C_RAM [GB/s]', 'C_max [GB/s]', SPEEDUP_VEC, SPEEDUP_DL1, \
+            NUM_CORES, DATA_SET, PREFETCHERS, REPETITIONS, \
+            E_PKG_J, E_DRAM_J, E_PKGDRAM_J, P_PKG_W, P_DRAM_W, P_PKGDRAM_W, \
             COUNT_INSTS_GI, RATE_INST_GI_P_S, \
-            RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, 'flop_rate_gflop/s', 'register_addr_rate_gb/s', 'register_data_rate_gb/s', 'register_simd_rate_gb/s', 'register_rate_gb/s', \
-            r'%ops[vec]', COUNT_OPS_FMA_PCT, r'%ops[div]', r'%ops[sqrt]', r'%ops[rsqrt]', r'%ops[rcp]', \
-            r'%inst[vec]', COUNT_INSTS_FMA_PCT, r'%inst[div]', r'%inst[sqrt]', r'%inst[rsqrt]', r'%inst[rcp]', \
-            TIMESTAMP, 'Color'])
+            RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, RATE_FP_GFLOP_P_S, RATE_REG_ADDR_GB_P_S, RATE_REG_DATA_GB_P_S, RATE_REG_SIMD_GB_P_S, RATE_REG_GB_P_S, \
+            COUNT_OPS_VEC_PCT, COUNT_OPS_DIV_PCT, COUNT_OPS_SQRT_PCT, COUNT_OPS_RSQRT_PCT, COUNT_OPS_RCP_PCT, \
+            COUNT_INSTS_VEC_PCT, COUNT_INSTS_DIV_PCT, COUNT_INSTS_SQRT_PCT, COUNT_INSTS_RSQRT_PCT, COUNT_INSTS_RCP_PCT, \
+            TIMESTAMP, 'Color']
+        for metric in metric_list:
+            column_list.append(metric)
         if not mappings.empty:
             column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
         table_button_frame = tk.Frame(self.summaryTab)

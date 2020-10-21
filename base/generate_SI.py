@@ -39,7 +39,7 @@ capacity_formula= {
     'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
     'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]/8),
     'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]/8),
-    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_S]),
+    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
     'VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/24),
     'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]/8),
     'FE': (lambda df : df[STALL_FE_PCT]*(df['C_max [GB/s]'])),
