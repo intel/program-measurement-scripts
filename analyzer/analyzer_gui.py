@@ -2853,6 +2853,7 @@ if __name__ == '__main__':
     gui = AnalyzerGui(root)
 
     # Allow pyinstaller to find all CEFPython binaries
+    # TODO: Add handling of framework nad resource paths for Mac
     if getattr(sys, 'frozen', False):
         appSettings = {
             'cache_path': tempfile.gettempdir(),
