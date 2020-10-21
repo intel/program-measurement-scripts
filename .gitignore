@@ -7,3 +7,8 @@ vrun/*log*
 */*/*/*.so*
 */*/*/*.o
 .venv
+/analyzer/packaging/build
+/analyzer/packaging/dist
+Formulas_used.txt
+__pycache__
+settings.json
