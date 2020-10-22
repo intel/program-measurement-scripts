@@ -321,6 +321,7 @@ def plot_magnified_data(title, filename, xs, ys, indices, speedups, floprates, N
 
 # Set filename to [] for GUI output    
 def plot_data(title, filename, xs, ys, indices, speedups, floprates, Ns):
+    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(indices))]    
     DATA =tuple(zip(xs,ys))
     #     DATA = ((1, 3),
     #             (2, 4),
@@ -357,7 +358,6 @@ def plot_data(title, filename, xs, ys, indices, speedups, floprates, Ns):
     ctxs = draw_contours(ax, xmax, ns)
 
     plt.rcParams.update({'font.size': 7})
-    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(DATA))]    
     texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
 
     ax.set(title=title, xlabel=r'$I$', ylabel=r'$S$')
@@ -539,6 +539,7 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
 
 # Set filename to [] for GUI output    
 def plot_data_orig(title, filename, xs, ys, indices, speedups, floprates, Ns, target_df, k_average):
+    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(indices))]
     DATA =tuple(zip(xs,ys))
     #     DATA = ((1, 3),
     #             (2, 4),
@@ -578,7 +579,6 @@ def plot_data_orig(title, filename, xs, ys, indices, speedups, floprates, Ns, ta
 
     plt.rcParams.update({'font.size': 7})
 
-    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(DATA))]
     texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
     #adjust_text(texts)
     #adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
