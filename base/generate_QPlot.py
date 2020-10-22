@@ -18,12 +18,17 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 import copy
+from capeplot import CapePlot
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
+
+class QPlot(CapePlot):
+	pass
+
 
 MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
 OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}

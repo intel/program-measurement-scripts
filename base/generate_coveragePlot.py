@@ -9,6 +9,7 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from adjustText import adjust_text
 import copy
+from capeplot import CapePlot
 from generate_QPlot import compute_capacity
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
@@ -16,6 +17,9 @@ from metric_names import MetricName
 globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
+
+class CoveragePlot(CapePlot):
+    pass
 
 def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG'], short_names_path=''):
     # Normalize the column names

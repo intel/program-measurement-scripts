@@ -8,6 +8,7 @@ import numpy as np
 import warnings
 import datetime
 import copy
+from capeplot import CapePlot
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -23,6 +24,9 @@ from metric_names import MetricName
 globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
+
+class SiPlot(CapePlot):
+    pass
 
 
 BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
