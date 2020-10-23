@@ -38,7 +38,7 @@ import multiprocessing
 import logging
 import copy
 import operator
-from generate_QPlot import compute_capacity
+#from generate_QPlot import compute_capacity
 import pickle
 from datetime import datetime
 from metric_names import MetricName
