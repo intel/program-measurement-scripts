@@ -20,7 +20,7 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class CustomPlot(CapacityPlot):
     def __init__(self, variant, df, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(COVERAGE_PCT, chosen_node_set)
+        super().__init__(COVERAGE_PCT.value, chosen_node_set)
         self.variant = variant
         self.df = df 
         self.outputfile_prefix = outputfile_prefix 

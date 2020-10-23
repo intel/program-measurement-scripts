@@ -19,7 +19,7 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class TrawlPlot(CapePlot):
     def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(SPEEDUP_DL1)
+        super().__init__(SPEEDUP_DL1.value)
         self.variant = variant
         self.df = df 
         self.outputfile_prefix = outputfile_prefix 
