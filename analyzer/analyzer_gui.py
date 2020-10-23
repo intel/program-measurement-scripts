@@ -2826,7 +2826,15 @@ if __name__ == '__main__':
 
     # Allow pyinstaller to find all CEFPython binaries
     if getattr(sys, 'frozen', False):
-        appSettings = {
+        if sys.platform == 'darwin':
+            appSettings = {
+                'cache_path': tempfile.gettempdir(),
+                'resources_dir_path': os.path.join(expanduser('~'), 'Desktop', 'working', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework', 'Resources'),
+                'framework_dir_path': os.path.join(expanduser('~'), 'Desktop', 'working', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework'),
+                'browser_subprocess_path': os.path.join(sys._MEIPASS, 'subprocess.exe')
+            }
+        else:
+            appSettings = {
             'cache_path': tempfile.gettempdir(),
             'resources_dir_path': sys._MEIPASS,
             'locales_dir_path': os.path.join(sys._MEIPASS, 'locales'),
