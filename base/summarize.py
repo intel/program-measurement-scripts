@@ -598,7 +598,7 @@ def read_short_names(filename):
         rows = list(csv.DictReader(infile, delimiter=','))
         for row in rows:
             name = getter(row, NAME, 'name', type=str)
-            timestamp = row.get(TIMESTAMP, None)
+            timestamp = int(row.get(TIMESTAMP, None))
             name_key = (name, timestamp) if timestamp is not None else name
             try:
                 short_names[name_key] = getter(row, 'ShortName', SHORT_NAME, type=str)

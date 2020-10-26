@@ -189,10 +189,6 @@ class LoadedData(Observable):
         self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
             request_use_cpi, request_skip_energy, request_skip_stalls, short_names_path, \
             False, True, self.mapping)
-        # Add short names, TODO: fix adding these in summarize.py
-        existing_shorts = pd.read_csv(self.short_names_path)
-        self.summaryDf.drop(columns=[SHORT_NAME], inplace=True)
-        self.summaryDf = pd.merge(left=existing_shorts[[NAME, SHORT_NAME, TIMESTAMP]], right=self.summaryDf, on=[NAME, TIMESTAMP], how='right')
         # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
         #if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
