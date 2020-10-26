@@ -63,30 +63,34 @@ def concat_ordered_columns(frames):
     return final_df[columns_ordered]
 
 def parse_ip_df(inputfile, outputfile, norm, title, chosen_node_set, rdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-    df = pd.read_csv(inputfile)
-    grouped = df.groupby(VARIANT)
-    # Generate SI plot for each variant
-    mask = df[VARIANT] == "ORIGG"
-    #if not df.empty
-    short_name=''
-    target_df = pd.DataFrame()
-    compute_and_plot('XFORM', df[~mask], outputfile, norm, title, chosen_node_set, target_df)
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
+    # Computation to get SI in the cluster df and then combine with the summary df
+    df = pd.read_csv(inputfile)
+    target_df = pd.DataFrame()
+    target_df[[NAME, SHORT_NAME, VARIANT]] = df[[NAME, SHORT_NAME, VARIANT]]
+    compute_capacity(df, norm, chosen_node_set, target_df)
+    compute_saturation(df, chosen_node_set, target_df)
+    compute_intensity(df, chosen_node_set, target_df)
+    for node in sorted(chosen_node_set):
+        formula=capacity_formula[node]
+        target_df['C_{}'.format(node)]=formula(df)
+    target_df['k'] = df['Saturation'] * df['Intensity']
+    target_df['speedup'] = df['speedup']
+    df['SI']=df['Saturation'] * df['Intensity'] 
+    df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
     # Only show selected variants, default is 'ORIG'
     rdf = rdf.loc[rdf[VARIANT].isin(variants)]
     l_df = df
     column_list = df.columns.tolist()
     column_list.extend([TIME_APP_S, TIMESTAMP, COVERAGE_PCT, 'Color'])
     data = pd.DataFrame(columns=column_list)
-    short_name = rdf[SHORT_NAME]
     data = data.append(rdf, ignore_index=False)[column_list]
-    #data = data.append(rdf, ignore_index=False)[df.columns.tolist()]
     dfs = [l_df,data]
     full_df = concat_ordered_columns(dfs)
 
-    return compute_and_plot_orig('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, short_name, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
+    return compute_and_plot('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
@@ -103,7 +107,6 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
         formula=capacity_formula[node]
         df['C_{}'.format(node)]=formula(df)
 
-    #print(df)
     if norm == 'row':
         print ("<=====Running Row Norm======>")
         df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1)
@@ -111,7 +114,6 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
         print ("<=====Running Matrix Norm======>")
         df['C_max [GB/s]']=max(df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1))
     print ("<=====compute_capacity======>")
-    #print(df['C_max [GB/s]'])
 
     if norm == 'row':
         print ("<=====Running Row Norm======>")
@@ -120,7 +122,6 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
         print ("<=====Running Matrix Norm======>")
         df['C_scalar']=max(df[list(map(lambda n: "C_{}".format(n), SCALAR_NODE_SET))].max(axis=1))
     print ("<=====compute_cu_scalar======>")
-    #print(df['C_scalar'])
     out_df['C_scalar'] = df['C_scalar']
     for node in chosen_buffer_node_set:
         formula=capacity_formula[node]
@@ -136,15 +137,11 @@ def compute_capacity(df, norm, chosen_node_set, out_df):
 
 def compute_saturation(df, chosen_node_set, out_df):
     nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
-    #max_list = np.array(nodeMax.values.tolist())
-    #print(nodeMax)
     nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
     print ("<=====compute_saturation======>")
-    #print(nodeMax)
     for node in chosen_node_set:
         df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
     df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
-    #print(df['Saturation'])
     out_df['Saturation'] = df['Saturation']
 
 
@@ -152,7 +149,6 @@ def compute_intensity(df, chosen_node_set, out_df):
     node_cnt = len(chosen_node_set)
     csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
     df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
-    #print(df['Intensity'])
     out_df['Intensity'] = df['Intensity']
 
 def compute_color_labels(df, short_names_path=''):
@@ -169,9 +165,7 @@ def compute_color_labels(df, short_names_path=''):
         color_labels.append((app_name, color))
     return color_labels
 
-def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_node_set, tdf, orig_name, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-    out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
-    #print (out_csv)
+def compute_and_plot(variant, df, outputfile_prefix, norm, title, chosen_node_set, tdf, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     out_df = pd.DataFrame()
     out_df[[NAME, SHORT_NAME, VARIANT]] = df[[NAME, SHORT_NAME, VARIANT]]
     compute_capacity(df, norm, chosen_node_set, out_df)
@@ -182,80 +176,24 @@ def compute_and_plot_orig(variant, df,outputfile_prefix, norm, title, chosen_nod
         out_df['C_{}'.format(node)]=formula(df)
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
-    #out_df.to_csv(out_csv, index = False, header=True)
     indices = df[SHORT_NAME]
     y = df['Saturation']
     z = df['Intensity']
     df['SI']=df['Saturation'] * df['Intensity'] 
     k = df['SI']
-    df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
+    df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup    
     k_avg = k.mean()
-    speedups = df['Speedup']
-    floprate = df['C_FLOP [GFlop/s]']
-    codelet_variant = df[VARIANT]
-    #plot_data("Saturation plot", 'saturation.png', x, y)
-    #plot_data("Intensity plot", 'Intensity.png', x, z)
-#    outputfile='SI.png'
     today = datetime.date.today()
-    outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
     f_outputfile='Final_{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-    #tdf.to_csv('target_debug.csv', index = False, header=True)
-
-    plot_data_orig("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
-                        str(sorted(list(chosen_node_set)))),
-                        outputfile, list(z), list(y),    list(indices), list(speedups), list(floprate), len(chosen_node_set), tdf, k_avg)
     fig = None
     l_df = None
     # Used to create a legend of file names to color for multiple plots
-    if not orig_name.empty:
-        l_df = df.dropna(subset=['Color']) # User selected data will have color column while FE_tier1.csv will not
-        #l_df = df.loc[df[SHORT_NAME].isin(orig_name)]
-        color_labels = compute_color_labels(l_df, short_names_path)
-        fig, textData = plot_data_point("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
-                            str(sorted(list(chosen_node_set)))),
-                            f_outputfile, l_df, orig_name, list(z), list(y), len(chosen_node_set), tdf, k_avg, color_labels, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)
+    l_df = df.dropna(subset=['Color']) # User selected data will have color column while FE_tier1.csv will not
+    color_labels = compute_color_labels(l_df, short_names_path)
+    fig, textData = plot_data("{} \n n = {}{} \n".format(title, len(chosen_node_set), 
+                        str(sorted(list(chosen_node_set)))),
+                        f_outputfile, l_df, list(z), list(y), len(chosen_node_set), tdf, k_avg, color_labels, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale)
     return l_df, fig, textData
-    #print ("Plotting Magnified Data")
-    #outputfile='Magnified - {}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-    #plot_magnified_data("{} \n N = {}{}, \nvariant={}, norm={}".format(title, len(chosen_node_set), 
-    #                    str(sorted(list(chosen_node_set))), variant, norm),
-    #                    outputfile, list(z), list(y),    list(indices), list(speedups), list(floprate), len(chosen_node_set), list(codelet_variant))
-
-def compute_and_plot(variant, df,outputfile_prefix, norm, title, chosen_node_set, out_df):
-    out_csv = variant+ '_' + outputfile_prefix +'_export_dataframe.csv'
-    out_df[[NAME, SHORT_NAME, VARIANT]] = df[[NAME, SHORT_NAME, VARIANT]]
-
-    compute_capacity(df, norm, chosen_node_set, out_df)
-    compute_saturation(df, chosen_node_set, out_df)
-    compute_intensity(df, chosen_node_set, out_df)
-    for node in sorted(chosen_node_set):
-        formula=capacity_formula[node]
-        out_df['C_{}'.format(node)]=formula(df)
-    out_df['k'] = df['Saturation'] * df['Intensity']
-    out_df['speedup'] = df['speedup']
-    #out_df.to_csv(out_csv, index = False, header=True)
-    indices = df[SHORT_NAME]
-    y = df['Saturation']
-    z = df['Intensity']
-    df['SI']=df['Saturation'] * df['Intensity'] 
-    k = df['SI']
-    df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
-    speedups = df['Speedup']
-    floprate = df['C_FLOP [GFlop/s]']
-    codelet_variant = df[VARIANT]
-    #plot_data("Saturation plot", 'saturation.png', x, y)
-    #plot_data("Intensity plot", 'Intensity.png', x, z)
-#    outputfile='SI.png'
-    today = datetime.date.today()
-    outputfile='{}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-    plot_data("{} \n N = {}{}, \nvariant={}, norm={}".format(title, len(chosen_node_set), 
-                        str(sorted(list(chosen_node_set))), variant, norm),
-                        outputfile, list(z), list(y),    list(indices), list(speedups), list(floprate), len(chosen_node_set))
-    print ("Plotting Magnified Data")
-    outputfile='Magnified - {}-{}-{}-{}.png'.format(outputfile_prefix, variant, norm, today)
-    #plot_magnified_data("{} \n N = {}{}, \nvariant={}, norm={}".format(title, len(chosen_node_set), 
-    #                    str(sorted(list(chosen_node_set))), variant, norm),
-    #                    outputfile, list(z), list(y),    list(indices), list(speedups), list(floprate), len(chosen_node_set), list(codelet_variant))
 
 def draw_contours(ax, maxx, ns):
     npoints=40
@@ -270,123 +208,7 @@ def draw_contours(ax, maxx, ns):
     return lines
 
 # Set filename to [] for GUI output    
-def plot_magnified_data(title, filename, xs, ys, indices, speedups, floprates, Ns, codelet_variant):
-    DATA =tuple(zip(xs,ys))
-    #     DATA = ((1, 3),
-    #             (2, 4),
-    #             (3, 1),
-    #             (4, 2))
-    # dash_style =
-    #     direction, length, (text)rotation, dashrotation, push
-    # (The parameters are varied to show their effects, not for visual appeal).
-    #     dash_style = (
-    #         (0, 20, -15, 30, 10),
-    #         (1, 30, 0, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (1, 20, 30, 60, 10))
-    
-    fig, ax = plt.subplots()
-
-    #xmax=max(xs)*2
-    xmax=max(xs) + 0.2*max(xs)
-    ymax=max(ys) + 0.2*max(xs)
-    xmin=min(xs) - 0.2*min(xs)
-    ymin=min(ys) - 0.2*min(ys)
-
-    ax.set_xlim((xmin, xmax))
-    ax.set_ylim((xmin, ymax))
-
-    (x, y) = zip(*DATA)
-    ax.scatter(x, y, marker='o')
-
-    ns = [1,2,(Ns-1), Ns, (Ns+1),8]
-
-    ctxs = draw_contours(ax, xmax, ns)
-
-    plt.rcParams.update({'font.size': 7})
-    mytext= [str('({0}, {1})'.format( indices[i], codelet_variant[i] ))  for i in range(len(DATA))]    
-    texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
-    #adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
-
-    ax.set(title=title, xlabel=r'$I$', ylabel=r'$S$')
-    #ax.legend(loc="lower left",title="(name,flops)")
-
-    if filename:
-        pass
-        #plt.savefig(filename)
-    else:
-        plt.show()
-
-# Set filename to [] for GUI output    
-def plot_data(title, filename, xs, ys, indices, speedups, floprates, Ns):
-    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(indices))]    
-    DATA =tuple(zip(xs,ys))
-    #     DATA = ((1, 3),
-    #             (2, 4),
-    #             (3, 1),
-    #             (4, 2))
-    # dash_style =
-    #     direction, length, (text)rotation, dashrotation, push
-    # (The parameters are varied to show their effects, not for visual appeal).
-    #     dash_style = (
-    #         (0, 20, -15, 30, 10),
-    #         (1, 30, 0, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (1, 20, 30, 60, 10))
-    
-    fig, ax = plt.subplots()
-
-    #xmax=max(xs)*2
-    xmax=max(xs)*1.2
-    ymax=max(ys)*1.2  
-    ax.set_xlim((0, xmax))
-    ax.set_ylim((0, ymax))
-    x_mean = statistics.mean(xs)
-    y_mean = statistics.mean(ys) 
-    x_stdev = statistics.stdev(xs)
-    y_stdev = statistics.stdev(ys) 
-
-    (x, y) = zip(*DATA)
-    ax.scatter(x, y, marker='o')
-
-    ns = [1,2,(Ns-1), Ns, (Ns+1),8]
-
-    ctxs = draw_contours(ax, xmax, ns)
-
-    plt.rcParams.update({'font.size': 7})
-    texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
-
-    ax.set(title=title, xlabel=r'$I$', ylabel=r'$S$')
-    #ax.legend(loc="lower left",title="(name,flops)")
-# Create the second legend and add the artist manually.
-    ax.legend(loc="lower left",title="CG:(" + str(round(x_mean, 2)) + " , " + str(round(y_mean, 2)) + ")\n"
-                                + "SD:(" + str(round(x_stdev, 2)) + " , " + str(round(y_stdev, 2)) + ")")
-    if filename:
-        pass
-       #plt.savefig(filename)
-    else:
-        plt.show()
-
-# Set filename to [] for GUI output    
-def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, k_average, color_labels=None, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
-    #     DATA = ((1, 3),
-    #             (2, 4),
-    #             (3, 1),
-    #             (4, 2))
-    # dash_style =
-    #     direction, length, (text)rotation, dashrotation, push
-    # (The parameters are varied to show their effects, not for visual appeal).
-    #     dash_style = (
-    #         (0, 20, -15, 30, 10),
-    #         (1, 30, 0, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (1, 20, 30, 60, 10))
+def plot_data(title, filename, orig_df, xs, ys, Ns, target_df, k_average, color_labels=None, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear'):
     if filtering:
         orig_df = orig_df.loc[(orig_df[filter_data[0]] >= filter_data[1]) & (orig_df[filter_data[0]] <= filter_data[2])]
 
@@ -422,19 +244,12 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
     DATA = tuple(zip(orig_codelet_int,orig_codelet_sat))
 
     orig_codelet_index = orig_df[SHORT_NAME].values.tolist()
-    orig_codelet_names = orig_df[NAME].values.tolist()
-    orig_codelet_speedup = orig_df['speedup'].values.tolist()
     orig_codelet_variant = orig_df[VARIANT].values.tolist()
     orig_codelet_memlevel = orig_df[MEM_LEVEL].values.tolist()
-    #xmax=max(xs)*2
     xmax=max(xs)*1.2
     ymax=max(ys)*1.2  
     ax.set_xlim((0, xmax))
     ax.set_ylim((0, ymax))
-    x_mean = statistics.mean(xs)
-    y_mean = statistics.mean(ys) 
-    x_stdev = statistics.stdev(xs)
-    y_stdev = statistics.stdev(ys) 
 
     (x, y) = zip(*DATA)
     print('Data length: ', len(DATA))
@@ -450,7 +265,6 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         markers.extend(ax.plot(x[i], y[i], marker='o', color=orig_df['Color'][i][0], label=orig_df[NAME][i]+str(orig_df[TIMESTAMP][i]), linestyle='', alpha=1))
 
     plt.rcParams.update({'font.size': 7})
-    #mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_speedup[i] ))  for i in range(len(DATA))]
     mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_memlevel[i]))  for i in range(len(DATA))]
     texts = [plt.text(x[i], y[i], mytext[i], alpha=1) for i in range(len(DATA))]
 
@@ -503,7 +317,6 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
                 name_mapping[after_row[NAME][0] + str(after_row[TIMESTAMP][0])].append(con)
                 mymappings.append(con)
     plt.tight_layout()
-    #ax.add_artist(leg);
 
     names = [name + timestamp for name,timestamp in zip(orig_df[NAME], orig_df[TIMESTAMP].astype(str))]
     plotData = {
@@ -536,72 +349,6 @@ def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         plt.show()
 
     return fig, plotData
-
-# Set filename to [] for GUI output    
-def plot_data_orig(title, filename, xs, ys, indices, speedups, floprates, Ns, target_df, k_average):
-    mytext= [str('({0}, {1:.2f})'.format( indices[i], floprates[i] ))  for i in range(len(indices))]
-    DATA =tuple(zip(xs,ys))
-    #     DATA = ((1, 3),
-    #             (2, 4),
-    #             (3, 1),
-    #             (4, 2))
-    # dash_style =
-    #     direction, length, (text)rotation, dashrotation, push
-    # (The parameters are varied to show their effects, not for visual appeal).
-    #     dash_style = (
-    #         (0, 20, -15, 30, 10),
-    #         (1, 30, 0, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (0, 40, 15, 15, 10),
-    #         (1, 20, 30, 60, 10))
-    
-    fig, ax = plt.subplots()
-
-    #xmax=max(xs)*2
-    xmax=max(xs)*1.2
-    ymax=max(ys)*1.2  
-    ax.set_xlim((0, xmax))
-    ax.set_ylim((0, ymax))
-    x_mean = statistics.mean(xs)
-    y_mean = statistics.mean(ys) 
-    x_stdev = statistics.stdev(xs)
-    y_stdev = statistics.stdev(ys) 
-
-    (x, y) = zip(*DATA)
-
-
-    ax.scatter(x, y, marker='o')
-
-    ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
-
-    ctxs = draw_contours(ax, xmax, ns)
-
-    plt.rcParams.update({'font.size': 7})
-
-    texts = [plt.text(xs[i], ys[i], mytext[i], ha='center', va='center') for i in range(len(DATA))]
-    #adjust_text(texts)
-    #adjust_text(texts, arrowprops=dict(arrowstyle='-', color='red'))
-    # Create a dot
-    plt.plot(x_mean, y_mean, 'ro')
-    #plt.annotate("C$_C$$_G$", (x_mean, y_mean), arrowprops=dict(facecolor='red', shrink=0.05))
-    # Create a Rectangle patch
-    print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
-    rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])),
-            (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor='r',facecolor='none')
-    ax.add_patch(rect)
-    ax.set(title=title, xlabel=r'$I$', ylabel=r'$S$')
-    #ax.legend(loc="lower left",title="(name,flops)")
-# Create the second legend and add the artist manually.
-    ax.legend(loc="lower left",title="I$_C$$_G$ = " + str(round(x_mean, 2)) + "\nS$_C$$_G$ = " + str(round(y_mean, 2)) 
-    + "\nk$_C$$_G$ = " + str(round(k_average, 2)))
-    #ax.add_artist(leg);
-
-    if filename:
-        pass
-        #plt.savefig(filename)
-    else:
-        plt.show()
 
 def usage(reason):
     error_code = 0
