@@ -10,9 +10,12 @@ from argparse import ArgumentParser
 # Metric list: {advisor_dir}/pythonapi/examples/columns.txt
 import advisor
 
-#from capelib import succinctify
 #from capelib import calculate_all_rate_and_counts
 import capelib
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 
 # "MEMORY" or "COMPUTE" or "UNKNOWN"
@@ -306,25 +309,25 @@ def summary_report(input, survey):
                      'self_memory', 'self_loaded_gb', 'self_stored_gb', 'self_l2_loaded_gb','self_l2_stored_gb', \
                      'self_l3_loaded_gb', 'self_l3_stored_gb', 'self_dram_loaded_gb', 'self_dram_stored_gb']
     input[numeric_in_cols]=input[numeric_in_cols].apply(pd.to_numeric, errors='coerce', axis=1)
-    out['Name']=input['source_location']
-    out['Num. Cores']=input['thread_count']
-    out['Time (s)']=input['self_time']
-    time = out['Time (s)']
+    out[NAME]=input['source_location']
+    out[NUM_CORES]=input['thread_count']
+    out[TIME_LOOP_S]=input['self_time']
+    time = out[TIME_LOOP_S]
     instrs=input['self_all_instructions']
-    out['O=Inst. Count (GI)']=instrs/1e9
-    out['C=Inst. Rate (GI/s)']=out['O=Inst. Count (GI)']/time
-    out['L1 Rate (GB/s)']=(input['self_loaded_gb'] + input['self_stored_gb'])/time
-    out['L2 Rate (GB/s)']=(input['self_l2_loaded_gb'] + input['self_l2_stored_gb'])/time
-    out['L3 Rate (GB/s)']=(input['self_l3_loaded_gb'] + input['self_l3_stored_gb'])/time
-    out['RAM Rate (GB/s)']=(input['self_dram_loaded_gb'] + input['self_dram_stored_gb'])/time
-    out['Load+Store Rate (GI/s)']=input['self_memory']/1e9/time
-    out['FLOP Rate (GFLOP/s)']=input['self_gflops']
-    out['IOP Rate (GIOP/s)']=input['self_gintops']
+    out[COUNT_INSTS_GI]=instrs/1e9
+    out[RATE_INST_GI_P_S]=out[COUNT_INSTS_GI]/time
+    out[RATE_L1_GB_P_S]=(input['self_loaded_gb'] + input['self_stored_gb'])/time
+    out[RATE_L2_GB_P_S]=(input['self_l2_loaded_gb'] + input['self_l2_stored_gb'])/time
+    out[RATE_L3_GB_P_S]=(input['self_l3_loaded_gb'] + input['self_l3_stored_gb'])/time
+    out[RATE_RAM_GB_P_S]=(input['self_dram_loaded_gb'] + input['self_dram_stored_gb'])/time
+    out[RATE_LDST_GI_P_S]=input['self_memory']/1e9/time
+    out[RATE_FP_GFLOP_P_S]=input['self_gflops']
+    out[RATE_INT_GIOP_P_S]=input['self_gintops']
     # Does not have enough information to do Ops normalization
-#    out['%Ops[Vec]']=0
-    out['%Inst[Vec]']=(input['self_vector_compute']+input['self_vector_memory'])/instrs
-#    out['%Ops[FMA]']=0
-    out['%Inst[FMA]']=input['self_fma']/instrs
+#    out[COUNT_OPS_VEC_PCT]=0
+    out[COUNT_INSTS_VEC_PCT]=(input['self_vector_compute']+input['self_vector_memory'])/instrs
+#    out[COUNT_OPS_FMA_PCT]=0
+    out[COUNT_INSTS_FMA_PCT]=input['self_fma']/instrs
     out['loop_function_id']=input['loop_function_id']
 
     mask = time > 0
@@ -340,7 +343,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', nargs='?', default='out.csv', help='the output csv file (default out.csv)', dest='out_file')
     parser.add_argument('-x', nargs='?', help='a short-name and/or variant csv file', dest='name_file')
     parser.add_argument('-u', nargs='?', help='a user-defined operation count csv file', dest='user_op_file')
-    parser.add_argument('--succinct', action='store_true', help='generate underscored, lowercase column names')
     args = parser.parse_args()
 
 

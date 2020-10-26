@@ -1,33 +1,33 @@
 import re
+import math
 from collections import namedtuple
 import pandas as pd
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 # Common routines needed for Cape tool chain
 
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
 
-def succinctify(value):
-    def helper(x):
-        x = x[:x.index(')')] if ')' in x else x
-        return x.lower().strip().replace(' ', '_').replace('_(', '_').replace('._','_')
-    if isinstance(value, str):
-        return helper(value)
-    else:
-        return list(map(helper,value))
-
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
     inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
     # inout_df = inout_df[inout_df[max_rate_name].notna()]
-    inout_df['memlevel']=inout_df[node_list].idxmax(axis=1)
-    nonnullMask = ~inout_df['memlevel'].isnull()
-    inout_df.loc[nonnullMask, 'memlevel'] = inout_df.loc[nonnullMask, 'memlevel'].apply(metric_to_memlevel_lambda)
+    inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
+    nonnullMask = ~inout_df[MEM_LEVEL].isnull()
+    inout_df.loc[nonnullMask, MEM_LEVEL] = inout_df.loc[nonnullMask, MEM_LEVEL].apply(metric_to_memlevel_lambda)
     # Old stuff below to be deleted
 	# Remove the first two characters which is 'C_'
-    # inout_df['memlevel'] = inout_df['memlevel'].apply((lambda v: v[2:]))
+    # inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].apply((lambda v: v[2:]))
 	# Drop the unit
-	# inout_df['memlevel'] = inout_df['memlevel'].str.replace(" \[.*\]","", regex=True)
+	# inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+
+# Simple function to convert nan's to 0
+def nan2zero(v):
+    return 0 if math.isnan(v) else v
 
 # For CQA metrics
 def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
@@ -50,42 +50,42 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
-                vec_ops += (cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
-                all_ops += cnts_per_iter.SUM
+                vec_ops += nan2zero(cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
+                all_ops += nan2zero(cnts_per_iter.SUM)
 
-                vec_insts += (inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
-                all_insts += inst_cnts_per_iter.SUM
+                vec_insts += nan2zero(inst_cnts_per_iter.XMM + inst_cnts_per_iter.YMM + inst_cnts_per_iter.ZMM)
+                all_insts += nan2zero(inst_cnts_per_iter.SUM)
                 for itype in itypes:
-                    ops_dict[itype] += getattr(cnts_per_iter, itype)
-                    inst_dict[itype] += getattr(inst_cnts_per_iter, itype)
+                    ops_dict[itype] += nan2zero(getattr(cnts_per_iter, itype))
+                    inst_dict[itype] += nan2zero(getattr(inst_cnts_per_iter, itype))
 
             return cnts_per_iter, inst_cnts_per_iter
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts('FLOP Rate (GFLOP/s)', calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts('IOP Rate (GIOP/s)', calculate_iops_counts_per_iter, False)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, False)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
     cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts('CVTOP Rate (GCVTOP/s)', calculate_cvtops_counts_per_iter, True)
     memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts('MEMOP Rate (GMEMOP/s)', calculate_memops_counts_per_iter, True)
 
-    out_row['%Ops[Vec]'] = 100 * vec_ops / all_ops if all_ops else 0
-    out_row['%Inst[Vec]'] = 100 * vec_insts / all_insts if all_insts else 0
+    out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
+    out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0
     for itype in itypes:
-        out_row['%Ops[{}]'.format(itype)] = 100 * ops_dict[itype] / all_ops if all_ops else 0
-        out_row['%Inst[{}]'.format(itype)] = 100 * inst_dict[itype] / all_insts if all_insts else 0
+        out_row[MetricName.opsPct(itype)] = 100 * ops_dict[itype] / all_ops if all_ops else 0
+        out_row[MetricName.instsPct(itype)] = 100 * inst_dict[itype] / all_insts if all_insts else 0
 
     try:
         # Check if CQA metric is available
         cqa_vec_ratio=in_row['Vec._ratio_(%)_all']
-        if not math.isclose(cqa_vec_ratio, out_row['%Inst[Vec]'], rel_tol=1e-8):
+        if not math.isclose(cqa_vec_ratio, out_row[COUNT_INSTS_VEC_PCT], rel_tol=1e-8):
             warnings.warn("CQA Vec. ration not matching computed: CQA={}, Computed={}, AllIters={}".format \
-                          (cqa_vec_ratio, out_row['%Inst[Vec]'], in_row['AllIterations']))
+                          (cqa_vec_ratio, out_row[COUNT_INSTS_VEC_PCT], in_row['AllIterations']))
             # Just set to CQA value for now.  (Pending check with Emmanuel)
-            out_row['%Inst[Vec]'] = cqa_vec_ratio
+            out_row[COUNT_INSTS_VEC_PCT] = cqa_vec_ratio
     except:
         pass
-    out_row['VecType[Ops]']=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
+    out_row[COUNT_VEC_TYPE_OPS_PCT]=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
 
 
 def calculate_flops_counts_per_iter(in_row):
@@ -314,9 +314,9 @@ def find_vector_ext(flop_counts, iop_counts):
     return vector_ext_str(out)
 
 def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
-    out_row['E[{}]/O (J/GI)'.format(kind)] = energy / num_ops
-    out_row['C/E[{}] (GI/Js)'.format(kind)] = ops_per_sec / energy
-    out_row['CO/E[{}] (GI2/Js)'.format(kind)] = (ops_per_sec * num_ops) / energy
+    out_row[MetricName.epo(kind)] = energy / num_ops
+    out_row[MetricName.rpe(kind)] = ops_per_sec / energy
+    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
@@ -330,9 +330,9 @@ def getter(in_row, *argv, **kwargs):
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):
-    keyColumns=['Name', 'Timestamp#', 'Variant']
-    timeColumns=['Time (s)', 'AppTime (s)']
-    rateColumns=['FLOP Rate (GFLOP/s)']
+    keyColumns=[NAME, TIMESTAMP, VARIANT]
+    timeColumns=[TIME_LOOP_S, TIME_APP_S]
+    rateColumns=[RATE_FP_GFLOP_P_S]
     perf_df = output_rows[keyColumns + timeColumns + rateColumns]
 
     new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
