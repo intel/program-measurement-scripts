@@ -378,6 +378,7 @@ class CustomData(Observable):
         loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CustomData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
@@ -484,6 +485,7 @@ class CoverageData(Observable):
         loadedData.add_observers(self)
     
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CoverageData Notified from ", loadedData)
         # use qplot dataframe to generate the coverage plot
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
@@ -1012,13 +1014,14 @@ class SummaryTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -1581,7 +1584,9 @@ class ShortNameTab(tk.Frame):
         merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT, 'Color']], on=[NAME, TIMESTAMP], how='right')
         # sort label table by coverage to keep consistent with data table
         merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
-        table = Table(tab, dataframe=merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
+        merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+        merged.columns = ["{}".format(i) for i in merged.columns]
+        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
         table_button_frame = tk.Frame(tab)
@@ -2271,13 +2276,14 @@ class TrawlTab(tk.Frame):
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2370,13 +2376,14 @@ class QPlotTab(tk.Frame):
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2478,6 +2485,7 @@ class SIPlotTab(tk.Frame):
         except: pass
         self.buildTableTabs()
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2563,6 +2571,7 @@ class CustomTab(tk.Frame):
             column_list.extend(gui.loadedData.analytic_columns)
             self.summaryDf = df[column_list]
         except: pass
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
