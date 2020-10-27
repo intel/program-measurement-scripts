@@ -176,7 +176,6 @@ def compute_and_plot(variant, df, outputfile_prefix, norm, title, chosen_node_se
         out_df['C_{}'.format(node)]=formula(df)
     out_df['k'] = df['Saturation'] * df['Intensity']
     out_df['speedup'] = df['speedup']
-    indices = df[SHORT_NAME]
     y = df['Saturation']
     z = df['Intensity']
     df['SI']=df['Saturation'] * df['Intensity'] 
@@ -246,10 +245,6 @@ def plot_data(title, filename, orig_df, xs, ys, Ns, target_df, k_average, color_
     orig_codelet_index = orig_df[SHORT_NAME].values.tolist()
     orig_codelet_variant = orig_df[VARIANT].values.tolist()
     orig_codelet_memlevel = orig_df[MEM_LEVEL].values.tolist()
-    xmax=max(xs)*1.2
-    ymax=max(ys)*1.2  
-    ax.set_xlim((0, xmax))
-    ax.set_ylim((0, ymax))
 
     (x, y) = zip(*DATA)
     print('Data length: ', len(DATA))
@@ -275,8 +270,6 @@ def plot_data(title, filename, orig_df, xs, ys, Ns, target_df, k_average, color_
     ax.add_patch(rect)
     ax.set(xlabel="Intensity", ylabel="Saturation")
     ax.set_title(title, pad=40)
-    centerx = min(target_df['Intensity'])
-    centery = min(target_df['Saturation'])
     # Legend
     patches = []
     if color_labels and len(color_labels) >= 2:
