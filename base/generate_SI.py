@@ -115,8 +115,13 @@ class SiPlot(CapacityPlot):
         #target_df['speedup'] = cluster_df['speedup']
         cluster_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
 
-        column_list = cluster_df.columns.tolist()
-        column_list.extend([TIME_APP_S, TIMESTAMP, COVERAGE_PCT, 'Color'])
+        #column_list = cluster_df.columns.tolist()
+        #column_list.extend([TIME_APP_S, TIMESTAMP, COVERAGE_PCT, 'Color'])
+        cluster_df[TIMESTAMP]=0
+        cluster_df[TIME_APP_S]=0.0
+        cluster_df[COVERAGE_PCT]=0.0
+        cluster_df['Color'] = ""
+        column_list = cluster_df.columns
 
         #cur_run_data_df = pd.DataFrame(columns=column_list)
         #cur_run_data_df = cur_run_data_df.append(cur_run_df, ignore_index=False)[column_list]
@@ -206,6 +211,11 @@ class SiPlot(CapacityPlot):
         return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name, variant, memlevel)"
 
     def draw_contours(self, maxx, maxy):
+        cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
+        cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
+        maxx=max(max(cluster_and_cur_run_xs)*1.2, maxx)
+        maxy=max(max(cluster_and_cur_run_ys)*1.2, maxy)
+
         Ns = self.Ns
         ax = self.ax
         ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
@@ -250,6 +260,7 @@ class SiPlot(CapacityPlot):
         for frame in frames:
             columns_ordered.extend(x for x in frame.columns if x not in columns_ordered)
         final_df = pd.concat(frames)
+        # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
         return final_df[columns_ordered]
 
 def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur_run_df, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
