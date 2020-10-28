@@ -169,8 +169,11 @@ class LoadedData(Observable):
 
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False
-        self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
-        self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
+        if not update: self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
+        if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
+        if update:
+            self.mapping.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
+                'after_name':'After Name', 'after_timestamp#':'After Timestamp'}, inplace=True)
         self.sources = sources
         # Add meta data from the timestamp directory
         if data_dir: self.set_meta_data(data_dir)
