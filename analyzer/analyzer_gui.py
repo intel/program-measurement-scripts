@@ -127,7 +127,7 @@ class LoadedData(Observable):
             pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP]).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
-            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
+            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
@@ -256,10 +256,10 @@ class LoadedData(Observable):
         speedup_gflop = []
         for i in df.index:
             row = mappings.loc[(mappings['before_name']==df['Name'][i]) & (mappings['before_timestamp#']==df['Timestamp#'][i])]
-            speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
-            speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
-            speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
-        speedup_metric = [(speedup_time, 'Speedup[Time (s)]'), (speedup_apptime, 'Speedup[AppTime (s)]'), (speedup_gflop, 'Speedup[FLOP Rate (GFLOP/s)]')]
+            speedup_time.append(row[SPEEDUP_TIME_LOOP_S].iloc[0] if not row.empty else 1)
+            speedup_apptime.append(row[SPEEDUP_TIME_APP_S].iloc[0] if not row.empty else 1)
+            speedup_gflop.append(row[SPEEDUP_RATE_FP_GFLOP_P_S].iloc[0] if not row.empty else 1)
+        speedup_metric = [(speedup_time, SPEEDUP_TIME_LOOP_S), (speedup_apptime, SPEEDUP_TIME_APP_S), (speedup_gflop, SPEEDUP_RATE_FP_GFLOP_P_S)]
         for pair in speedup_metric:
             df[pair[1]] = pair[0]
 
@@ -271,7 +271,7 @@ class LoadedData(Observable):
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         return mappings
     
-    def get_end2end(self, mappings, metric='Speedup[FLOP Rate (GFLOP/s)]'):
+    def get_end2end(self, mappings, metric=SPEEDUP_RATE_FP_GFLOP_P_S):
         newMappings = mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                                     'after_name':'After Name', 'after_timestamp#':'After Timestamp'})
         newMappings = compute_end2end_transitions(newMappings, metric)
@@ -1476,7 +1476,7 @@ class AxesTab(tk.Frame):
         if not parent.tab.mappings.empty:
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Speedups', menu=menu)
-            for metric in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+            for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
         if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
@@ -1757,7 +1757,7 @@ class MappingsTab(tk.Frame):
         self.win.title('Select Speedup')
         message = 'Select the speedup to maximize for\nend-to-end transitions.'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        for index, metric in enumerate(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]']):
+        for index, metric in enumerate([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S]):
             b = tk.Button(self.win, text=metric)
             b['command'] = lambda metric=metric : self.selectAction(metric) 
             b.grid(row=index+1, column=1, padx=20, pady=10)
@@ -1977,7 +1977,7 @@ class LabelTab(tk.Frame):
                 for choice in self.tab.current_labels:
                     codeletName = textData['names'][i]
                     # TODO: Clean this up so it's on the edges and not the data points
-                    if choice in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+                    if choice in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                         tempDf = pd.DataFrame()
                         if not self.tab.mappings.empty: # Mapping
                             tempDf = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==codeletName]
@@ -2087,13 +2087,13 @@ class GuideTab(tk.Frame):
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
                 self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
                 self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True) # Highlight SIDO codelets
-                self.updateLabels('Speedup[Time (s)]')
+                self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=True) # Highlight SIDO codelets
+                self.updateLabels(SPEEDUP_TIME_LOOP_S)
             elif self.aLabel['text'] == self.a1_state: # Go to A2 (RHS=1) state
                 self.aLabel['text'] = self.a2_state
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
                 self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
+                self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
                 self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, points=self.a2_points) # Highlight RHS codelets
                 self.updateLabels('rhs_op_count')
             elif self.aLabel['text'] == self.a2_state: # Go to A3 (FMA) state
@@ -2116,15 +2116,15 @@ class GuideTab(tk.Frame):
                 self.tab.plotInteraction.textData['ax'].set_title(self.title, pad=40)
                 self.prevButton.grid_remove()
                 self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False)
+                self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False)
                 self.tab.labelTab.reset()
             elif self.aLabel['text'] == self.a2_state: # Go back to A1 (SIDO) state
                 self.aLabel['text'] = self.a1_state
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
                 self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
                 self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, points=self.a2_points)
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True, show=True)
-                self.updateLabels('Speedup[Time (s)]')
+                self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=True, show=True)
+                self.updateLabels(SPEEDUP_TIME_LOOP_S)
             elif self.aLabel['text'] == self.a3_state: # Go back to A2 (RHS=1) state
                 self.aLabel['text'] = self.a2_state
                 self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
@@ -2158,7 +2158,7 @@ class GuideTab(tk.Frame):
             self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
             self.aLabel['text'] = self.a1_trans_state
             self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_trans_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
+            self.updateLabels(SPEEDUP_TIME_LOOP_S)
             self.transButton['text'] = 'Hide Transitions'
         
         def hide_trans_state(self):
@@ -2166,7 +2166,7 @@ class GuideTab(tk.Frame):
             self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
             self.aLabel['text'] = self.a1_state
             self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
+            self.updateLabels(SPEEDUP_TIME_LOOP_S)
             self.a1_highlighted = gui.loadedData.c_plot_state['highlighted_names']
             self.transButton['text'] = 'Show Transitions'
 
@@ -2571,7 +2571,7 @@ class CustomTab(tk.Frame):
         for metric in metric_list:
             column_list.append(metric)
         if not mappings.empty:
-            column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
+            column_list.extend([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S])
         self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)

@@ -85,6 +85,9 @@ class MetricName(str, Enum):
     
     SPEEDUP_VEC = 'Speedup[Vec]'
     SPEEDUP_DL1 = 'Speedup[DL1]'
+    SPEEDUP_TIME_LOOP_S = 'Speedup[Time[Loop]_s]'
+    SPEEDUP_TIME_APP_S = 'Speedup[Time[App]_s]'
+    SPEEDUP_RATE_FP_GFLOP_P_S = 'Speedup[Rate[Fp]_GFLOP/s]'
     E_PKG_J = _energyStr('PKG')
     P_PKG_W = _powerStr('PKG')
     E_DRAM_J = _energyStr('DRAM')
