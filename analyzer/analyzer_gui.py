@@ -1162,13 +1162,19 @@ class PlotInteraction():
         if not os.path.isdir(dest):
             Path(dest).mkdir(parents=True, exist_ok=True)
         # Store data for all levels
-        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : gui.loadedData.summaryDf, 'mapping' : gui.loadedData.mapping, \
+        df = gui.loadedData.summaryDf.copy(deep=True)
+        df.columns = ["{}".format(i) for i in df.columns]
+        srcDf = gui.loadedData.srcDf.copy(deep=True)
+        srcDf.columns = ["{}".format(i) for i in srcDf.columns]
+        appDf = gui.loadedData.appDf.copy(deep=True)
+        appDf.columns = ["{}".format(i) for i in appDf.columns]
+        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : df, 'mapping' : gui.loadedData.mapping, \
             'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'mapping.xlsx'), \
             'tabs' : self.codelet_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : gui.loadedData.srcDf, 'mapping' : gui.loadedData.src_mapping, \
+        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : srcDf, 'mapping' : gui.loadedData.src_mapping, \
             'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcMapping.xlsx'), \
             'tabs' : self.source_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : gui.loadedData.appDf, 'mapping' : gui.loadedData.app_mapping, \
+        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : appDf, 'mapping' : gui.loadedData.app_mapping, \
             'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appMapping.xlsx'), \
             'tabs' : self.application_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         levels = [codelet, source, app]
@@ -1197,7 +1203,7 @@ class PlotInteraction():
             level['data']['variants'] = gui.summaryTab.current_variants
             # Each tab has its own dictionary with it's current plot selections
             for tab in level['tabs']:
-                level['data'][tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+                level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
         # Save the all the stored data into a nested dictionary
         data = {}
         data['Codelet'] = codelet['data']
@@ -1559,13 +1565,13 @@ class AxesTab(tk.Frame):
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
-                self.tab.qplotData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.qplotData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'TRAWL':
-                self.tab.trawlData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.trawlData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Custom':
-                self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.customData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
-                self.tab.coverageData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+                self.tab.coverageData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
 
 class ShortNameTab(tk.Frame):
     def __init__(self, parent, level=None):
