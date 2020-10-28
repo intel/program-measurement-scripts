@@ -12,3 +12,4 @@ vrun/*log*
 Formulas_used.txt
 __pycache__
 settings.json
+.DS_store
