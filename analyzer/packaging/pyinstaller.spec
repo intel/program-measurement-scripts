@@ -6,6 +6,7 @@ This is a PyInstaller spec file.
 """
 
 import os
+import sys
 from PyInstaller.building.api import PYZ, EXE, COLLECT
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.utils.hooks import is_module_satisfies
@@ -40,13 +41,23 @@ DEBUG = os.environ.get("CEFPYTHON_PYINSTALLER_DEBUG", False)
 #else:
 #    cipher_obj = None
 
-a = Analysis(
-    ["../analyzer_gui.py"],
-    hookspath=["."],  # To find "hook-cefpython3.py"
-    win_private_assemblies=True,
-    win_no_prefer_redirects=True,
-    datas=[('..\\clusters', 'clusters')],
-)
+if sys.platform == 'darwin':
+    a = Analysis(
+        ["../analyzer_gui.py"],
+        hookspath=["."],  # To find "hook-cefpython3.py"
+        win_private_assemblies=True,
+        win_no_prefer_redirects=True,
+        binaries=[('/System/Library/Frameworks/Tk.framework/Tk', 'tk'), ('/System/Library/Frameworks/Tcl.framework/Tcl', 'tcl')],
+        datas=[('../clusters', 'clusters')],
+    )
+else:
+    a = Analysis(
+            ["../analyzer_gui.py"],
+            hookspath=["."],  # To find "hook-cefpython3.py"
+            win_private_assemblies=True,
+            win_no_prefer_redirects=True,
+            datas=[('../clusters', 'clusters')],
+        )
 
 if not os.environ.get("PYINSTALLER_CEFPYTHON3_HOOK_SUCCEEDED", None):
     raise SystemExit("Error: Pyinstaller hook-cefpython3.py script was "
