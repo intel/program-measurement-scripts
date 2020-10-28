@@ -26,6 +26,7 @@ import pkg_resources.py2_warn
 from web_browser import BrowserFrame
 from cefpython3 import cefpython as cef
 import sys
+from sys import platform
 import requests
 from lxml import html
 import time
@@ -41,6 +42,8 @@ import operator
 #from generate_QPlot import compute_capacity
 import pickle
 from datetime import datetime
+from transitions.extensions import GraphMachine as Machine
+from transitions import State
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -127,7 +130,7 @@ class LoadedData(Observable):
             pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP]).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
-            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
+            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
@@ -166,8 +169,11 @@ class LoadedData(Observable):
 
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False
-        self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
-        self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
+        if not update: self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
+        if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
+        if update:
+            self.mapping.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
+                'after_name':'After Name', 'after_timestamp#':'After Timestamp'}, inplace=True)
         self.sources = sources
         # Add meta data from the timestamp directory
         if data_dir: self.set_meta_data(data_dir)
@@ -243,6 +249,7 @@ class LoadedData(Observable):
         self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
     def add_analytics(self, analyticsDf):
+        analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP}, inplace=True)
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
 
     def add_speedup(self, mappings, df):
@@ -256,10 +263,10 @@ class LoadedData(Observable):
         speedup_gflop = []
         for i in df.index:
             row = mappings.loc[(mappings['before_name']==df['Name'][i]) & (mappings['before_timestamp#']==df['Timestamp#'][i])]
-            speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
-            speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
-            speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
-        speedup_metric = [(speedup_time, 'Speedup[Time (s)]'), (speedup_apptime, 'Speedup[AppTime (s)]'), (speedup_gflop, 'Speedup[FLOP Rate (GFLOP/s)]')]
+            speedup_time.append(row[SPEEDUP_TIME_LOOP_S].iloc[0] if not row.empty else 1)
+            speedup_apptime.append(row[SPEEDUP_TIME_APP_S].iloc[0] if not row.empty else 1)
+            speedup_gflop.append(row[SPEEDUP_RATE_FP_GFLOP_P_S].iloc[0] if not row.empty else 1)
+        speedup_metric = [(speedup_time, SPEEDUP_TIME_LOOP_S), (speedup_apptime, SPEEDUP_TIME_APP_S), (speedup_gflop, SPEEDUP_RATE_FP_GFLOP_P_S)]
         for pair in speedup_metric:
             df[pair[1]] = pair[0]
 
@@ -271,7 +278,7 @@ class LoadedData(Observable):
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         return mappings
     
-    def get_end2end(self, mappings, metric='Speedup[FLOP Rate (GFLOP/s)]'):
+    def get_end2end(self, mappings, metric=SPEEDUP_RATE_FP_GFLOP_P_S):
         newMappings = mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                                     'after_name':'After Name', 'after_timestamp#':'After Timestamp'})
         newMappings = compute_end2end_transitions(newMappings, metric)
@@ -378,6 +385,7 @@ class CustomData(Observable):
         loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CustomData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
@@ -484,6 +492,7 @@ class CoverageData(Observable):
         loadedData.add_observers(self)
     
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CoverageData Notified from ", loadedData)
         # use qplot dataframe to generate the coverage plot
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
@@ -593,7 +602,6 @@ class SIPlotData(Observable):
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
             (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
-        # TODO: Figure out why we need to merge the diagnostic variables again, parse_ip_siplot_df probably removes those columns
         self.fig = fig_ORIG
         self.textData = textData_ORIG
 
@@ -639,6 +647,7 @@ class DataSourcePanel(ScrolledTreePane):
             self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
             self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
             self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
+            self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
             self.children = []
             self.url = url
             self.local_dir_path = ''
@@ -670,6 +679,7 @@ class DataSourcePanel(ScrolledTreePane):
                 self.download_data()
 
         def download_data(self):
+            print("Downloading Data")
             local_dir = os.path.dirname(self.path)
             dir_url = self.url.rsplit('/', 1)[0] + '/' # Get the data directory to download any corresponding files
             dir_page = requests.get(dir_url)
@@ -777,10 +787,12 @@ class DataSourcePanel(ScrolledTreePane):
             self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview'
             dirs = []
             path, name = os.path.split(os.path.dirname(self.path)) # dir_path is self.path
-            while name != 'UVSQ':
+            while (name != 'UVSQ') and (name != 'UVSQ_2020'):
                 dirs.append(name)
                 path, name = os.path.split(path)
             dirs.reverse()
+            if name == 'UVSQ_2020':
+                self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview2020'
             for name in dirs:
                 self.url += '/' + name
 
@@ -789,6 +801,7 @@ class DataSourcePanel(ScrolledTreePane):
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
         self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
+        self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
         self.loadDataSrcFn = loadDataSrcFn
         self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source')
         self.localNode = DataSourcePanel.MetaTreeNode('Local')
@@ -851,6 +864,7 @@ class DataSourcePanel(ScrolledTreePane):
 
     def setupRemoteRoots(self):
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', self.UVSQ_path, 'UVSQ', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', self.UVSQ_2020_path, 'UVSQ_2020', self))
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://vectorization.computer/data/', self.UIUC_path, 'UIUC', self))
 
 class AnalysisResultsPanel(ScrolledTreePane):
@@ -1012,13 +1026,14 @@ class SummaryTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -1042,19 +1057,24 @@ class SummaryTab(tk.Frame):
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        #if not gui.loadedData.analytics.empty: self.guideTab = GuideTab(self.tableNote, self)
+        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+            self.guideTab = GuideTab(self.tableNote, self)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.shortnameTab, text="Short Names")
         self.tableNote.add(self.labelTab, text='Labels')
         self.tableNote.add(self.axesTab, text="Axes")
         self.tableNote.add(self.variantTab, text="Variants")
         self.tableNote.add(self.mappingsTab, text="Mappings")
-        #if not gui.loadedData.analytics.empty: self.tableNote.add(self.guideTab, text='Guide')
+        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns): 
+            self.tableNote.add(self.guideTab, text='Guide')
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
     def notify(self, coverageData):
         for w in self.window.winfo_children():
             w.destroy()
+        try: self.guideTab.destroy()
+        except: pass
+
         self.update(coverageData.df, coverageData.fig, coverageData.textData, coverageData.mappings, coverageData.variants)
 
 class PlotInteraction():
@@ -1096,6 +1116,7 @@ class PlotInteraction():
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points', command=self.showMarkers)
+        self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight', command=self.unhighlightPoints)
         #self.star_speedups_button = tk.Button(self.plotFrame3, text='Star Speedups', command=self.star_speedups)
         self.action_selected = tk.StringVar(value='Choose Action')
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
@@ -1117,6 +1138,7 @@ class PlotInteraction():
         # Grid Layout
         self.toolbar.grid(column=7, row=0, sticky=tk.S)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
+        self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
@@ -1159,13 +1181,19 @@ class PlotInteraction():
         if not os.path.isdir(dest):
             Path(dest).mkdir(parents=True, exist_ok=True)
         # Store data for all levels
-        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : gui.loadedData.summaryDf, 'mapping' : gui.loadedData.mapping, \
+        df = gui.loadedData.summaryDf.copy(deep=True)
+        df.columns = ["{}".format(i) for i in df.columns]
+        srcDf = gui.loadedData.srcDf.copy(deep=True)
+        srcDf.columns = ["{}".format(i) for i in srcDf.columns]
+        appDf = gui.loadedData.appDf.copy(deep=True)
+        appDf.columns = ["{}".format(i) for i in appDf.columns]
+        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : df, 'mapping' : gui.loadedData.mapping, \
             'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'mapping.xlsx'), \
             'tabs' : self.codelet_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : gui.loadedData.srcDf, 'mapping' : gui.loadedData.src_mapping, \
+        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : srcDf, 'mapping' : gui.loadedData.src_mapping, \
             'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcMapping.xlsx'), \
             'tabs' : self.source_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : gui.loadedData.appDf, 'mapping' : gui.loadedData.app_mapping, \
+        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : appDf, 'mapping' : gui.loadedData.app_mapping, \
             'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appMapping.xlsx'), \
             'tabs' : self.application_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         levels = [codelet, source, app]
@@ -1194,7 +1222,7 @@ class PlotInteraction():
             level['data']['variants'] = gui.summaryTab.current_variants
             # Each tab has its own dictionary with it's current plot selections
             for tab in level['tabs']:
-                level['data'][tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+                level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
         # Save the all the stored data into a nested dictionary
         data = {}
         data['Codelet'] = codelet['data']
@@ -1206,12 +1234,13 @@ class PlotInteraction():
         data_file.close()
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
-    def A_filter(self, relate, metric, threshold, highlight, remove=False, show=False, points=[]):
+    def A_filter(self, relate, metric, threshold, highlight=True, remove=False, show=False, points=[], getNames=False):
         df = gui.loadedData.summaryDf
         names = []
         if metric: names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
         # Temporary hardcoded option while Dave works on specific formulas
         names.extend(points)
+        if getNames: return names
         for name in names:
             try: 
                 marker = self.textData['name:marker'][name]
@@ -1391,6 +1420,17 @@ class PlotInteraction():
             otherMarker = tab.plotInteraction.textData['name:marker'][self.textData['marker:name'][marker]]
             otherText = tab.plotInteraction.textData['marker:text'][otherMarker]
             self.highlight(otherMarker, otherText)
+
+    def unhighlightPoints(self):
+        for tab in self.tabs:
+            for marker in tab.plotInteraction.textData['markers']:
+                text = tab.plotInteraction.textData['marker:text'][marker]
+                if marker.get_marker() == '*':
+                    marker.set_marker('o')
+                    marker.set_markeredgecolor(marker.get_markerfacecolor())
+                    marker.set_markersize(6.0)
+                    text.set_color('k')
+        self.drawPlots()
     
     def drawPlots(self):
         for tab in self.tabs:
@@ -1444,7 +1484,10 @@ class PlotInteraction():
     def adjustText(self):
         if not self.adjusting: 
             self.adjusting = True
-            threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
+            if sys.platform == 'darwin':
+                self.thread_adjustText()
+            else:
+                threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
 class AxesTab(tk.Frame):
     @staticmethod
@@ -1467,7 +1510,7 @@ class AxesTab(tk.Frame):
         if not parent.tab.mappings.empty:
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Speedups', menu=menu)
-            for metric in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+            for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
         if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
@@ -1556,13 +1599,13 @@ class AxesTab(tk.Frame):
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
-                self.tab.qplotData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.qplotData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'TRAWL':
-                self.tab.trawlData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.trawlData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Custom':
-                self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.customData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
-                self.tab.coverageData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+                self.tab.coverageData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
 
 class ShortNameTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -1581,7 +1624,9 @@ class ShortNameTab(tk.Frame):
         merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT, 'Color']], on=[NAME, TIMESTAMP], how='right')
         # sort label table by coverage to keep consistent with data table
         merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
-        table = Table(tab, dataframe=merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
+        merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+        merged.columns = ["{}".format(i) for i in merged.columns]
+        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
         table_button_frame = tk.Frame(tab)
@@ -1746,7 +1791,7 @@ class MappingsTab(tk.Frame):
         self.win.title('Select Speedup')
         message = 'Select the speedup to maximize for\nend-to-end transitions.'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        for index, metric in enumerate(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]']):
+        for index, metric in enumerate([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S]):
             b = tk.Button(self.win, text=metric)
             b['command'] = lambda metric=metric : self.selectAction(metric) 
             b.grid(row=index+1, column=1, padx=20, pady=10)
@@ -1966,7 +2011,7 @@ class LabelTab(tk.Frame):
                 for choice in self.tab.current_labels:
                     codeletName = textData['names'][i]
                     # TODO: Clean this up so it's on the edges and not the data points
-                    if choice in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+                    if choice in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                         tempDf = pd.DataFrame()
                         if not self.tab.mappings.empty: # Mapping
                             tempDf = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==codeletName]
@@ -2034,160 +2079,166 @@ class FilteringTab(tk.Frame):
                 filtering=True, filter_data=filter_data)
 
 class GuideTab(tk.Frame):
-    class ATab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-            self.parent = parent
-            self.tab = parent.tab
-            # Text for states
-            self.a_state = 'State: A-Start'
-            self.a1_state = 'State: A1'
-            # self.a1_state = 'State: B1'
-            self.a1_trans_state = 'State: A11'
-            self.a2_state = 'State: A2'
-            # self.a2_state = 'State: B2'
-            self.a3_state = 'State: A3'
-            # self.a3_state = 'State: B-End'
-            self.a_end_state = 'State: A-End'
-            # self.a_end_state = 'State: End'
-            self.title = self.tab.plotInteraction.textData['title']
-            # Initial Title
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_state, pad=40)
-            # Temporary hardcoded points for each state
-            self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
-            self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
-            # Labels for the current state of the plot
-            self.customFont = tk.font.Font(family="Helvetica", size=11)
-            self.aLabel = tk.Label(self, text=self.a_state, borderwidth=2, relief="solid", font=self.customFont, padx=10)
-            # Buttons: Next (go to next level of filtering), Previous, Transitions (show transitions for the current codelets)
-            self.nextButton = tk.Button(self, text='Next State', command=self.nextState)
-            self.prevButton = tk.Button(self, text='Previous State', command=self.prevState)
-            self.transButton = tk.Button(self, text='Show Transitions', command=self.toggleTrans)
-            # Grid layout
-            self.aLabel.grid(row=0, column=0, pady=10, padx=10, sticky=tk.NW)
-            self.nextButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
-            if gui.loadedData.transitions == 'showing': self.show_trans_state()
-            elif gui.loadedData.transitions == 'hiding': self.hide_trans_state()
-
-
-        def nextState(self):
-            if self.aLabel['text'] == self.a_state: # Go to A1 (SIDO) state
-                self.aLabel['text'] = self.a1_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-                self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
-                self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True) # Highlight SIDO codelets
-                self.updateLabels('Speedup[Time (s)]')
-            elif self.aLabel['text'] == self.a1_state: # Go to A2 (RHS=1) state
-                self.aLabel['text'] = self.a2_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
-                self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
-                self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, points=self.a2_points) # Highlight RHS codelets
-                self.updateLabels('rhs_op_count')
-            elif self.aLabel['text'] == self.a2_state: # Go to A3 (FMA) state
-                self.aLabel['text'] = self.a3_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
-                self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, points=self.a3_points) # Highlight FMA codelets
-                self.updateLabels(COUNT_OPS_FMA_PCT)
-            elif self.aLabel['text'] == self.a3_state: # Go to A_END state
-                self.aLabel['text'] = self.a_end_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a_end_state, pad=40)
-                self.nextButton.grid_remove()
-                self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
-                self.updateLabels('advice')
-        
-        def prevState(self):
-            if self.aLabel['text'] == self.a1_state: # Go back to the starting view
-                self.aLabel['text'] = self.a_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title, pad=40)
-                self.prevButton.grid_remove()
-                self.transButton.grid_remove()
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False)
-                self.tab.labelTab.reset()
-            elif self.aLabel['text'] == self.a2_state: # Go back to A1 (SIDO) state
-                self.aLabel['text'] = self.a1_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-                self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, points=self.a2_points)
-                self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=True, show=True)
-                self.updateLabels('Speedup[Time (s)]')
-            elif self.aLabel['text'] == self.a3_state: # Go back to A2 (RHS=1) state
-                self.aLabel['text'] = self.a2_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a2_state, pad=40)
-                self.nextButton.grid()
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=False, points=self.a3_points)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True, points=self.a2_points)
-                self.updateLabels('rhs_op_count')
-            elif self.aLabel['text'] == self.a_end_state: # Go back to A3 (FMA) state
-                self.aLabel['text'] = self.a3_state
-                self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a3_state, pad=40)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=False, remove=True, points=self.all_highlighted)
-                self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points)
-                self.updateLabels(COUNT_OPS_FMA_PCT)
-
-        def toggleTrans(self):
-            if self.transButton['text'] == 'Show Transitions':
-                gui.loadedData.transitions = 'showing'
-                # Remove any points that aren't currently highglighted
-                for name in self.tab.plotInteraction.textData['names']:
-                    if name not in self.a1_highlighted:
-                        self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
-                # Auto-check all variants and call update variants
-                self.tab.variantTab.checkListBox.showAllVariants()
-            else:
-                gui.loadedData.transitions = 'hiding'
-                self.tab.plotInteraction.showMarkers()
-                self.tab.variantTab.checkListBox.showOrig()
-
-        def show_trans_state(self):
-            self.nextButton.grid_remove()
-            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-            self.aLabel['text'] = self.a1_trans_state
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_trans_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
-            self.transButton['text'] = 'Hide Transitions'
-        
-        def hide_trans_state(self):
-            self.prevButton.grid(row=2, column=0, padx=10, pady=10, sticky=tk.NW)
-            self.transButton.grid(row=3, column=0, padx=10, sticky=tk.NW)
-            self.aLabel['text'] = self.a1_state
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + self.a1_state, pad=40)
-            self.updateLabels('Speedup[Time (s)]')
-            self.a1_highlighted = gui.loadedData.c_plot_state['highlighted_names']
-            self.transButton['text'] = 'Show Transitions'
-
-        def updateLabels(self, metric):
-            self.tab.labelTab.resetMetrics()
-            self.tab.labelTab.metric1.set(metric)
-            self.tab.labelTab.updateLabels()
-            
-
-    class BTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-
-    class CTab(tk.Frame):
-        def __init__(self, parent):
-            tk.Frame.__init__(self, parent)
-
     def __init__(self, parent, tab):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.guideNote = ttk.Notebook(self)
-        # A, B, C are tabs in the GuideTab (Currently only have A tab defined)
-        self.aTab = GuideTab.ATab(self)
-        self.bTab = GuideTab.BTab(self)
-        self.cTab = GuideTab.CTab(self)
-        # Add buttons to Guide Tab
-        self.guideNote.add(self.aTab, text="A")
-        self.guideNote.add(self.bTab, text="B")
-        self.guideNote.add(self.cTab, text="C")
-        self.guideNote.pack(fill=tk.BOTH, expand=True)
+        # State GUI
+        self.canvas = tk.Canvas(self, width=500, height=250)
+        self.canvas.pack(side=tk.LEFT)
+        self.fsm = FSM(self)
+        self.fsm.add_observers(self)
+        self.img = tk.PhotoImage(file=self.fsm.file)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 
+        bottomframe = tk.Frame(self)
+        bottomframe.pack(side=tk.BOTTOM)
+
+        proceedButton = tk.Button(self, text="Proceed", command=self.fsm.proceed)
+        proceedButton.pack(side=tk.TOP)
+        detailsButton = tk.Button(self, text="Details", command=self.fsm.details)
+        detailsButton.pack(side=tk.TOP)
+        prevButton = tk.Button(self, text="Previous", command=self.fsm.previous)
+        prevButton.pack(side=tk.TOP)
+
+    def notify(self, observable):
+        self.fsm.save_graph()
+        self.img = tk.PhotoImage(file=self.fsm.file)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
+
+class FSM(Observable):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.tab = self.parent.tab
+        self.title = self.tab.plotInteraction.textData['title']
+        self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
+        # Temporary hardcoded points for each state
+        self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
+        self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
+        transitions = [{'trigger':'proceed', 'source':'INIT', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'details', 'source':'AStart', 'dest':'A1', 'after':'A1'},
+                {'trigger':'details', 'source':'A1', 'dest':'A11', 'after':'A11'},
+                {'trigger':'proceed', 'source':'A1', 'dest':'A2', 'after':'A2'},
+                {'trigger':'proceed', 'source':'A2', 'dest':'A3', 'after':'A3'},
+                {'trigger':'proceed', 'source':'A3', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'proceed', 'source':'AStart', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'proceed', 'source':'AEnd', 'dest':'B1', 'after':'B1'},
+                {'trigger':'proceed', 'source':'B1', 'dest':'B2', 'after':'B2'},
+                {'trigger':'proceed', 'source':'B2', 'dest':'BEnd', 'after':'BEnd'},
+                {'trigger':'proceed', 'source':'BEnd', 'dest':'End', 'after':'End'},
+                {'trigger':'previous', 'source':'End', 'dest':'BEnd', 'after':'BEnd'},
+                {'trigger':'previous', 'source':'BEnd', 'dest':'B2', 'after':'B2'},
+                {'trigger':'previous', 'source':'B2', 'dest':'B1', 'after':'B1'},
+                {'trigger':'previous', 'source':'B1', 'dest':'AEnd', 'after':'AEnd'},
+                {'trigger':'previous', 'source':'AEnd', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'previous', 'source':'AStart', 'dest':'INIT', 'after':'INIT'},
+                {'trigger':'previous', 'source':'A3', 'dest':'A2', 'after':'A2'},
+                {'trigger':'previous', 'source':'A2', 'dest':'A1', 'after':'A1'},
+                {'trigger':'previous', 'source':'A1', 'dest':'AStart', 'after':'AStart'},
+                {'trigger':'previous', 'source':'A11', 'dest':'A1', 'after':'A1'}]
+        states = ['INIT', 'AStart', State('A1', ignore_invalid_triggers=True), State('A11', ignore_invalid_triggers=True), 'A2', 'A3', 'AEnd', 'B1', 'B2', 'BEnd', 'End']
+
+        if gui.loadedData.transitions == 'showing':
+            self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
+        elif gui.loadedData.transitions == 'hiding':
+            gui.loadedData.transitions = 'disabled'
+            self.machine = Machine(model=self, states=states, initial='A1', transitions=transitions)
+        else:
+            self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
+        self.save_graph()
+        # Get points that we want to save for each state
+        self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, getNames=True) # Highlight SIDO codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, points=self.a2_points, getNames=True) # Highlight RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, points=self.a3_points, getNames=True) # Highlight FMA codelets
+
+    def INIT(self):
+        print("In INIT")
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'INIT', pad=40)
+        self.notify_observers()
+    
+    def AStart(self):
+        print("In AStart")
+        self.tab.plotInteraction.showMarkers()
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.labelTab.reset()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-Start', pad=40)
+        self.notify_observers()
+
+    def A1(self):
+        print("In A1")
+        if gui.loadedData.transitions == 'showing':
+            print("going back to orig variants")
+            gui.loadedData.transitions = 'hiding'
+            self.tab.plotInteraction.showMarkers()
+            self.tab.variantTab.checkListBox.showOrig()
+        else:
+            print("A1 state after orig variants")
+            self.tab.plotInteraction.showMarkers()
+            self.tab.plotInteraction.unhighlightPoints()
+            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
+            self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, show=True, highlight=True) # Highlight SIDO codelets
+            self.updateLabels('Speedup[Time (s)]')
+            self.notify_observers()
+
+    def A11(self):
+        print("In A11")
+        if gui.loadedData.transitions != 'showing':
+            gui.loadedData.transitions = 'showing'
+            for name in self.tab.plotInteraction.textData['names']:
+                if name not in self.a1_highlighted:
+                    self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
+            self.tab.variantTab.checkListBox.showAllVariants()
+
+    def A2(self):
+        print("In A2")
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
+        self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True, points=self.a2_points) # Highlight RHS codelets
+        self.updateLabels('rhs_op_count')
+        self.notify_observers()
+
+    def A3(self):
+        print("In A3")
+        self.tab.plotInteraction.unhighlightPoints()
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points) # Highlight FMA codelets
+        self.updateLabels(r'%ops[fma]')
+        self.notify_observers()
+
+    def AEnd(self):
+        print("In AEnd")
+        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-End', pad=40)
+        self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
+        self.updateLabels('advice')
+        self.notify_observers()
+
+    def B1(self):
+        print("In B1")
+        self.notify_observers()
+
+    def B2(self):
+        print("In B2")
+        self.notify_observers()
+
+    def BEnd(self):
+        print("In BEnd")
+        self.notify_observers()
+
+    def End(self):
+        print("In End")
+        self.notify_observers()
+
+    def save_graph(self):
+        self.machine.get_graph(show_roi=True).draw(self.file, prog='dot')
+    
+    def updateLabels(self, metric):
+        self.tab.labelTab.resetMetrics()
+        self.tab.labelTab.metric1.set(metric)
+        self.tab.labelTab.updateLabels()
 
 class ApplicationTab(tk.Frame):
     def __init__(self, parent):
@@ -2271,13 +2322,14 @@ class TrawlTab(tk.Frame):
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2370,13 +2422,14 @@ class QPlotTab(tk.Frame):
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2478,6 +2531,7 @@ class SIPlotTab(tk.Frame):
         except: pass
         self.buildTableTabs()
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2557,12 +2611,13 @@ class CustomTab(tk.Frame):
         for metric in metric_list:
             column_list.append(metric)
         if not mappings.empty:
-            column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
+            column_list.extend([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S])
         self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
             self.summaryDf = df[column_list]
         except: pass
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
@@ -2828,12 +2883,13 @@ if __name__ == '__main__':
     gui = AnalyzerGui(root)
 
     # Allow pyinstaller to find all CEFPython binaries
+    # TODO: Add handling of framework nad resource paths for Mac
     if getattr(sys, 'frozen', False):
         if sys.platform == 'darwin':
             appSettings = {
                 'cache_path': tempfile.gettempdir(),
-                'resources_dir_path': os.path.join(expanduser('~'), 'Desktop', 'working', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework', 'Resources'),
-                'framework_dir_path': os.path.join(expanduser('~'), 'Desktop', 'working', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework'),
+                'resources_dir_path': os.path.join(expanduser('~'), 'Documents', 'Development', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework', 'Resources'),
+                'framework_dir_path': os.path.join(expanduser('~'), 'Documents', 'Development', 'env', 'lib', 'python3.7', 'site-packages', 'cefpython3', 'Chromium Embedded Framework.framework'),
                 'browser_subprocess_path': os.path.join(sys._MEIPASS, 'subprocess.exe')
             }
         else:

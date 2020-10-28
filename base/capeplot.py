@@ -13,6 +13,7 @@ globals().update(MetricName.__members__)
 from capelib import add_mem_max_level_columns
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
+plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
 
 # Base class for all plots
 class CapePlot:
@@ -152,7 +153,6 @@ class CapePlot:
             markers.extend(ax.plot(x[i], y[i], marker='o', color=df['Color'][i][0], \
                 label=df[NAME][i]+str(df[TIMESTAMP][i]), linestyle='', alpha=1))
 
-        plt.rcParams.update({'font.size': 7})
         texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
 
         #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
