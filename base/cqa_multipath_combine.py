@@ -38,7 +38,7 @@ def main():
         csvwriter.writerow(avg_data)
       except:
         # skip failures to generate partial reports
-        print "WARNING: Unexpected error!"
+        print("WARNING: Unexpected error!")
         traceback.print_exc()
 
 if __name__ == "__main__":

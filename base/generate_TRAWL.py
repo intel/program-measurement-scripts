@@ -18,20 +18,11 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class TrawlPlot(CapePlot):
-    def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(SPEEDUP_DL1.value)
-        self.variant = variant
-        self.df = df 
-        self.outputfile_prefix = outputfile_prefix 
-        self.scale = scale
-        self.title = title
-        self.no_plot = no_plot
-        self.gui = gui
-        self.x_axis = x_axis
-        self.y_axis = y_axis
+    def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
+                 source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+        super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+                         default_y_axis=SPEEDUP_DL1.value, mappings=mappings, short_names_path=short_names_path)
         self.source_order = source_order
-        self.mappings = mappings
-        self.short_names_path = short_names_path
 
     def draw_contours(self, xmax, ymax):
         plt.axvline(x=xmax/2)

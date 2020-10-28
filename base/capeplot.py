@@ -16,10 +16,24 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 # Base class for all plots
 class CapePlot:
-    def __init__(self, default_y_axis):
+    def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+
+        self.df = df
         self.default_y_axis = default_y_axis
-        self.default_x_axis = 'C_FLOP [GFlop/s]'
+        self.default_x_axis = default_x_axis
         self.ctxs = []
+        self.filtering = filtering
+        self.variant = variant
+        self.outputfile_prefix = outputfile_prefix
+        self.scale = scale
+        self.title = title
+        self.no_plot = no_plot
+        self.gui = gui
+        self.x_axis = x_axis
+        self.y_axis = y_axis
+        self.mappings = mappings
+        self.short_names_path = short_names_path
 
     def mk_labels(self):
         df = self.df
@@ -40,10 +54,14 @@ class CapePlot:
     # Override to compute more metrics
     def compute_extra(self):
         pass
+
+    # Override to update the data frame containing plot data.
+    def filter_data_points(self, in_df):
+        return in_df
         
     def compute_and_plot(self):
+        self.compute_extra()
         variant = self.variant
-        df = self.df
         outputfile_prefix = self.outputfile_prefix
         scale = self.scale
         title = self.title
@@ -54,10 +72,14 @@ class CapePlot:
         mappings = self.mappings
         short_names_path = self.short_names_path
 
-        self.compute_extra()
         
-        if df.empty:
+        if self.df.empty:
             return # Nothing to do
+
+        if self.filtering:
+            self.df = self.filter_data_points(self.df)
+
+        df = self.df
 
         # Used to create a legend of file names to color for multiple plots
         color_labels = self.compute_color_labels(df, short_names_path)
@@ -78,10 +100,10 @@ class CapePlot:
         if gui:
             outputfile = None
         else:
-            outputfile = '{}-{}-{}-{}.png'.format \
-                (outputfile_prefix, variant, scale, today)
-        self.fig, self.plotData = self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, list(
-            xs), list(ys), list(mytext), scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
+            outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
+
+        self.fig, self.plotData = self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, \
+            scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
         self.df = df
 
     def draw_contours(self, xmax, ymax):
@@ -116,22 +138,7 @@ class CapePlot:
         ymin=min(ys)
 
         # Set specified axis scales
-        if scale == 'linear' or scale == 'linearlinear':
-            ax.set_xlim((0, xmax))
-            ax.set_ylim((0, ymax))
-        elif scale == 'log' or scale == 'loglog':
-            plt.xscale("log")
-            plt.yscale("log")
-            ax.set_xlim((xmin, xmax))
-            ax.set_ylim((ymin, ymax))
-        elif scale == 'loglinear':
-            plt.xscale("log")
-            ax.set_xlim((xmin, xmax))
-            ax.set_ylim((0, ymax))
-        elif scale == 'linearlog':
-            plt.yscale("log")
-            ax.set_xlim((0, xmax))
-            ax.set_ylim((ymin, ymax))
+        self.set_plot_scale(scale, ax, xmax, ymax, xmin, ymin)
 
         (x, y) = zip(*DATA)
 
@@ -228,7 +235,31 @@ class CapePlot:
         #if filename:
         #plt.savefig(filename)
 
+        #if filename:
+        #    pass
+            #plt.savefig(filename)
+        #else:
+        #    plt.show()
+
         return fig, plotData
+
+    def set_plot_scale(self, scale, ax, xmax, ymax, xmin, ymin):
+        if scale == 'linear' or scale == 'linearlinear':
+            ax.set_xlim((0, xmax))
+            ax.set_ylim((0, ymax))
+        elif scale == 'log' or scale == 'loglog':
+            plt.xscale("log")
+            plt.yscale("log")
+            ax.set_xlim((xmin, xmax))
+            ax.set_ylim((ymin, ymax))
+        elif scale == 'loglinear':
+            plt.xscale("log")
+            ax.set_xlim((xmin, xmax))
+            ax.set_ylim((0, ymax))
+        elif scale == 'linearlog':
+            plt.yscale("log")
+            ax.set_xlim((0, xmax))
+            ax.set_ylim((ymin, ymax))
 
 
 # Plot with capacity computation
@@ -251,8 +282,10 @@ class CapacityPlot(CapePlot):
 	    'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
     }
         
-    def __init__(self, default_y_axis, chosen_node_set):
-        super().__init__(default_y_axis)
+    def __init__(self, chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+        super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+            default_y_axis, default_x_axis, filtering, mappings, short_names_path)
         self.chosen_node_set = chosen_node_set
 
 	# Override to compute capacity
