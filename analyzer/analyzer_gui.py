@@ -246,6 +246,7 @@ class LoadedData(Observable):
         self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
     def add_analytics(self, analyticsDf):
+        analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP}, inplace=True)
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
 
     def add_speedup(self, mappings, df):
@@ -598,7 +599,6 @@ class SIPlotData(Observable):
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
             (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
-        # TODO: Figure out why we need to merge the diagnostic variables again, parse_ip_siplot_df probably removes those columns
         self.fig = fig_ORIG
         self.textData = textData_ORIG
 
@@ -644,6 +644,7 @@ class DataSourcePanel(ScrolledTreePane):
             self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
             self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
             self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
+            self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
             self.children = []
             self.url = url
             self.local_dir_path = ''
@@ -783,10 +784,12 @@ class DataSourcePanel(ScrolledTreePane):
             self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview'
             dirs = []
             path, name = os.path.split(os.path.dirname(self.path)) # dir_path is self.path
-            while name != 'UVSQ':
+            while (name != 'UVSQ') and (name != 'UVSQ_2020'):
                 dirs.append(name)
                 path, name = os.path.split(path)
             dirs.reverse()
+            if name == 'UVSQ_2020':
+                self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview2020'
             for name in dirs:
                 self.url += '/' + name
 
@@ -795,6 +798,7 @@ class DataSourcePanel(ScrolledTreePane):
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
         self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
+        self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
         self.loadDataSrcFn = loadDataSrcFn
         self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source')
         self.localNode = DataSourcePanel.MetaTreeNode('Local')
@@ -857,6 +861,7 @@ class DataSourcePanel(ScrolledTreePane):
 
     def setupRemoteRoots(self):
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', self.UVSQ_path, 'UVSQ', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', self.UVSQ_2020_path, 'UVSQ_2020', self))
         self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://vectorization.computer/data/', self.UIUC_path, 'UIUC', self))
 
 class AnalysisResultsPanel(ScrolledTreePane):
