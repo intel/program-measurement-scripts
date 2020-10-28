@@ -49,7 +49,7 @@ def agg_fn(df, short_names_path):
     totalAppTime = np.sum(df[TIME_APP_S])
 
     # Calculate potential speedups
-    speedupMetrics = [SPEEDUP_VEC, SPEEDUP_DL1, 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]' ] 
+    speedupMetrics = [SPEEDUP_VEC, SPEEDUP_DL1, SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S ] 
     for metric in speedupMetrics:
         try:
             out_df[metric] = totalAppTime / (np.sum(df[TIME_APP_S] / df[metric]))

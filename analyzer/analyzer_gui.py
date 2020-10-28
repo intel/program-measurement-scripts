@@ -130,7 +130,7 @@ class LoadedData(Observable):
             pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP]).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
-            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', 'Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']).to_csv(self.mappings_path, index=False)
+            pd.DataFrame(columns=['before_name', 'before_timestamp#', 'after_name', 'after_timestamp#', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
@@ -259,10 +259,10 @@ class LoadedData(Observable):
         speedup_gflop = []
         for i in df.index:
             row = mappings.loc[(mappings['before_name']==df['Name'][i]) & (mappings['before_timestamp#']==df['Timestamp#'][i])]
-            speedup_time.append(row['Speedup[Time (s)]'].iloc[0] if not row.empty else 1)
-            speedup_apptime.append(row['Speedup[AppTime (s)]'].iloc[0] if not row.empty else 1)
-            speedup_gflop.append(row['Speedup[FLOP Rate (GFLOP/s)]'].iloc[0] if not row.empty else 1)
-        speedup_metric = [(speedup_time, 'Speedup[Time (s)]'), (speedup_apptime, 'Speedup[AppTime (s)]'), (speedup_gflop, 'Speedup[FLOP Rate (GFLOP/s)]')]
+            speedup_time.append(row[SPEEDUP_TIME_LOOP_S].iloc[0] if not row.empty else 1)
+            speedup_apptime.append(row[SPEEDUP_TIME_APP_S].iloc[0] if not row.empty else 1)
+            speedup_gflop.append(row[SPEEDUP_RATE_FP_GFLOP_P_S].iloc[0] if not row.empty else 1)
+        speedup_metric = [(speedup_time, SPEEDUP_TIME_LOOP_S), (speedup_apptime, SPEEDUP_TIME_APP_S), (speedup_gflop, SPEEDUP_RATE_FP_GFLOP_P_S)]
         for pair in speedup_metric:
             df[pair[1]] = pair[0]
 
@@ -274,7 +274,7 @@ class LoadedData(Observable):
                                     'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
         return mappings
     
-    def get_end2end(self, mappings, metric='Speedup[FLOP Rate (GFLOP/s)]'):
+    def get_end2end(self, mappings, metric=SPEEDUP_RATE_FP_GFLOP_P_S):
         newMappings = mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                                     'after_name':'After Name', 'after_timestamp#':'After Timestamp'})
         newMappings = compute_end2end_transitions(newMappings, metric)
@@ -381,6 +381,7 @@ class CustomData(Observable):
         loadedData.add_observers(self)
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CustomData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
@@ -487,6 +488,7 @@ class CoverageData(Observable):
         loadedData.add_observers(self)
     
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+        print("CoverageData Notified from ", loadedData)
         # use qplot dataframe to generate the coverage plot
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
@@ -1016,13 +1018,14 @@ class SummaryTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summary_pt = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()
         summary_pt.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -1170,13 +1173,19 @@ class PlotInteraction():
         if not os.path.isdir(dest):
             Path(dest).mkdir(parents=True, exist_ok=True)
         # Store data for all levels
-        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : gui.loadedData.summaryDf, 'mapping' : gui.loadedData.mapping, \
+        df = gui.loadedData.summaryDf.copy(deep=True)
+        df.columns = ["{}".format(i) for i in df.columns]
+        srcDf = gui.loadedData.srcDf.copy(deep=True)
+        srcDf.columns = ["{}".format(i) for i in srcDf.columns]
+        appDf = gui.loadedData.appDf.copy(deep=True)
+        appDf.columns = ["{}".format(i) for i in appDf.columns]
+        codelet = {'textData' : gui.c_customTab.plotInteraction.textData, 'df' : df, 'mapping' : gui.loadedData.mapping, \
             'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'mapping.xlsx'), \
             'tabs' : self.codelet_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : gui.loadedData.srcDf, 'mapping' : gui.loadedData.src_mapping, \
+        source = {'textData' : gui.s_customTab.plotInteraction.textData, 'df' : srcDf, 'mapping' : gui.loadedData.src_mapping, \
             'summary_dest' : os.path.join(dest, 'srcSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'srcMapping.xlsx'), \
             'tabs' : self.source_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
-        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : gui.loadedData.appDf, 'mapping' : gui.loadedData.app_mapping, \
+        app = {'textData' : gui.a_customTab.plotInteraction.textData, 'df' : appDf, 'mapping' : gui.loadedData.app_mapping, \
             'summary_dest' : os.path.join(dest, 'appSummary.xlsx'), 'mapping_dest' : os.path.join(dest, 'appMapping.xlsx'), \
             'tabs' : self.application_tabs, 'data' : {'visible_names' : [], 'hidden_names' : [], 'highlighted_names' : []}}
         levels = [codelet, source, app]
@@ -1205,7 +1214,7 @@ class PlotInteraction():
             level['data']['variants'] = gui.summaryTab.current_variants
             # Each tab has its own dictionary with it's current plot selections
             for tab in level['tabs']:
-                level['data'][tab.name] = {'x_axis':tab.x_axis, 'y_axis':tab.y_axis, 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+                level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
         # Save the all the stored data into a nested dictionary
         data = {}
         data['Codelet'] = codelet['data']
@@ -1490,7 +1499,7 @@ class AxesTab(tk.Frame):
         if not parent.tab.mappings.empty:
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Speedups', menu=menu)
-            for metric in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+            for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
         if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
@@ -1579,13 +1588,13 @@ class AxesTab(tk.Frame):
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
-                self.tab.qplotData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.qplotData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'TRAWL':
-                self.tab.trawlData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.trawlData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Custom':
-                self.tab.customData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.customData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
-                self.tab.coverageData.notify(gui.loadedData, x_axis=self.tab.x_axis, y_axis=self.tab.y_axis, variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+                self.tab.coverageData.notify(gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
 
 class ShortNameTab(tk.Frame):
     def __init__(self, parent, level=None):
@@ -1604,7 +1613,9 @@ class ShortNameTab(tk.Frame):
         merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT, 'Color']], on=[NAME, TIMESTAMP], how='right')
         # sort label table by coverage to keep consistent with data table
         merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
-        table = Table(tab, dataframe=merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
+        merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+        merged.columns = ["{}".format(i) for i in merged.columns]
+        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
         table.show()
         table.redraw()
         table_button_frame = tk.Frame(tab)
@@ -1769,7 +1780,7 @@ class MappingsTab(tk.Frame):
         self.win.title('Select Speedup')
         message = 'Select the speedup to maximize for\nend-to-end transitions.'
         tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        for index, metric in enumerate(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]']):
+        for index, metric in enumerate([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S]):
             b = tk.Button(self.win, text=metric)
             b['command'] = lambda metric=metric : self.selectAction(metric) 
             b.grid(row=index+1, column=1, padx=20, pady=10)
@@ -1989,7 +2000,7 @@ class LabelTab(tk.Frame):
                 for choice in self.tab.current_labels:
                     codeletName = textData['names'][i]
                     # TODO: Clean this up so it's on the edges and not the data points
-                    if choice in ['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]', 'Difference']:
+                    if choice in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                         tempDf = pd.DataFrame()
                         if not self.tab.mappings.empty: # Mapping
                             tempDf = self.tab.mappings.loc[(self.tab.mappings['before_name']+self.tab.mappings['before_timestamp#'].astype(str))==codeletName]
@@ -2300,13 +2311,14 @@ class TrawlTab(tk.Frame):
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
         column_list.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2399,13 +2411,14 @@ class QPlotTab(tk.Frame):
         column_list.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
-        summaryDf = df[column_list]
+        self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
-            summaryDf = df[column_list]
+            self.summaryDf = df[column_list]
         except: pass
-        summaryDf = summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        summaryTable = Table(self.summaryTab, dataframe=summaryDf, showtoolbar=False, showstatusbar=True)
+        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
+        summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
         table_button_frame = tk.Frame(self.summaryTab)
@@ -2507,6 +2520,7 @@ class SIPlotTab(tk.Frame):
         except: pass
         self.buildTableTabs()
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summaryTable.show()
         summaryTable.redraw()
@@ -2586,12 +2600,13 @@ class CustomTab(tk.Frame):
         for metric in metric_list:
             column_list.append(metric)
         if not mappings.empty:
-            column_list.extend(['Speedup[Time (s)]', 'Speedup[AppTime (s)]', 'Speedup[FLOP Rate (GFLOP/s)]'])
+            column_list.extend([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S])
         self.summaryDf = df[column_list]
         try: # See if we have analytic variables
             column_list.extend(gui.loadedData.analytic_columns)
             self.summaryDf = df[column_list]
         except: pass
+        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
         summary_pt.show()

@@ -4,6 +4,10 @@ from argparse import ArgumentParser
 import pandas as pd
 import networkx as nx
 import numpy as np
+from metric_names import MetricName
+# Importing the MetricName enums to global variable space
+# See: http://www.qtrac.eu/pyenum.html
+globals().update(MetricName.__members__)
 
 def read_transitions(in_files):
     in_transitions = pd.DataFrame()  # empty df as start and keep appending in loop next
