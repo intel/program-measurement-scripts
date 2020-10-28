@@ -1,5 +1,7 @@
 import tkinter as tk
 import enum
+import os
+from os.path import expanduser
 
 #from transitions import Machine
 from transitions.extensions import GraphMachine as Machine
@@ -120,7 +122,7 @@ class FiniteStateMachine(Observable):
         # Below after_state_change call back could make it another method to call notify_observers and invoke action methods in states as well.
         m = Machine(self, states=States, transitions=transitions, initial=States.INIT, use_pygraphviz=False, after_state_change=self.notify_observers)
         self.fsm = m
-        self.file = 'c:/users/cwong29/AppData/Local/Temp/my_state_diagram1.png'
+        self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
         self.dump_graph()
  #       assert self.is_INIT()
  #       assert self.state is States.INIT
@@ -131,33 +133,32 @@ class FiniteStateMachine(Observable):
  #       assert self.is_Aend()
 
     def dump_graph(self):
-        self.fsm.get_graph().draw(self.file, prog='dot')
-
+        roi = self.fsm.get_graph(show_roi=True).draw(self.file, prog='dot')
 
 class Gui(tk.Frame):
     def __init__(self, parent, fsm):
-        tk.Frame.__init__(self, parent, width=1500, height=500)
+        tk.Frame.__init__(self, parent)
         self.pack()
         self.fsm = fsm
         self.fsm.add_observers(self)
-        self.canvas = tk.Canvas(self, width=1500, height=500)
-        self.canvas.pack(side=tk.BOTTOM)
+        self.canvas = tk.Canvas(self, width=500, height=250)
+        self.canvas.pack(side=tk.LEFT)
         self.img = tk.PhotoImage(file=fsm.file)
-        self.canvas.create_image(750, 250, image=self.img)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 
         bottomframe = tk.Frame(self)
         bottomframe.pack(side=tk.BOTTOM)
 
-        proceedButton = tk.Button(bottomframe, text="Proceed", command=self.fsm.proceed)
-        proceedButton.pack(side=tk.LEFT)
-        detailsButton = tk.Button(bottomframe, text="Details", command=self.fsm.details)
-        detailsButton.pack(side=tk.LEFT)
+        proceedButton = tk.Button(self, text="Proceed", command=self.fsm.proceed)
+        proceedButton.pack(side=tk.TOP)
+        detailsButton = tk.Button(self, text="Details", command=self.fsm.details)
+        detailsButton.pack(side=tk.TOP)
         
     def notify(self, observable):
         self.fsm.dump_graph()
         print("changed")
         self.img = tk.PhotoImage(file=self.fsm.file)
-        self.canvas.create_image(750, 250, image=self.img)
+        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 
 
 

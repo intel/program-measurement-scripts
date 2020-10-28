@@ -40,7 +40,6 @@ def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-        df.rename(columns={'speedup[time_s':'Speedup[Time (s)]', 'speedup[apptime_s':'Speedup[AppTime (s)]', 'speedup[flop_rate_gflop/s':'Speedup[FLOP Rate (GFLOP/s)]'}, inplace=True)
     df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)]

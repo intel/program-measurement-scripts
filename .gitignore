@@ -7,6 +7,16 @@ vrun/*log*
 */*/*/*.so*
 */*/*/*.o
 .venv
+*.pyc
+*.toc
+*.pkg
+*.html
+*.txt
+*.log
+*.pyz
+*.zip
+*.manifest
+*.json
 /analyzer/packaging/build
 /analyzer/packaging/dist
 Formulas_used.txt
