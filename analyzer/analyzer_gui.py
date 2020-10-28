@@ -137,7 +137,10 @@ class LoadedData(Observable):
     def set_meta_data(self, data_dir):
         for name in os.listdir(data_dir):
             local_path = os.path.join(data_dir, name)
-            if name.endswith('.names.csv'): self.names = pd.read_csv(local_path)
+            if name.endswith('.names.csv'): 
+                self.names = pd.read_csv(local_path)
+                self.names.rename(columns={'name':NAME, 'timestamp#':TIMESTAMP, \
+                    'short_name':SHORT_NAME, 'variant':VARIANT}, inplace=True)
             elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
             elif name.endswith('.analytics.csv'): 
                 # TODO: Ask for naming in analytics to be lowercase timestamp
@@ -171,7 +174,7 @@ class LoadedData(Observable):
         self.restore = False
         if not update: self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
         if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
-        if update:
+        if update and not self.mapping.empty:
             self.mapping.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
                 'after_name':'After Name', 'after_timestamp#':'After Timestamp'}, inplace=True)
         self.sources = sources
@@ -249,7 +252,7 @@ class LoadedData(Observable):
         self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
     def add_analytics(self, analyticsDf):
-        analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP}, inplace=True)
+        analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP, 'timestamp#':TIMESTAMP}, inplace=True)
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
 
     def add_speedup(self, mappings, df):
