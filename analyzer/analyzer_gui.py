@@ -1481,7 +1481,10 @@ class PlotInteraction():
     def adjustText(self):
         if not self.adjusting: 
             self.adjusting = True
-            threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
+            if sys.platform == 'darwin':
+                self.thread_adjustText()
+            else:
+                threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
 class AxesTab(tk.Frame):
     @staticmethod
