@@ -161,6 +161,9 @@ class CapePlot:
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
         plt.tight_layout()
     
+        self.fill_plot_data(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings)
+
+    def fill_plot_data(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings):
         names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
         self.plotData = {
             'xs' : xs,
