@@ -183,7 +183,8 @@ class SiPlot(CapacityPlot):
         chosen_node_set = self.chosen_node_set
         return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
 
-    def set_plot_scale(self, scale, ax, xmax, ymax, xmin, ymin):
+    def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
+        ax = self.ax
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
         xmax=max(max(cluster_and_cur_run_xs)*1.2, xmax)

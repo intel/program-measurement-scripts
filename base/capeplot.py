@@ -103,8 +103,8 @@ class CapePlot:
         else:
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
-        self.fig, self.plotData = self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, \
-            scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
+        self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
+                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
         self.df = df
 
     def draw_contours(self, xmax, ymax):
@@ -126,11 +126,11 @@ class CapePlot:
         return color_labels
 
     # Set filename to [] for GUI output
-    def plot_data(self, title, filename, xs, ys, mytext, scale, df, color_labels=None, \
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels=None, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
-        DATA = tuple(zip(xs, ys))
+        # DATA = tuple(zip(xs, ys))
 
-        fig, ax = plt.subplots()
+        self.fig, ax = plt.subplots()
         self.ax = ax
 
         xmax=max(xs)*1.2
@@ -139,21 +139,15 @@ class CapePlot:
         ymin=min(ys)
 
         # Set specified axis scales
-        self.set_plot_scale(scale, ax, xmax, ymax, xmin, ymin)
+        self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
 
-        (x, y) = zip(*DATA)
+        # (x, y) = zip(*DATA)
 
         # Draw contours
         self.draw_contours(xmax, ymax)
 
         # Plot data points
-        markers = []
-        df.reset_index(drop=True, inplace=True)
-        for i in range(len(x)):
-            markers.extend(ax.plot(x[i], y[i], marker='o', color=df['Color'][i][0], \
-                label=df[NAME][i]+str(df[TIMESTAMP][i]), linestyle='', alpha=1))
-
-        texts = [plt.text(xs[i], ys[i], mytext[i], alpha=1) for i in range(len(DATA))]
+        labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
 
         #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
         ax.set(xlabel=x_axis if x_axis else self.default_x_axis, \
@@ -161,6 +155,60 @@ class CapePlot:
         ax.set_title(title, pad=40)
 
         # Legend
+        legend = self.mk_legend(color_labels)
+
+        # Arrows between multiple runs
+        name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
+        plt.tight_layout()
+    
+        names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
+        self.plotData = {
+            'xs' : xs,
+            'ys' : ys,
+            'mytext' : mytexts,
+            'orig_mytext' : copy.deepcopy(mytexts),
+            'ax' : ax,
+            'legend' : legend,
+            'orig_legend' : legend.get_title().get_text(),
+            'title' : title,
+            'texts' : labels,
+            'markers' : markers,
+            'names' : names,
+            'timestamps' : df[TIMESTAMP].values.tolist(),
+            'marker:text' : dict(zip(markers,labels)),
+            'marker:name' : dict(zip(markers,names)),
+            'name:marker' : dict(zip(names, markers)),
+            'name:text' : dict(zip(names, labels)),
+            'text:arrow' : {},
+            'text:name' : dict(zip(labels, names)),
+            'name:mapping' : name_mapping,
+            'mappings' : mymappings
+        }
+
+        #if filename:
+        #plt.savefig(filename)
+
+        #if filename:
+        #    pass
+            #plt.savefig(filename)
+        #else:
+        #    plt.show()
+
+
+    def plot_markers_and_labels(self, df, xs, ys, mytexts):
+        ax = self.ax
+        markers = []
+        df.reset_index(drop=True, inplace=True)
+        for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
+            markers.extend(ax.plot(x, y, marker='o', color=color[0], 
+                                   label=name+str(timestamp), linestyle='', alpha=1))
+
+        #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
+        texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
+        return texts, markers
+
+    def mk_legend(self, color_labels):
+        ax = self.ax
         patches = []
         if color_labels and len(color_labels) >= 2:
             for color_label in color_labels:
@@ -172,8 +220,10 @@ class CapePlot:
 
         legend = ax.legend(loc="lower left", ncol=6, bbox_to_anchor=(0., 1.02, 1., .102), \
             title=self.mk_label_key(), mode='expand', borderaxespad=0., handles=patches)
+        return legend
 
-        # Arrows between multiple runs
+    def mk_mappings(self, mappings, df, x_axis, y_axis, xmax, ymax):
+        ax = self.ax
         name_mapping = dict()
         mymappings = []
         if not mappings.empty:
@@ -206,44 +256,10 @@ class CapePlot:
                     name_mapping[before_row[NAME][0] + str(before_row[TIMESTAMP][0])].append(con)
                     name_mapping[after_row[NAME][0] + str(after_row[TIMESTAMP][0])].append(con)
                     mymappings.append(con)
-        plt.tight_layout()
-    
-        names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
-        plotData = {
-            'xs' : xs,
-            'ys' : ys,
-            'mytext' : mytext,
-            'orig_mytext' : copy.deepcopy(mytext),
-            'ax' : ax,
-            'legend' : legend,
-            'orig_legend' : legend.get_title().get_text(),
-            'title' : title,
-            'texts' : texts,
-            'markers' : markers,
-            'names' : names,
-            'timestamps' : df[TIMESTAMP].values.tolist(),
-            'marker:text' : dict(zip(markers,texts)),
-            'marker:name' : dict(zip(markers,names)),
-            'name:marker' : dict(zip(names, markers)),
-            'name:text' : dict(zip(names, texts)),
-            'text:arrow' : {},
-            'text:name' : dict(zip(texts, names)),
-            'name:mapping' : name_mapping,
-            'mappings' : mymappings
-        }
+        return name_mapping, mymappings
 
-        #if filename:
-        #plt.savefig(filename)
-
-        #if filename:
-        #    pass
-            #plt.savefig(filename)
-        #else:
-        #    plt.show()
-
-        return fig, plotData
-
-    def set_plot_scale(self, scale, ax, xmax, ymax, xmin, ymin):
+    def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
+        ax = self.ax
         if scale == 'linear' or scale == 'linearlinear':
             ax.set_xlim((0, xmax))
             ax.set_ylim((0, ymax))
