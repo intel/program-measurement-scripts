@@ -249,6 +249,7 @@ class LoadedData(Observable):
     
     def add_variants(self, namesDf):
         self.summaryDf.drop(columns=[VARIANT], inplace=True)
+        namesDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP, 'timestamp#':TIMESTAMP, 'short_name':SHORT_NAME}, inplace=True)
         self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
     def add_analytics(self, analyticsDf):
@@ -500,8 +501,7 @@ class CoverageData(Observable):
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         if not update: # Get all unique variants upon first load
-            try: self.variants = df['Variant'].dropna().unique()
-            except: self.variants = df[VARIANT].dropna().unique()
+            self.variants = df[VARIANT].dropna().unique()
         # mappings
         self.mappings = loadedData.mapping
         df, fig, texts = coverage_plot(df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
@@ -1934,8 +1934,8 @@ class ChecklistBox(tk.Frame):
             tab.current_variants = self.parent.tab.current_variants
         self.parent.tab.plotInteraction.save_plot_state()
         for tab in self.parent.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title)
-            else: tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis=tab.x_axis, y_axis=tab.y_axis, scale=tab.x_scale+tab.y_scale, update=True, level=tab.level)
+            if tab.name == 'SIPlot': tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title)
+            else: tab.data.notify(gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level)
 
 class VariantTab(tk.Frame):
     def __init__(self, parent, tab, variants, current_variants):
@@ -2151,7 +2151,7 @@ class FSM(Observable):
             self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
         self.save_graph()
         # Get points that we want to save for each state
-        self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, getNames=True) # Highlight SIDO codelets
+        self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, getNames=True) # Highlight SIDO codelets
         self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, points=self.a2_points, getNames=True) # Highlight RHS codelets
         self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, points=self.a3_points, getNames=True) # Highlight FMA codelets
 
@@ -2180,8 +2180,8 @@ class FSM(Observable):
             self.tab.plotInteraction.showMarkers()
             self.tab.plotInteraction.unhighlightPoints()
             self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
-            self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, show=True, highlight=True) # Highlight SIDO codelets
-            self.updateLabels('Speedup[Time (s)]')
+            self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, show=True, highlight=True) # Highlight SIDO codelets
+            self.updateLabels(SPEEDUP_TIME_LOOP_S)
             self.notify_observers()
 
     def A11(self):
@@ -2197,7 +2197,7 @@ class FSM(Observable):
         print("In A2")
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
-        self.tab.plotInteraction.A_filter(relate=operator.gt, metric='Speedup[Time (s)]', threshold=1, highlight=False, remove=True) # Remove SIDO codelets
+        self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
         self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=True, show=True, points=self.a2_points) # Highlight RHS codelets
         self.updateLabels('rhs_op_count')
         self.notify_observers()
@@ -2208,7 +2208,7 @@ class FSM(Observable):
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
         self.tab.plotInteraction.A_filter(relate=operator.eq, metric='rhs_op_count', threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
         self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points) # Highlight FMA codelets
-        self.updateLabels(r'%ops[fma]')
+        self.updateLabels(COUNT_OPS_FMA_PCT)
         self.notify_observers()
 
     def AEnd(self):
