@@ -75,7 +75,7 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=Fals
 
 	grouped = df.groupby(VARIANT)
 	# Only show selected variants, default is 'ORIG'
-	df = df.loc[df[VARIANT].isin(variants)]
+	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
 	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
 	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
 

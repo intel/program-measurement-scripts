@@ -272,7 +272,7 @@ def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur
     cluster_df = pd.read_csv(cluster_inputfile)
 
     # Only show selected variants, default is 'ORIG'
-    cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)]
+    cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)].reset_index(drop=True)
 
     #return compute_and_plot('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
     plot = SiPlot ('ORIG', 'SIPLOT', norm, title, chosen_node_set, cluster_df, cur_run_df, variants=variants, \
