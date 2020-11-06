@@ -36,7 +36,7 @@ def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
-    df = df.loc[df[VARIANT].isin(variants)]
+    df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     # df, fig, plotData = compute_and_plot(
     #     'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
     # Return dataframe and figure for GUI
