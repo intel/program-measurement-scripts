@@ -2706,9 +2706,11 @@ class AnalyzerGui(tk.Frame):
         self.explorerPanel = ExplorerPanel(self.pw, self.loadFile, self.loadSavedState)
         self.explorerPanel.pack(side = tk.LEFT)
         self.pw.add(self.explorerPanel)
+
         right = self.buildTabs(self.pw)
         right.pack(side = tk.LEFT)
         self.pw.add(right)
+
         self.pw.pack(fill=tk.BOTH,expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
         self.sources = []
@@ -2798,15 +2800,20 @@ class AnalyzerGui(tk.Frame):
                 widget.destroy()
 
     def buildTabs(self, parent):
+        infoPw=tk.PanedWindow(parent, orient="horizontal")
+
+        self.oneviewTab = OneviewTab(infoPw)
+        self.oneviewTab.pack(side = tk.LEFT)
+        infoPw.add(self.oneviewTab)
+
         # 1st level notebook
-        self.main_note = ttk.Notebook(parent)
+        self.main_note = ttk.Notebook(infoPw)
         self.applicationTab = ApplicationTab(self.main_note)
         self.sourceTab = SourceTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
-        self.oneviewTab = OneviewTab(self.main_note)
         self.coverageData = CoverageData(self.loadedData)
         self.summaryTab = SummaryTab(self.main_note, self.coverageData, 'Codelet')
-        self.main_note.add(self.oneviewTab, text="Oneview")
+        #self.main_note.add(self.oneviewTab, text="Oneview")
         self.main_note.add(self.summaryTab, text="Summary")
         self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.sourceTab, text="Source")
@@ -2849,7 +2856,11 @@ class AnalyzerGui(tk.Frame):
         #application_note.add(self.a_siPlotTab, text="SI Plot")
         application_note.add(self.a_customTab, text="Custom")
         application_note.pack(fill=tk.BOTH, expand=True)
-        return self.main_note
+
+        self.main_note.pack(side = tk.LEFT)
+        infoPw.add(self.main_note)
+
+        return infoPw
 
 
 def on_closing(root):
