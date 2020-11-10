@@ -986,13 +986,13 @@ class AnalysisResultsPanel(ScrolledTreePane):
 
 class ExplorerPanel(tk.PanedWindow):
     def __init__(self, parent, loadDataSrcFn, loadSavedStateFn):
-        tk.PanedWindow.__init__(self, parent, orient="vertical")
+        tk.PanedWindow.__init__(self, parent, orient="horizontal")
         top = DataSourcePanel(self, loadDataSrcFn)
-        top.pack(side = tk.TOP)
-        self.add(top)
+        top.pack(side = tk.LEFT, expand=True)
         bot = AnalysisResultsPanel(self, loadSavedStateFn)
-        bot.pack(side = tk.TOP)
-        self.add(bot)
+        bot.pack(side = tk.LEFT, expand=True)
+        self.add(top, stretch='always')
+        self.add(bot, stretch='always')
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
 
@@ -2701,17 +2701,17 @@ class AnalyzerGui(tk.Frame):
         
         self.parent.config(menu=menubar)
 
-        self.pw=tk.PanedWindow(parent, orient="horizontal")
-
-        self.explorerPanel = ExplorerPanel(self.pw, self.loadFile, self.loadSavedState)
-        self.explorerPanel.pack(side = tk.LEFT)
-        self.pw.add(self.explorerPanel)
+        self.pw=tk.PanedWindow(parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
 
         right = self.buildTabs(self.pw)
-        right.pack(side = tk.LEFT)
-        self.pw.add(right)
+        right.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
+        self.pw.add(right, stretch='always')
 
-        self.pw.pack(fill=tk.BOTH,expand=True)
+        self.explorerPanel = ExplorerPanel(self.pw, self.loadFile, self.loadSavedState)
+        self.explorerPanel.pack(side = tk.BOTTOM)
+        self.pw.add(self.explorerPanel, stretch='never')
+
+        self.pw.pack(fill=tk.BOTH, expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
         self.sources = []
         self.urls = []
@@ -2800,12 +2800,13 @@ class AnalyzerGui(tk.Frame):
                 widget.destroy()
 
     def buildTabs(self, parent):
-        infoPw=tk.PanedWindow(parent, orient="horizontal")
-
-        self.oneviewTab = OneviewTab(infoPw)
-        self.oneviewTab.pack(side = tk.LEFT)
-        infoPw.add(self.oneviewTab)
-
+        infoPw=tk.PanedWindow(parent, orient="horizontal", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        # Oneview Tab
+        self.oneview_note = ttk.Notebook(infoPw)
+        self.oneviewTab = OneviewTab(self.oneview_note)
+        self.oneview_note.add(self.oneviewTab, text="Oneview")
+        self.oneview_note.pack(side = tk.LEFT, expand=True)
+        infoPw.add(self.oneview_note, stretch='always')
         # 1st level notebook
         self.main_note = ttk.Notebook(infoPw)
         self.applicationTab = ApplicationTab(self.main_note)
@@ -2835,7 +2836,7 @@ class AnalyzerGui(tk.Frame):
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.add(self.c_customTab, text="Custom")
-        codelet_note.pack(fill=tk.BOTH, expand=1)
+        codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Tabs
         self.s_trawlTab = TrawlTab(source_note, self.trawlData, 'Source')
         self.s_qplotTab = QPlotTab(source_note, self.qplotData, 'Source')
@@ -2856,9 +2857,8 @@ class AnalyzerGui(tk.Frame):
         #application_note.add(self.a_siPlotTab, text="SI Plot")
         application_note.add(self.a_customTab, text="Custom")
         application_note.pack(fill=tk.BOTH, expand=True)
-
-        self.main_note.pack(side = tk.LEFT)
-        infoPw.add(self.main_note)
+        self.main_note.pack(side = tk.RIGHT, expand=True)
+        infoPw.add(self.main_note, stretch='always')
 
         return infoPw
 
