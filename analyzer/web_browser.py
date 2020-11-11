@@ -27,6 +27,9 @@ class BrowserFrame(tk.Frame):
         self.url = ''
         tk.Frame.__init__(self, master)
     
+    def refresh(self):
+        self.browser.Reload()
+
     def change_browser(self, url): 
         self.url = url
         if not self.browser:
@@ -34,8 +37,7 @@ class BrowserFrame(tk.Frame):
             rect = [0, 0, self.winfo_width(), self.winfo_height()]
             window_info.SetAsChild(self.get_window_handle(), rect)
             self.window_info = window_info
-            self.browser = cef.CreateBrowserSync(self.window_info,
-                                                url=url)
+            self.browser = cef.CreateBrowserSync(self.window_info, url=url)
             assert self.browser
             self.browser.SetClientHandler(LifespanHandler(self))
             self.message_loop_work()

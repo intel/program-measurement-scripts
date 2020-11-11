@@ -673,7 +673,10 @@ class DataSourcePanel(ScrolledTreePane):
             if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
             elif choice in ['Overwrite', 'Append']: self.get_files()
-            self.container.openLocalFile(choice, os.path.dirname(self.path), self.path, self.url[:-5] if self.url.endswith('.xlsx') else None)
+            url = None
+            if self.url.endswith('.xlsx'): url = self.url[:-5]
+            elif choice == 'Open Webpage': url = self.url
+            self.container.openLocalFile(choice, os.path.dirname(self.path), self.path, url)
         
         def get_files(self):
             #TODO: Look into combining this when opening LocalDir
@@ -2260,6 +2263,15 @@ class OneviewTab(tk.Frame):
         self.window.pack(fill=tk.BOTH,expand=True)
         self.browser1 = None
         self.browser2 = None
+        self.refreshButton = None
+
+    def refresh(self):
+        if self.browser1: self.browser1.refresh()
+        if self.browser2: self.browser2.refresh()
+
+    def addRefresh(self):
+        self.refreshButton = tk.Button(self.window, text="Refresh", command=self.refresh)
+        self.refreshButton.pack(side=tk.TOP, anchor=tk.NW)
 
     def loadPage(self):
         if len(gui.urls) == 1: self.loadFirstPage()
@@ -2269,6 +2281,7 @@ class OneviewTab(tk.Frame):
         self.removePages()
         self.browser1 = BrowserFrame(self.window)
         self.window.add(self.browser1, stretch='always')
+        self.addRefresh()
         current_tab = gui.main_note.select()
         gui.main_note.select(0)
         self.update()
@@ -2281,6 +2294,7 @@ class OneviewTab(tk.Frame):
         self.browser2 = BrowserFrame(self.window)
         self.window.add(self.browser1, stretch='always')
         self.window.add(self.browser2, stretch='always')
+        self.addRefresh()
         current_tab = gui.main_note.select()
         gui.main_note.select(0)
         self.update()
@@ -2289,10 +2303,10 @@ class OneviewTab(tk.Frame):
         self.browser2.change_browser(url=gui.urls[1])
 
     def removePages(self):
-        if self.browser1:
+        if self.browser1: 
             self.window.remove(self.browser1)
-        if self.browser2:
-            self.window.remove(self.browser2)
+            self.refreshButton.destroy()
+        if self.browser2: self.window.remove(self.browser2)
 
 class TrawlTab(tk.Frame):
     def __init__(self, parent, trawlData, level):
