@@ -64,7 +64,7 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' }}
 
-LFBFields = ['%lfb:k{}'.format(i) for i in range(0,11)]
+LFBFields = [MetricName.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
 
 def counter_sum(row, cols):
@@ -335,14 +335,14 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
     try:
         clk = "CPU_CLK_UNHALTED_THREAD"
         fmt = "L1D_PEND_MISS_PENDING:c%s"
-        ofmt = "%%lfb:k%d"
+        # ofmt = "%%lfb:k%d"
         prv = clk
         for x in range(1,11): 
             i = ("0x%x" if x > 9 else "%x") % x 
             cnt = fmt % i
-            out_row[ofmt % (x-1)] = 100 * max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
+            out_row[MetricName.busyLfbPct(x-1)] = 100 * max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
             prv = cnt
-        out_row[ofmt % x] = 100 * getter(row, prv) / getter(row, clk)
+        out_row[MetricName.busyLfbPct(x)] = 100 * getter(row, prv) / getter(row, clk)
     except:
         pass
 
@@ -350,9 +350,9 @@ def calculate_array_efficiency(out_rows, in_rows):
     try:
         num_all_streams = in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
             + in_rows['Nb_streams_stride_n'].values + in_rows['Nb_streams_unknown_stride'].values + in_rows['Nb_streams_indirect'].values
-        out_rows[ARRAY_EFFICIENCY_PCT] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
+        out_rows.loc[num_all_streams > 0, ARRAY_EFFICIENCY_PCT] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
             + 0.75 * in_rows['Nb_streams_stride_n'].values + 0.5 * in_rows['Nb_streams_unknown_stride'].values \
-                + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams
+                + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams[num_all_streams>0]
     except:
         pass
 

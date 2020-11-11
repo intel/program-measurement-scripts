@@ -10,6 +10,9 @@ def _opsPctStr(type):
 def _stallPctStr(stall):
     return 'Stall[{}]_%'.format(stall)
 
+def _busyLfbPctStr(cnt):
+    return 'Busy[LFB[k{}]]_%'.format(cnt)
+
 def _energyStr(type):
     return 'E[{}]_J'.format(type)
 
@@ -53,6 +56,8 @@ class MetricName(str, Enum):
     RATE_MAXMEM_GB_P_S = 'Rate[MaxMem]_GB/s'
     RATE_LDST_GI_P_S = 'Rate[Ld+St]_GI/s'
     RATE_FP_GFLOP_P_S = 'Rate[Fp]_GFLOP/s'
+    RATE_CVT_GCVTOP_P_S = 'Rate[Cvt]_GCVTOP/s'
+    RATE_MEM_GMEMOP_P_S = 'Rate[Mem]_GMEMOP/s'
     RATE_INT_GIOP_P_S = 'Rate[Int]_GIOP/s'
     RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
                 
@@ -82,6 +87,18 @@ class MetricName(str, Enum):
     STALL_LM_PCT = _stallPctStr('LM')
     STALL_ANY_PCT = _stallPctStr('ANY')
     STALL_FE_PCT = _stallPctStr('FE')
+
+    BUSY_LFB_K0_PCT = _busyLfbPctStr(0)
+    BUSY_LFB_K1_PCT = _busyLfbPctStr(1)
+    BUSY_LFB_K2_PCT = _busyLfbPctStr(2)
+    BUSY_LFB_K3_PCT = _busyLfbPctStr(3)
+    BUSY_LFB_K4_PCT = _busyLfbPctStr(4)
+    BUSY_LFB_K5_PCT = _busyLfbPctStr(5)
+    BUSY_LFB_K6_PCT = _busyLfbPctStr(6)
+    BUSY_LFB_K7_PCT = _busyLfbPctStr(7)
+    BUSY_LFB_K8_PCT = _busyLfbPctStr(8)
+    BUSY_LFB_K9_PCT = _busyLfbPctStr(9)
+    BUSY_LFB_K10_PCT = _busyLfbPctStr(10)
     
     SPEEDUP_VEC = 'Speedup[Vec]'
     SPEEDUP_DL1 = 'Speedup[DL1]'
@@ -119,9 +136,15 @@ class MetricName(str, Enum):
     @classmethod
     def instsPct(cls, type):
         return cls(_instsPctStr(type))
+
     @classmethod
     def stallPct(cls, stall):
         return cls(_stallPctStr(stall))
+
+
+    @classmethod
+    def busyLfbPct(cls, cnt):
+        return cls(_busyLfbPctStr(cnt))
 
     @classmethod
     def energy(cls, kind):
