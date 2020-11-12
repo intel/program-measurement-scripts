@@ -100,7 +100,7 @@ class LoadedData(Observable):
         self.source_order=[]
         self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, 'C_FLOP [GFlop/s]', COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        self.analytic_columns = ['rating', 'advice', 'ddg_true_cyclic', 'ddg_artifical_cyclic', 'limits', 'rhs_op_count', 'init_only', 'scalar_reduction', 'recurrence', 'offsets', 'info_url']
+        self.analytic_columns = []
         self.mappings = pd.DataFrame()
         self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
@@ -143,7 +143,7 @@ class LoadedData(Observable):
                     'short_name':SHORT_NAME, 'variant':VARIANT}, inplace=True)
             elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
             elif name.endswith('.analytics.csv'): 
-                # TODO: Ask for naming in analytics to be lowercase timestamp
+                # TODO: Ask for naming in analytics to conform to naming convention
                 self.analytics = pd.read_csv(local_path)
     
     def resetStates(self):
@@ -255,6 +255,10 @@ class LoadedData(Observable):
     def add_analytics(self, analyticsDf):
         analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP, 'timestamp#':TIMESTAMP}, inplace=True)
         self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
+        self.summaryDf.rename(columns={'ArrayEfficiency_%_x':'ArrayEfficiency_%'}, inplace=True)
+        self.analytics.drop(columns=[NAME, TIMESTAMP], inplace=True)
+        self.analytic_columns = self.analytics.columns.tolist()
+        self.common_columns_end.extend(self.analytics.columns)
 
     def add_speedup(self, mappings, df):
         if mappings.empty or df.empty:
@@ -607,6 +611,10 @@ class SIPlotData(Observable):
         self.df = df_ORIG
         self.fig = fig_ORIG
         self.textData = textData_ORIG
+
+        # TODO: Fix analytic variables being dropped in 'def compute_extra' in generate_SI.py
+        self.df.drop(columns=loadedData.analytic_columns, errors='ignore', inplace=True)
+        self.df = pd.merge(left=self.df, right=loadedData.summaryDf[loadedData.analytic_columns + [NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
         self.notify_observers()
 
@@ -1032,11 +1040,8 @@ class SummaryTab(tk.Frame):
         self.window.add(self.tableFrame, stretch='always')
         self.buildTableTabs()
         column_list = copy.deepcopy(gui.loadedData.common_columns_start)
+        column_list.extend(gui.loadedData.common_columns_end)
         self.summaryDf = df[column_list]
-        try: # See if we have analytic variables
-            column_list.extend(gui.loadedData.analytic_columns)
-            self.summaryDf = df[column_list]
-        except: pass
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
@@ -1052,7 +1057,7 @@ class SummaryTab(tk.Frame):
 
     def exportCSV(self):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
-        gui.loadedData.summaryDf.to_csv(export_file_path, index=False, header=True)
+        gui.loadedData.summaryDf.drop(columns=['Color']).to_csv(export_file_path, index=False, header=True)
     
     # Create tabs for data and labels
     def buildTableTabs(self):
@@ -1063,7 +1068,8 @@ class SummaryTab(tk.Frame):
         self.variantTab = VariantTab(self.tableNote, self, self.variants, self.current_variants)
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+        #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
+        if not gui.urls and gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
             self.guideTab = GuideTab(self.tableNote, self)
         self.tableNote.add(self.summaryTab, text="Data")
         self.tableNote.add(self.shortnameTab, text="Short Names")
@@ -1071,7 +1077,7 @@ class SummaryTab(tk.Frame):
         self.tableNote.add(self.axesTab, text="Axes")
         self.tableNote.add(self.variantTab, text="Variants")
         self.tableNote.add(self.mappingsTab, text="Mappings")
-        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns): 
+        if not gui.urls and gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns): 
             self.tableNote.add(self.guideTab, text='Guide')
         self.tableNote.pack(fill=tk.BOTH, expand=True)
 
@@ -1519,7 +1525,7 @@ class AxesTab(tk.Frame):
             for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
-        if set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+        if gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
             menu = tk.Menu(main_menu, tearoff=False)
             main_menu.add_cascade(label='Diagnostics', menu=menu)
             for metric in gui.loadedData.analytic_columns:
@@ -2340,10 +2346,6 @@ class TrawlTab(tk.Frame):
         column_list.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         column_list.extend(gui.loadedData.common_columns_end)
         self.summaryDf = df[column_list]
-        try: # See if we have analytic variables
-            column_list.extend(gui.loadedData.analytic_columns)
-            self.summaryDf = df[column_list]
-        except: pass
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
@@ -2440,10 +2442,6 @@ class QPlotTab(tk.Frame):
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
         self.summaryDf = df[column_list]
-        try: # See if we have analytic variables
-            column_list.extend(gui.loadedData.analytic_columns)
-            self.summaryDf = df[column_list]
-        except: pass
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         summaryTable = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
@@ -2542,10 +2540,6 @@ class SIPlotTab(tk.Frame):
         #       'C_RAM [GB/s]', 'C_max [GB/s]'])
         column_list.extend(gui.loadedData.common_columns_end)
         self.summaryDf = df[column_list]
-        try: # See if we have analytic variables
-            column_list.extend(gui.loadedData.analytic_columns)
-            self.summaryDf = df[column_list]
-        except: pass
         self.buildTableTabs()
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
@@ -2630,10 +2624,6 @@ class CustomTab(tk.Frame):
         if not mappings.empty:
             column_list.extend([SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S])
         self.summaryDf = df[column_list]
-        try: # See if we have analytic variables
-            column_list.extend(gui.loadedData.analytic_columns)
-            self.summaryDf = df[column_list]
-        except: pass
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         summary_pt = Table(self.summaryTab, dataframe=self.summaryDf, showtoolbar=False, showstatusbar=True)
