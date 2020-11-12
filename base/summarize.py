@@ -350,9 +350,10 @@ def calculate_array_efficiency(out_rows, in_rows):
     try:
         num_all_streams = in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
             + in_rows['Nb_streams_stride_n'].values + in_rows['Nb_streams_unknown_stride'].values + in_rows['Nb_streams_indirect'].values
-        out_rows.loc[num_all_streams > 0, ARRAY_EFFICIENCY_PCT] = 100 * ( in_rows['Nb_streams_stride_0'].values + in_rows['Nb_streams_stride_1'].values \
-            + 0.75 * in_rows['Nb_streams_stride_n'].values + 0.5 * in_rows['Nb_streams_unknown_stride'].values \
-                + 0 * in_rows['Nb_streams_indirect'].values ) / num_all_streams[num_all_streams>0]
+        out_rows.loc[num_all_streams > 0, ARRAY_EFFICIENCY_PCT] = 100 * ( in_rows.loc[num_all_streams>0,'Nb_streams_stride_0'].values \
+            + in_rows.loc[num_all_streams>0,'Nb_streams_stride_1'].values \
+            + 0.75 * in_rows.loc[num_all_streams>0,'Nb_streams_stride_n'].values + 0.5 * in_rows.loc[num_all_streams>0,'Nb_streams_unknown_stride'].values \
+                + 0 * in_rows.loc[num_all_streams>0,'Nb_streams_indirect'].values ) / num_all_streams[num_all_streams>0]
     except:
         pass
 
