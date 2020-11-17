@@ -258,6 +258,7 @@ class LoadedData(Observable):
         self.summaryDf.rename(columns={'ArrayEfficiency_%_x':'ArrayEfficiency_%'}, inplace=True)
         self.analytics.drop(columns=[NAME, TIMESTAMP], inplace=True)
         self.analytic_columns = self.analytics.columns.tolist()
+        self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         self.common_columns_end.extend(self.analytics.columns)
 
     def add_speedup(self, mappings, df):
