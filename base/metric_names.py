@@ -57,6 +57,7 @@ class MetricName(str, Enum):
     RATE_LDST_GI_P_S = 'Rate[Ld+St]_GI/s'
     RATE_FP_GFLOP_P_S = 'Rate[Fp]_GFLOP/s'
     RATE_CVT_GCVTOP_P_S = 'Rate[Cvt]_GCVTOP/s'
+    RATE_PACK_GPACKOP_P_S = 'Rate[Pack]_GPACKOP/s'
     RATE_MEM_GMEMOP_P_S = 'Rate[Mem]_GMEMOP/s'
     RATE_INT_GIOP_P_S = 'Rate[Int]_GIOP/s'
     RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
@@ -77,6 +78,8 @@ class MetricName(str, Enum):
     COUNT_INSTS_RCP_PCT = _instsPctStr('RCP')
     COUNT_OPS_CVT_PCT = _opsPctStr('CVT')
     COUNT_INSTS_CVT_PCT = _instsPctStr('CVT')
+    COUNT_OPS_PACK_PCT = _opsPctStr('PACK')
+    COUNT_INSTS_PACK_PCT = _instsPctStr('PACK')
     COUNT_VEC_TYPE_OPS_PCT = 'VecType[Ops]'
 
     STALL_PRF_PCT = _stallPctStr('PRF')
