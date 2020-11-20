@@ -28,6 +28,7 @@ from cefpython3 import cefpython as cef
 import sys
 from sys import platform
 import requests
+import graphviz
 from lxml import html
 import time
 from pathlib import Path
