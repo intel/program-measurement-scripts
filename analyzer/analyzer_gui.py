@@ -610,6 +610,7 @@ class SIPlotData(Observable):
         df_ORIG, fig_ORIG, textData_ORIG = parse_ip_siplot_df\
             (cluster, "FE_tier1", "row", title, chosen_node_set, df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, short_names_path=gui.loadedData.short_names_path)
         self.df = df_ORIG
+        loadedData.summaryDf = pd.merge(left=loadedData.summaryDf, right=self.df[[NAME, TIMESTAMP, 'Saturation', 'Intensity']], on=[NAME, TIMESTAMP], how='left')
         self.fig = fig_ORIG
         self.textData = textData_ORIG
 
@@ -1518,6 +1519,11 @@ class AxesTab(tk.Frame):
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='QPlot', menu=menu)
         for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # SIPlot
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='SIPlot', menu=menu)
+        for metric in ['Saturation', 'Intensity']:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Speedups (If mappings):
         if not parent.tab.mappings.empty:
