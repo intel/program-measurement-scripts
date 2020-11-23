@@ -52,7 +52,7 @@ capacity_formula= {
     }
 
 class SiPlot(CapacityPlot):
-    def __init__(self, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, cur_run_df, variants=['ORIG'], 
+    def __init__(self, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, cur_run_df, variants, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
         super().__init__(chosen_node_set, variant, cur_run_df, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
                          default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, short_names_path=short_names_path)
@@ -264,7 +264,7 @@ class SiPlot(CapacityPlot):
         # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
         return final_df[columns_ordered]
 
-def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur_run_df, variants=['ORIG'], filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)

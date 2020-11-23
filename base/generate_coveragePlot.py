@@ -41,7 +41,7 @@ class CoveragePlot(CapacityPlot):
         plt.axvline(x=8)
 
 
-def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), variants=['ORIG'], short_names_path=''):
+def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
     # Normalize the column names
     #df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:

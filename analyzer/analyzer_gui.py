@@ -136,6 +136,7 @@ class LoadedData(Observable):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
     def set_meta_data(self, data_dir):
+        self.analytics = pd.DataFrame()
         for name in os.listdir(data_dir):
             local_path = os.path.join(data_dir, name)
             if name.endswith('.names.csv'): 
@@ -160,20 +161,19 @@ class LoadedData(Observable):
         self.app_mapping = pd.DataFrame()
 
     def resetTabValues(self):
-        tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab,
+        self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab,
                 gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
                  gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
-        for tab in tabs:
+        for tab in self.tabs:
             tab.x_scale = tab.orig_x_scale
             tab.y_scale = tab.orig_y_scale
             tab.x_axis = tab.orig_x_axis
             tab.y_axis = tab.orig_y_axis
-            tab.current_variants = ['ORIG']
+            tab.current_variants = [gui.loadedData.default_variant]
             tab.current_labels = []
 
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False
-        if not update: self.resetTabValues() # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
         if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)
         if update and not self.mapping.empty:
             self.mapping.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
@@ -201,8 +201,13 @@ class LoadedData(Observable):
             False, True, self.mapping)
         # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
-        #if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
+        # Get default variant (most frequent)
+        self.default_variant = self.summaryDf[VARIANT].value_counts().idxmax()
+        # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
+        if not update: self.resetTabValues() 
+        # if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
         # Add diagnostic variables from analyticsDf
+        self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         if not self.analytics.empty: self.add_analytics(self.analytics)
         # Source summary
         self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path, mapping_df=self.mapping)
@@ -229,7 +234,6 @@ class LoadedData(Observable):
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
         gui.loaded_url = None
-        self.resetTabValues()
         self.resetStates()
         self.levels = {'Codelet' : levels[0], 'Source' : levels[1], 'Application' : levels[2]}
         self.summaryDf = self.levels['Codelet']['summary']
@@ -238,6 +242,9 @@ class LoadedData(Observable):
         self.mapping = self.levels['Codelet']['mapping']
         self.src_mapping = self.levels['Source']['mapping']
         self.app_mapping = self.levels['Application']['mapping']
+        # Get default variant (most frequent)
+        self.default_variant = [self.summaryDf[VARIANT].value_counts().idxmax()]
+        self.resetTabValues()
         self.analytics = pd.DataFrame()
         self.sources = []
         self.restore = True
@@ -259,7 +266,6 @@ class LoadedData(Observable):
         self.summaryDf.rename(columns={'ArrayEfficiency_%_x':'ArrayEfficiency_%'}, inplace=True)
         self.analytics.drop(columns=[NAME, TIMESTAMP], inplace=True)
         self.analytic_columns = self.analytics.columns.tolist()
-        self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         self.common_columns_end.extend(self.analytics.columns)
 
     def add_speedup(self, mappings, df):
@@ -394,12 +400,14 @@ class CustomData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("CustomData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
         self.app_mapping = loadedData.app_mapping
+        # Only show selected variants, default is most frequent variant
+        if not variants: variants = [loadedData.default_variant]
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
         if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
@@ -446,12 +454,14 @@ class TRAWLData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("TRAWLData Notified from ", loadedData)
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
         self.app_mapping = loadedData.app_mapping
+        # Only show selected variants, default is most frequent variant
+        if not variants: variants = [loadedData.default_variant]
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
         if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
@@ -501,11 +511,13 @@ class CoverageData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
     
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("CoverageData Notified from ", loadedData)
         # use qplot dataframe to generate the coverage plot
         df = loadedData.summaryDf.copy(deep=True)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        # Only show selected variants, default is most frequent variant
+        if not variants: variants = [loadedData.default_variant]
         if not update: # Get all unique variants upon first load
             self.variants = df[VARIANT].dropna().unique()
         # mappings
@@ -532,13 +544,15 @@ class QPlotData(Observable):
         self.mappings = pd.DataFrame()
         self.name = 'QPlot'
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("QPlotData Notified from ", loadedData)
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         # mappings
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
         self.app_mapping = loadedData.app_mapping
+        # Only show selected variants, default is most frequent variant
+        if not variants: variants = [loadedData.default_variant]
         # Get all unique variants upon first load
         if not update: self.variants = loadedData.summaryDf['Variant'].dropna().unique()
         if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
@@ -594,7 +608,7 @@ class SIPlotData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=['ORIG'], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
+    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
         print("SIPlotData Notified from ", loadedData)
         df = loadedData.summaryDf.copy(deep=True)
@@ -603,6 +617,8 @@ class SIPlotData(Observable):
         self.mappings = loadedData.mapping
         self.src_mapping = loadedData.src_mapping
         self.app_mapping = loadedData.app_mapping
+        # Only show selected variants, default is most frequent variant
+        if not variants: variants = [loadedData.default_variant]
         # Plot only at Codelet level for now
         if not update: self.variants = df['Variant'].dropna().unique()
         if not update: self.src_variants = loadedData.srcDf['Variant'].dropna().unique()
@@ -616,8 +632,9 @@ class SIPlotData(Observable):
         self.textData = textData_ORIG
 
         # TODO: Fix analytic variables being dropped in 'def compute_extra' in generate_SI.py
-        self.df.drop(columns=loadedData.analytic_columns, errors='ignore', inplace=True)
-        self.df = pd.merge(left=self.df, right=loadedData.summaryDf[loadedData.analytic_columns + [NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
+        if not loadedData.analytics.empty:
+            self.df.drop(columns=loadedData.analytic_columns, errors='ignore', inplace=True)
+            self.df = pd.merge(left=self.df, right=loadedData.summaryDf[loadedData.analytic_columns + [NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
 
         self.notify_observers()
 
@@ -1022,7 +1039,7 @@ class SummaryTab(tk.Frame):
         self.coverageData = self.data = coverageData
         self.name = 'Summary'
         self.level = level
-        self.current_variants = ['ORIG']
+        self.current_variants = []
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
@@ -1938,7 +1955,7 @@ class ChecklistBox(tk.Frame):
     
     def showOrig(self):
         for i, cb in enumerate(self.cbs):
-            if cb['text'] == 'ORIG': self.vars[i].set(1)
+            if cb['text'] == gui.loadedData.default_variant: self.vars[i].set(1)
             else: self.vars[i].set(0)
         self.updateVariants()
 
@@ -2334,7 +2351,7 @@ class TrawlTab(tk.Frame):
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
         self.y_axis = self.orig_y_axis = SPEEDUP_VEC
-        self.current_variants = ['ORIG']
+        self.current_variants = []
         self.current_labels = []
         # TRAWL tab has a paned window with the data tables and trawl plot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -2429,7 +2446,7 @@ class QPlotTab(tk.Frame):
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'
         self.y_axis = self.orig_y_axis = 'C_max [GB/s]'
-        self.current_variants = ['ORIG']
+        self.current_variants = []
         self.current_labels = []
         # QPlot tab has a paned window with the data tables and qplot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -2527,7 +2544,7 @@ class SIPlotTab(tk.Frame):
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'Intensity'
         self.y_axis = self.orig_y_axis = 'Saturation'
-        self.current_variants = ['ORIG']
+        self.current_variants = []
         self.current_labels = []
         # SIPlot tab has a paned window with the data tables and sipLot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6,
@@ -2595,7 +2612,7 @@ class CustomTab(tk.Frame):
         self.name = 'Custom'
         self.level = level
         self.customData = self.data = customData
-        self.current_variants = ['ORIG']
+        self.current_variants = []
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
         self.x_axis = self.orig_x_axis = 'C_FLOP [GFlop/s]'

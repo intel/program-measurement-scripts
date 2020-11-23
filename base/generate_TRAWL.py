@@ -29,8 +29,8 @@ class TrawlPlot(CapePlot):
         plt.axhline(y=ymax/2)
 
 
-def trawl_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, \
-    variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+def trawl_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
+    source_order=None, mappings=pd.DataFrame(), short_names_path=''):
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)

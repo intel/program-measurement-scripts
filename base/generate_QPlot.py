@@ -67,14 +67,12 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df = pd.read_csv(input_data_source)
 	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 
-def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, variants=['ORIG'], source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
 	if not mappings.empty:
 		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
 		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-
-	grouped = df.groupby(VARIANT)
-	# Only show selected variants, default is 'ORIG'
+		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
 	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
 	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
