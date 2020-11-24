@@ -14,6 +14,8 @@ from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from collections import OrderedDict
 
+from xlsxgen import XlsxGenerator
+
 from argparse import ArgumentParser
 from enum import Enum
 import tempfile
@@ -568,8 +570,14 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
     output_rows, new_mapping_df = summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy, \
         skip_stalls, name_file, enable_lfb, incl_meta_data, mapping_df)
 
-    outputfile = sys.stdout if outputfile == '-' else outputfile
-    output_rows.to_csv(outputfile, index=False)
+    if outputfile.endswith('xlsx'):
+        xlsxgen = XlsxGenerator()
+        xlsxgen.set_header("single")
+        xlsxgen.set_scheme("general")
+        xlsxgen.from_dataframe("data", output_rows, outputfile)
+    else:
+        outputfile = sys.stdout if outputfile == '-' else outputfile
+        output_rows.to_csv(outputfile, index=False)
 
     if new_mapping_df is not None:
         outdir = os.path.dirname(outputfile)
