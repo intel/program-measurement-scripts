@@ -7,7 +7,6 @@ import os, csv
 import itertools
 
 class XlsxGenerator:
-
     def __init__(self):
         self.tiered_metrics = {}
         self.cutoffs = {}
@@ -33,6 +32,16 @@ class XlsxGenerator:
 
     def from_dataframe(self, title, df, outfile):
         _process(self, title, df, outfile)
+
+class DerivedMetric:
+    def __init__(self, value, inputs, output):
+        self.value = value
+        self.inputs = inputs
+        self.output = output
+
+    def apply(self, loop):
+        inputs = [ loop[x] for x in self.inputs ]
+        return self.output(*inputs)
 
 _colors = [ '2EB62C', '83D475', 'C5E8B7' ]
 _highlight = 'DAAE5D'
@@ -174,13 +183,3 @@ def _process(xlsxgen, title, df, outfile):
             if found >= 0:
                 _color_cell(ws, metric, curr_row, _color_for_tier(found))
     wb.save(filename=outfile)
-
-class DerivedMetric:
-    def __init__(self, value, inputs, output):
-        self.value = value
-        self.inputs = inputs
-        self.output = output
-
-    def apply(self, loop):
-        inputs = [ loop[x] for x in self.inputs ]
-        return self.output(*inputs)
