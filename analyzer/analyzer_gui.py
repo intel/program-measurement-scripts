@@ -21,6 +21,7 @@ from generate_SI import parse_ip_df as parse_ip_siplot_df
 from generate_coveragePlot import coverage_plot
 from generate_TRAWL import trawl_plot
 from generate_custom import custom_plot
+from xlsxgen import XlsxGenerator
 import tempfile
 import pkg_resources.py2_warn
 from web_browser import BrowserFrame
@@ -1043,6 +1044,7 @@ class SummaryTab(tk.Frame):
         table_button_frame.grid(row=3, column=1)
         tk.Button(table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(summary_pt)).grid(row=0, column=0)
         tk.Button(table_button_frame, text="Export Summary", command=lambda: self.exportCSV()).grid(row=0, column=1)
+        tk.Button(table_button_frame, text="Export Summary to Excel", command=lambda: self.exportXlsx()).grid(row=0, column=2)
         self.shortnameTab.buildLabelTable(df, self.shortnameTab)
         if (self.level == 'Codelet') and not gui.loadedData.mapping.empty:
             self.mappingsTab.buildMappingsTab(df, mappings)
@@ -1050,6 +1052,14 @@ class SummaryTab(tk.Frame):
     def exportCSV(self):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         gui.loadedData.summaryDf.to_csv(export_file_path, index=False, header=True)
+
+    def exportXlsx(self):
+        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.xlsx')
+        # To be moved to constructor later (after refactoring?)
+        xlsxgen = XlsxGenerator()
+        xlsxgen.set_header("single")
+        xlsxgen.set_scheme("general")
+        xlsxgen.from_dataframe("data", gui.loadedData.summaryDf, export_file_path)
     
     # Create tabs for data and labels
     def buildTableTabs(self):
