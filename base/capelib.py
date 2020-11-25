@@ -12,9 +12,13 @@ globals().update(MetricName.__members__)
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
 
+# This function should be called instead of individual calls of
+# add_one_mem_max_level_columns() to ensure consistent thresholds being computed
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
-    add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, 100)
-    add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, 85)
+    max_rate =inout_df[node_list].max(axis=1)
+    inout_df[max_rate_name] = max_rate
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, 100)
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, 85)
 
 # Compute the max memory level column 
 # node_list is an ordered list with preferred node at the right
@@ -22,13 +26,12 @@ def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_meml
 # order(n) = index of n in node_list
 # acceptableNodes = { node \in node_list : v[node] >= max_{n \in node_list}(v[n]) * threshold }
 # max_level_node = node_list[max({order(n) : n in acceptableNodes})]
-def add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, threshold=100):
+def add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, threshold=100):
     memLevel = MetricName.memlevel(threshold)
-    inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
     # inout_df = inout_df[inout_df[max_rate_name].notna()]
     # Note (threshold/100) needs to be computed first to avoid rounding errors
-    passValues = inout_df[node_list].max(axis=1)*(threshold/100)
+    passValues = max_rate*(threshold/100)
     rnode_list = node_list[::-1] # Reverse list to put preferred nodes first
     # mask with values passing the threshold and column in reversed order so prefered columns come first
     passMask = inout_df.loc[:, rnode_list].ge(passValues,axis=0)
