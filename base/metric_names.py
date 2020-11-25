@@ -29,6 +29,9 @@ def _rpeStr(ekind, ikind):
 def _ropeStr(ekind, ikind):
     return 'RateOpsPerE[{},{}]_GI2/Js'.format(ikind, ekind)
 
+def _memlevelStr(threshold):
+    return 'MaxMemlevel[{}%]'.format(threshold)
+
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class MetricName(str, Enum):
     NAME = "Name"
@@ -38,7 +41,10 @@ class MetricName(str, Enum):
     VARIANT = 'Variant'
     NUM_CORES = 'NumCores'
     DATA_SET = 'DataSet'
-    MEM_LEVEL = 'Memlevel'
+    #MEM_LEVEL = 'Memlevel'
+    MAX_MEM_LEVEL_100 = _memlevelStr(100)
+    MAX_MEM_LEVEL_85 = _memlevelStr(85)
+    MEM_LEVEL = MAX_MEM_LEVEL_100
     PREFETCHERS = 'Prefetchers'
     REPETITIONS = 'Repetitions'
     TIME_LOOP_S = 'Time[Loop]_s'
@@ -169,6 +175,9 @@ class MetricName(str, Enum):
     def rope(cls, ekind, ikind='Inst'):
         return cls(_ropeStr(ekind, ikind))
 
+    @classmethod
+    def memlevel(cls, threshold):
+        return cls(_memlevelStr(threshold))
 
     # With metric pattern <MetricType>[<Component>]_<UNIT>
     # extract the <Component> part

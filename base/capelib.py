@@ -13,12 +13,30 @@ Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
 
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, 100)
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, 85)
+
+# Compute the max memory level column 
+# node_list is an ordered list with preferred node at the right
+# threshold is in percentage ranging [0-100]
+# order(n) = index of n in node_list
+# acceptableNodes = { node \in node_list : v[node] >= max_{n \in node_list}(v[n]) * threshold }
+# max_level_node = node_list[max({order(n) : n in acceptableNodes})]
+def add_one_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda, threshold=100):
+    memLevel = MetricName.memlevel(threshold)
     inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
     # inout_df = inout_df[inout_df[max_rate_name].notna()]
-    inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
-    nonnullMask = ~inout_df[MEM_LEVEL].isnull()
-    inout_df.loc[nonnullMask, MEM_LEVEL] = inout_df.loc[nonnullMask, MEM_LEVEL].apply(metric_to_memlevel_lambda)
+    # Note (threshold/100) needs to be computed first to avoid rounding errors
+    passValues = inout_df[node_list].max(axis=1)*(threshold/100)
+    rnode_list = node_list[::-1] # Reverse list to put preferred nodes first
+    # mask with values passing the threshold and column in reversed order so prefered columns come first
+    passMask = inout_df.loc[:, rnode_list].ge(passValues,axis=0)
+    # Use idxmax() to return first column with the biggest value (which is value of True)
+    inout_df[memLevel]=passMask.idxmax(axis=1)
+    # inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
+    nonnullMask = ~inout_df[memLevel].isnull()
+    inout_df.loc[nonnullMask, memLevel] = inout_df.loc[nonnullMask, memLevel].apply(metric_to_memlevel_lambda)
     # Old stuff below to be deleted
 	# Remove the first two characters which is 'C_'
     # inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].apply((lambda v: v[2:]))
