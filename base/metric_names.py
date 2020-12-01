@@ -10,6 +10,9 @@ def _opsPctStr(type):
 def _stallPctStr(stall):
     return 'Stall[{}]_%'.format(stall)
 
+def _busyLfbPctStr(cnt):
+    return 'Busy[LFB[k{}]]_%'.format(cnt)
+
 def _energyStr(type):
     return 'E[{}]_J'.format(type)
 
@@ -26,6 +29,9 @@ def _rpeStr(ekind, ikind):
 def _ropeStr(ekind, ikind):
     return 'RateOpsPerE[{},{}]_GI2/Js'.format(ikind, ekind)
 
+def _memlevelStr(threshold):
+    return 'MaxMemlevel[{}%]'.format(threshold)
+
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class MetricName(str, Enum):
     NAME = "Name"
@@ -35,7 +41,10 @@ class MetricName(str, Enum):
     VARIANT = 'Variant'
     NUM_CORES = 'NumCores'
     DATA_SET = 'DataSet'
-    MEM_LEVEL = 'Memlevel'
+    #MEM_LEVEL = 'Memlevel'
+    MAX_MEM_LEVEL_100 = _memlevelStr(100)
+    MAX_MEM_LEVEL_85 = _memlevelStr(85)
+    MEM_LEVEL = MAX_MEM_LEVEL_100
     PREFETCHERS = 'Prefetchers'
     REPETITIONS = 'Repetitions'
     TIME_LOOP_S = 'Time[Loop]_s'
@@ -53,6 +62,9 @@ class MetricName(str, Enum):
     RATE_MAXMEM_GB_P_S = 'Rate[MaxMem]_GB/s'
     RATE_LDST_GI_P_S = 'Rate[Ld+St]_GI/s'
     RATE_FP_GFLOP_P_S = 'Rate[Fp]_GFLOP/s'
+    RATE_CVT_GCVTOP_P_S = 'Rate[Cvt]_GCVTOP/s'
+    RATE_PACK_GPACKOP_P_S = 'Rate[Pack]_GPACKOP/s'
+    RATE_MEM_GMEMOP_P_S = 'Rate[Mem]_GMEMOP/s'
     RATE_INT_GIOP_P_S = 'Rate[Int]_GIOP/s'
     RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
                 
@@ -72,6 +84,8 @@ class MetricName(str, Enum):
     COUNT_INSTS_RCP_PCT = _instsPctStr('RCP')
     COUNT_OPS_CVT_PCT = _opsPctStr('CVT')
     COUNT_INSTS_CVT_PCT = _instsPctStr('CVT')
+    COUNT_OPS_PACK_PCT = _opsPctStr('PACK')
+    COUNT_INSTS_PACK_PCT = _instsPctStr('PACK')
     COUNT_VEC_TYPE_OPS_PCT = 'VecType[Ops]'
 
     STALL_PRF_PCT = _stallPctStr('PRF')
@@ -82,6 +96,18 @@ class MetricName(str, Enum):
     STALL_LM_PCT = _stallPctStr('LM')
     STALL_ANY_PCT = _stallPctStr('ANY')
     STALL_FE_PCT = _stallPctStr('FE')
+
+    BUSY_LFB_K0_PCT = _busyLfbPctStr(0)
+    BUSY_LFB_K1_PCT = _busyLfbPctStr(1)
+    BUSY_LFB_K2_PCT = _busyLfbPctStr(2)
+    BUSY_LFB_K3_PCT = _busyLfbPctStr(3)
+    BUSY_LFB_K4_PCT = _busyLfbPctStr(4)
+    BUSY_LFB_K5_PCT = _busyLfbPctStr(5)
+    BUSY_LFB_K6_PCT = _busyLfbPctStr(6)
+    BUSY_LFB_K7_PCT = _busyLfbPctStr(7)
+    BUSY_LFB_K8_PCT = _busyLfbPctStr(8)
+    BUSY_LFB_K9_PCT = _busyLfbPctStr(9)
+    BUSY_LFB_K10_PCT = _busyLfbPctStr(10)
     
     SPEEDUP_VEC = 'Speedup[Vec]'
     SPEEDUP_DL1 = 'Speedup[DL1]'
@@ -119,9 +145,15 @@ class MetricName(str, Enum):
     @classmethod
     def instsPct(cls, type):
         return cls(_instsPctStr(type))
+
     @classmethod
     def stallPct(cls, stall):
         return cls(_stallPctStr(stall))
+
+
+    @classmethod
+    def busyLfbPct(cls, cnt):
+        return cls(_busyLfbPctStr(cnt))
 
     @classmethod
     def energy(cls, kind):
@@ -143,6 +175,9 @@ class MetricName(str, Enum):
     def rope(cls, ekind, ikind='Inst'):
         return cls(_ropeStr(ekind, ikind))
 
+    @classmethod
+    def memlevel(cls, threshold):
+        return cls(_memlevelStr(threshold))
 
     # With metric pattern <MetricType>[<Component>]_<UNIT>
     # extract the <Component> part
@@ -151,4 +186,3 @@ class MetricName(str, Enum):
         metricAndComp = matched.group(1)
         matched = re.match(r"([^\[]*)\[(.*)\]$", metricAndComp)
         return matched.group(2)
-        
