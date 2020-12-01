@@ -1,5 +1,6 @@
 import tkinter as tk
 from utils import Observable
+from utils import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_QPlot import parse_ip_df as parse_ip_qplot_df
 import copy
@@ -10,22 +11,15 @@ from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
-class QPlotData(Observable):
+class QPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root):
-        super().__init__()
-        # Watch for updates in loaded data
-        loadedData.add_observers(self)
-        self.loadedData = loadedData
+        super().__init__(loadedData, gui, root, 'QPlot')
         self.df = None
         self.fig = None
         self.ax = None
         self.appDf = None
         self.appFig = None
         self.appTextData = None
-        self.mappings = pd.DataFrame()
-        self.name = 'QPlot'
-        self.gui = gui
-        self.root = root
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("QPlotData Notified from ", loadedData)
@@ -87,9 +81,9 @@ class QPlotData(Observable):
         if level == 'All':
             self.notify_observers()
 
-class QPlotTab(tk.Frame):
+class QPlotTab(AnalyzerTab):
     def __init__(self, parent, qplotData, level):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent)
         if qplotData is not None:
            qplotData.add_observers(self)
         self.name = 'QPlot'

@@ -1,5 +1,6 @@
 import tkinter as tk
 from utils import Observable, resource_path
+from utils import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_SI import parse_ip_df as parse_ip_siplot_df
 import copy
@@ -11,16 +12,9 @@ from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, 
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
-class SIPlotData(Observable):
+class SIPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root):
-        super().__init__()
-        self.loadedData = loadedData
-        self.mappings = pd.DataFrame()
-        self.name = 'SIPlot'
-        self.gui = gui
-        self.root = root
-        # Watch for updates in loaded data
-        loadedData.add_observers(self)
+        super().__init__(loadedData, gui, root, 'SIPlot')
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
@@ -57,9 +51,9 @@ class SIPlotData(Observable):
 
         self.notify_observers()
 
-class SIPlotTab(tk.Frame):
+class SIPlotTab(AnalyzerTab):
     def __init__(self, parent, siplotData, level):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent)
         if siplotData is not None:
             siplotData.add_observers(self)
         self.name = 'SIPlot'
