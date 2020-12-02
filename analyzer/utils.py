@@ -38,11 +38,11 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-def exportCSV(self, df):
+def exportCSV(df):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         df.drop(columns=['Color']).to_csv(export_file_path, index=False, header=True)
     
-def exportXlsx(self, df):
+def exportXlsx(df):
     export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.xlsx')
     # To be moved to constructor later (after refactoring?)
     xlsxgen = XlsxGenerator()
