@@ -2,6 +2,7 @@ import os
 import sys
 import tkinter as tk
 import pandas as pd
+from xlsxgen import XlsxGenerator
 
 # Simple implementation of Observer Design Pattern
 class Observable:
@@ -37,20 +38,14 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+def exportCSV(self, df):
+        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+        df.drop(columns=['Color']).to_csv(export_file_path, index=False, header=True)
     
-class AnalyzerTab(tk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent)
-    
-class AnalyzerData(Observable):
-    def __init__(self, loadedData, gui, root, level, name):
-        super().__init__()
-        self.loadedData = loadedData
-        self.mappings = pd.DataFrame()
-        self.level = level
-        self.name = name
-        self.gui = gui
-        self.root = root
-        # Watch for updates in loaded data
-        loadedData.add_observers(self)
-    
+def exportXlsx(self, df):
+    export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.xlsx')
+    # To be moved to constructor later (after refactoring?)
+    xlsxgen = XlsxGenerator()
+    xlsxgen.set_header("single")
+    xlsxgen.set_scheme("general")
+    xlsxgen.from_dataframe("data", df, export_file_path)

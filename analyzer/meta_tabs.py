@@ -8,7 +8,6 @@ from pandastable import Table
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path
-from utils import AnalyzerTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -130,13 +129,13 @@ class AxesTab(tk.Frame):
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'TRAWL':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Custom':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale)
 
 class ShortNameTab(tk.Frame):
     @staticmethod
@@ -213,7 +212,7 @@ class ShortNameTab(tk.Frame):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
 
-class MappingsTab(AnalyzerTab):
+class MappingsTab(tk.Frame):
     def __init__(self, parent, tab, level):
         super().__init__(parent)
         self.parent = parent
@@ -292,8 +291,8 @@ class MappingsTab(AnalyzerTab):
         # Check if there are actually mappings to update
         if self.mappings.iloc[0].name != 'temp':
             for tab in self.tab.plotInteraction.tabs:
-                if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mappings)
-                else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mappings)
+                if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mappings)
+                else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mappings)
 
     def buildMappingsTab(self, df, mappings):
         self.df = df
@@ -355,7 +354,7 @@ class MappingsTab(AnalyzerTab):
             (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), \
             (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
         for data, tab in data_tab_pairs:
-            data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
+            data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
     
     def cancelAction(self):
         self.choice = 'cancel'
@@ -385,7 +384,7 @@ class MappingsTab(AnalyzerTab):
         self.tab.data.gui.loadedData.removedIntermediates = True
         data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
         for data, tab in data_tab_pairs:
-            data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.current_variants, scale=tab.x_scale+tab.y_scale)
+            data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
 
 class ClusterTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -408,7 +407,7 @@ class ClusterTab(tk.Frame):
             path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
             self.tab.cluster = path
             self.tab.title = self.cluster_selected.get()
-            self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.current_variants, update=True, cluster=path, title=self.cluster_selected.get())
+            self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class ChecklistBox(tk.Frame):
     def __init__(self, parent, choices, current_choices, tab, listType='', **kwargs):
@@ -505,29 +504,39 @@ class ChecklistBox(tk.Frame):
         self.updateVariants()
 
     def updateVariants(self):
-        self.parent.tab.current_variants = self.getCheckedItems()
+        self.parent.tab.variants = self.getCheckedItems()
         # Update the rest of the plots at the same level with the new checked variants
         for tab in self.parent.tab.plotInteraction.tabs:
             for i, cb in enumerate(self.cbs):
                 tab.variantTab.checkListBox.vars[i].set(self.vars[i].get())
-            tab.current_variants = self.parent.tab.current_variants
+            tab.variants = self.parent.tab.variants
         self.parent.tab.plotInteraction.save_plot_state()
         # Get new mappings from database to update plots
         self.all_mappings = pd.read_csv(self.tab.data.gui.loadedData.mappings_path)
-        self.mapping = MappingsTab.restoreCustom(self.tab.data.gui.loadedData.summaryDf.loc[self.tab.data.gui.loadedData.summaryDf[VARIANT].isin(self.parent.tab.current_variants)], self.all_mappings)
+        self.mapping = MappingsTab.restoreCustom(self.tab.data.gui.loadedData.summaryDf.loc[self.tab.data.gui.loadedData.summaryDf[VARIANT].isin(self.parent.tab.variants)], self.all_mappings)
         for tab in self.parent.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mapping)
-            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.current_variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mapping)
+            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mapping)
+            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mapping)
 
 class VariantTab(tk.Frame):
-    def __init__(self, parent, tab, variants, current_variants):
+    def __init__(self, parent, tab, all_variants, variants):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.checkListBox = ChecklistBox(self, variants, current_variants, self.tab, bd=1, relief="sunken", background="white")
+        self.checkListBox = ChecklistBox(self, all_variants, variants, self.tab, bd=1, relief="sunken", background="white")
         update = tk.Button(self, text='Update', command=self.checkListBox.updateVariants)
         self.checkListBox.pack(side=tk.LEFT)
         update.pack(side=tk.LEFT, anchor=tk.NW)
+
+class DataTab(tk.Frame):
+    def __init__(self, parent, df):
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.summaryTable = Table(self, dataframe=df, showtoolbar=False, showstatusbar=True)
+        self.summaryTable.show()
+        self.summaryTable.redraw()
+        self.table_button_frame = tk.Frame(self)
+        self.table_button_frame.grid(row=3, column=1)
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -660,7 +669,7 @@ class FilteringTab(tk.Frame):
         if self.metric_selected.get() == 'Choose Metric': pass
         else:
             filter_data = (self.metric_selected.get(), self.min_num.get(), self.max_num.get())
-            self.tab.data.gui.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.current_variants, update=True, cluster=self.tab.cluster, title=self.tab.title, \
+            self.tab.data.gui.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=self.tab.cluster, title=self.tab.title, \
                 filtering=True, filter_data=filter_data)
 
 class GuideTab(tk.Frame):

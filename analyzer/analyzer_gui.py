@@ -123,7 +123,7 @@ class LoadedData(Observable):
             tab.y_scale = tab.orig_y_scale
             tab.x_axis = tab.orig_x_axis
             tab.y_axis = tab.orig_y_axis
-            tab.current_variants = [gui.loadedData.default_variant]
+            tab.variants = [gui.loadedData.default_variant] #TODO: edit this out
             tab.current_labels = []
 
     def add_data(self, sources, data_dir='', update=False):
@@ -152,6 +152,8 @@ class LoadedData(Observable):
         # self.mapping = self.get_speedups(self.mapping)
         # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
+        # Store all unique variants for variant tab options
+        self.all_variants = self.summaryDf[VARIANT].dropna().unique()
         # Get default variant (most frequent)
         self.default_variant = self.summaryDf[VARIANT].value_counts().idxmax()
         # Get corresponding mappings from the local database
@@ -534,7 +536,7 @@ class AnalyzerGui(tk.Frame):
         self.sourceTab = SourceTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
         self.coverageData = CoverageData(self.loadedData, self, root, 'Codelet')
-        self.summaryTab = SummaryTab(self.main_note, self.coverageData, 'Codelet')
+        self.summaryTab = SummaryTab(self.main_note, self.coverageData)
         self.main_note.add(self.summaryTab, text="Summary")
         self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.sourceTab, text="Source")
@@ -549,10 +551,10 @@ class AnalyzerGui(tk.Frame):
         self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
         self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
-        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData, 'Codelet')
-        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData, 'Codelet')
-        self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData, 'Codelet')
-        self.c_customTab = CustomTab(codelet_note, self.c_customData, 'Codelet')
+        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
+        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
+        self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
+        self.c_customTab = CustomTab(codelet_note, self.c_customData)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
@@ -564,9 +566,9 @@ class AnalyzerGui(tk.Frame):
         self.s_trawlData = TRAWLData(self.loadedData, self, root, 'Source')
         self.s_customData = CustomData(self.loadedData, self, root, 'Source')
         # Source Plot Tabs
-        self.s_trawlTab = TrawlTab(source_note, self.s_trawlData, 'Source')
-        self.s_qplotTab = QPlotTab(source_note, self.s_qplotData, 'Source')
-        self.s_customTab = CustomTab(source_note, self.s_customData, 'Source')
+        self.s_trawlTab = TrawlTab(source_note, self.s_trawlData)
+        self.s_qplotTab = QPlotTab(source_note, self.s_qplotData)
+        self.s_customTab = CustomTab(source_note, self.s_customData)
         source_note.add(self.s_trawlTab, text="TRAWL")
         source_note.add(self.s_qplotTab, text="QPlot")
         source_note.add(self.s_customTab, text="Custom")
@@ -577,9 +579,9 @@ class AnalyzerGui(tk.Frame):
         self.a_trawlData = TRAWLData(self.loadedData, self, root, 'Application')
         self.a_customData = CustomData(self.loadedData, self, root, 'Application')
         # Application Plot Tabs
-        self.a_trawlTab = TrawlTab(application_note, self.a_trawlData, 'Application')
-        self.a_qplotTab = QPlotTab(application_note, self.a_qplotData, 'Application')
-        self.a_customTab = CustomTab(application_note, self.a_customData, 'Application')
+        self.a_trawlTab = TrawlTab(application_note, self.a_trawlData)
+        self.a_qplotTab = QPlotTab(application_note, self.a_qplotData)
+        self.a_customTab = CustomTab(application_note, self.a_customData)
         application_note.add(self.a_trawlTab, text="TRAWL")
         application_note.add(self.a_qplotTab, text="QPlot")
         application_note.add(self.a_customTab, text="Custom")

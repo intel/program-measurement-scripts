@@ -159,7 +159,7 @@ class PlotInteraction():
                 selected_summary = level['df'].loc[(level['df']['Name']+level['df']['Timestamp#'].astype(str)).isin(level['data']['visible_names'])]
                 selected_summary.to_excel(level['summary_dest'], index=False)
             # variants apply to all levels
-            level['data']['variants'] = self.gui.summaryTab.current_variants
+            level['data']['variants'] = self.gui.summaryTab.variants
             # Each tab has its own dictionary with it's current plot selections
             for tab in level['tabs']:
                 level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
