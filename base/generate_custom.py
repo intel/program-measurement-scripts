@@ -23,8 +23,8 @@ class CustomPlot(CapacityPlot):
         super().__init__(chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=COVERAGE_PCT.value, mappings=mappings, short_names_path=short_names_path)
 
-def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, \
-    variants=['ORIG'], mappings=pd.DataFrame(), short_names_path=''):
+def custom_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
+    mappings=pd.DataFrame(), short_names_path=''):
     chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
     #df, op_metric_name = compute_capacity(df, chosen_node_set)
     if not mappings.empty:
@@ -32,7 +32,7 @@ def custom_plot(df, outputfile, scale, title, no_plot, gui=False, x_axis=None, y
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
-    df = df.loc[df[VARIANT].isin(variants)]
+    df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     # df, fig, plotData = compute_and_plot(
     #     'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
     # Return dataframe and figure for GUI
