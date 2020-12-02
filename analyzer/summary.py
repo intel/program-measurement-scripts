@@ -38,11 +38,11 @@ class CoverageData(AnalyzerData):
         self.notify_observers()
 
 class SummaryTab(AnalyzerTab):
-    def __init__(self, parent, coverageData, level):
+    def __init__(self, parent, data, level):
         super().__init__(parent)
-        if coverageData is not None:
-           coverageData.add_observers(self)
-        self.coverageData = self.data = coverageData
+        if data is not None:
+           data.add_observers(self)
+        self.data = data
         self.name = 'Summary'
         self.level = level
         self.current_variants = []

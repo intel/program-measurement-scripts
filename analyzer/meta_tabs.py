@@ -8,6 +8,7 @@ from pandastable import Table
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path
+from utils import AnalyzerTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -212,9 +213,9 @@ class ShortNameTab(tk.Frame):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
 
-class MappingsTab(tk.Frame):
+class MappingsTab(AnalyzerTab):
     def __init__(self, parent, tab, level):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent)
         self.parent = parent
         self.tab = tab
         self.level = level
