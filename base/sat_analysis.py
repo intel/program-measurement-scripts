@@ -11,18 +11,28 @@ import sys
 import importlib
 from pathlib import Path
 from metric_names import NonMetricName
-#import analyzer_gui 
+import os
+# GUI import
+from utils import resource_path as gui_resource_path
 
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def find_clusters(current_codelets_runs_df):
+def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
+  # Below assumed all the codelets are associated with FE_tier1 cluster.  
+  # Real implementation, should put the right cluster name
   current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
-  sample_cluster_path = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
+
+  # Load sample FE_tier1 cluster data.  
+  # Real implementation should have found many cluster dataframes and with the name set to its cluster name
+  sample_cluster_path = gui_resource_path(os.path.join('clusters', 'FE_tier1.csv'))
   sample_cluster_df = pd.read_csv(sample_cluster_path)
   sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
-  all_clusters=pd.DataFrame()
-  all_clusters.append(sample_cluster_df, ignore_index=True) 
+
+  # Appending all the cluster dataframe into one to return.  
+  # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
+  all_clusters = pd.DataFrame()
+  all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
   return all_clusters
 
 # csv to read should be first argument

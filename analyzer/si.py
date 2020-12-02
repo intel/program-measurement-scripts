@@ -10,7 +10,13 @@ from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab
 from metric_names import MetricName
+from sat_analysis import find_clusters as find_si_clusters
 globals().update(MetricName.__members__)
+
+
+# Sample dummy call to SI script to show how it would work
+#df = pd.DataFrame([[1, 2], [3, 4]], columns=list('AB'))
+#clusters = find_si_clusters(df)
 
 class SIPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
