@@ -1,8 +1,8 @@
 from openpyxl.utils.dataframe import dataframe_to_rows
 import sys
 sys.path.append('.\test_SI')
-from test_SI import compute_and_plot
-from test_SI import test_and_plot_orig
+#from test_SI import compute_and_plot
+#from test_SI import test_and_plot_orig
 import openpyxl
 import openpyxl.chart
 import pandas as pd
@@ -10,6 +10,20 @@ import numpy as np
 import sys
 import importlib
 from pathlib import Path
+from metric_names import NonMetricName
+#import analyzer_gui 
+
+# For each codelets in current_codelets_runs_df, find their cluster
+#   Store the name of the cluster to the SI_CLUSTER_NAME column
+#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
+def find_clusters(current_codelets_runs_df):
+  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
+  sample_cluster_path = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
+  sample_cluster_df = pd.read_csv(sample_cluster_path)
+  sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
+  all_clusters=pd.DataFrame()
+  all_clusters.append(sample_cluster_df, ignore_index=True) 
+  return all_clusters
 
 # csv to read should be first argument
 csvToRead = sys.argv[1]
@@ -568,6 +582,7 @@ def main(argv):
     mainDataFrame["flop_rate_gflop/s"] / mainDataFrame[["l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s"]].max(axis=1)/8)
 
     do_sat_analysis(mainDataFrame, TestSetDF)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
