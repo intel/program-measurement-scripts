@@ -185,6 +185,8 @@ class LoadedData(Observable):
         self.summaryDf = self.compute_colors(self.summaryDf)
         self.srcDf = self.compute_colors(self.srcDf)
         self.appDf = self.compute_colors(self.appDf)
+        self.dfs = {'Codelet' : self.summaryDf, 'Source' : self.srcDf, 'Application' : self.appDf}
+        self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
     def add_saved_data(self, levels=[]):
@@ -520,61 +522,66 @@ class AnalyzerGui(tk.Frame):
 
     def buildTabs(self, parent):
         infoPw=tk.PanedWindow(parent, orient="horizontal", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
-        # Oneview Tab
+        # Oneview (Left Window)
         self.oneview_note = ttk.Notebook(infoPw)
         self.oneviewTab = OneviewTab(self.oneview_note)
         self.oneview_note.add(self.oneviewTab, text="Oneview")
         self.oneview_note.pack(side = tk.LEFT, expand=True)
         infoPw.add(self.oneview_note, stretch='always')
-        # 1st level notebook
+        # Plots (Right Window)
         self.main_note = ttk.Notebook(infoPw)
         self.applicationTab = ApplicationTab(self.main_note)
         self.sourceTab = SourceTab(self.main_note)
         self.codeletTab = CodeletTab(self.main_note)
-        self.coverageData = CoverageData(self.loadedData, self, root)
+        self.coverageData = CoverageData(self.loadedData, self, root, 'Codelet')
         self.summaryTab = SummaryTab(self.main_note, self.coverageData, 'Codelet')
-        #self.main_note.add(self.oneviewTab, text="Oneview")
         self.main_note.add(self.summaryTab, text="Summary")
         self.main_note.add(self.applicationTab, text="Application")
         self.main_note.add(self.sourceTab, text="Source")
         self.main_note.add(self.codeletTab, text="Codelet")
-        # Application, Source, and Codelet each have their own 2nd level tabs
+        # Each level has its own plot tabs
         application_note = ttk.Notebook(self.applicationTab)
         source_note = ttk.Notebook(self.sourceTab)
         codelet_note = ttk.Notebook(self.codeletTab)
-        # Codelet tabs
-        self.siplotData = SIPlotData(self.loadedData, self, root)
-        self.qplotData = QPlotData(self.loadedData, self, root)
-        self.trawlData = TRAWLData(self.loadedData, self, root)
-        self.customData = CustomData(self.loadedData, self, root)
-
-        self.c_trawlTab = TrawlTab(codelet_note, self.trawlData, 'Codelet')
-        self.c_qplotTab = QPlotTab(codelet_note, self.qplotData, 'Codelet')
-        self.c_siPlotTab = SIPlotTab(codelet_note, self.siplotData, 'Codelet')
-        self.c_customTab = CustomTab(codelet_note, self.customData, 'Codelet')
+        # Codelet Plot Data
+        self.c_siplotData = SIPlotData(self.loadedData, self, root, 'Codelet')
+        self.c_qplotData = QPlotData(self.loadedData, self, root, 'Codelet')
+        self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
+        self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
+        # Codelet Plot Tabs
+        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData, 'Codelet')
+        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData, 'Codelet')
+        self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData, 'Codelet')
+        self.c_customTab = CustomTab(codelet_note, self.c_customData, 'Codelet')
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.add(self.c_customTab, text="Custom")
         codelet_note.pack(fill=tk.BOTH, expand=True)
-        # Source Tabs
-        self.s_trawlTab = TrawlTab(source_note, self.trawlData, 'Source')
-        self.s_qplotTab = QPlotTab(source_note, self.qplotData, 'Source')
-        #self.s_siPlotTab = SIPlotTab(source_note, self.siplotData, 'Source')
-        self.s_customTab = CustomTab(source_note, self.customData, 'Source')
+        # Source Plot Data
+        self.s_siplotData = SIPlotData(self.loadedData, self, root, 'Source')
+        self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
+        self.s_trawlData = TRAWLData(self.loadedData, self, root, 'Source')
+        self.s_customData = CustomData(self.loadedData, self, root, 'Source')
+        # Source Plot Tabs
+        self.s_trawlTab = TrawlTab(source_note, self.s_trawlData, 'Source')
+        self.s_qplotTab = QPlotTab(source_note, self.s_qplotData, 'Source')
+        self.s_customTab = CustomTab(source_note, self.s_customData, 'Source')
         source_note.add(self.s_trawlTab, text="TRAWL")
         source_note.add(self.s_qplotTab, text="QPlot")
-        #source_note.add(self.s_siPlotTab, text="SI Plot")
         source_note.add(self.s_customTab, text="Custom")
         source_note.pack(fill=tk.BOTH, expand=True)
-        # Application tabs
-        self.a_trawlTab = TrawlTab(application_note, self.trawlData, 'Application')
-        self.a_qplotTab = QPlotTab(application_note, self.qplotData, 'Application')
-        #self.a_siPlotTab = SIPlotTab(application_note, self.siplotData, 'Application')
-        self.a_customTab = CustomTab(application_note, self.customData, 'Application')
+        # Application Plot Data
+        self.a_siplotData = SIPlotData(self.loadedData, self, root, 'Application')
+        self.a_qplotData = QPlotData(self.loadedData, self, root, 'Application')
+        self.a_trawlData = TRAWLData(self.loadedData, self, root, 'Application')
+        self.a_customData = CustomData(self.loadedData, self, root, 'Application')
+        # Application Plot Tabs
+        self.a_trawlTab = TrawlTab(application_note, self.a_trawlData, 'Application')
+        self.a_qplotTab = QPlotTab(application_note, self.a_qplotData, 'Application')
+        self.a_customTab = CustomTab(application_note, self.a_customData, 'Application')
         application_note.add(self.a_trawlTab, text="TRAWL")
         application_note.add(self.a_qplotTab, text="QPlot")
-        #application_note.add(self.a_siPlotTab, text="SI Plot")
         application_note.add(self.a_customTab, text="Custom")
         application_note.pack(fill=tk.BOTH, expand=True)
         self.main_note.pack(side = tk.RIGHT, expand=True)

@@ -129,13 +129,13 @@ class AxesTab(tk.Frame):
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
             if self.plotType == 'QPlot':
-                self.tab.qplotData.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'TRAWL':
-                self.tab.trawlData.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Custom':
-                self.tab.customData.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
             elif self.plotType == 'Summary':
-                self.tab.coverageData.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
+                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.current_variants, scale=self.tab.x_scale+self.tab.y_scale)
 
 class ShortNameTab(tk.Frame):
     @staticmethod

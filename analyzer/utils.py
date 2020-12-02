@@ -1,5 +1,7 @@
 import os
 import sys
+import tkinter as tk
+import pandas as pd
 
 # Simple implementation of Observer Design Pattern
 class Observable:
@@ -34,3 +36,21 @@ def resource_path(relative_path):
         base_path = os.path.dirname(os.path.abspath(__file__))
 
     return os.path.join(base_path, relative_path)
+
+    
+class AnalyzerTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+    
+class AnalyzerData(Observable):
+    def __init__(self, loadedData, gui, root, level, name):
+        super().__init__()
+        self.loadedData = loadedData
+        self.mappings = pd.DataFrame()
+        self.level = level
+        self.name = name
+        self.gui = gui
+        self.root = root
+        # Watch for updates in loaded data
+        loadedData.add_observers(self)
+    

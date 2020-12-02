@@ -1,5 +1,6 @@
 import tkinter as tk
 from utils import Observable
+from utils import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_coveragePlot import coverage_plot
 import copy
@@ -11,16 +12,9 @@ from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, 
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
-class CoverageData(Observable):
-    def __init__(self, loadedData, gui, root):
-        super().__init__()
-        self.loadedData = loadedData
-        self.mappings = pd.DataFrame()
-        self.name = 'Summary'
-        self.gui = gui
-        self.root = root
-        # Watch for updates in loaded data
-        loadedData.add_observers(self)
+class CoverageData(AnalyzerData):
+    def __init__(self, loadedData, gui, root, level):
+        super().__init__(loadedData, gui, root, level, 'Summary')
     
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("CoverageData Notified from ", loadedData)
@@ -43,9 +37,9 @@ class CoverageData(Observable):
         self.textData = texts
         self.notify_observers()
 
-class SummaryTab(tk.Frame):
+class SummaryTab(AnalyzerTab):
     def __init__(self, parent, coverageData, level):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent)
         if coverageData is not None:
            coverageData.add_observers(self)
         self.coverageData = self.data = coverageData
