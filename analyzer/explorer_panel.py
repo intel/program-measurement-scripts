@@ -112,20 +112,19 @@ class DataSourcePanel(ScrolledTreePane):
                     open(os.path.join(local_dir, file_name), 'wb').write(file_data.content)
                     # Add new mappings data to database
                     if file_name == self.name + '.mapping.csv':
-                        new_mappings = pd.read_csv(os.path.join(local_dir, file_name))
-                        all_mappings = pd.read_csv(self.mappings_path)
-                        all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
-                        all_mappings.to_csv(self.mappings_path, index=False)
+                        pass
+                        # new_mappings = pd.read_csv(os.path.join(local_dir, file_name))
+                        # all_mappings = pd.read_csv(self.mappings_path)
+                        # all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
+                        # all_mappings.to_csv(self.mappings_path, index=False)
 
         def open_directory(self):
-            tree = html.fromstring(self.page.content)
-            names = []
-            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
-                hyperlink = link_element.xpath('td[position()=2]/a')[0]
-                names.append(hyperlink.get('href'))
-            names = self.remove_webpages(names)
+            names, link_element = self.directory_file_names(self.page)
             # Show directories and data files (.xlsx or .raw.csv)
             for name in names:
+                # Check if there exists a meta directory
+                if name == 'meta/': #TODO: Only check this once a user has decided to load a file
+                    self.check_meta()
                 if (name.endswith('/') or name.endswith('.raw.csv') or name.endswith('.xlsx')) and name not in self.children:
                     self.children.append(name)
                     full_url = self.url + name
@@ -135,6 +134,39 @@ class DataSourcePanel(ScrolledTreePane):
                         full_path = os.path.join(self.path, short_name, time_stamp, name)
                     elif name.endswith('/'): full_path = os.path.join(self.path, name[:-1])
                     self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, full_path, short_name, self.container))
+
+        def check_meta(self):
+            meta_url = self.url + 'meta/'
+            meta_page = requests.get(meta_url)
+            names, link_element = self.directory_file_names(meta_page)
+            # Get local mapping database max timestamp
+            all_mappings = pd.read_csv(self.mappings_path)
+            before_max = all_mappings['Before Timestamp'].max()
+            after_max = all_mappings['After Timestamp'].max()
+            max_timestamp = before_max if before_max > after_max else after_max
+            # Check each mapping file and add to database if it has a greater timestamp
+            for name in names:
+                meta_timestamp = int(name.split('.csv')[0].split('-')[-1])
+                # if meta_timestamp > max_timestamp:
+                if meta_timestamp > -1: #TODO: Use local database max corresponding to root
+                    # Temporary download, add to database, delete file
+                    file_data = requests.get(meta_url + name)
+                    temp_path = os.path.join(self.cape_path, name)
+                    open(temp_path, 'wb').write(file_data.content)
+                    new_mappings = pd.read_csv(temp_path)
+                    all_mappings = pd.read_csv(self.mappings_path)
+                    all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
+                    all_mappings.to_csv(self.mappings_path, index=False)
+                    os.remove(temp_path)
+
+        def directory_file_names(self, page):
+            tree = html.fromstring(page.content)
+            names = []
+            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
+                hyperlink = link_element.xpath('td[position()=2]/a')[0]
+                names.append(hyperlink.get('href'))
+            names = self.remove_webpages(names)
+            return names, link_element
 
         def remove_webpages(self, names):
             data_files = [i.split('.xlsx')[0]+'/' for i in names if i.endswith('.xlsx')]
