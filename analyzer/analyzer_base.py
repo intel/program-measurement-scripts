@@ -28,7 +28,7 @@ class AnalyzerData(Observable):
         else: self.variants = variants
         # Get correct dataframe
         self.df = loadedData.dfs[self.level].copy(deep=True)
-
+    
 class AnalyzerTab(tk.Frame):
     def __init__(self, parent, data, title, x_axis, y_axis):
         super().__init__(parent)
@@ -48,16 +48,16 @@ class AnalyzerTab(tk.Frame):
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
 
-    def setup(self, data, metrics):
+    def setup(self, metrics):
         # Clear previous plots and meta data tabs TODO: investigate if we can update rather than rebuilding
         for w in self.window.winfo_children():
             w.destroy()
         # Update attributes
-        self.df = data.df
-        self.fig = data.fig
-        self.mappings = data.mappings
-        self.variants = data.variants
-        self.textData = data.textData
+        self.df = self.data.df
+        self.fig = self.data.fig
+        self.mappings = self.data.mappings
+        self.variants = self.data.variants
+        self.textData = self.data.textData
         # Plot/Table setup
         self.plotInteraction = PlotInteraction(self, self.df, self.fig, self.textData, self.level, self.data.gui, self.data.root)
         self.tableFrame = tk.Frame(self.window)

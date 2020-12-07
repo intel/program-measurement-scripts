@@ -561,7 +561,6 @@ class AnalyzerGui(tk.Frame):
         codelet_note.add(self.c_customTab, text="Custom")
         codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Plot Data
-        self.s_siplotData = SIPlotData(self.loadedData, self, root, 'Source')
         self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
         self.s_trawlData = TRAWLData(self.loadedData, self, root, 'Source')
         self.s_customData = CustomData(self.loadedData, self, root, 'Source')
@@ -574,7 +573,6 @@ class AnalyzerGui(tk.Frame):
         source_note.add(self.s_customTab, text="Custom")
         source_note.pack(fill=tk.BOTH, expand=True)
         # Application Plot Data
-        self.a_siplotData = SIPlotData(self.loadedData, self, root, 'Application')
         self.a_qplotData = QPlotData(self.loadedData, self, root, 'Application')
         self.a_trawlData = TRAWLData(self.loadedData, self, root, 'Application')
         self.a_customData = CustomData(self.loadedData, self, root, 'Application')
