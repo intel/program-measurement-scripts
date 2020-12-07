@@ -25,9 +25,9 @@ class SIPlotData(AnalyzerData):
         self.df, self.fig, self.textData = parse_ip_siplot_df\
             (cluster, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
-        # Add saturation and intensity to shared dataframe for custom tab to use
-        loadedData.summaryDf['Saturation'] = self.df['Saturation']
-        loadedData.summaryDf['Intensity'] = self.df['Intensity']
+        # Add new metrics to shared dataframe
+        self.loadedData.dfs[self.level].drop(columns=['Saturation', 'Intensity'], inplace=True, errors='ignore')
+        self.loadedData.dfs[self.level] = pd.merge(self.loadedData.dfs[self.level], self.df[[NAME, TIMESTAMP, 'Saturation', 'Intensity']], on=[NAME, TIMESTAMP], how='left')
         # TODO: Fix analytic variables being dropped in 'def compute_extra' in generate_SI.py
         if not loadedData.analytics.empty:
             self.df.drop(columns=loadedData.analytic_columns, errors='ignore', inplace=True)
@@ -44,7 +44,7 @@ class SIPlotTab(AnalyzerTab):
         metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
         metrics.extend(['Saturation', 'Intensity', 'SI'])
         metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(data, metrics)
+        super().setup(metrics)
         self.buildTableTabs()
 
     # Create meta tabs

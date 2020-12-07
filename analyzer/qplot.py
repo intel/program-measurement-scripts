@@ -45,7 +45,7 @@ class QPlotTab(AnalyzerTab):
         metrics.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
         metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(data, metrics)
+        super().setup(metrics)
         self.buildTableTabs()
 
     # Create meta tabs

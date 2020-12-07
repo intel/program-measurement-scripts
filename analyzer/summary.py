@@ -35,7 +35,7 @@ class SummaryTab(AnalyzerTab):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
         metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(data, metrics)
+        super().setup(metrics)
         self.buildTableTabs()
 
     # Create meta tabs

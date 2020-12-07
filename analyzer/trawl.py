@@ -18,6 +18,8 @@ class TRAWLData(AnalyzerData):
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("TRAWLData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
+        if self.level == 'Application':
+            x = 2
         # Generate Plot 
         self.df, self.fig, self.textData = trawl_plot(self.df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
                 source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
@@ -32,7 +34,7 @@ class TrawlTab(AnalyzerTab):
         metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
         metrics.extend([SPEEDUP_VEC, SPEEDUP_DL1])
         metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(data, metrics)
+        super().setup(metrics)
         self.buildTableTabs()
 
     # Create meta tabs

@@ -25,12 +25,17 @@ class CustomData(AnalyzerData):
 
 class CustomTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Custom', 'C_FLOP [GFlop/s]', COVERAGE_PCT)
+        super().__init__(parent, data, 'Custom', RATE_FP_GFLOP_P_S, COVERAGE_PCT)
 
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = self.data.df.columns.tolist()
-        super().setup(data, metrics)
+        # TODO: Have a cleaner fix, complicated as can't send in shared dataframe to plot functions but want to add new metrics to shared
+        df = self.data.loadedData.dfs[self.level]
+        if set(['Saturation', 'Intensity']).issubset(df.columns):
+            self.data.df.drop(columns=['Saturation', 'Intensity'], inplace=True, errors='ignore')
+            self.data.df = pd.merge(self.data.df, df[[NAME, TIMESTAMP, 'Saturation', 'Intensity']], on=[NAME, TIMESTAMP])
+        super().setup(metrics)
         self.buildTableTabs()
     
     # Create meta tabs

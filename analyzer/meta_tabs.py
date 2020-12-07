@@ -179,12 +179,20 @@ class ShortNameTab(tk.Frame):
 
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table):
-        df = table.model.df
-        if self.checkForDuplicates(df):
+        table_df = table.model.df
+        if self.checkForDuplicates(table_df):
             return
         else:
-            addShortNames(df)
-        self.tab.data.gui.loadedData.add_data(self.tab.data.gui.sources, update=True)
+            # Add to local database 
+            ShortNameTab.addShortNames(table_df)
+            # Change the short name in each of the main dfs
+            for level in self.tab.data.loadedData.dfs:
+                df = self.tab.data.loadedData.dfs[level]
+                df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
+                df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
+                df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True)
+                self.tab.data.loadedData.dfs[level] = df.copy(deep=True)
+        self.tab.data.gui.loadedData.notify_observers()
     
     def getShortNames(self, df):
         if os.path.getsize(self.short_names_path) > 0:
@@ -266,6 +274,8 @@ class MappingsTab(tk.Frame):
                 (mapping['Before Timestamp']==before_timestamp) & \
                 (mapping['After Name']==after_name) & \
                 (mapping['After Timestamp']==after_timestamp)].index, inplace=True)
+        # Update the mappings for this level
+        self.tab.data.gui.loadedData.mappings[self.level] = self.mappings
         # Add placeholder row if current mappings table is now empty
         if self.mappings.empty:
             self.mappings = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', \
@@ -289,10 +299,11 @@ class MappingsTab(tk.Frame):
         # self.all_mappings = self.all_mappings.append(self.mappings, ignore_index=True)
         # self.all_mappings.to_csv(self.mappings_path, index=False)
         # Check if there are actually mappings to update
-        if self.mappings.iloc[0].name != 'temp':
-            for tab in self.tab.plotInteraction.tabs:
-                if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mappings)
-                else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mappings)
+        if self.mappings.iloc[0].name == 'temp': mappings = pd.DataFrame()
+        else: mappings = self.mappings
+        for tab in self.tab.plotInteraction.tabs:
+            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=mappings)
+            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=mappings)
 
     def buildMappingsTab(self, df, mappings):
         self.df = df
