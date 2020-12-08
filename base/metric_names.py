@@ -191,3 +191,4 @@ class MetricName(str, Enum):
 # TODO: move some of the MetricNames here.
 class NonMetricName(str, Enum):
     SI_CLUSTER_NAME = "SiClusterName"
+    SI_SAT_NODES = "SiSatNodes"
