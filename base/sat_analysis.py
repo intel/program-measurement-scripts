@@ -15,6 +15,9 @@ import os
 # GUI import
 from utils import resource_path as gui_resource_path
 
+# Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
+# cluster_df, cluster_and_run_df = compute_only(norm, cluster_df, cur_run_df) 
+
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
@@ -24,7 +27,8 @@ def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold 
   optimal_data_df = pd.read_csv(optimal_data_path)
   # Below assumed all the codelets are associated with FE_tier1 cluster.  
   # Real implementation, should put the right cluster name
-  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
+  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = {'FE_tier1'}
+  current_codelets_runs_df[NonMetricName.SAT_NODES] = { 'L2 [GB/s]', 'L3 [GB/s]', 'LM' }
 
   # Load sample FE_tier1 cluster data.  
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
@@ -105,7 +109,7 @@ result_df = pd.DataFrame(columns=column_names)
 opRed = openpyxl.styles.PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 opYellow = openpyxl.styles.PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 opGreen = openpyxl.styles.PatternFill(start_color="008000", end_color="008000", fill_type="solid")
-opBlue = openpyxl.styles.PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")
+opBlue = openpyxl.styles.PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid") 
 opPurple = openpyxl.styles.PatternFill(start_color="800080", end_color="800080", fill_type="solid")
 
 # loop through max columns, color them
