@@ -36,8 +36,10 @@ class SIPlotData(AnalyzerData):
         if not update: self.variants = self.df['Variant'].dropna().unique()
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
+        #cluster_df = find_clusters(self.df)
+        cluster_df = pd.read_csv(cluster)
         self.df, self.fig, self.textData = parse_ip_siplot_df\
-            (cluster, "FE_tier1", "row", title, chosen_node_set, self.df, variants=variants, filtering=filtering, filter_data=filter_data, \
+            (cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
         # Add saturation and intensity to shared dataframe for custom tab to use
         loadedData.summaryDf['Saturation'] = self.df['Saturation']
