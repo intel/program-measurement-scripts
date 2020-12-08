@@ -19,6 +19,9 @@ from utils import resource_path as gui_resource_path
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
 def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
+  # Read the optimal data file
+  optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
+  optimal_data_df = pd.read_csv(optimal_data_path)
   # Below assumed all the codelets are associated with FE_tier1 cluster.  
   # Real implementation, should put the right cluster name
   current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
