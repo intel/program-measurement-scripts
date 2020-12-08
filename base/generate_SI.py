@@ -264,12 +264,11 @@ class SiPlot(CapacityPlot):
         # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
         return final_df[columns_ordered]
 
-def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Computation to get SI in the cluster df and then combine with the summary df
-    cluster_df = pd.read_csv(cluster_inputfile)
 
     # Only show selected variants, default is 'ORIG'
     cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)].reset_index(drop=True)
@@ -280,6 +279,15 @@ def parse_ip_df(cluster_inputfile, outputfile, norm, title, chosen_node_set, cur
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
     
+def compute_only(norm, cluster_df, cur_run_df, variants='ORIG', filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+    # Only show selected variants, default is 'ORIG'
+    cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)].reset_index(drop=True)
+
+    #return compute_and_plot('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
+    plot = SiPlot ('ORIG', 'SIPLOT', norm, '', chosen_node_set, cluster_df, cur_run_df, variants=variants, \
+        filtering=filtering, filter_data=filter_data, mappings=[], scale=scale, short_names_path=short_names_path)
+    plot.compute_extra()
+    return plot.cluster_df, plot.cluster_and_run_df
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
