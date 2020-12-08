@@ -17,7 +17,7 @@ from utils import resource_path as gui_resource_path
 
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
-# cluster_df, cluster_and_run_df, cur_run_df = compute_only(norm, cluster_df, cur_run_df) 
+# cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
 
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
