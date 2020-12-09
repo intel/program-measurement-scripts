@@ -38,6 +38,7 @@ from trawl import TRAWLData, TrawlTab
 from qplot import QPlotData, QPlotTab
 from si import SIPlotData, SIPlotTab
 from custom import CustomData, CustomTab
+from plot_3d import Data3d, Tab3d
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab
 from plot_interaction import PlotInteraction
 # Importing the MetricName enums to global variable space
@@ -550,15 +551,18 @@ class AnalyzerGui(tk.Frame):
         self.c_qplotData = QPlotData(self.loadedData, self, root, 'Codelet')
         self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
         self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
+        self.c_3dData = Data3d(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
         self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
         self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
         self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
         self.c_customTab = CustomTab(codelet_note, self.c_customData)
+        #self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.add(self.c_customTab, text="Custom")
+        #codelet_note.add(self.c_3dTab, text="3D")
         codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Plot Data
         self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
