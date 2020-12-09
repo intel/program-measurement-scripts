@@ -6,7 +6,6 @@ import os, csv
 import itertools
 
 class XlsxGenerator:
-
     def __init__(self):
         self.tiered_metrics = {}
         self.cutoffs = {}

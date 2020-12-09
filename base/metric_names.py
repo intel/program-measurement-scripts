@@ -186,3 +186,9 @@ class MetricName(str, Enum):
         metricAndComp = matched.group(1)
         matched = re.match(r"([^\[]*)\[(.*)\]$", metricAndComp)
         return matched.group(2)
+        
+#  For column names that are not measurement data
+# TODO: move some of the MetricNames here.
+class NonMetricName(str, Enum):
+    SI_CLUSTER_NAME = "SiClusterName"
+    SI_SAT_NODES = "SiSatNodes"

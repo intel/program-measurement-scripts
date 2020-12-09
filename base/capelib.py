@@ -12,13 +12,34 @@ globals().update(MetricName.__members__)
 Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
 
+# This function should be called instead of individual calls of
+# add_one_mem_max_level_columns() to ensure consistent thresholds being computed
 def add_mem_max_level_columns(inout_df, node_list, max_rate_name, metric_to_memlevel_lambda):
-    inout_df[max_rate_name]=inout_df[node_list].max(axis=1)
+    max_rate =inout_df[node_list].max(axis=1)
+    inout_df[max_rate_name] = max_rate
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, 100)
+    add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, 85)
+
+# Compute the max memory level column 
+# node_list is an ordered list with preferred node at the right
+# threshold is in percentage ranging [0-100]
+# order(n) = index of n in node_list
+# acceptableNodes = { node \in node_list : v[node] >= max_{n \in node_list}(v[n]) * threshold }
+# max_level_node = node_list[max({order(n) : n in acceptableNodes})]
+def add_one_mem_max_level_columns(inout_df, node_list, max_rate, metric_to_memlevel_lambda, threshold=100):
+    memLevel = MetricName.memlevel(threshold)
     # TODO: Comment out below to avoid creating new df.  Need to fix if notna() check needed
     # inout_df = inout_df[inout_df[max_rate_name].notna()]
-    inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
-    nonnullMask = ~inout_df[MEM_LEVEL].isnull()
-    inout_df.loc[nonnullMask, MEM_LEVEL] = inout_df.loc[nonnullMask, MEM_LEVEL].apply(metric_to_memlevel_lambda)
+    # Note (threshold/100) needs to be computed first to avoid rounding errors
+    passValues = max_rate*(threshold/100)
+    rnode_list = node_list[::-1] # Reverse list to put preferred nodes first
+    # mask with values passing the threshold and column in reversed order so prefered columns come first
+    passMask = inout_df.loc[:, rnode_list].ge(passValues,axis=0)
+    # Use idxmax() to return first column with the biggest value (which is value of True)
+    inout_df[memLevel]=passMask.idxmax(axis=1)
+    # inout_df[MEM_LEVEL]=inout_df[node_list].idxmax(axis=1)
+    nonnullMask = ~inout_df[memLevel].isnull()
+    inout_df.loc[nonnullMask, memLevel] = inout_df.loc[nonnullMask, memLevel].apply(metric_to_memlevel_lambda)
     # Old stuff below to be deleted
 	# Remove the first two characters which is 'C_'
     # inout_df[MEM_LEVEL] = inout_df[MEM_LEVEL].apply((lambda v: v[2:]))
@@ -66,8 +87,8 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
     iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, False)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
-    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts('CVTOP Rate (GCVTOP/s)', calculate_cvtops_counts_per_iter, True)
-    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts('MEMOP Rate (GMEMOP/s)', calculate_memops_counts_per_iter, True)
+    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
     out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0
