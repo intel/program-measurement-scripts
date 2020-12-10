@@ -279,15 +279,15 @@ def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
     
-def compute_only(norm, cluster_df, cur_run_df, variants='ORIG', filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+def compute_only(cluster_df, norm, cur_run_df, variants='ORIG'):
     # Only show selected variants, default is 'ORIG'
     cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)].reset_index(drop=True)
-
+    chosen_node_set = DEFAULT_CHOSEN_NODE_SET
     #return compute_and_plot('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
-    plot = SiPlot ('ORIG', 'SIPLOT', norm, '', chosen_node_set, cluster_df, cur_run_df, variants=variants, \
-        filtering=filtering, filter_data=filter_data, mappings=[], scale=scale, short_names_path=short_names_path)
+    plot = SiPlot ('ORIG', 'SIPLOT', norm, '', chosen_node_set, cluster_df, cur_run_df, variants=None, \
+        filtering=None, filter_data=None, mappings=None, scale=None, short_names_path=None)
     plot.compute_extra()
-    return plot.cluster_df, plot.cluster_and_run_df
+    return plot.cluster_df, plot.cluster_and_run_df, plot.df
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
