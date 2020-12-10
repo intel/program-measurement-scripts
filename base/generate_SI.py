@@ -9,6 +9,8 @@ import warnings
 import datetime
 import copy
 from capeplot import CapacityPlot
+from capeplot import CapePlot
+from capeplot import CapacityData
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -25,43 +27,26 @@ globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
+class SiData(CapacityData):
+    def __init__(self, df):
+        super().__init__(df)
 
+    # Getter of cur_run_df
+    @property
+    def cur_run_df(self):
+        return self.df
+    
+    # Setter of cur_run_df (May remove)
+    @cur_run_df.setter
+    def cur_run_df(self, v):
+        self.df = v
 
-BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
-MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
-#CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FE'}
-# For L1, L2, L3, FLOP 4 node runs
-#CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'VR'}
-DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]'}
-
-# For node using derived metrics (e.g. FE), make sure the depended metrics are computed
-capacity_formula= {
-    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
-    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]/8),
-    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]/8),
-    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
-    'VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/24),
-    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]/8),
-    'FE': (lambda df : df[STALL_FE_PCT]*(df['C_max [GB/s]'])),
-    'SB': (lambda df : df[STALL_SB_PCT]*(df['C_max [GB/s]'])),
-    'LM': (lambda df : df[STALL_LM_PCT]*(df['C_max [GB/s]'])),
-    'RS': (lambda df : df[STALL_RS_PCT]*(df['C_max [GB/s]'])),
-    'CU': (lambda df : (df[STALL_FE_PCT]*df['C_scalar'] + df[STALL_LB_PCT]*df['C_scalar'] + df[STALL_SB_PCT]*df['C_scalar'] + df[STALL_LM_PCT]*df['C_scalar']))
-    }
-
-class SiPlot(CapacityPlot):
-    def __init__(self, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, cur_run_df, variants, 
-                 filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-        super().__init__(chosen_node_set, variant, cur_run_df, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
-                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, short_names_path=short_names_path)
+    def set_norm(self, norm):
         self.norm = norm
-        self.cur_run_df = cur_run_df
-        self.variants = variants
-        self.filter_data = filter_data
+    
+    def set_cluster_df (self, cluster_df):
         self.cluster_df = cluster_df
-        
+
     def compute_capacity(self, df):
         chosen_node_set = self.chosen_node_set
         norm = self.norm
@@ -101,7 +86,15 @@ class SiPlot(CapacityPlot):
         # Drop the unit
         df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
-    def compute_extra(self):
+    def concat_ordered_columns(self, frames):
+        columns_ordered = []
+        for frame in frames:
+            columns_ordered.extend(x for x in frame.columns if x not in columns_ordered)
+        final_df = pd.concat(frames)
+        # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
+        return final_df[columns_ordered]
+
+    def compute(self):
         cluster_df = self.cluster_df
         cur_run_df = self.cur_run_df
         self.compute_CSI(cluster_df)
@@ -164,6 +157,83 @@ class SiPlot(CapacityPlot):
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
 
+    def compute_saturation(self, df, chosen_node_set):
+        nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
+        nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
+        print ("<=====compute_saturation======>")
+        for node in chosen_node_set:
+            df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+        df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
+
+
+    def compute_intensity(self, df, chosen_node_set):
+        node_cnt = len(chosen_node_set)
+        csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
+        df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
+
+BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
+MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
+SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
+BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
+#CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FE'}
+# For L1, L2, L3, FLOP 4 node runs
+#CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'VR'}
+DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]'}
+
+# For node using derived metrics (e.g. FE), make sure the depended metrics are computed
+capacity_formula= {
+    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
+    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]/8),
+    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]/8),
+    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
+    'VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/24),
+    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]/8),
+    'FE': (lambda df : df[STALL_FE_PCT]*(df['C_max [GB/s]'])),
+    'SB': (lambda df : df[STALL_SB_PCT]*(df['C_max [GB/s]'])),
+    'LM': (lambda df : df[STALL_LM_PCT]*(df['C_max [GB/s]'])),
+    'RS': (lambda df : df[STALL_RS_PCT]*(df['C_max [GB/s]'])),
+    'CU': (lambda df : (df[STALL_FE_PCT]*df['C_scalar'] + df[STALL_LB_PCT]*df['C_scalar'] + df[STALL_SB_PCT]*df['C_scalar'] + df[STALL_LM_PCT]*df['C_scalar']))
+    }
+
+class SiPlot(CapePlot):
+    def __init__(self, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, cur_run_df, variants, 
+                 filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+        super().__init__(variant, cur_run_df, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
+                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, short_names_path=short_names_path)
+        # cur_run_df already set when self.data is created
+        self.data.set_chosen_node_set (chosen_node_set)
+        self.data.set_norm(norm)
+        self.data.set_cluster_df(cluster_df)
+        #self.norm = norm
+        #self.cur_run_df = cur_run_df
+        #self.cluster_df = cluster_df
+        self.variants = variants
+        self.filter_data = filter_data
+
+    # df here is the cur_run_df
+    def mk_data(self, df):
+        self.data = SiData(df)
+
+    # Getter of chosen_node_set, delegate to self.data
+    @property
+    def chosen_node_set(self):
+        return self.data.chosen_node_set
+
+    # Getter of cluster_and_cur_run_df, delegate to self.data
+    @property
+    def cluster_and_cur_run_df(self):
+        return self.data.cluster_and_cur_run_df
+        
+    # Getter of cluster_df, delegate to self.data
+    @property
+    def cluster_df(self):
+        return self.data.cluster_df
+
+    # Getter of norm, delegate to self.data
+    @property
+    def norm(self):
+        return self.data.norm
+
     def mk_labels(self):
         l_df = self.df
         orig_codelet_index = l_df[SHORT_NAME]
@@ -217,7 +287,7 @@ class SiPlot(CapacityPlot):
         maxx=max(max(cluster_and_cur_run_xs)*1.2, maxx)
         maxy=max(max(cluster_and_cur_run_ys)*1.2, maxy)
 
-        Ns = self.Ns
+        Ns = self.data.Ns
         ax = self.ax
         ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
         npoints=40
@@ -239,30 +309,8 @@ class SiPlot(CapacityPlot):
                          (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor='r',facecolor='none')
         ax.add_patch(rect)
 
-    def compute_saturation(self, df, chosen_node_set):
-        nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
-        nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
-        print ("<=====compute_saturation======>")
-        for node in chosen_node_set:
-            df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-        df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
-
-
-    def compute_intensity(self, df, chosen_node_set):
-        node_cnt = len(chosen_node_set)
-        csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
-        df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
-
-
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 
-    def concat_ordered_columns(self, frames):
-        columns_ordered = []
-        for frame in frames:
-            columns_ordered.extend(x for x in frame.columns if x not in columns_ordered)
-        final_df = pd.concat(frames)
-        # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
-        return final_df[columns_ordered]
 
 def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
     if not mappings.empty:

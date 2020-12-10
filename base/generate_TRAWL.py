@@ -10,6 +10,7 @@ from matplotlib import style
 from adjustText import adjust_text
 import copy
 from capeplot import CapePlot
+from capeplot import CapeData
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
