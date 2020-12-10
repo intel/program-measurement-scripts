@@ -214,22 +214,29 @@ class CapePlot:
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
 
     def compute_color_labels(self, df, short_names_path=''):
-        color_labels = []
+        color_labels = dict()
+        colors = ['blue', 'red', 'green', 'magenta', 'black', 'yellow', 'cyan']
+        user_colors = [i for i in colors if i not in df['Color'].unique()]
+        i = 0
         for color in df['Color'].unique():
-            colorDf = df.loc[df['Color']==color].reset_index()
-            codelet = colorDf[NAME][0]
-            timestamp = colorDf[TIMESTAMP][0]
-            app_name = codelet.split(':')[0]
-            if short_names_path:
-                short_names = pd.read_csv(short_names_path)
-                row = short_names.loc[(short_names[NAME]==app_name) & \
-                    (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
-                if not row.empty: app_name = row[SHORT_NAME][0]
-            color_labels.append((app_name, color))
+            if color not in colors: # If it is user-specified then we want to display that in the legend
+                color_labels[color] = user_colors[i]
+                i += 1
+            else: # Otherwise we just use the app name in the legend
+                colorDf = df.loc[df['Color']==color].reset_index()
+                codelet = colorDf[NAME][0]
+                timestamp = colorDf[TIMESTAMP][0]
+                app_name = codelet.split(':')[0]
+                if short_names_path:
+                    short_names = pd.read_csv(short_names_path)
+                    row = short_names.loc[(short_names[NAME]==app_name) & \
+                        (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
+                    if not row.empty: app_name = row[SHORT_NAME][0]
+                color_labels[app_name] = color
         return color_labels
 
     # Set filename to [] for GUI output
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels=None, \
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
@@ -250,7 +257,7 @@ class CapePlot:
         self.draw_contours(xmax, ymax)
 
         # Plot data points
-        labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
+        labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts, color_labels)
 
         #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
         ax.set(xlabel=x_axis if x_axis else self.default_x_axis, \
@@ -301,12 +308,14 @@ class CapePlot:
         #    plt.show()
 
 
-    def plot_markers_and_labels(self, df, xs, ys, mytexts):
+    def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
         markers = []
         df.reset_index(drop=True, inplace=True)
         for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
-            markers.extend(ax.plot(x, y, marker='o', color=color[0], 
+            if color in color_labels: # Check if the color is a user specified name, then get the actual color
+                color = color_labels[color]
+            markers.extend(ax.plot(x, y, marker='o', color=color, 
                                    label=name+str(timestamp), linestyle='', alpha=1))
 
         #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
@@ -318,7 +327,7 @@ class CapePlot:
         patches = []
         if color_labels and len(color_labels) >= 2:
             for color_label in color_labels:
-                patch = mpatches.Patch(label=color_label[0], color=color_label[1])
+                patch = mpatches.Patch(label=color_label, color=color_labels[color_label])
                 patches.append(patch)
 
         if self.ctxs:  

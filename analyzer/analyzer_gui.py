@@ -83,7 +83,7 @@ class LoadedData(Observable):
         if not os.path.isfile(self.short_names_path):
             Path(self.cape_path).mkdir(parents=True, exist_ok=True)
             open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP]).to_csv(self.short_names_path, index=False)
+            pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP, 'Color']).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
             pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
@@ -290,20 +290,26 @@ class LoadedData(Observable):
         colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple']
         colorDf = pd.DataFrame() 
         timestamps = df['Timestamp#'].dropna().unique()
-        if self.source_order:
-            for index, timestamp in enumerate(self.source_order):
-                curDf = df.loc[df['Timestamp#']==timestamp]
-                curDf['Color'] = colors[index]
-                colorDf = colorDf.append(curDf, ignore_index=True)
+        # Get saved color column from short names file
+        if os.path.getsize(self.short_names_path) > 0:
+            all_short_names = pd.read_csv(self.short_names_path)
+            df.drop(columns=['Color'], inplace=True, errors='ignore')
+            df = pd.merge(left=df, right=all_short_names[[NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
+            toAdd = df[df['Color'].notnull()]
+            colorDf = colorDf.append(toAdd, ignore_index=True)
+        # Group data by timestamps if less than 2
         #TODO: This is a quick fix for getting multiple colors for whole files, use design doc specs in future
-        elif len(self.sources) > 1 and len(timestamps <= 2):
-            for index, timestamp in enumerate(df['Timestamp#'].dropna().unique()):
-                curDf = df.loc[df['Timestamp#']==timestamp]
+        if (self.source_order) or (len(self.sources) > 1 and len(timestamps <= 2)):
+            if self.source_order: timestamps = self.source_order
+            for index, timestamp in enumerate(timestamps):
+                curDf = df.loc[(df['Timestamp#']==timestamp)]
+                curDf = curDf[curDf['Color'].isna()]
                 curDf['Color'] = colors[index]
                 colorDf = colorDf.append(curDf, ignore_index=True)
         else:
-            colorDf = colorDf.append(df, ignore_index=True)
-            colorDf['Color'] = colors[0]
+            toAdd = df[df['Color'].isna()]
+            toAdd['Color'] = colors[0]
+            colorDf = colorDf.append(toAdd, ignore_index=True)
         return colorDf
 
     def getMappings(self):
@@ -557,12 +563,12 @@ class AnalyzerGui(tk.Frame):
         self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
         self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
         self.c_customTab = CustomTab(codelet_note, self.c_customData)
-        #self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
+        self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
         codelet_note.add(self.c_trawlTab, text="TRAWL")
         codelet_note.add(self.c_qplotTab, text="QPlot")
         codelet_note.add(self.c_siPlotTab, text="SI Plot")
         codelet_note.add(self.c_customTab, text="Custom")
-        #codelet_note.add(self.c_3dTab, text="3D")
+        codelet_note.add(self.c_3dTab, text="3D")
         codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Plot Data
         self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
