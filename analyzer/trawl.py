@@ -18,8 +18,6 @@ class TRAWLData(AnalyzerData):
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("TRAWLData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
-        if self.level == 'Application':
-            x = 2
         # Generate Plot 
         self.df, self.fig, self.textData = trawl_plot(self.df, 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
                 source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)

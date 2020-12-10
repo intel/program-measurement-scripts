@@ -143,10 +143,15 @@ class ShortNameTab(tk.Frame):
         short_names_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'short_names.csv')
         if os.path.getsize(short_names_path) > 0:
             existing_shorts = pd.read_csv(short_names_path)
-            new_shorts = namesDf[[NAME, SHORT_NAME, TIMESTAMP]]
-            merged = pd.concat([existing_shorts, new_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
+            if 'Color' in namesDf.columns:
+                merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
+            else:
+                merged = pd.merge(left=existing_shorts, right=namesDf[[NAME, SHORT_NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
+                merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
+            merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_y', 'Color_x'], inplace=True, errors='ignore')
         else: 
             merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP]]
+            merged['Color'] = pd.Series()
         merged.to_csv(short_names_path, index=False)
 
     def __init__(self, parent, tab, level=None):
@@ -160,10 +165,10 @@ class ShortNameTab(tk.Frame):
 
     # Create table for Labels tab and update button
     def buildLabelTable(self, df, tab):
-        short_name_table = df[[NAME, TIMESTAMP]]
+        short_name_table = df[[NAME, TIMESTAMP, 'Color']]
         short_name_table[SHORT_NAME] = short_name_table[NAME]
         merged = self.getShortNames(short_name_table)
-        merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT, 'Color']], on=[NAME, TIMESTAMP], how='right')
+        merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT]], on=[NAME, TIMESTAMP], how='right')
         # sort label table by coverage to keep consistent with data table
         merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
         merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
@@ -190,17 +195,20 @@ class ShortNameTab(tk.Frame):
                 df = self.tab.data.loadedData.dfs[level]
                 df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
                 df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
-                df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True)
+                df = self.tab.data.gui.loadedData.compute_colors(df)
+                df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
                 self.tab.data.loadedData.dfs[level] = df.copy(deep=True)
-        self.tab.data.gui.loadedData.notify_observers()
+        for tab in self.tab.plotInteraction.tabs:
+            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
+            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
     
     def getShortNames(self, df):
         if os.path.getsize(self.short_names_path) > 0:
             existing_shorts = pd.read_csv(self.short_names_path)
-            current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP]]
+            current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
             merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
         else: 
-            merged = df[[NAME, SHORT_NAME, TIMESTAMP]]
+            merged = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
         return merged
 
     def checkForDuplicates(self, df):
