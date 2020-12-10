@@ -330,8 +330,8 @@ def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df
 def compute_only(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
     siData = SiData(cur_run_df)
     siData.set_chosen_node_set(chosen_node_set)
-    siData.data.set_norm(norm)
-    siData.data.set_cluster_df(cluster_df)
+    siData.set_norm(norm)
+    siData.set_cluster_df(cluster_df)
     siData.compute()
     return siData.cluster_df, siData.cluster_and_run_df, siData.df
 
