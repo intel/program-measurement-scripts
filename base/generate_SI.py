@@ -333,7 +333,7 @@ def compute_only(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_
     siData.set_norm(norm)
     siData.set_cluster_df(cluster_df)
     siData.compute()
-    return siData.cluster_df, siData.cluster_and_run_df, siData.df
+    return siData.cluster_df, siData.cluster_and_cur_run_df, siData.df
 
 def parse_ip(inputfile,outputfile, norm, title, chosen_node_set, rfile):
 #    inputfile="/tmp/input.csv"
