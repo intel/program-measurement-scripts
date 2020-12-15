@@ -24,7 +24,7 @@ class TrawlPlot(CapePlot):
                          default_y_axis=SPEEDUP_DL1.value, mappings=mappings, short_names_path=short_names_path)
         self.source_order = source_order
 
-    def draw_contours(self, xmax, ymax):
+    def draw_contours(self, xmax, ymax, color_labels):
         plt.axvline(x=xmax/2)
         plt.axhline(y=ymax/2)
 

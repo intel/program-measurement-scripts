@@ -11,6 +11,7 @@ import sys
 import importlib
 from pathlib import Path
 from metric_names import NonMetricName
+from metric_names import MetricName
 import os
 # GUI import
 from utils import resource_path as gui_resource_path
@@ -25,22 +26,33 @@ from utils import resource_path as gui_resource_path
 def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
   # Read the optimal data file
   optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
+  #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
   optimal_data_df = pd.read_csv(optimal_data_path)
+  # optimal_data_df[NonMetricName.SI_CLUSTER_NAME] = 'LORE-Optimal'
+  optimal_data_df[NonMetricName.SI_CLUSTER_NAME] = 'Cluster A'
   # Below assumed all the codelets are associated with FE_tier1 cluster.  
   # Real implementation, should put the right cluster name
-  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = {'FE_tier1'}
-  current_codelets_runs_df[NonMetricName.SAT_NODES] = { 'L2 [GB/s]', 'L3 [GB/s]', 'LM' }
+  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'LORE-Optimal'
+  for i in current_codelets_runs_df.index:
+    if i % 2 == 0:
+      current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME][i] = 'Cluster A'
+    else:
+      current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME][i] = 'Cluster B'
+
+  # current_codelets_runs_df[NonMetricName.SAT_NODES] = ['L2 [GB/s]', 'L3 [GB/s]', 'LM']
 
   # Load sample FE_tier1 cluster data.  
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
   sample_cluster_path = gui_resource_path(os.path.join('clusters', 'FE_tier1.csv'))
   sample_cluster_df = pd.read_csv(sample_cluster_path)
-  sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'FE_tier1'
+  sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'Cluster B'
 
+  do_sat_analysis(optimal_data_df, current_codelets_runs_df)
   # Appending all the cluster dataframe into one to return.  
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
   all_clusters = pd.DataFrame()
   all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
+  all_clusters = all_clusters.append(optimal_data_df, ignore_index=True) 
   return all_clusters
 
 # percent within max in column for color
@@ -56,27 +68,28 @@ unique_tiers = []
 DO_SUB_CLUSTERING = False
 DO_DEBUG_LOGS = True
 
-CU_NODE_SET={'%frontend', '%lb', '%sb', '%lm', '%rs'}
-CU_NODE_DICT={'%frontend':'FE', '%lb':'LB', '%sb':'SB', '%lm':'LM', '%rs':'RS'}
+CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
+CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
 
 # No Frontend
-#CU_NODE_SET={'%lb', '%sb', '%lm', '%rs'}
-#CU_NODE_DICT={'%lb':'LB', '%sb':'SB', '%lm':'LM', '%rs':'RS'}
+#CU_NODE_SET={MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
+#CU_NODE_DICT={MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
 
 BASIC_NODE_LIST=['L1', 'L2', 'L3', 'FLOP', 'VR', 'RAM']
 
 # memory traffic
-trafficToCheck = [ "register_simd_rate_gb/s", "flop_rate_gflop/s", "l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s" ]
-memTrafficToCheck = [ "register_simd_rate_gb/s", "l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s" ]
-archIntensityToCheck = ["SIMD_MEM_Intensity", "FLOP_MEM_Intensity"]
+trafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S ]
+memTrafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S ]
+#archIntensityToCheck = ["SIMD_MEM_Intensity", "FLOP_MEM_Intensity"]
+archIntensityToCheck = []
 
 
 # arith
-#percentsToCheck = ["register_simd_rate_gb/s", "%ops[vec]", "%inst[vec]", "%prf", "%sb", "%rs", "%lb", "%rob", "%lm", "%frontend" ]
-#percentsToCheck = [ "%sb", "%lm", "%frontend" , "%rs", "%lb"]
-percentsToCheck = [ "%sb", "%lm", "%rs", "%lb"]
-cuTrafficToCheck = [ "%sb", "%lm", "%lb"]
-subNodeTrafficToCheck = [ "%sb", "%lm", "%lb", "%frontend", "%rs"]
+#percentsToCheck = [MetricName.RATE_REG_SIMD_GB_P_S, "%ops[vec]", "%inst[vec]", "%prf", MetricName.STALL_SB_PCT, MetricName.STALL_RS_PCT, MetricName.STALL_LB_PCT, "%rob", MetricName.STALL_LM_PCT, MetricName.STALL_FE_PCT ]
+#percentsToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_FE_PCT , MetricName.STALL_RS_PCT, MetricName.STALL_LB_PCT]
+percentsToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT, MetricName.STALL_LB_PCT]
+cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
+subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 
 # this dict contains columns + rows of those columns that need to be colored
 # assumption is that you don't add any more rows else dict becomes out of dat
@@ -178,28 +191,28 @@ def findUniqueTiers(data, satList, tier):
   #print ("Calling findUniqueTiers with : ", satList)
   # get rows that we need to check
   sat_string = ''
-  if 'register_simd_rate_gb/s' in satList:
+  if MetricName.RATE_REG_SIMD_GB_P_S in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'vr+'
-  if 'l1_rate_gb/s' in satList:
+  if MetricName.RATE_L1_GB_P_S in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'L1+'
-  if 'l2_rate_gb/s' in satList:
+  if MetricName.RATE_L2_GB_P_S in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'L2+'
-  if 'l3_rate_gb/s' in satList:
+  if MetricName.RATE_L3_GB_P_S in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'L3+'
-  if 'ram_rate_gb/s' in satList:
+  if MetricName.RATE_RAM_GB_P_S in satList:
       sat_string = sat_string + 'RAM+'
 
-  if 'flop_rate_gflop/s' in satList:
+  if MetricName.RATE_FP_GFLOP_P_S in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'FLOP+'
-  if '%frontend' in satList:
+  if MetricName.STALL_FE_PCT in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'FE+'
-  if '%lm' in satList:
+  if MetricName.STALL_LM_PCT in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'LM+'
-  if '%sb' in satList:
+  if MetricName.STALL_SB_PCT in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'SB+'
-  if 'rs' in satList:
+  if MetricName.STALL_RS_PCT in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'RS+'
-  if '%lb' in satList:
+  if MetricName.STALL_LB_PCT in satList:
       sat_string = sat_string + 'tier_' + str(tier) + 'LB+'
 
   if 'SIMD_MEM_Intensity' in satList:
@@ -228,13 +241,13 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
   # get rows that we need to check
   codelet_in_this_tier = False
   index = satdata.index
-  condition = satdata["short_name"] == testCdltName
+  condition = satdata[MetricName.SHORT_NAME] == testCdltName
   test_codelet_indx = index[condition]
   row = test_codelet_indx[0]
   #print (rowsToCheck)
   #print (rowsToCheck)
   #satdata.to_csv(testCdltName + '_debug.csv', index = False, header=True)
-  short_nameInx = satdata.columns.get_loc('short_name')
+  short_nameInx = satdata.columns.get_loc(MetricName.SHORT_NAME)
   short_name = satdata.iloc[test_codelet_indx[0], short_nameInx]
   for column in traffic:
     # init list of blocks to color 
@@ -451,10 +464,10 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
     #full_df.to_csv(short_name + '_debug.csv', index = False, header=True)
     satTrafficList = []
     codelet_tier = codelet_tier + 1;
-    max_mem_traffic = testDF[["l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s"]].max(axis=1)
+    max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
     mem_traffic_threshold = 0.1 * max_mem_traffic.item()
     tstcdlt_TrafficToCheck = []
-    tstcdlt_TrafficToCheck.append("flop_rate_gflop/s")
+    tstcdlt_TrafficToCheck.append(MetricName.RATE_FP_GFLOP_P_S)
     for column in memTrafficToCheck:
        columnIndex = testDF.columns.get_loc(column)
        val = testDF.iloc[0, columnIndex]
@@ -539,9 +552,9 @@ def do_sat_analysis(satSetDF,testSetDF):
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
         testDF = pd.DataFrame(columns=satSetDF.columns.tolist())
-        short_name = row['short_name']
+        short_name = row[MetricName.SHORT_NAME]
         short_name = 'test-' + short_name
-        row['short_name'] = short_name
+        row[MetricName.SHORT_NAME] = short_name
         testDF = testDF.append(row, ignore_index=False)[satSetDF.columns.tolist()]
         codelet_tested += 1
         find_cluster(satSetDF, testDF, short_name, 0)
@@ -587,14 +600,14 @@ def main(argv):
     originalDataFrame = mainDataFrame
 
     # SIMD_RATE divided by max traffic column for memory
-    addAfterColumn = mainDataFrame.columns.get_loc("ram_rate_gb/s") + 1
-    mainDataFrame.insert(addAfterColumn, "SIMD_MEM_Intensity",
-      mainDataFrame["register_simd_rate_gb/s"] / mainDataFrame[["l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s"]].max(axis=1))
+    # addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_RAM_GB_P_S) + 1
+    # mainDataFrame.insert(addAfterColumn, "SIMD_MEM_Intensity",
+      # mainDataFrame[MetricName.RATE_REG_SIMD_GB_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1))
 
     # FLOP_RATE divided by max traffic column for memory
-    addAfterColumn = mainDataFrame.columns.get_loc("flop_rate_gflop/s") + 1
-    mainDataFrame.insert(addAfterColumn, "FLOP_MEM_Intensity",
-    mainDataFrame["flop_rate_gflop/s"] / mainDataFrame[["l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s"]].max(axis=1)/8)
+    # addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_FP_GFLOP_P_S) + 1
+    # mainDataFrame.insert(addAfterColumn, "FLOP_MEM_Intensity",
+    # mainDataFrame[MetricName.RATE_FP_GFLOP_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)/8)
 
     do_sat_analysis(mainDataFrame, TestSetDF)
 
