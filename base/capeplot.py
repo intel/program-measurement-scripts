@@ -210,7 +210,7 @@ class CapePlot:
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
         self.df = df
 
-    def draw_contours(self, xmax, ymax):
+    def draw_contours(self, xmax, ymax, color_labels):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
 
     def compute_color_labels(self, df, short_names_path=''):
@@ -254,7 +254,7 @@ class CapePlot:
         # (x, y) = zip(*DATA)
 
         # Draw contours
-        self.draw_contours(xmax, ymax)
+        self.draw_contours(xmax, ymax, color_labels)
 
         # Plot data points
         labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts, color_labels)

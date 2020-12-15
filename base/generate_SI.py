@@ -283,7 +283,7 @@ class SiPlot(CapePlot):
     def mk_label_key(self):
         return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name, variant, memlevel)"
 
-    def draw_contours(self, maxx, maxy):
+    def draw_contours(self, maxx, maxy, color_labels):
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
         maxx=max(max(cluster_and_cur_run_xs)*1.2, maxx)
@@ -305,11 +305,15 @@ class SiPlot(CapePlot):
 
         # Create a Rectangle patch
         # (but not saved in self.ctxs)
-        target_df = self.cluster_df
-        print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
-        rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
-                         (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor='r',facecolor='none')
-        ax.add_patch(rect)
+        colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple']
+        for i, cluster in enumerate(self.cluster_df[NonMetricName.SI_CLUSTER_NAME].unique()):
+            if cluster in color_labels: color = color_labels[cluster]
+            else: color = colors[i]
+            target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
+            print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
+            rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
+                            (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
+            ax.add_patch(rect)
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 

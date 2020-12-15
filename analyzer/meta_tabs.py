@@ -10,6 +10,7 @@ from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path
 from metric_names import MetricName
+from metric_names import NonMetricName
 globals().update(MetricName.__members__)
 
 class AxesTab(tk.Frame):
@@ -174,14 +175,14 @@ class ShortNameTab(tk.Frame):
         merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
         merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
         merged.columns = ["{}".format(i) for i in merged.columns]
-        table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
-        table.show()
-        table.redraw()
+        self.table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
+        self.table.show()
+        self.table.redraw()
         table_button_frame = tk.Frame(tab)
         table_button_frame.grid(row=3, column=1)
-        tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(table)).grid(row=0, column=0)
-        tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(table)).grid(row=0, column=1)
-        return table
+        tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table)).grid(row=0, column=1)
+        return self.table
 
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table):
@@ -214,16 +215,17 @@ class ShortNameTab(tk.Frame):
 
     def checkForDuplicates(self, df):
         # Check if there are duplicates short names with the same timestamp
-        df.reset_index(drop=True, inplace=True)
-        duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
-        if duplicate_rows.any():
-            message = str()
-            for index, row in df[duplicate_rows].iterrows():
-                message = message + 'row: ' + str(index + 1) + ', ShortName: ' + row[SHORT_NAME] + '\n'
-            messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
-                + message)
-            return True
-        return False
+        pass
+        # df.reset_index(drop=True, inplace=True)
+        # duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
+        # if duplicate_rows.any():
+        #     message = str()
+        #     for index, row in df[duplicate_rows].iterrows():
+        #         message = message + 'row: ' + str(index + 1) + ', ShortName: ' + row[SHORT_NAME] + '\n'
+        #     messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
+        #         + message)
+        #     return True
+        # return False
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
@@ -419,8 +421,15 @@ class ClusterTab(tk.Frame):
         self.cluster_menu = tk.OptionMenu(self, self.cluster_selected, *cluster_options)
         self.cluster_menu['menu'].insert_separator(1)
         update = tk.Button(self, text='Update', command=self.update)
+        colors = tk.Button(self, text='Color by Cluster', command=self.updateColors)
         self.cluster_menu.pack(side=tk.LEFT, anchor=tk.NW)
         update.pack(side=tk.LEFT, anchor=tk.NW)
+        colors.pack(side=tk.LEFT, anchor=tk.NW, padx=10)
+
+    def updateColors(self):
+        table_df = self.tab.shortnameTab.table.model.df
+        table_df['Color'] = self.tab.df[NonMetricName.SI_CLUSTER_NAME]
+        self.tab.shortnameTab.updateLabels(self.tab.shortnameTab.table)
     
     def update(self):
         if self.cluster_selected.get() != 'Choose Cluster':

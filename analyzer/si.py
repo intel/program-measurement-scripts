@@ -10,6 +10,7 @@ from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName
+from metric_names import NonMetricName
 from sat_analysis import find_clusters as find_si_clusters
 globals().update(MetricName.__members__)
 
@@ -28,8 +29,8 @@ class SIPlotData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
-        #cluster_df = find_clusters(self.df)
-        cluster_df = pd.read_csv(cluster)
+        cluster_df = find_si_clusters(self.df)
+        #cluster_df = pd.read_csv(cluster)
         self.df, self.fig, self.textData = parse_ip_siplot_df\
             (cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
@@ -50,7 +51,7 @@ class SIPlotTab(AnalyzerTab):
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
-        metrics.extend(['Saturation', 'Intensity', 'SI'])
+        metrics.extend(['Saturation', 'Intensity', 'SI', NonMetricName.SI_CLUSTER_NAME])
         metrics.extend(self.data.gui.loadedData.common_columns_end)
         super().setup(metrics)
         self.buildTableTabs()
