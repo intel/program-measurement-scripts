@@ -1,4 +1,5 @@
 import re
+import sys
 import pandas as pd
 import warnings
 import datetime
@@ -15,12 +16,100 @@ from capelib import add_mem_max_level_columns
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
 
+# Base class for plot data without GUI specific data
+# Subclass should override for plot specific data processing.
+class CapeData:
+    def __init__(self, df):
+        self._df = df
+
+    
+    # Getter of df
+    @property
+    def df(self):
+        return self._df
+    
+    # Setter of df (May remove)
+    @df.setter
+    def df(self, v):
+        self._df = v
+        
+    def compute(self):
+        pass
+
+class CapacityData(CapeData):
+    MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
+    OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}
+    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET
+
+    BUFFER_NODE_SET={'FE'}
+    DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]', 'FLOP [GFlop/s]'}
+
+    # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
+    capacity_formula= {
+	    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
+	    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
+	    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
+	    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
+	    'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
+	    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
+	    'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
+    }
+
+    def __init__(self, df):
+        super().__init__(df)
+
+    def set_chosen_node_set(self, chosen_node_set):
+        self.chosen_node_set = chosen_node_set
+        
+    def compute(self):
+        self.compute_capacity()
+
+    def compute_capacity(self):
+        df = self.df
+        chosen_node_set = self.chosen_node_set
+        print("The node list are as follows :")
+        print(chosen_node_set)
+        chosen_mem_node_set = CapacityData.MEM_NODE_SET & chosen_node_set
+        for node in chosen_mem_node_set:
+            print ("The current node : ", node)
+            formula=CapacityData.capacity_formula[node]
+            df['C_{}'.format(node)]=formula(df)
+
+        node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
+        metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
+        add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
+		# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
+		# df = df[df['C_max [GB/s]'].notna()]
+		# df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+		# # Remove the first two characters which is 'C_'
+		# df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
+		# # Drop the unit
+		# df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+        print ("<=====compute_capacity======>")
+	#	print(df['C_max'])
+
+        chosen_op_node_set = CapacityData.OP_NODE_SET & chosen_node_set
+        if len(chosen_op_node_set) > 1:
+            print("Too many op node selected: {}".format(chosen_op_node_set))
+            sys.exit(-1)
+        elif len(chosen_op_node_set) < 1:
+            print("No op node selected")
+            sys.exit(-1)
+		# Exactly 1 op node selected below
+        op_node = chosen_op_node_set.pop()
+        op_metric_name = 'C_{}'.format(op_node)
+        formula=CapacityData.capacity_formula[op_node]
+        df[op_metric_name]=formula(df)
+        self.df = df
+        self.op_metric_name = op_metric_name
+    
+
 # Base class for all plots
 class CapePlot:
     def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
 
-        self.df = df
+        self.mk_data(df)
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
         self.ctxs = []
@@ -36,6 +125,20 @@ class CapePlot:
         self.mappings = mappings
         self.short_names_path = short_names_path
 
+    # Getter of df, delegate to self.data
+    @property
+    def df(self):
+        return self.data.df
+    
+    # Setter of df (May remove), delegate to self.data
+    @df.setter
+    def df(self, v):
+        self.data.df = v
+
+    # Subclass override this to create the right data object
+    def mk_data(self, df):
+        self.data = CapeData(df)
+        
     def mk_labels(self):
         df = self.df
         try:
@@ -54,7 +157,7 @@ class CapePlot:
 
     # Override to compute more metrics
     def compute_extra(self):
-        pass
+        self.data.compute()
 
     # Override to update the data frame containing plot data.
     def filter_data_points(self, in_df):
@@ -292,69 +395,21 @@ class CapePlot:
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
-    MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-    OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}
-    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET
-
-    BUFFER_NODE_SET={'FE'}
-    DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]', 'FLOP [GFlop/s]'}
-
-    # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
-    capacity_formula= {
-	    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
-	    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
-	    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
-	    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
-	    'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
-	    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
-	    'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
-    }
-        
     def __init__(self, chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
-        self.chosen_node_set = chosen_node_set
+        self.data.set_chosen_node_set (chosen_node_set)
 
-	# Override to compute capacity
+    def mk_data(self, df):
+        self.data = CapacityData(df)
+
+    # Getter of chosen_node_set, delegate to self.data
+    @property
+    def chosen_node_set(self):
+        return self.data.chosen_node_set
+
     def compute_extra(self):
-        self.compute_capacity()
+        super().compute_extra()
+        self.default_x_axis = self.data.op_metric_name
         
-    def compute_capacity(self):
-        df = self.df
-        chosen_node_set = self.chosen_node_set
-        print("The node list are as follows :")
-        print(chosen_node_set)
-        chosen_mem_node_set = CapacityPlot.MEM_NODE_SET & chosen_node_set
-        for node in chosen_mem_node_set:
-            print ("The current node : ", node)
-            formula=CapacityPlot.capacity_formula[node]
-            df['C_{}'.format(node)]=formula(df)
-
-        node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
-        metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
-        add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
-		# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
-		# df = df[df['C_max [GB/s]'].notna()]
-		# df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-		# # Remove the first two characters which is 'C_'
-		# df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
-		# # Drop the unit
-		# df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
-        print ("<=====compute_capacity======>")
-	#	print(df['C_max'])
-
-        chosen_op_node_set = CapacityPlot.OP_NODE_SET & chosen_node_set
-        if len(chosen_op_node_set) > 1:
-            print("Too many op node selected: {}".format(chosen_op_node_set))
-            sys.exit(-1)
-        elif len(chosen_op_node_set) < 1:
-            print("No op node selected")
-            sys.exit(-1)
-		# Exactly 1 op node selected below
-        op_node = chosen_op_node_set.pop()
-        op_metric_name = 'C_{}'.format(op_node)
-        formula=CapacityPlot.capacity_formula[op_node]
-        df[op_metric_name]=formula(df)
-        self.df = df
-        self.default_x_axis = op_metric_name
