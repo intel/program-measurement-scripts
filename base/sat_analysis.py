@@ -12,9 +12,14 @@ import importlib
 from pathlib import Path
 from metric_names import NonMetricName
 from metric_names import MetricName
+from generate_SI import compute_only
 import os
 # GUI import
 from utils import resource_path as gui_resource_path
+
+all_clusters = pd.DataFrame()
+all_test_codelets = pd.DataFrame()
+my_unique_cluster_list = []
 
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
@@ -50,10 +55,13 @@ def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold 
   do_sat_analysis(optimal_data_df, current_codelets_runs_df)
   # Appending all the cluster dataframe into one to return.  
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
-  all_clusters = pd.DataFrame()
-  all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
-  all_clusters = all_clusters.append(optimal_data_df, ignore_index=True) 
-  return all_clusters
+  #all_clusters = pd.DataFrame()
+  #all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
+  #all_clusters = all_clusters.append(optimal_data_df, ignore_index=True) 
+  # return the global cluster and test codelets => to use for plotting
+  global all_clusters
+  global all_test_codelets
+  return all_clusters, all_test_codelets
 
 # percent within max in column for color
 # TODO unused at the moment
@@ -66,7 +74,7 @@ no_cluster = 0
 unique_sat_node_clusters = []
 unique_tiers = []
 DO_SUB_CLUSTERING = False
-DO_DEBUG_LOGS = True
+DO_DEBUG_LOGS = False
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
 CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
@@ -504,12 +512,26 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             title = "SI"
             target_df = pd.DataFrame()
             #print ("calling SI Compute with nodes :", chosen_node_set)
-            compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
+            #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
             peer_dfs = [peer_codelet_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
+            testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + str(satTrafficList)
+            testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
+            my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF)
+            global all_test_codelets
+            all_test_codelets.append(my_test_df)
+            cluster_name = str(codelet_tier) + str(satTrafficList)
+            my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
+            global all_clusters
+            global my_unique_cluster_list
+
+            if cluster_name not in my_unique_cluster_list:
+                all_clusters.append(my_cluster_df)
+                my_unique_cluster_list.insert(0, cluster_name)
             if DO_DEBUG_LOGS:
                 final_df.to_csv(short_name+'_report.csv', index = True, header=True)
-            result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+            #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+            result =True
             if result == True :
                 print (short_name, "Passed the SI Test =>")
                 si_passed +=1

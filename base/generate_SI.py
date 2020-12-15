@@ -55,6 +55,7 @@ class SiData(CapacityData):
         print(chosen_node_set)
         chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
         chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
+        chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
         for node in chosen_basic_node_set:
             print ("The current node : ", node)
             formula=capacity_formula[node]
@@ -62,7 +63,7 @@ class SiData(CapacityData):
 
         self.compute_norm(norm, df, chosen_basic_node_set, 'C_max [GB/s]')
         print ("<=====compute_capacity======>")
-        self.compute_norm(norm, df, SCALAR_NODE_SET, 'C_scalar')
+        self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
         print ("<=====compute_cu_scalar======>")
 
         for node in chosen_buffer_node_set:

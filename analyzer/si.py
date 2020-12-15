@@ -29,7 +29,7 @@ class SIPlotData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
-        cluster_df = find_si_clusters(self.df)
+        cluster_df, self.df = find_si_clusters(self.df)
         #cluster_df = pd.read_csv(cluster)
         self.df, self.fig, self.textData = parse_ip_siplot_df\
             (cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
