@@ -21,6 +21,7 @@ from matplotlib.legend import Legend
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from metric_names import MetricName
+from metric_names import NonMetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -59,21 +60,11 @@ class SiData(CapacityData):
             formula=capacity_formula[node]
             df['C_{}'.format(node)]=formula(df)
 
-        if norm == 'row':
-            print ("<=====Running Row Norm======>")
-            df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1)
-        else:
-            print ("<=====Running Matrix Norm======>")
-            df['C_max [GB/s]']=max(df[list(map(lambda n: "C_{}".format(n), chosen_basic_node_set))].max(axis=1))
+        self.compute_norm(norm, df, chosen_basic_node_set, 'C_max [GB/s]')
         print ("<=====compute_capacity======>")
-
-        if norm == 'row':
-            print ("<=====Running Row Norm======>")
-            df['C_scalar']=df[list(map(lambda n: "C_{}".format(n), SCALAR_NODE_SET))].max(axis=1)
-        else:
-            print ("<=====Running Matrix Norm======>")
-            df['C_scalar']=max(df[list(map(lambda n: "C_{}".format(n), SCALAR_NODE_SET))].max(axis=1))
+        self.compute_norm(norm, df, SCALAR_NODE_SET, 'C_scalar')
         print ("<=====compute_cu_scalar======>")
+
         for node in chosen_buffer_node_set:
             formula=capacity_formula[node]
             df['C_{}'.format(node)]=formula(df)
@@ -85,6 +76,14 @@ class SiData(CapacityData):
         df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
         # Drop the unit
         df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+
+    def compute_norm(self, norm, df, node_set, lhs):
+        if norm == 'row':
+            print ("<=====Running Row Norm======>")
+            df[lhs]=df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1)
+        else:
+            print ("<=====Running Matrix Norm======>")
+            df[lhs]=max(df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1))
 
     def concat_ordered_columns(self, frames):
         columns_ordered = []
@@ -153,6 +152,9 @@ class SiData(CapacityData):
 
     def compute_CSI(self, df_to_update):
         chosen_node_set = self.chosen_node_set
+        # If SiSatNodes columns not exist.  Fill in default values here
+        if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
+            df_to_update[NonMetricName.SI_SAT_NODES]=[DEFAULT_CHOSEN_NODE_SET]*len(df_to_update)
         self.compute_capacity(df_to_update)
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
