@@ -167,6 +167,9 @@ class SiData(CapacityData):
         # If SiSatNodes columns not exist.  Fill in default values here
         if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
             df_to_update[NonMetricName.SI_SAT_NODES]=[DEFAULT_CHOSEN_NODE_SET]*len(df_to_update)
+        if not NonMetricName.SI_CLUSTER_NAME in df_to_update.columns: 
+            df_to_update[NonMetricName.SI_CLUSTER_NAME]=[[]]*len(df_to_update)
+
         self.compute_capacity(df_to_update)
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
@@ -208,11 +211,12 @@ capacity_formula= {
     'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
     'VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/24),
     'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]/8),
-    'FE': (lambda df : df[STALL_FE_PCT]*(df['C_max [GB/s]'])),
-    'SB': (lambda df : df[STALL_SB_PCT]*(df['C_max [GB/s]'])),
-    'LM': (lambda df : df[STALL_LM_PCT]*(df['C_max [GB/s]'])),
-    'RS': (lambda df : df[STALL_RS_PCT]*(df['C_max [GB/s]'])),
-    'CU': (lambda df : (df[STALL_FE_PCT]*df['C_scalar'] + df[STALL_LB_PCT]*df['C_scalar'] + df[STALL_SB_PCT]*df['C_scalar'] + df[STALL_LM_PCT]*df['C_scalar']))
+    'FE': (lambda df : (df[STALL_FE_PCT]/100)*(df['C_max [GB/s]'])),
+    'SB': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_max [GB/s]'])),
+    'LM': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_max [GB/s]'])),
+    'RS': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_max [GB/s]'])),
+    'CU': (lambda df : ((df[STALL_FE_PCT]/100)*df['C_scalar'] + (df[STALL_LB_PCT]/100)*df['C_scalar'] + 
+                        (df[STALL_SB_PCT]/100)*df['C_scalar'] + (df[STALL_LM_PCT]/100)*df['C_scalar']))
     }
 
 class SiPlot(CapePlot):
