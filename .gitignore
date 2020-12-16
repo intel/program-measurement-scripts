@@ -23,3 +23,5 @@ Formulas_used.txt
 __pycache__
 settings.json
 .DS_store
+Result_report.csv
+statistcs.csv

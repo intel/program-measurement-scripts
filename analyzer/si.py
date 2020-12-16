@@ -14,7 +14,6 @@ from metric_names import NonMetricName
 from sat_analysis import find_clusters as find_si_clusters
 globals().update(MetricName.__members__)
 
-
 # Sample dummy call to SI script to show how it would work
 #df = pd.DataFrame([[1, 2], [3, 4]], columns=list('AB'))
 #clusters = find_si_clusters(df)
@@ -29,7 +28,11 @@ class SIPlotData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
-        cluster_df, self.df = find_si_clusters(self.df)
+        cluster_df, si_df = find_si_clusters(self.df)
+        # TODO: merge new SI metrics into summary sheet
+        new_columns = [NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES]
+        self.df.drop(columns=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], inplace=True, errors='ignore')
+        self.df = pd.merge(left=self.df, right=si_df[new_columns], how='left', on=[NAME, TIMESTAMP])
         #cluster_df = pd.read_csv(cluster)
         self.df, self.fig, self.textData = parse_ip_siplot_df\
             (cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \

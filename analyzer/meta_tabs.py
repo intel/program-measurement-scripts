@@ -185,13 +185,13 @@ class ShortNameTab(tk.Frame):
         return self.table
 
     # Merge user input labels with current mappings and replot
-    def updateLabels(self, table):
+    def updateLabels(self, table, clusters=False):
         table_df = table.model.df
         if self.checkForDuplicates(table_df):
             return
         else:
             # Add to local database 
-            ShortNameTab.addShortNames(table_df)
+            if not clusters: ShortNameTab.addShortNames(table_df)
             # Change the short name in each of the main dfs
             for level in self.tab.data.loadedData.dfs:
                 df = self.tab.data.loadedData.dfs[level]
@@ -429,7 +429,7 @@ class ClusterTab(tk.Frame):
     def updateColors(self):
         table_df = self.tab.shortnameTab.table.model.df
         table_df['Color'] = self.tab.df[NonMetricName.SI_CLUSTER_NAME]
-        self.tab.shortnameTab.updateLabels(self.tab.shortnameTab.table)
+        self.tab.shortnameTab.updateLabels(self.tab.shortnameTab.table, True)
     
     def update(self):
         if self.cluster_selected.get() != 'Choose Cluster':

@@ -29,6 +29,11 @@ my_unique_cluster_list = []
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
 def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
+  # Reset global dataframes
+  global all_clusters
+  global all_test_codelets
+  all_clusters = pd.DataFrame()
+  all_test_codelets = pd.DataFrame()
   # Read the optimal data file
   optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
   #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
@@ -59,8 +64,6 @@ def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold 
   #all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
   #all_clusters = all_clusters.append(optimal_data_df, ignore_index=True) 
   # return the global cluster and test codelets => to use for plotting
-  global all_clusters
-  global all_test_codelets
   return all_clusters, all_test_codelets
 
 # percent within max in column for color
@@ -167,7 +170,7 @@ def findMaxInColumnsToColor(data, main_traffic, cu_traffic, pyxlSheet):
       num = data.iloc[row, columnIndex]
 
       if num >= threshold:
-        coloured_maxOfColumn[column].append(row);
+        coloured_maxOfColumn[column].append(row)
   #endfor
 
   # percent only colored if above certain threshold
@@ -183,14 +186,14 @@ def findMaxInColumnsToColor(data, main_traffic, cu_traffic, pyxlSheet):
         num = data.iloc[row, columnIndex]
 
         if num >= threshold:
-          coloured_maxOfColumn[column].append(row);
+          coloured_maxOfColumn[column].append(row)
       #endfor
   #endfor
   #check SIMD intensity
   #for row in rowsToCheck:
   # columnIndex = data.columns.get_loc("SIMD_MEM_Intensity")
   #  if data.iloc[row, columnIndex] > 3:
-  #    coloured_maxOfColumn["SIMD_MEM_Intensity"].append(row);
+  #    coloured_maxOfColumn["SIMD_MEM_Intensity"].append(row)
 
 # Find max in traffic columns + perfcent columns, save to maxDict
 def findUniqueTiers(data, satList, tier):
@@ -298,12 +301,12 @@ def findPeerCodelets(data, traffic, cu_traffic, satList, short_name):
               threshold = maxValue * (1 - cuSatThreshold)
               num = data.iloc[row, columnIndex]
               if num > threshold:
-                 maxOfColumn[column].append(row);
+                 maxOfColumn[column].append(row)
       else:
           threshold = maxValue * (1 - satThreshold)
           num = data.iloc[row, columnIndex]
           if num > threshold:
-            maxOfColumn[column].append(row);
+            maxOfColumn[column].append(row)
     #end columnfor
   #end rowfor
   codelet_list = maxOfColumn[column]
@@ -331,7 +334,7 @@ def createSubcluster(data, subSatList, short_name):
           # init list of blocks to color 
           num = data.iloc[row, columnIndex]
           if num <= 0.5:
-              maxOfColumn[column].append(row);
+              maxOfColumn[column].append(row)
   else:
       for row in rowsToCheck:
         #print (row)
@@ -341,7 +344,7 @@ def createSubcluster(data, subSatList, short_name):
           columnIndex = data.columns.get_loc(column)
           num = data.iloc[row, columnIndex]
           if num >= 0.5:
-              maxOfColumn[column].append(row);
+              maxOfColumn[column].append(row)
     #end columnfor
   #end rowfor
   codelet_list = maxOfColumn[column]
@@ -466,12 +469,13 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
     global si_passed
     global si_failed
     global no_cluster
+    global all_test_codelets
     peer_cdlt_count = 0
     dfs = [satSetDF,testDF]
     full_df = concat_ordered_columns(dfs)
     #full_df.to_csv(short_name + '_debug.csv', index = False, header=True)
     satTrafficList = []
-    codelet_tier = codelet_tier + 1;
+    codelet_tier = codelet_tier + 1
     max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
     mem_traffic_threshold = 0.1 * max_mem_traffic.item()
     tstcdlt_TrafficToCheck = []
@@ -483,7 +487,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
           tstcdlt_TrafficToCheck.append(column)
     check_codlet_in_this_tier = checkCodeletTier(full_df, short_name, tstcdlt_TrafficToCheck, percentsToCheck, satTrafficList)
 
-    tier_book = openpyxl.Workbook();
+    tier_book = openpyxl.Workbook()
     highlightSheet = tier_book.active
     highlightSheet.title = "Highlights"
     findMaxInColumnsToColor(full_df, tstcdlt_TrafficToCheck, percentsToCheck, highlightSheet)
@@ -515,18 +519,21 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
             peer_dfs = [peer_codelet_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
-            testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + str(satTrafficList)
+            satTrafficString = ''
+            for i, elem in enumerate(satTrafficList): 
+              if i != len(satTrafficList) - 1: satTrafficString += str(elem) + ', '
+              else: satTrafficString += str(elem)
+            testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF)
-            global all_test_codelets
-            all_test_codelets.append(my_test_df)
+            all_test_codelets = all_test_codelets.append(my_test_df)
             cluster_name = str(codelet_tier) + str(satTrafficList)
             my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
             global all_clusters
             global my_unique_cluster_list
 
             if cluster_name not in my_unique_cluster_list:
-                all_clusters.append(my_cluster_df)
+                all_clusters = all_clusters.append(my_cluster_df)
                 my_unique_cluster_list.insert(0, cluster_name)
             if DO_DEBUG_LOGS:
                 final_df.to_csv(short_name+'_report.csv', index = True, header=True)
@@ -547,6 +554,9 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
                 if DO_SUB_CLUSTERING:
                    do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
         else:
+            testDF[NonMetricName.SI_CLUSTER_NAME] = [[]]*len(testDF)
+            testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
+            all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "No Cluster for the SI Test =>")
             no_cluster+=1
             findUniqueTiers(peer_codelet_df, satTrafficList, codelet_tier)
@@ -559,10 +569,13 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
         if next_tier_df.shape[0] > 5 :
             find_cluster(next_tier_df, testDF, short_name, codelet_tier)
         else :
-                print (short_name, "Last Tier: No Cluster for the SI Test =>")
-                result_df = result_df.append({'short_name' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
-                            'Tier' : 'LastTier_'+str(codelet_tier), 'Sat_Node' : satTrafficList, 'SI_Result' : 'No Cluster'},  
-                ignore_index = True) 
+            testDF[NonMetricName.SI_CLUSTER_NAME] = [[]]*len(testDF)
+            testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
+            all_test_codelets = all_test_codelets.append(testDF)
+            print (short_name, "Last Tier: No Cluster for the SI Test =>")
+            result_df = result_df.append({'short_name' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
+                        'Tier' : 'LastTier_'+str(codelet_tier), 'Sat_Node' : satTrafficList, 'SI_Result' : 'No Cluster'},  
+            ignore_index = True) 
 
 def do_sat_analysis(satSetDF,testSetDF):
     short_name=''
@@ -571,13 +584,15 @@ def do_sat_analysis(satSetDF,testSetDF):
     codelet_tested = 0
     print ("Memory Node Saturation Threshold : ", satThreshold)
     print ("Control Node Saturation Threshold : ", cuSatThreshold)
+    cols = satSetDF.columns.tolist()
+    cols.append(MetricName.TIMESTAMP)
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
-        testDF = pd.DataFrame(columns=satSetDF.columns.tolist())
+        testDF = pd.DataFrame(columns=cols)
         short_name = row[MetricName.SHORT_NAME]
         short_name = 'test-' + short_name
         row[MetricName.SHORT_NAME] = short_name
-        testDF = testDF.append(row, ignore_index=False)[satSetDF.columns.tolist()]
+        testDF = testDF.append(row, ignore_index=False)[cols]
         codelet_tested += 1
         find_cluster(satSetDF, testDF, short_name, 0)
         #print ("codelet_tested = ", codelet_tested, " Passed = ", si_passed, " Failed = ", si_failed, " No Cluster = ", no_cluster)
