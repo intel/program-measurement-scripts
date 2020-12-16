@@ -79,12 +79,22 @@ class SiData(CapacityData):
         df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
     def compute_norm(self, norm, df, node_set, lhs):
-        if norm == 'row':
-            print ("<=====Running Row Norm======>")
-            df[lhs]=df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1)
-        else:
-            print ("<=====Running Matrix Norm======>")
-            df[lhs]=max(df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1))
+        # First go ahead to compute the row norm
+        # Get the right column names for the sat node by prepending C_ to node names.  Store the results in 'SatCaps' column
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns)))
+        # Get the max of the columns specified in 'SatCaps' column
+        df[lhs] = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
+        if norm == 'matrix':
+           # Just take the max across all row norms and make it the matrix norm
+            df[lhs] = df[lhs].max()
+            
+        #if norm == 'row':
+        #    print ("<=====Running Row Norm======>")
+        #    df[lhs]=df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1)
+        #else:
+        #    print ("<=====Running Matrix Norm======>")
+        #    df[lhs]=max(df[list(map(lambda n: "C_{}".format(n), node_set))].max(axis=1))
+        df.drop('SatCaps', axis=1, inplace=True)
 
     def concat_ordered_columns(self, frames):
         columns_ordered = []
@@ -98,6 +108,7 @@ class SiData(CapacityData):
         cluster_df = self.cluster_df
         cur_run_df = self.cur_run_df
         self.compute_CSI(cluster_df)
+        cluster_df['SI']=cluster_df['Saturation'] * cluster_df['Intensity'] 
         # Capcacity already computed in compute_capacity() method so commented below
         # for node in sorted(chosen_node_set):
         #     formula=capacity_formula[node]
@@ -170,9 +181,15 @@ class SiData(CapacityData):
 
 
     def compute_intensity(self, df, chosen_node_set):
-        node_cnt = len(chosen_node_set)
-        csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns)))
+        node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
+        csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
         df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
+
+        #node_cnt = len(chosen_node_set)
+        #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
+        #df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
+        df.drop('SatCaps', axis=1, inplace=True)
 
 BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
 MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
