@@ -3,13 +3,15 @@ import os
 # Follow line seems to be needed to get the modules needed
 #sys.path.insert(0, 'c:\\Users\\cwong29\\OneDrive - Intel Corporation\\working\\Development\\Cape Analyzer\\master\\cape-experiment-scripts\\base')
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'base'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'analyzer'))
 
 import unittest
 import pandas as pd
 from generate_SI import compute_only
+from sat_analysis import find_clusters
 from metric_names import NonMetricName
 
-class TestSiMethods(unittest.TestCase):
+class TestGenerateSi(unittest.TestCase):
     def test_compute_norm_row(self):
         root = os.path.join(os.path.dirname(__file__), 'data', 'generate_SI')
         cur_run_df = pd.read_csv(os.path.join(root, 'Test.csv'))
@@ -31,6 +33,13 @@ class TestSiMethods(unittest.TestCase):
         self.assertIn('Intensity', new_all_df.columns)
         self.assertTrue(new_cluster_df.append(new_run_df).equals(new_all_df))
         # Should add more to check values
+
+class TestSiAnalysis(unittest.TestCase):
+    def test_empty_cluster_df (self):
+        root = os.path.join(os.path.dirname(__file__), 'data', 'sat_analysis')
+        cur_run_df = pd.read_csv(os.path.join(root, 'empty_cluster_case.csv'))
+        cluster_df, si_df = find_clusters(cur_run_df)
+        self.assertFalse(cluster_df.empty)
 
 if __name__ == '__main__':
     unittest.main()
