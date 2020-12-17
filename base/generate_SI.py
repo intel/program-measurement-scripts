@@ -81,7 +81,7 @@ class SiData(CapacityData):
     def compute_norm(self, norm, df, node_set, lhs):
         # First go ahead to compute the row norm
         # Get the right column names for the sat node by prepending C_ to node names.  Store the results in 'SatCaps' column
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns)))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns & BASIC_NODE_SET)))
         # Get the max of the columns specified in 'SatCaps' column
         df[lhs] = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
         if norm == 'matrix':
@@ -169,7 +169,7 @@ class SiData(CapacityData):
         if not NonMetricName.SI_CLUSTER_NAME in df_to_update.columns: 
             df_to_update[NonMetricName.SI_CLUSTER_NAME]=''
         # Union of all sets of SI_SAT_NODES
-        self.chosen_node_set = set.union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
+        self.chosen_node_set = set().union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
         chosen_node_set = self.chosen_node_set
 
         # Fill the NA entries with ''
