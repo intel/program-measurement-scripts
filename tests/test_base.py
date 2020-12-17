@@ -38,11 +38,13 @@ class TestSiAnalysis(unittest.TestCase):
     def test_repeated_calls_df (self):
         root = os.path.join(os.path.dirname(__file__), 'data', 'sat_analysis')
         cur_run_df = pd.read_csv(os.path.join(root, 'empty_cluster_case.csv'))
-        cluster_df1, si_df = find_clusters(cur_run_df)
+        cluster_df1, si_df1 = find_clusters(cur_run_df)
         # Run again to get the results
-        cluster_df2, si_df = find_clusters(cur_run_df)
+        cluster_df2, si_df2 = find_clusters(cur_run_df)
         self.assertFalse(cluster_df1.empty)
         self.assertFalse(cluster_df2.empty)
+        self.assertTrue(cluster_df1.equals(cluster_df2))
+        self.assertTrue(si_df1.equals(si_df2))
 
 if __name__ == '__main__':
     unittest.main()
