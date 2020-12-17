@@ -86,7 +86,8 @@ CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', Metric
 #CU_NODE_SET={MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
 #CU_NODE_DICT={MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
 
-BASIC_NODE_LIST=['L1', 'L2', 'L3', 'FLOP', 'VR', 'RAM']
+# This has to be identical to BASIC_NODE_SET in generate_SI
+BASIC_NODE_LIST=['L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]']
 
 # memory traffic
 trafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S ]
@@ -629,32 +630,15 @@ def main(argv):
       satThreshold = float(sys.argv[3])
       cuSatThreshold = float(sys.argv[4])
 
-    print("Attempting to read", csvToRead)
-
-    # read into pandas
-    mainDataFrame = pd.read_csv(csvToRead)
-    TestSetDF = pd.read_csv(csvTestSet)
+    test_data_path = gui_resource_path(os.path.join('clusters', 'si_test.csv'))
+    #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
+    test_data_df = pd.read_csv(test_data_path)
 
     print("Read successful!")
 
-    # save original dataframe
-    originalDataFrame = mainDataFrame
-
-    # SIMD_RATE divided by max traffic column for memory
-    # addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_RAM_GB_P_S) + 1
-    # mainDataFrame.insert(addAfterColumn, "SIMD_MEM_Intensity",
-      # mainDataFrame[MetricName.RATE_REG_SIMD_GB_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1))
-
-    # FLOP_RATE divided by max traffic column for memory
-    # addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_FP_GFLOP_P_S) + 1
-    # mainDataFrame.insert(addAfterColumn, "FLOP_MEM_Intensity",
-    # mainDataFrame[MetricName.RATE_FP_GFLOP_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)/8)
-
-    do_sat_analysis(mainDataFrame, TestSetDF)
+    find_clusters(test_data_df)
 
 
 if __name__ == "__main__":
     # csv to read should be first argument
-    csvToRead = sys.argv[1]
-    csvTestSet = sys.argv[2]
     main(sys.argv[1:])
