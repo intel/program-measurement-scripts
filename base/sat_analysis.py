@@ -18,9 +18,6 @@ import os
 # GUI import
 from utils import resource_path as gui_resource_path
 
-all_clusters = pd.DataFrame()
-all_test_codelets = pd.DataFrame()
-my_unique_cluster_list = []
 
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
@@ -30,11 +27,6 @@ my_unique_cluster_list = []
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
 def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
-  # Reset global dataframes
-  global all_clusters
-  global all_test_codelets
-  all_clusters = pd.DataFrame()
-  all_test_codelets = pd.DataFrame()
   # Read the optimal data file
   optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
   #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
@@ -58,7 +50,7 @@ def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold 
   sample_cluster_df = pd.read_csv(sample_cluster_path)
   sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'Cluster B'
 
-  do_sat_analysis(optimal_data_df, current_codelets_runs_df)
+  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
   # Appending all the cluster dataframe into one to return.  
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
   #all_clusters = pd.DataFrame()
@@ -467,12 +459,11 @@ def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTraf
         print (short_name, "How to do Sub_Cluster SI Test ??=>")
         si_failed+=1
 
-def find_cluster(satSetDF, testDF, short_name, codelet_tier):
+def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_test_codelets):
     global result_df
     global si_passed
     global si_failed
     global no_cluster
-    global all_test_codelets
     peer_cdlt_count = 0
     dfs = [satSetDF,testDF]
     full_df = concat_ordered_columns(dfs)
@@ -534,12 +525,9 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             all_test_codelets = all_test_codelets.append(my_test_df)
             cluster_name = str(codelet_tier) + str(satTrafficList)
             my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
-            global all_clusters
-            global my_unique_cluster_list
 
-            if cluster_name not in my_unique_cluster_list:
+            if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
                 all_clusters = all_clusters.append(my_cluster_df)
-                my_unique_cluster_list.insert(0, cluster_name)
             if DO_DEBUG_LOGS:
                 final_df.to_csv(short_name+'_report.csv', index = True, header=True)
             #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
@@ -573,7 +561,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
         next_tier_df = findNextTierInColumns(satSetDF, trafficToCheck, percentsToCheck)
         #print ("next tier codelet count : ", next_tier_df.shape[0])
         if next_tier_df.shape[0] > 5 :
-            find_cluster(next_tier_df, testDF, short_name, codelet_tier)
+            all_clusters, all_test_codelets = find_cluster(next_tier_df, testDF, short_name, codelet_tier, all_clusters, all_test_codelets)
         else :
             # empty tuple more friendly to group by operations
             testDF[NonMetricName.SI_CLUSTER_NAME] = ''
@@ -583,8 +571,11 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             result_df = result_df.append({'short_name' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
                         'Tier' : 'LastTier_'+str(codelet_tier), 'Sat_Node' : satTrafficList, 'SI_Result' : 'No Cluster'},  
             ignore_index = True) 
+    return all_clusters, all_test_codelets
 
-def do_sat_analysis(satSetDF,testSetDF):
+def do_sat_analysis(satSetDF, testSetDF):
+    all_clusters = pd.DataFrame()
+    all_test_codelets = pd.DataFrame()
     short_name=''
     # Creating an empty Dataframe with column names only
     #print("Empty Dataframe ", dfObj, sep='\n')
@@ -601,7 +592,7 @@ def do_sat_analysis(satSetDF,testSetDF):
         row[MetricName.SHORT_NAME] = short_name
         testDF = testDF.append(row, ignore_index=False)[cols]
         codelet_tested += 1
-        find_cluster(satSetDF, testDF, short_name, 0)
+        all_clusters, all_test_codelets = find_cluster(satSetDF, testDF, short_name, 0, all_clusters, all_test_codelets)
         #print ("codelet_tested = ", codelet_tested, " Passed = ", si_passed, " Failed = ", si_failed, " No Cluster = ", no_cluster)
     result_df.to_csv('Result_report.csv', index = True, header=True)
     print ("Total No. of codelets tested : ", codelet_tested)
@@ -620,6 +611,7 @@ def do_sat_analysis(satSetDF,testSetDF):
        stats_df.to_csv('statistcs.csv', mode='a', header=False, index=False)
     else :
        stats_df.to_csv('statistcs.csv', mode='w', header=True, index=False)
+    return all_clusters, all_test_codelets
 
 
 def main(argv):
