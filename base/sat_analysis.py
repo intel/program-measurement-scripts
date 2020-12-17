@@ -13,6 +13,7 @@ from pathlib import Path
 from metric_names import NonMetricName
 from metric_names import MetricName
 from generate_SI import compute_only
+from generate_SI import BASIC_NODE_SET
 import os
 # GUI import
 from utils import resource_path as gui_resource_path
@@ -87,7 +88,8 @@ CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', Metric
 #CU_NODE_DICT={MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
 
 # This has to be identical to BASIC_NODE_SET in generate_SI
-BASIC_NODE_LIST=['L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]']
+#BASIC_NODE_LIST=['L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]']
+BASIC_NODE_LIST=list(BASIC_NODE_SET)
 
 # memory traffic
 trafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S ]
