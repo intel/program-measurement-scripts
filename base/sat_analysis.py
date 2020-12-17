@@ -557,7 +557,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
                    do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
         else:
             # empty tuple more friendly to group by operations
-            testDF[NonMetricName.SI_CLUSTER_NAME] = [()]*len(testDF)
+            testDF[NonMetricName.SI_CLUSTER_NAME] = ''
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "No Cluster for the SI Test =>")
@@ -573,7 +573,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             find_cluster(next_tier_df, testDF, short_name, codelet_tier)
         else :
             # empty tuple more friendly to group by operations
-            testDF[NonMetricName.SI_CLUSTER_NAME] = [()]*len(testDF)
+            testDF[NonMetricName.SI_CLUSTER_NAME] = ''
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "Last Tier: No Cluster for the SI Test =>")
