@@ -81,7 +81,7 @@ class SiData(CapacityData):
     def compute_norm(self, norm, df, node_set, lhs):
         # First go ahead to compute the row norm
         # Get the right column names for the sat node by prepending C_ to node names.  Store the results in 'SatCaps' column
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns & BASIC_NODE_SET)))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), set(ns) & BASIC_NODE_SET)))
         # Get the max of the columns specified in 'SatCaps' column
         df[lhs] = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
         if norm == 'matrix':
