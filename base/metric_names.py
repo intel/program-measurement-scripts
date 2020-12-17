@@ -33,7 +33,14 @@ def _memlevelStr(threshold):
     return 'MaxMemlevel[{}%]'.format(threshold)
 
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
-class MetricName(str, Enum):
+class CapeEnum(str, Enum):
+    def __str__(self):
+        return str(self.value)
+
+    def __format__(self, format_spec):
+        return format(self.value, format_spec)
+    
+class MetricName(CapeEnum):
     NAME = "Name"
     SHORT_NAME = "ShortName"
     SRC_NAME = "SourceName"
@@ -189,6 +196,6 @@ class MetricName(str, Enum):
         
 #  For column names that are not measurement data
 # TODO: move some of the MetricNames here.
-class NonMetricName(str, Enum):
+class NonMetricName(CapeEnum):
     SI_CLUSTER_NAME = "SiClusterName"
     SI_SAT_NODES = "SiSatNodes"

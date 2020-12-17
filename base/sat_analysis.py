@@ -519,10 +519,12 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
             peer_dfs = [peer_codelet_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
-            satTrafficString = ''
-            for i, elem in enumerate(satTrafficList): 
-              if i != len(satTrafficList) - 1: satTrafficString += str(elem) + ', '
-              else: satTrafficString += str(elem)
+            #satTrafficString = ''
+            #for i, elem in enumerate(satTrafficList): 
+            #  if i != len(satTrafficList) - 1: satTrafficString += str(elem) + ', '
+            #  else: satTrafficString += str(elem)
+            satTrafficString = ", ".join(map(str, satTrafficList))
+
             testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF)
@@ -554,7 +556,8 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
                 if DO_SUB_CLUSTERING:
                    do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
         else:
-            testDF[NonMetricName.SI_CLUSTER_NAME] = [[]]*len(testDF)
+            # empty tuple more friendly to group by operations
+            testDF[NonMetricName.SI_CLUSTER_NAME] = [()]*len(testDF)
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "No Cluster for the SI Test =>")
@@ -569,7 +572,8 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
         if next_tier_df.shape[0] > 5 :
             find_cluster(next_tier_df, testDF, short_name, codelet_tier)
         else :
-            testDF[NonMetricName.SI_CLUSTER_NAME] = [[]]*len(testDF)
+            # empty tuple more friendly to group by operations
+            testDF[NonMetricName.SI_CLUSTER_NAME] = [()]*len(testDF)
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "Last Tier: No Cluster for the SI Test =>")

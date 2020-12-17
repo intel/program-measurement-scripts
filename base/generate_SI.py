@@ -168,19 +168,30 @@ class SiData(CapacityData):
         if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
             df_to_update[NonMetricName.SI_SAT_NODES]=[DEFAULT_CHOSEN_NODE_SET]*len(df_to_update)
         if not NonMetricName.SI_CLUSTER_NAME in df_to_update.columns: 
-            df_to_update[NonMetricName.SI_CLUSTER_NAME]=[[]]*len(df_to_update)
+            df_to_update[NonMetricName.SI_CLUSTER_NAME]=[()]*len(df_to_update)
 
         self.compute_capacity(df_to_update)
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
 
     def compute_saturation(self, df, chosen_node_set):
-        nodeMax=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].max(axis=0)
-        nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
+        listOfCapacityColumns = list(map(lambda n: "C_{}".format(n), chosen_node_set))
+        #nodeMax=df[listOfCapacityColumns].max(axis=0)
+        # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
+        # The transform() will send the max values back to the original dataframe
+        # see: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.core.groupby.DataFrameGroupBy.transform.html
+        # also: https://stackoverflow.com/questions/24980437/pandas-groupby-and-then-merge-on-original-table
+        newNodeMax = df[listOfCapacityColumns+[NonMetricName.SI_CLUSTER_NAME]].groupby(by=[NonMetricName.SI_CLUSTER_NAME]).transform(max)
+        #nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
+        newNodeMax = newNodeMax.applymap(lambda x: x if x > 1.00 else 100.00)
         print ("<=====compute_saturation======>")
         for node in chosen_node_set:
-            df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-        df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
+            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+            df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / newNodeMax['C_{}'.format(node)]
+        df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
+        df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
+        #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
+        df.drop('SatSats', axis=1, inplace=True)
 
 
     def compute_intensity(self, df, chosen_node_set):
