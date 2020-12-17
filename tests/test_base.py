@@ -35,11 +35,14 @@ class TestGenerateSi(unittest.TestCase):
         # Should add more to check values
 
 class TestSiAnalysis(unittest.TestCase):
-    def test_empty_cluster_df (self):
+    def test_repeated_calls_df (self):
         root = os.path.join(os.path.dirname(__file__), 'data', 'sat_analysis')
         cur_run_df = pd.read_csv(os.path.join(root, 'empty_cluster_case.csv'))
-        cluster_df, si_df = find_clusters(cur_run_df)
-        self.assertFalse(cluster_df.empty)
+        cluster_df1, si_df = find_clusters(cur_run_df)
+        # Run again to get the results
+        cluster_df2, si_df = find_clusters(cur_run_df)
+        self.assertFalse(cluster_df1.empty)
+        self.assertFalse(cluster_df2.empty)
 
 if __name__ == '__main__':
     unittest.main()
