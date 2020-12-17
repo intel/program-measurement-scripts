@@ -163,12 +163,14 @@ class SiData(CapacityData):
         self.Ns = len(self.chosen_node_set)
 
     def compute_CSI(self, df_to_update):
-        chosen_node_set = self.chosen_node_set
         # If SiSatNodes columns not exist.  Fill in default values here
         if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
             df_to_update[NonMetricName.SI_SAT_NODES]=[DEFAULT_CHOSEN_NODE_SET]*len(df_to_update)
         if not NonMetricName.SI_CLUSTER_NAME in df_to_update.columns: 
             df_to_update[NonMetricName.SI_CLUSTER_NAME]=''
+        # Union of all sets of SI_SAT_NODES
+        self.chosen_node_set = set.union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
+        chosen_node_set = self.chosen_node_set
 
         # Fill the NA entries with ''
         df_to_update.fillna({NonMetricName.SI_CLUSTER_NAME:''}, inplace=True)
