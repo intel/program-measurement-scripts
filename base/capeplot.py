@@ -269,7 +269,8 @@ class CapePlot:
 
         # Arrows between multiple runs
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
-        plt.tight_layout()
+        try: plt.tight_layout()
+        except: print("plt.tight_layout() failed")
     
         self.fill_plot_data(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings)
 
