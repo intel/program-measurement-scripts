@@ -90,6 +90,7 @@ memTrafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_L1_GB_P_S
 archIntensityToCheck = []
 
 
+ALL_NODE_LIST =  [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
 # arith
 #percentsToCheck = [MetricName.RATE_REG_SIMD_GB_P_S, "%ops[vec]", "%inst[vec]", "%prf", MetricName.STALL_SB_PCT, MetricName.STALL_RS_PCT, MetricName.STALL_LB_PCT, "%rob", MetricName.STALL_LM_PCT, MetricName.STALL_FE_PCT ]
 #percentsToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_FE_PCT , MetricName.STALL_RS_PCT, MetricName.STALL_LB_PCT]
@@ -173,8 +174,8 @@ def findMaxInColumnsToColor(data, main_traffic, cu_traffic, pyxlSheet):
     columnIndex = data.columns.get_loc(column)
     maxValue = data[column].max()
 
-    # only bother if greater than .7
-    if maxValue >= 0.5:
+    # only bother if greater than .5
+    if maxValue >= 50:
       threshold = maxValue * (1 - cuSatThreshold)
 
       for row in rowsToCheck:
@@ -271,12 +272,14 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
     maxValue = satdata[column].max()
     threshold = maxValue * (1 - satThreshold)
     num = satdata.iloc[row, columnIndex]
-    if num > threshold and threshold > 0.5:
+    if num > threshold and threshold > 50:
       codelet_in_this_tier = True
       #print(short_name, " in current tier.")
       sat_traffic.append(column)
   #if codelet_in_this_tier == False:
     #print(short_name, " not in current tier.")
+  if   codelet_in_this_tier:
+    print ("The sat Threshold in checkCodeletTier :", satThreshold)
   return codelet_in_this_tier
 
 # Find max in traffic columns + perfcent columns, save to maxDict
@@ -286,13 +289,34 @@ def findPeerCodelets(data, traffic, cu_traffic, satList, short_name):
   rowsToCheck = data.index.tolist()
   target_df = pd.DataFrame(columns=data.columns.tolist())
   csv_string = short_name + '_peer_codelet.csv'
+  NodesNotInSatList = set(ALL_NODE_LIST) - set(satList)
+  rowsToCheckForSaturation = []
   for row in rowsToCheck:
+    codelet_in_non_sat_grp = False
+    for column in NodesNotInSatList:
+      columnIndex = data.columns.get_loc(column)
+      maxValue = data[column].max()
+      if column in cu_traffic:
+          if maxValue >= 50:
+              threshold = maxValue * (1 - cuSatThreshold)
+              num = data.iloc[row, columnIndex]
+              if num > threshold:
+                 codelet_in_non_sat_grp = True;
+      else:
+          threshold = maxValue * (1 - satThreshold)
+          num = data.iloc[row, columnIndex]
+          if num > threshold:
+            codelet_in_non_sat_grp = True;
+    if codelet_in_non_sat_grp is False:
+      rowsToCheckForSaturation.append(row);
+  print ("The sat Threshold in findPeerCodelets :", satThreshold)
+  for row in rowsToCheckForSaturation:
     for column in satList:
       # init list of blocks to color 
       columnIndex = data.columns.get_loc(column)
       maxValue = data[column].max()
       if column in cu_traffic:
-          if maxValue >= 0.5:
+          if maxValue >= 50:
               threshold = maxValue * (1 - cuSatThreshold)
               num = data.iloc[row, columnIndex]
               if num > threshold:
@@ -328,7 +352,7 @@ def createSubcluster(data, subSatList, short_name):
           columnIndex = data.columns.get_loc(column)
           # init list of blocks to color 
           num = data.iloc[row, columnIndex]
-          if num <= 0.5:
+          if num <= 50:
               maxOfColumn[column].append(row)
   else:
       for row in rowsToCheck:
@@ -338,7 +362,7 @@ def createSubcluster(data, subSatList, short_name):
           # init list of blocks to color 
           columnIndex = data.columns.get_loc(column)
           num = data.iloc[row, columnIndex]
-          if num >= 0.5:
+          if num >= 50:
               maxOfColumn[column].append(row)
     #end columnfor
   #end rowfor
@@ -381,7 +405,7 @@ def findNextTierInColumns(data, traffic, cu_traffic):
       # only bother if greater than .7
       columnIndex = data.columns.get_loc(column)
       maxValue = data[column].max()
-      if maxValue >= 0.7:
+      if maxValue >= 70:
           threshold = maxValue * (1 - cuSatThreshold)
           try:
              num = data.iloc[row, columnIndex]
@@ -415,13 +439,13 @@ def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTraf
         for column in subNodeTrafficToCheck:
           columnIndex = testDF.columns.get_loc(column)
           cu_val = testDF.iloc[0, columnIndex]
-          if cu_val >= 0.5:
+          if cu_val >= 50:
              sub_nodes.append(column)
         print (sub_nodes)
         print ("calling createSubcluster :", short_name)
         sub_cluster_df = createSubcluster(peer_codelet_df, sub_nodes, short_name)
         sub_clstr_cdlt_count = sub_cluster_df.shape[0]
-        if sub_clstr_cdlt_count >= 2:
+        if sub_clstr_cdlt_count >= 3:
             outputfile = short_name + 'SUB_Tier_'+str(codelet_tier) + "_SI.csv"
             norm = "row"
             title = "SI"
@@ -500,7 +524,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             sat_rng_string += "  "
             sat_rng_string += str(peer_codelet_df[elem].min())
             sat_rng_string += "], "
-        if peer_cdlt_count >= 2:
+        if peer_cdlt_count >= 3:
             for elem in satTrafficList:
                 if elem in CU_NODE_SET:
                     #print (CU_NODE_DICT[elem])
@@ -625,7 +649,7 @@ def main(argv):
       satThreshold = float(sys.argv[3])
       cuSatThreshold = float(sys.argv[4])
 
-    test_data_path = gui_resource_path(os.path.join('clusters', 'si_test.csv'))
+    test_data_path = gui_resource_path(os.path.join('clusters', 'out.csv'))
     #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
     test_data_df = pd.read_csv(test_data_path)
 
