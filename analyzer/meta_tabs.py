@@ -143,17 +143,12 @@ class ShortNameTab(tk.Frame):
     @staticmethod
     def addShortNames(namesDf):
         short_names_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'short_names.csv')
+        if 'Color' not in namesDf.columns: namesDf['Color'] = pd.Series()
         if os.path.getsize(short_names_path) > 0:
             existing_shorts = pd.read_csv(short_names_path)
-            if 'Color' in namesDf.columns:
-                merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
-            else:
-                merged = pd.merge(left=existing_shorts, right=namesDf[[NAME, SHORT_NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
-                merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
-            merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_y', 'Color_x'], inplace=True, errors='ignore')
+            merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
         else: 
-            merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP]]
-            merged['Color'] = pd.Series()
+            merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
         merged.to_csv(short_names_path, index=False)
 
     def __init__(self, parent, tab, level=None):
