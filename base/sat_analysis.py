@@ -523,7 +523,8 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
             my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF)
             all_test_codelets = all_test_codelets.append(my_test_df)
-            cluster_name = str(codelet_tier) + str(satTrafficList)
+            # cluster_name = str(codelet_tier) + str(satTrafficList)
+            cluster_name = str(codelet_tier) + ' ' + satTrafficString
             my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
 
             if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
