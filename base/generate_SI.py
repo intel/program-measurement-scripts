@@ -341,11 +341,13 @@ class SiPlot(CapePlot):
         self.ctxs = lines
 
         # Create a Rectangle patch
+        #TODO: Only plot clusters that are associated with the current variants
         # (but not saved in self.ctxs)
-        colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple']
         for i, cluster in enumerate(self.cluster_df[NonMetricName.SI_CLUSTER_NAME].unique()):
             if cluster in color_labels: color = color_labels[cluster]
-            else: color = colors[i]
+            else: 
+                try: color = self.colors[i]
+                except: color = self.colors[0]
             target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
             print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
             rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 

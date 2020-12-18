@@ -287,7 +287,7 @@ class LoadedData(Observable):
         root.wait_window(self.win)
 
     def compute_colors(self, df, clusters=False):
-        colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple']
+        colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         colorDf = pd.DataFrame() 
         timestamps = df['Timestamp#'].dropna().unique()
         # Get saved color column from short names file

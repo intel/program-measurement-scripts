@@ -180,8 +180,7 @@ class ShortNameTab(tk.Frame):
         return self.table
 
     # Merge user input labels with current mappings and replot
-    def updateLabels(self, table, clusters=False):
-        table_df = table.model.df
+    def updateLabels(self, table_df, clusters=False):
         if self.checkForDuplicates(table_df):
             return
         else:
@@ -424,8 +423,10 @@ class ClusterTab(tk.Frame):
 
     def updateColors(self):
         table_df = self.tab.shortnameTab.table.model.df
-        table_df['Color'] = self.tab.df[NonMetricName.SI_CLUSTER_NAME]
-        self.tab.shortnameTab.updateLabels(self.tab.shortnameTab.table, True)
+        table_df = pd.merge(left=table_df, right=self.tab.df[[NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME]], how='left', on=[NAME, TIMESTAMP])
+        table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
+        table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
+        self.tab.shortnameTab.updateLabels(table_df, True)
     
     def update(self):
         if self.cluster_selected.get() != 'Choose Cluster':

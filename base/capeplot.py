@@ -124,6 +124,7 @@ class CapePlot:
         self.y_axis = y_axis
         self.mappings = mappings
         self.short_names_path = short_names_path
+        self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
 
     # Getter of df, delegate to self.data
     @property
@@ -215,11 +216,10 @@ class CapePlot:
 
     def compute_color_labels(self, df, short_names_path=''):
         color_labels = dict()
-        colors = ['blue', 'red', 'green', 'magenta', 'black', 'yellow', 'cyan']
-        user_colors = [i for i in colors if i not in df['Color'].unique()]
+        user_colors = [i for i in self.colors if i not in df['Color'].unique()]
         i = 0
         for color in df['Color'].unique():
-            if color not in colors: # If it is user-specified then we want to display that in the legend
+            if color not in self.colors: # If it is user-specified then we want to display that in the legend
                 color_labels[color] = user_colors[i]
                 i += 1
             else: # Otherwise we just use the app name in the legend
