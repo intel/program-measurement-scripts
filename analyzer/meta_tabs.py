@@ -190,10 +190,11 @@ class ShortNameTab(tk.Frame):
             # Change the short name in each of the main dfs
             for level in self.tab.data.loadedData.dfs:
                 df = self.tab.data.loadedData.dfs[level]
-                df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
+                df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
                 df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
-                df = self.tab.data.gui.loadedData.compute_colors(df)
-                df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
+                df['Color'] = df["Color_y"].fillna(df["Color_x"])
+                df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
+                df = self.tab.data.gui.loadedData.compute_colors(df, clusters)
                 self.tab.data.loadedData.dfs[level] = df.copy(deep=True)
         for tab in self.tab.plotInteraction.tabs:
             if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)

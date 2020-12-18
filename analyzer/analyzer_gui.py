@@ -286,16 +286,19 @@ class LoadedData(Observable):
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
 
-    def compute_colors(self, df):
+    def compute_colors(self, df, clusters=False):
         colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple']
         colorDf = pd.DataFrame() 
         timestamps = df['Timestamp#'].dropna().unique()
         # Get saved color column from short names file
-        if os.path.getsize(self.short_names_path) > 0:
+        if not clusters and os.path.getsize(self.short_names_path) > 0:
             all_short_names = pd.read_csv(self.short_names_path)
             df.drop(columns=['Color'], inplace=True, errors='ignore')
             df = pd.merge(left=df, right=all_short_names[[NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
             toAdd = df[df['Color'].notnull()]
+            colorDf = colorDf.append(toAdd, ignore_index=True)
+        elif clusters:
+            toAdd = df[df['Color'] != '']
             colorDf = colorDf.append(toAdd, ignore_index=True)
         # Group data by timestamps if less than 2
         #TODO: This is a quick fix for getting multiple colors for whole files, use design doc specs in future
@@ -306,6 +309,10 @@ class LoadedData(Observable):
                 curDf = curDf[curDf['Color'].isna()]
                 curDf['Color'] = colors[index]
                 colorDf = colorDf.append(curDf, ignore_index=True)
+        elif clusters:
+            toAdd = df[df['Color'] == '']
+            toAdd['Color'] = colors[0]
+            colorDf = colorDf.append(toAdd, ignore_index=True)
         else:
             toAdd = df[df['Color'].isna()]
             toAdd['Color'] = colors[0]
