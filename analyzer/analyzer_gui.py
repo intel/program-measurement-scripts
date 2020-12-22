@@ -118,7 +118,7 @@ class LoadedData(Observable):
     def resetTabValues(self):
         self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab,
                 gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
-                 gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
+                gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
         for tab in self.tabs:
             tab.x_scale = tab.orig_x_scale
             tab.y_scale = tab.orig_y_scale
@@ -126,6 +126,8 @@ class LoadedData(Observable):
             tab.y_axis = tab.orig_y_axis
             tab.variants = [gui.loadedData.default_variant] #TODO: edit this out
             tab.current_labels = []
+        # Reset cluster var for SIPlotData so find_si_clusters() is called again 
+        gui.c_siplotData.run_cluster = True
 
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False

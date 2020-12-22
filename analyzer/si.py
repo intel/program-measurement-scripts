@@ -21,6 +21,7 @@ globals().update(MetricName.__members__)
 class SIPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
         super().__init__(loadedData, gui, root, level, 'SIPlot')
+        self.run_cluster = True
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
@@ -28,14 +29,15 @@ class SIPlotData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
-        cluster_df, si_df = find_si_clusters(self.df)
-        # TODO: merge new SI metrics into summary sheet
+        if self.run_cluster:
+            self.cluster_df, self.si_df = find_si_clusters(loadedData.dfs[self.level])
+            self.run_cluster = False
         new_columns = [NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES]
         self.df.drop(columns=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], inplace=True, errors='ignore')
-        self.df = pd.merge(left=self.df, right=si_df[new_columns], how='left', on=[NAME, TIMESTAMP])
+        self.df = pd.merge(left=self.df, right=self.si_df[new_columns], how='left', on=[NAME, TIMESTAMP])
         #cluster_df = pd.read_csv(cluster)
         self.df, self.fig, self.textData = parse_ip_siplot_df\
-            (cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
+            (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
         # Add new metrics to shared dataframe
         self.loadedData.dfs[self.level].drop(columns=['Saturation', 'Intensity'], inplace=True, errors='ignore')
