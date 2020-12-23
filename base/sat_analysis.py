@@ -29,33 +29,10 @@ from utils import resource_path as gui_resource_path
 def find_clusters(current_codelets_runs_df, satThreshold = 0.10, cuSatThreshold = 0.25):
   # Read the optimal data file
   optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
-  #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
   optimal_data_df = pd.read_csv(optimal_data_path)
-  # optimal_data_df[NonMetricName.SI_CLUSTER_NAME] = 'LORE-Optimal'
-  optimal_data_df[NonMetricName.SI_CLUSTER_NAME] = 'Cluster A'
-  # Below assumed all the codelets are associated with FE_tier1 cluster.  
-  # Real implementation, should put the right cluster name
-  current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME] = 'LORE-Optimal'
-  for i in current_codelets_runs_df.index:
-    if i % 2 == 0:
-      current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME][i] = 'Cluster A'
-    else:
-      current_codelets_runs_df[NonMetricName.SI_CLUSTER_NAME][i] = 'Cluster B'
-
-  # current_codelets_runs_df[NonMetricName.SAT_NODES] = ['L2 [GB/s]', 'L3 [GB/s]', 'LM']
-
-  # Load sample FE_tier1 cluster data.  
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
-  sample_cluster_path = gui_resource_path(os.path.join('clusters', 'FE_tier1.csv'))
-  sample_cluster_df = pd.read_csv(sample_cluster_path)
-  sample_cluster_df[NonMetricName.SI_CLUSTER_NAME] = 'Cluster B'
-
   all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
-  # Appending all the cluster dataframe into one to return.  
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
-  #all_clusters = pd.DataFrame()
-  #all_clusters = all_clusters.append(sample_cluster_df, ignore_index=True) 
-  #all_clusters = all_clusters.append(optimal_data_df, ignore_index=True) 
   # return the global cluster and test codelets => to use for plotting
   return all_clusters, all_test_codelets
 
@@ -301,14 +278,14 @@ def findPeerCodelets(data, traffic, cu_traffic, satList, short_name):
               threshold = maxValue * (1 - cuSatThreshold)
               num = data.iloc[row, columnIndex]
               if num > threshold:
-                 codelet_in_non_sat_grp = True;
+                 codelet_in_non_sat_grp = True
       else:
           threshold = maxValue * (1 - satThreshold)
           num = data.iloc[row, columnIndex]
           if num > threshold:
-            codelet_in_non_sat_grp = True;
+            codelet_in_non_sat_grp = True
     if codelet_in_non_sat_grp is False:
-      rowsToCheckForSaturation.append(row);
+      rowsToCheckForSaturation.append(row)
   print ("The sat Threshold in findPeerCodelets :", satThreshold)
   for row in rowsToCheckForSaturation:
     for column in satList:
