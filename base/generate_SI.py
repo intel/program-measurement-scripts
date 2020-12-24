@@ -341,18 +341,18 @@ class SiPlot(CapePlot):
         self.ctxs = lines
 
         # Create a Rectangle patch
-        #TODO: Only plot clusters that are associated with the current variants
         # (but not saved in self.ctxs)
-        for i, cluster in enumerate(self.cluster_df[NonMetricName.SI_CLUSTER_NAME].unique()):
-            if cluster in color_labels: color = color_labels[cluster]
-            else: 
-                try: color = self.colors[i]
-                except: color = self.colors[0]
-            target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
-            print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
-            rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
-                            (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
-            ax.add_patch(rect)
+        for i, cluster in enumerate(self.df[NonMetricName.SI_CLUSTER_NAME].unique()):
+            if cluster:
+                if cluster in color_labels: color = color_labels[cluster]
+                else: 
+                    try: color = self.colors[i]
+                    except: color = self.colors[0]
+                target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
+                print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
+                rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
+                                (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
+                ax.add_patch(rect)
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 

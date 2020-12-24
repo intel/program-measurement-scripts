@@ -14,10 +14,6 @@ from metric_names import NonMetricName
 from sat_analysis import find_clusters as find_si_clusters
 globals().update(MetricName.__members__)
 
-# Sample dummy call to SI script to show how it would work
-#df = pd.DataFrame([[1, 2], [3, 4]], columns=list('AB'))
-#clusters = find_si_clusters(df)
-
 class SIPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
         super().__init__(loadedData, gui, root, level, 'SIPlot')
