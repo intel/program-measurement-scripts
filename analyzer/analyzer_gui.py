@@ -148,10 +148,21 @@ class LoadedData(Observable):
         request_skip_energy = False
         request_skip_stalls = False
         short_names_path = self.short_names_path if os.path.isfile(self.short_names_path) else None
+        # Check if we can use cached summary sheets
+        if data_dir:
+            for name in os.listdir(data_dir):
+                if name.endswith('codelet_summary.xlsx'): 
+                    self.summaryDf = pd.read_excel(os.path.join(data_dir, name))
+                elif name.endswith('source_summary.xlsx'): 
+                    self.srcDf = pd.read_excel(os.path.join(data_dir, name))
+                elif name.endswith('app_summary.xlsx'): 
+                    self.appDf = pd.read_excel(os.path.join(data_dir, name))
         # Codelet summary
-        self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
-            request_use_cpi, request_skip_energy, request_skip_stalls, short_names_path, \
-            False, True, self.mapping)
+        if self.summaryDf.empty:
+            self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
+                request_use_cpi, request_skip_energy, request_skip_stalls, short_names_path, \
+                False, True, self.mapping)
+            if data_dir: self.summaryDf.to_excel(os.path.join(data_dir, 'codelet_summary.xlsx'))
         # self.mapping = self.get_speedups(self.mapping)
         # Add variants from namesDf to summaryDf and mapping file if it exists
         if not self.names.empty: self.add_variants(self.names)
@@ -171,9 +182,13 @@ class LoadedData(Observable):
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         if not self.analytics.empty: self.add_analytics(self.analytics)
         # Source summary
-        self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
+        if self.srcDf.empty:
+            self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
+            if data_dir: self.srcDf.to_excel(os.path.join(data_dir, 'source_summary.xlsx'))
         # Application summary
-        self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
+        if self.appDf.empty:
+            self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
+            if data_dir: self.appDf.to_excel(os.path.join(data_dir, 'app_summary.xlsx'))
         # Add speedups to the corresponding dfs at each level
         if not self.mapping.empty: 
             #self.add_speedup(self.mapping, self.summaryDf)

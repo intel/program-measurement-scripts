@@ -234,7 +234,7 @@ class DataSourcePanel(ScrolledTreePane):
             if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
             for data in os.listdir(self.path):
-                if data.endswith('.xlsx') or data.endswith('.raw.csv'):
+                if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
                     source_path = os.path.join(self.path, data)
                     break
             # Recreate URL from local directory structure if UVSQ file (.xlsx)
