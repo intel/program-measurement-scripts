@@ -5,6 +5,7 @@ import pandas as pd
 from generate_SI import parse_ip_df as parse_ip_siplot_df
 import copy
 import os
+import pickle
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
@@ -26,7 +27,28 @@ class SIPlotData(AnalyzerData):
         # Generate Plot
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
         if self.run_cluster:
-            self.cluster_df, self.si_df = find_si_clusters(loadedData.dfs[self.level])
+            self.cluster_df = pd.DataFrame()
+            self.si_df = pd.DataFrame()
+            cluster_dest = os.path.join(loadedData.data_dir, 'cluster_df.pkl')
+            si_dest = os.path.join(loadedData.data_dir, 'si_df.pkl')
+            # Check to see if we can use cached cluster and si dataframes
+            for name in os.listdir(loadedData.data_dir):
+                if name.endswith('cluster_df.pkl'):
+                    data = open(cluster_dest, 'rb') 
+                    self.cluster_df = pickle.load(data)
+                    data.close()
+                elif name.endswith('si_df.pkl'): 
+                    data = open(si_dest, 'rb') 
+                    self.si_df = pickle.load(data)
+                    data.close()
+            if self.cluster_df.empty or self.si_df.empty:
+                self.cluster_df, self.si_df = find_si_clusters(loadedData.dfs[self.level])
+                data = open(cluster_dest, 'wb')
+                pickle.dump(self.cluster_df, data)
+                data.close()
+                data = open(si_dest, 'wb')
+                pickle.dump(self.si_df, data)
+                data.close()
             self.run_cluster = False
         new_columns = [NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES]
         self.df.drop(columns=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], inplace=True, errors='ignore')

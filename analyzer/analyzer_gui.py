@@ -134,7 +134,9 @@ class LoadedData(Observable):
         if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
         self.sources = sources
         # Add meta data from the timestamp directory
-        if data_dir: self.set_meta_data(data_dir)
+        if data_dir: 
+            self.data_dir = data_dir
+            self.set_meta_data(data_dir)
         # Add short names to cape short names file
         if not self.names.empty:
             ShortNameTab.addShortNames(self.names)
