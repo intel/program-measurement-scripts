@@ -544,6 +544,9 @@ class ChecklistBox(tk.Frame):
             if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mapping)
             else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mapping)
 
+    def set_all(self, val):
+        for var in self.vars: var.set(val)
+
 class VariantTab(tk.Frame):
     def __init__(self, parent, tab, all_variants, variants):
         tk.Frame.__init__(self, parent)
@@ -551,8 +554,12 @@ class VariantTab(tk.Frame):
         self.tab = tab
         self.checkListBox = ChecklistBox(self, all_variants, variants, self.tab, bd=1, relief="sunken", background="white")
         update = tk.Button(self, text='Update', command=self.checkListBox.updateVariants)
+        select_all = tk.Button(self, text='Select All', command= lambda val=1 : self.checkListBox.set_all(val))
+        deselect_all = tk.Button(self, text='Deselect All', command= lambda val=0 : self.checkListBox.set_all(val))
         self.checkListBox.pack(side=tk.LEFT)
-        update.pack(side=tk.LEFT, anchor=tk.NW)
+        update.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
+        select_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
+        deselect_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
 
 class DataTab(tk.Frame):
     def __init__(self, parent, df):
