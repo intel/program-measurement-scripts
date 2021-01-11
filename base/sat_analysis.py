@@ -250,10 +250,11 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
     # init list of blocks to color 
     columnIndex = satdata.columns.get_loc(column)
     maxValue = satdata[column].max()/100
-    threshold = maxValue * (1 - cuSatThreshold)
-    num = satdata.iloc[row, columnIndex]/100
-    if num > threshold and threshold > 0.5:
-      codelet_in_this_tier = True
+    if maxValue >= 0.5:
+       threshold = maxValue * (1 - cuSatThreshold)
+       num = satdata.iloc[row, columnIndex]/100
+       if num > threshold:
+          codelet_in_this_tier = True
       #print(short_name, " in current tier.")
       sat_traffic.append(column)
   #if codelet_in_this_tier == False:
@@ -345,7 +346,7 @@ def findNextTierInColumns(data, traffic, cu_traffic):
       # only bother if greater than .7
       columnIndex = data.columns.get_loc(column)
       maxValue = data[column].max()
-      if maxValue >= 70:
+      if maxValue >= 50:
           threshold = maxValue * (1 - cuSatThreshold)
           try:
              num = data.iloc[row, columnIndex]
