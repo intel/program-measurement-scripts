@@ -251,15 +251,15 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
     columnIndex = satdata.columns.get_loc(column)
     maxValue = satdata[column].max()/100
     if maxValue >= 0.5:
-       threshold = maxValue * (1 - cuSatThreshold)
-       num = satdata.iloc[row, columnIndex]/100
-       if num > threshold:
-          codelet_in_this_tier = True
+      threshold = maxValue * (1 - cuSatThreshold)
+      num = satdata.iloc[row, columnIndex]/100
+      if num > threshold:
+        codelet_in_this_tier = True
       #print(short_name, " in current tier.")
       sat_traffic.append(column)
   #if codelet_in_this_tier == False:
     #print(short_name, " not in current tier.")
-  if   codelet_in_this_tier:
+  if codelet_in_this_tier:
     print ("The sat Threshold in checkCodeletTier :", satThreshold)
   return codelet_in_this_tier
 
