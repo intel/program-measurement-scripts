@@ -39,6 +39,7 @@ from qplot import QPlotData, QPlotTab
 from si import SIPlotData, SIPlotTab
 from custom import CustomData, CustomTab
 from plot_3d import Data3d, Tab3d
+from scurve import ScurveData, ScurveTab
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab
 from plot_interaction import PlotInteraction
 # Importing the MetricName enums to global variable space
@@ -116,7 +117,7 @@ class LoadedData(Observable):
         self.app_mapping = pd.DataFrame()
 
     def resetTabValues(self):
-        self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab,
+        self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab, gui.c_scurveTab,
                 gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
                 gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
         for tab in self.tabs:
@@ -546,7 +547,7 @@ class AnalyzerGui(tk.Frame):
     def clearTabs(self, levels=['All']):
         tabs = []
         if 'Codelet' in levels or 'All' in levels:
-            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab])
+            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveTab])
         if 'Source' in levels or 'All' in levels:
             tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab])
         if 'Application' in levels or 'All' in levels:
@@ -570,10 +571,10 @@ class AnalyzerGui(tk.Frame):
         self.codeletTab = CodeletTab(self.main_note)
         self.coverageData = CoverageData(self.loadedData, self, root, 'Codelet')
         self.summaryTab = SummaryTab(self.main_note, self.coverageData)
-        self.main_note.add(self.summaryTab, text="Summary")
-        self.main_note.add(self.applicationTab, text="Application")
-        self.main_note.add(self.sourceTab, text="Source")
-        self.main_note.add(self.codeletTab, text="Codelet")
+        self.main_note.add(self.summaryTab, text='Summary')
+        self.main_note.add(self.applicationTab, text='Application')
+        self.main_note.add(self.sourceTab, text='Source')
+        self.main_note.add(self.codeletTab, text='Codelet')
         # Each level has its own plot tabs
         application_note = ttk.Notebook(self.applicationTab)
         source_note = ttk.Notebook(self.sourceTab)
@@ -584,17 +585,20 @@ class AnalyzerGui(tk.Frame):
         self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
         self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
         self.c_3dData = Data3d(self.loadedData, self, root, 'Codelet')
+        self.c_scurveData = ScurveData(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
         self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
         self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
         self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
         self.c_customTab = CustomTab(codelet_note, self.c_customData)
         self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
-        codelet_note.add(self.c_trawlTab, text="TRAWL")
-        codelet_note.add(self.c_qplotTab, text="QPlot")
-        codelet_note.add(self.c_siPlotTab, text="SI Plot")
-        codelet_note.add(self.c_customTab, text="Custom")
-        codelet_note.add(self.c_3dTab, text="3D")
+        self.c_scurveTab = ScurveTab(codelet_note, self.c_scurveData)
+        codelet_note.add(self.c_trawlTab, text='TRAWL')
+        codelet_note.add(self.c_qplotTab, text='QPlot')
+        codelet_note.add(self.c_siPlotTab, text='SI Plot')
+        codelet_note.add(self.c_customTab, text='Custom')
+        codelet_note.add(self.c_3dTab, text='3D')
+        codelet_note.add(self.c_scurveTab, text='Scurve')
         codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Plot Data
         self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
@@ -604,9 +608,9 @@ class AnalyzerGui(tk.Frame):
         self.s_trawlTab = TrawlTab(source_note, self.s_trawlData)
         self.s_qplotTab = QPlotTab(source_note, self.s_qplotData)
         self.s_customTab = CustomTab(source_note, self.s_customData)
-        source_note.add(self.s_trawlTab, text="TRAWL")
-        source_note.add(self.s_qplotTab, text="QPlot")
-        source_note.add(self.s_customTab, text="Custom")
+        source_note.add(self.s_trawlTab, text='TRAWL')
+        source_note.add(self.s_qplotTab, text='QPlot')
+        source_note.add(self.s_customTab, text='Custom')
         source_note.pack(fill=tk.BOTH, expand=True)
         # Application Plot Data
         self.a_qplotData = QPlotData(self.loadedData, self, root, 'Application')
@@ -616,9 +620,9 @@ class AnalyzerGui(tk.Frame):
         self.a_trawlTab = TrawlTab(application_note, self.a_trawlData)
         self.a_qplotTab = QPlotTab(application_note, self.a_qplotData)
         self.a_customTab = CustomTab(application_note, self.a_customData)
-        application_note.add(self.a_trawlTab, text="TRAWL")
-        application_note.add(self.a_qplotTab, text="QPlot")
-        application_note.add(self.a_customTab, text="Custom")
+        application_note.add(self.a_trawlTab, text='TRAWL')
+        application_note.add(self.a_qplotTab, text='QPlot')
+        application_note.add(self.a_customTab, text='Custom')
         application_note.pack(fill=tk.BOTH, expand=True)
         self.main_note.pack(side = tk.RIGHT, expand=True)
         infoPw.add(self.main_note, stretch='always')

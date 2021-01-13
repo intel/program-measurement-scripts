@@ -29,7 +29,7 @@ class PlotInteraction():
         self.cur_xlim = self.home_xlim = self.textData['ax'].get_xlim()
         self.cur_ylim = self.home_ylim = self.textData['ax'].get_ylim()
         # Create lists of tabs that need to be synchronized according to the level and update the plot with the saved state
-        self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.summaryTab]
+        self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.summaryTab, self.gui.c_scurveTab]
         self.source_tabs = [self.gui.s_trawlTab, self.gui.s_qplotTab, self.gui.s_customTab]
         self.application_tabs = [self.gui.a_trawlTab, self.gui.a_qplotTab, self.gui.a_customTab]
         if self.level == 'Codelet': 

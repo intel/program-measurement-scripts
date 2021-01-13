@@ -79,7 +79,7 @@ class AxesTab(tk.Frame):
         self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
         self.x_selected = tk.StringVar(value='Choose X Axis Metric')
         x_options = ['Choose X Axis Metric', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]
-        if self.plotType == 'Custom':
+        if self.plotType == 'Custom' or self.plotType == 'Scurve':
             x_menu = AxesTab.custom_axes(self, self.x_selected, self.tab.data.gui)
             y_menu = AxesTab.custom_axes(self, self.y_selected, self.tab.data.gui)
         else:  
@@ -109,7 +109,7 @@ class AxesTab(tk.Frame):
         # Tab grid
         metric_label.grid(row=0, column=0, padx=5, sticky=tk.W)
         scale_label.grid(row=0, column=1, padx=5, sticky=tk.W)
-        x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
+        if self.plotType != 'Scurve': x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
         y_menu.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
         xscale_menu.grid(row=1, column=1, padx=5, sticky=tk.W)
         yscale_menu.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
@@ -130,14 +130,7 @@ class AxesTab(tk.Frame):
         self.tab.plotInteraction.save_plot_state()
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
-            if self.plotType == 'QPlot':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
-            elif self.plotType == 'TRAWL':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
-            elif self.plotType == 'Custom':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
-            elif self.plotType == 'Summary':
-                self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale)
+            self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
 
 class ShortNameTab(tk.Frame):
     @staticmethod
