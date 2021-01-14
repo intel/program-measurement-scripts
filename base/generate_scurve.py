@@ -34,9 +34,10 @@ class ScurvePlot(CapePlot):
         mappings = pd.DataFrame()
         # Get scurve points and labels to plot
         self.scurve = Scurve(ys.tolist())
-        xs = self.scurve.x_vals
-        ys = self.scurve.y_vals
-        mytexts = self.scurve.labels
+        # Convert to array data type so masked access is possible
+        xs = np.array(self.scurve.x_vals)
+        ys = np.array(self.scurve.y_vals)
+        mytexts = np.array(self.scurve.labels)
         super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
             x_axis, y_axis, mappings)
 
