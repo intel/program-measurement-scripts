@@ -1,5 +1,6 @@
 import re
 import sys
+import numpy as np
 import pandas as pd
 import warnings
 import datetime
@@ -243,10 +244,13 @@ class CapePlot:
         self.fig, ax = plt.subplots()
         self.ax = ax
 
-        xmax=max(xs)*1.2
-        ymax=max(ys)*1.2  
-        xmin=min(xs)
-        ymin=min(ys)
+        finiteXs = xs[np.isfinite(xs)]
+        finiteYs = ys[np.isfinite(ys)]
+        xmax=max(finiteXs)*1.2
+        ymax=max(finiteYs)*1.2  
+        xmin=min(finiteXs)
+        ymin=min(finiteYs)
+
 
         # Set specified axis scales
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
