@@ -30,7 +30,7 @@ no_cluster = 0
 unique_sat_node_clusters = []
 unique_tiers = []
 DO_SUB_CLUSTERING = False
-DO_DEBUG_LOGS = True
+DO_DEBUG_LOGS = False
 PRINT_ALL_CLUSTERS = False
 PRINT_COLOURED_TIERS = False
 RUN_SI = True
@@ -255,8 +255,7 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
       num = satdata.iloc[row, columnIndex]/100
       if num > threshold:
         codelet_in_this_tier = True
-      #print(short_name, " in current tier.")
-      sat_traffic.append(column)
+        sat_traffic.append(column)
   #if codelet_in_this_tier == False:
     #print(short_name, " not in current tier.")
   if codelet_in_this_tier:
