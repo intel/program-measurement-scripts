@@ -3,6 +3,7 @@ import graphviz
 import pandas as pd
 import os
 import copy
+import operator
 from os.path import expanduser
 from tkinter import messagebox
 from pandastable import Table
