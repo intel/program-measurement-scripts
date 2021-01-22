@@ -216,7 +216,7 @@ BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FE'}
 # For L1, L2, L3, FLOP 4 node runs
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'VR'}
-DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]'}
+DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 capacity_formula= {
