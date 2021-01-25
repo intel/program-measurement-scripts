@@ -318,6 +318,9 @@ class DataSourcePanel(ScrolledTreePane):
     def setupLocalRoots(self):
         home_dir=expanduser("~")
         self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(home_dir, 'Home', self) )
+        cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data')
+        if os.path.isdir(cape_onedrive):
+            self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_onedrive, 'Intel', self) )
         cape_cache_path= os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
         self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_cache_path, 'Previously Visited', self) )
