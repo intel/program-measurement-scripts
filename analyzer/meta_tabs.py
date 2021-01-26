@@ -110,7 +110,7 @@ class AxesTab(tk.Frame):
         # Tab grid
         metric_label.grid(row=0, column=0, padx=5, sticky=tk.W)
         scale_label.grid(row=0, column=1, padx=5, sticky=tk.W)
-        if self.plotType != 'Scurve': x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
+        x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
         y_menu.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
         xscale_menu.grid(row=1, column=1, padx=5, sticky=tk.W)
         yscale_menu.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)

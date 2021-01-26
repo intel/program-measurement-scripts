@@ -29,19 +29,21 @@ class ScurveAllPlot(CapePlot):
     
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
-        # Scurve doesn't support mappings and x_axis is always 'Rank'
-        x_axis = 'Rank'
+        # Scurve doesn't support mappings
         mappings = pd.DataFrame()
         # Get median value of data
         self.median = median(ys.tolist())
         mytext = self.mk_labels()
         temp_df = pd.DataFrame()
-        temp_df['metric'] = ys.tolist()
+        temp_df['x-metric'] = xs.tolist()
+        temp_df['y-metric'] = ys.tolist()
         temp_df['label'] = mytext
-        temp_df = temp_df.sort_values(by=['metric'])
+        temp_df = temp_df.sort_values(by=['x-metric'])
         mytexts = np.array(temp_df['label'].tolist())
-        ys = np.array(temp_df['metric'].tolist())
+        ys = np.array(temp_df['y-metric'].tolist())
         xs = np.array([i for i in range(len(ys))])
+        if x_axis: x_axis = 'Ranked Order (' + x_axis + ')'
+        else: x_axis = 'Ranked Order (' + self.default_x_axis + ')'
         super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
             x_axis, y_axis, mappings)
 
