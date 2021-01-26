@@ -144,6 +144,9 @@ class MetricName(CapeEnum):
     EXE_PER_RET_UOPS = 'ExeRetUopsRatio',
 
     ARRAY_EFFICIENCY_PCT = 'ArrayEfficiency_%'
+    COUNT_OPS_RHS_OP = 'rhs_op_count'
+    RECURRENCE_BOOL = 'recurrence'
+    SCORE_CLU_PCT = 'clu_scores'
 
     @classmethod
     def opsPct(cls, type):
