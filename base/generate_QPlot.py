@@ -50,7 +50,7 @@ class QPlot(CapacityPlot):
 		return "{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale)
 
 	def draw_contours(self, xmax, ymax, color_labels):
-		ns = [1,2,4,8,16,32]
+		ns = [1,2,4,8,16,32,64]
 		ax = self.ax
 
 		npoints=40
