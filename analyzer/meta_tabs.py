@@ -330,6 +330,11 @@ class MappingsTab(tk.Frame):
     def restoreCustom(df, all_mappings):
         # for each row in all_mappings
         # if before and after are in df -> add to mappings
+        # Auto change user's saved mapping file with the latest naming convention
+        mappings_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv')
+        all_mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
+        'after_name':'After Name', 'after_timestamp#':'After Timestamp'}, inplace=True)
+        all_mappings.to_csv(mappings_path, index=False)
         before = pd.merge(left=df[[NAME, TIMESTAMP]], right=all_mappings, left_on=[NAME, TIMESTAMP], right_on=['Before Name', 'Before Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
         mappings = pd.merge(left=df[[NAME, TIMESTAMP]], right=before, left_on=[NAME, TIMESTAMP], right_on=['After Name', 'After Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
         return mappings
