@@ -326,6 +326,7 @@ class PlotInteraction():
                     return
 
     def togglePoint(self, marker, visible):
+        # TODO: Fix so that binned scurve doesn't get invoked in togglePoint
         for tab in self.tabs:
             otherMarker = tab.plotInteraction.textData['name:marker'][self.textData['marker:name'][marker]]
             otherMarker.set_alpha(visible)

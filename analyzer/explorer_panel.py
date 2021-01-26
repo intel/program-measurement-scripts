@@ -205,12 +205,13 @@ class DataSourcePanel(ScrolledTreePane):
             # gui.loaded_url = self.path # Use live version for now
 
     class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container):
+        def __init__(self, path, name, container, select_fn):
+            self.user_selection = select_fn
             super().__init__(path, name, container)
 
         def open(self):
-            print("file node open:", self.name, self.id) 
-            pass
+            print("file node open:", self.name, self.id)
+            self.container.show_options(file_type='data', select_fn=self.user_selection)
         
     class LocalDirNode(LocalTreeNode):
         def __init__(self, path, name, container):
@@ -227,8 +228,10 @@ class DataSourcePanel(ScrolledTreePane):
                     if d not in self.children:
                         self.children.append(d)
                         self.fullpath= os.path.join(self.path, d)
-                        if os.path.isdir(self.fullpath): # Currently only allow user to open files that were downloaded from a server or in the timestamp format
+                        if os.path.isdir(self.fullpath):
                             self.container.insertNode(self, DataSourcePanel.LocalDirNode(self.fullpath, d, self.container))
+                        elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
+                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection))
 
         def user_selection(self, choice):
             if self.container.win: self.container.win.destroy()
