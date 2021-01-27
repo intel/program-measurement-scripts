@@ -69,7 +69,11 @@ def scurve_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_ax
 class Scurve:
     @staticmethod
     def get_bin(value, bin_width, fn=round):
-        return fn(value / bin_width) * bin_width
+        try:
+            val = fn(value / bin_width) * bin_width
+        except:
+            val = 0
+        return val
  
     def __init__(self, data, bin_width=0.5):
         min_, max_, median_ = min(data), max(data), median(data)

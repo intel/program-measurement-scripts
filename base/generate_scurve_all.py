@@ -51,9 +51,14 @@ class ScurveAllPlot(CapePlot):
         ax = self.ax
         markers = []
         df.reset_index(drop=True, inplace=True)
-        for x, y, label in zip(xs, ys, mytexts):
-            markers.extend(ax.plot(x, y, marker='o', color='blue', 
-                                   label=label, linestyle='', alpha=1))
+        # for x, y, label in zip(xs, ys, mytexts):
+        #     markers.extend(ax.plot(x, y, marker='o', color='blue', 
+        #                            label=label, linestyle='', alpha=1))
+        for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
+            if color in color_labels: # Check if the color is a user specified name, then get the actual color
+                color = color_labels[color]
+            markers.extend(ax.plot(x, y, marker='o', color=color, 
+                                   label=name+str(timestamp), linestyle='', alpha=1))
 
         texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
