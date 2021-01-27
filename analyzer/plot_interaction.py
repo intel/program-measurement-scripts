@@ -15,6 +15,21 @@ from meta_tabs import ChecklistBox
 from explorer_panel import center
 globals().update(MetricName.__members__)
 
+# Extracted from sca(ax) from 3.2.2
+def plt_sca(ax):
+    """ 
+    Set the current Axes instance to *ax*.
+
+    The current Figure is updated to the parent of *ax*.
+    """
+    managers = plt._pylab_helpers.Gcf.get_all_fig_managers()
+    for m in managers:
+        if ax in m.canvas.figure.axes:
+            plt._pylab_helpers.Gcf.set_active(m)
+            m.canvas.figure.sca(ax)
+            return
+    raise ValueError("Axes instance argument was not found in a figure")
+
 class PlotInteraction():
     def __init__(self, tab, df, fig, textData, level, gui, root):
         self.tab = tab
@@ -388,7 +403,6 @@ class PlotInteraction():
             self.adjustText()
 
     def thread_adjustText(self):
-        plt.sca(self.textData['ax'])
         if self.adjusted: # Remove old adjusted texts/arrows and create new texts before calling adjust_text again
             # Store index of hidden texts to update the new texts
             hiddenTexts = []
@@ -428,5 +442,8 @@ class PlotInteraction():
             self.adjusting = True
             if sys.platform == 'darwin':
                 self.thread_adjustText()
-            else:
+            else: 
+                #        plt.sca(self.textData['ax'])
+                # Do this in mainthread
+                plt_sca(self.textData['ax'])
                 threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
