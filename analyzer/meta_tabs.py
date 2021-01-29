@@ -169,7 +169,7 @@ class ShortNameTab(tk.Frame):
         self.table.redraw()
         table_button_frame = tk.Frame(tab)
         table_button_frame.grid(row=3, column=1)
-        tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table)).grid(row=0, column=0)
+        tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table.model.df)).grid(row=0, column=0)
         tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table)).grid(row=0, column=1)
         return self.table
 
@@ -671,67 +671,6 @@ class LabelTab(tk.Frame):
                 # Adjust labels if already adjusted
                 if tab.plotInteraction.adjusted:
                     tab.plotInteraction.adjustText()
-
-    def updateLabels_old(self):
-        current_metrics = []
-        if self.metric1.get() != 'Metric 1': current_metrics.append(self.metric1.get())
-        if self.metric2.get() != 'Metric 2': current_metrics.append(self.metric2.get())
-        if self.metric3.get() != 'Metric 3': current_metrics.append(self.metric3.get())
-        if not current_metrics: return # User hasn't selected any label metrics
-        
-        self.tab.current_labels = current_metrics
-        textData = self.tab.plotInteraction.textData
-
-        # TODO: Update the rest of the plots at the same level with the new checked variants
-        # for tab in self.parent.tab.plotInteraction.tabs:
-        #     for i, cb in enumerate(self.cbs):
-        #         tab.labelTab.checkListBox.vars[i].set(self.vars[i].get())
-        #     tab.current_labels = self.parent.tab.current_labels
-
-        # If nothing selected, revert labels and legend back to original
-        if not self.tab.current_labels:
-            for i, text in enumerate(textData['texts']):
-                text.set_text(textData['orig_mytext'][i])
-                textData['mytext'] = copy.deepcopy(textData['orig_mytext'])
-                textData['legend'].get_title().set_text(textData['orig_legend'])
-        else: 
-            # Update existing plot texts by adding user specified metrics
-            df = self.tab.plotInteraction.df
-            for i, text in enumerate(textData['texts']):
-                toAdd = textData['orig_mytext'][i][:-1]
-                for choice in self.tab.current_labels:
-                    codeletName = textData['names'][i]
-                    # TODO: Clean this up so it's on the edges and not the data points
-                    if choice in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
-                        tempDf = pd.DataFrame()
-                        if not self.tab.mappings.empty: # Mapping
-                            tempDf = self.tab.mappings.loc[(self.tab.mappings['Before Name']+self.tab.mappings['Before Timestamp'].astype(str))==codeletName]
-                        if tempDf.empty: 
-                            if choice == 'Difference': 
-                                tempDf = self.tab.mappings.loc[(self.tab.mappings['After Name']+self.tab.mappings['After Timestamp'].astype(str))==codeletName]
-                                if tempDf.empty:
-                                    value = 'Same'
-                            else: value = 1
-                        else: value = tempDf[choice].iloc[0]
-                    else:
-                        value = df.loc[(df[NAME]+df[TIMESTAMP].astype(str))==codeletName][choice].iloc[0]
-                    if isinstance(value, int) or isinstance(value, float):
-                        toAdd += ', ' + str(round(value, 2))
-                    else:
-                        toAdd += ', ' + str(value)
-                toAdd += ')'
-                text.set_text(toAdd)
-                textData['mytext'][i] = toAdd
-            # Update legend for user to see order of metrics in the label
-            newTitle = textData['orig_legend'][:-1]
-            for choice in self.tab.current_labels:
-                newTitle += ', ' + choice
-            newTitle += ')'
-            textData['legend'].get_title().set_text(newTitle)
-        self.tab.plotInteraction.canvas.draw()
-        # Adjust labels if already adjusted
-        if self.tab.plotInteraction.adjusted:
-            self.tab.plotInteraction.adjustText()
 
 class FilteringTab(tk.Frame):
     def __init__(self, parent, tab):
