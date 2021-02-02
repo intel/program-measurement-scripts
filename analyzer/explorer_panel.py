@@ -9,6 +9,7 @@ import re
 import pickle
 from pathlib import Path
 from utils import center
+import datetime
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -58,13 +59,10 @@ class DataSourcePanel(ScrolledTreePane):
             self.time_stamp = time_stamp
 
     class RemoteNode(RemoteTreeNode):
-        def __init__(self, url, path, name, container, time_stamp=None):
+        def __init__(self, url, cape_path, path, name, container, time_stamp=None):
             super().__init__(path, name, container, time_stamp)
-            self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
+            self.cape_path = cape_path
             self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
-            self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
-            self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
-            self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
             self.children = []
             self.url = url
             self.local_dir_path = ''
@@ -133,7 +131,7 @@ class DataSourcePanel(ScrolledTreePane):
                         time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10] + '_' + link_element.xpath('td[position()=3]/text()')[0][11:13] + '-' + link_element.xpath('td[position()=3]/text()')[0][14:16]
                         full_path = os.path.join(self.path, short_name, time_stamp, name)
                     elif name.endswith('/'): full_path = os.path.join(self.path, name[:-1])
-                    self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, full_path, short_name, self.container))
+                    self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, self.cape_path, full_path, short_name, self.container))
 
         def check_meta(self):
             meta_url = self.url + 'meta/'
@@ -213,25 +211,13 @@ class DataSourcePanel(ScrolledTreePane):
             print("file node open:", self.name, self.id)
             self.container.show_options(file_type='data', select_fn=self.user_selection)
         
+
     class LocalDirNode(LocalTreeNode):
         def __init__(self, path, name, container):
             super().__init__(path, name+'/', container)
             self.children = []
             self.url = ''
 
-        def open(self):
-            print("dir node open:", self.name, self.id)
-            if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', self.name): # timestamp directory holding several files to be loaded
-                self.container.show_options(file_type='data', select_fn=self.user_selection)
-            else:
-                for d in os.listdir(self.path):
-                    if d not in self.children:
-                        self.children.append(d)
-                        self.fullpath= os.path.join(self.path, d)
-                        if os.path.isdir(self.fullpath):
-                            self.container.insertNode(self, DataSourcePanel.LocalDirNode(self.fullpath, d, self.container))
-                        elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
-                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection))
 
         def user_selection(self, choice):
             if self.container.win: self.container.win.destroy()
@@ -260,9 +246,6 @@ class DataSourcePanel(ScrolledTreePane):
     def __init__(self, parent, loadDataSrcFn, gui, root):
         ScrolledTreePane.__init__(self, parent)
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
-        self.UIUC_path = os.path.join(self.cape_path, 'UIUC')
-        self.UVSQ_path = os.path.join(self.cape_path, 'UVSQ')
-        self.UVSQ_2020_path = os.path.join(self.cape_path, 'UVSQ_2020')
         self.loadDataSrcFn = loadDataSrcFn
         self.gui = gui
         self.root = root
@@ -320,18 +303,74 @@ class DataSourcePanel(ScrolledTreePane):
 
     def setupLocalRoots(self):
         home_dir=expanduser("~")
-        self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(home_dir, 'Home', self) )
+        self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
         cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
         if os.path.isdir(cape_onedrive):
-            self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_onedrive, 'Intel', self) )
+            self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
         cape_cache_path= os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.localNode, DataSourcePanel.LocalDirNode(cape_cache_path, 'Previously Visited', self) )
+        self.insertNode(self.localNode, DataSourcePanel.CacheLocalDirNode(cape_cache_path, 'Previously Visited', self) )
 
     def setupRemoteRoots(self):
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', self.UVSQ_path, 'UVSQ', self))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', self.UVSQ_2020_path, 'UVSQ_2020', self))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://vectorization.computer/data/', self.UIUC_path, 'UIUC', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 
+                                                                    self.cape_path, os.path.join(self.cape_path, 'UVSQ'), 'UVSQ', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 
+                                                                    self.cape_path, os.path.join(self.cape_path, 'UVSQ_2020'), 'UVSQ_2020', self))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://vectorization.computer/data/', 
+                                                                    self.cape_path, os.path.join(self.cape_path, 'UIUC'), 'UIUC', self))
+
+    # This tree should handle cache directory
+    class CacheLocalDirNode(LocalDirNode):
+        def __init__(self, path, name, container):
+            super().__init__(path, name, container)
+
+        def open(self):
+            print("dir node open:", self.name, self.id)
+            if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', self.name): # timestamp directory holding several files to be loaded
+                self.container.show_options(file_type='data', select_fn=self.user_selection)
+            else:
+                for d in os.listdir(self.path):
+                    if d not in self.children:
+                        self.children.append(d)
+                        self.fullpath= os.path.join(self.path, d)
+                        if os.path.isdir(self.fullpath):
+                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container))
+                        elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
+                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection))
+
+    # This tree should not visit cache directory
+    class NonCacheLocalDirNode(LocalDirNode):
+        def __init__(self, path, cape_path, cache_path, name, container):
+            super().__init__(path, name, container)
+            self.cache_path = cache_path
+            self.cape_path = cape_path
+
+        def open(self):
+            print("noncached dir node open:", self.name, self.id)
+            for d in os.listdir(self.path):
+                fullpath = os.path.join(self.path, d)
+                if d not in self.children and not os.path.samefile (fullpath, self.cape_path):
+                    self.children.append(d)
+                    #self.fullpath = fullpath
+                    if os.path.isdir(fullpath):
+                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalDirNode(fullpath, self.cape_path, 
+                                                                                             os.path.join(self.cache_path, d), d, self.container))
+                    elif os.path.isfile(fullpath) and (fullpath.endswith('.raw.csv') or fullpath.endswith('.xlsx')):
+                        short_name = d.split('.raw.csv')[0] if d.endswith('.raw.csv') else d.split('.xlsx')[0]
+                        modified_epoch = os.path.getmtime(fullpath)
+                        time_stamp = datetime.datetime.fromtimestamp(modified_epoch).strftime('%Y-%m-%d_%H-%M')
+                        cache_path = os.path.join(self.cache_path, short_name, time_stamp, d)
+                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalFileNode(fullpath, cache_path, d, self.container, self.user_selection))
+
+    class NonCacheLocalFileNode(LocalTreeNode):
+        def __init__(self, path, cache_path, name, container, select_fn):
+            self.user_selection = select_fn
+            super().__init__(path, name, container)
+            self.cache_path = cache_path
+
+        def open(self):
+            print("noncache file node open:", self.name, self.id, self.cache_path)
+            self.container.show_options(file_type='data', select_fn=self.user_selection)
 
 class AnalysisResultsPanel(ScrolledTreePane):
     class DataTreeNode:
