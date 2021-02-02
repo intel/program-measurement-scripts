@@ -382,9 +382,14 @@ def add_trawl_data(out_rows, in_rows):
     try:
         out_rows[SPEEDUP_VEC] = in_rows['potential_speedup.if_fully_vectorized'].values
     except:
-        if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'].values + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'].values)/2
-        dl1_cycles = (in_rows['(L1)_Nb_cycles_min'].values + in_rows['(L1)_Nb_cycles_max'].values)/2
-        out_rows[SPEEDUP_VEC] = dl1_cycles / if_fully_cycles
+        try:
+            if_fully_cycles = (in_rows['(L1)_Nb_cycles_if_fully_vectorized_min'].values + in_rows['(L1)_Nb_cycles_if_fully_vectorized_max'].values)/2
+            dl1_cycles = (in_rows['(L1)_Nb_cycles_min'].values + in_rows['(L1)_Nb_cycles_max'].values)/2
+            out_rows[SPEEDUP_VEC] = dl1_cycles / if_fully_cycles
+        except:
+            # Simply return because we got two exceptions thrown and not likely to have data to compute SPEEDUP_DL1
+            return
+            
 
     try:
         out_rows[SPEEDUP_DL1] = in_rows['time(ORIG) / time(DL1)'].values
