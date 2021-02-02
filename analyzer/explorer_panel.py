@@ -82,7 +82,7 @@ class DataSourcePanel(ScrolledTreePane):
             # Directory node
             else: self.open_directory()
 
-        def user_selection(self, choice):
+        def user_selection(self, choice, node=None):
             if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
             elif choice in ['Overwrite', 'Append']: self.get_files()
