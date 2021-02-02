@@ -10,6 +10,7 @@ import pickle
 from pathlib import Path
 from utils import center
 import datetime
+from shutil import copyfile
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -218,14 +219,21 @@ class DataSourcePanel(ScrolledTreePane):
             self.children = []
             self.url = ''
 
-
-        def user_selection(self, choice):
+        def user_selection(self, choice, node=None):
             if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
-            for data in os.listdir(self.path):
-                if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
-                    source_path = os.path.join(self.path, data)
-                    break
+            if not node: # Then the user has selected a timestamp directory and we find the data file
+                for data in os.listdir(self.path):
+                    if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
+                        source_path = os.path.join(self.path, data)
+                        break
+            else: # The user has selected a noncache data file
+                # Check if we need to create cache directory and copy source file
+                if not os.path.isfile(node.cache_path):
+                    os.makedirs(os.path.dirname(node.cache_path))
+                    copyfile(node.path, node.cache_path)
+                source_path = node.cache_path
+                self.path = os.path.split(source_path)[0]
             # Recreate URL from local directory structure if UVSQ file (.xlsx)
             if source_path.endswith('.xlsx'): self.create_url()
             self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None)
@@ -262,25 +270,25 @@ class DataSourcePanel(ScrolledTreePane):
         self.setupRemoteRoots()
         self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
 
-    def show_options(self, file_type, select_fn):
+    def show_options(self, file_type, select_fn, node=None):
         if file_type == 'html': # OV webpage with no xlsx file
             self.create_dialog_win('Missing Data', 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?', ['Open Webpage', 'Cancel'], select_fn)
         elif file_type == 'data':
             if len(self.gui.loadedData.sources) >= 2: # Currently can only append max 2 files
-                self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'], select_fn)
+                self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'], select_fn, node)
             elif len(self.gui.loadedData.sources) >= 1: # User has option to append to existing file
-                self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'], select_fn)
+                self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'], select_fn, node)
             if not self.gui.loadedData.sources: # Nothing currently loaded so just load the data with no need to warn the user
-                select_fn('Overwrite')
+                select_fn('Overwrite', node)
 
-    def create_dialog_win(self, title, message, options, select_fn):
+    def create_dialog_win(self, title, message, options, select_fn, node=None):
         self.win = tk.Toplevel()
         center(self.win)
         self.win.protocol("WM_DELETE_WINDOW", lambda option='Cancel' : select_fn(option))
         self.win.title(title)
         tk.Label(self.win, text=message).grid(row=0, columnspan=len(options), padx=15, pady=10)
         for i, option in enumerate(options):
-            tk.Button(self.win, text=option, command=lambda choice=option:select_fn(choice)).grid(row=1, column=i, pady=10)
+            tk.Button(self.win, text=option, command=lambda choice=option:select_fn(choice, node)).grid(row=1, column=i, pady=10)
         self.root.wait_window(self.win)
 
     def insertNode(self, parent, node):
@@ -370,7 +378,7 @@ class DataSourcePanel(ScrolledTreePane):
 
         def open(self):
             print("noncache file node open:", self.name, self.id, self.cache_path)
-            self.container.show_options(file_type='data', select_fn=self.user_selection)
+            self.container.show_options(file_type='data', select_fn=self.user_selection, node=self)
 
 class AnalysisResultsPanel(ScrolledTreePane):
     class DataTreeNode:
