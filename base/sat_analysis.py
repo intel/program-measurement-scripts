@@ -15,6 +15,7 @@ from metric_names import NonMetricName
 from metric_names import MetricName
 from generate_SI import compute_only
 from generate_SI import BASIC_NODE_SET
+from sw_bias import compute_sw_bias
 import os
 # GUI import
 from utils import resource_path as gui_resource_path
@@ -34,6 +35,7 @@ DO_DEBUG_LOGS = False
 PRINT_ALL_CLUSTERS = False
 PRINT_COLOURED_TIERS = False
 RUN_SI = True
+RUN_SW_BIAS = False
 
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
@@ -155,7 +157,7 @@ def findMaxInColumnsToColor(data, main_traffic, cu_traffic):
     maxValue = data[column].max()/100
 
     # only bother if greater than .5
-    if maxValue >= .5:
+    if maxValue >= 0.5:
       threshold = maxValue * (1 - cuSatThreshold)
 
       for row in rowsToCheck:
@@ -256,10 +258,6 @@ def checkCodeletTier(satdata, testCdltName, traffic, cu_traffic, sat_traffic):
       if num > threshold:
         codelet_in_this_tier = True
         sat_traffic.append(column)
-  #if codelet_in_this_tier == False:
-    #print(short_name, " not in current tier.")
-  if codelet_in_this_tier:
-    print ("The sat Threshold in checkCodeletTier :", satThreshold)
   return codelet_in_this_tier
 
 # Find max in traffic columns + perfcent columns, save to maxDict
@@ -292,7 +290,6 @@ def findPeerCodelets(data, traffic, cu_traffic, satList, short_name):
             codelet_in_non_sat_grp = True
     if codelet_in_non_sat_grp is False:
       rowsToCheckForSaturation.append(row)
-  print ("The sat Threshold in findPeerCodelets :", satThreshold)
   for row in rowsToCheckForSaturation:
     for column in satList:
       # init list of blocks to color 
@@ -625,8 +622,15 @@ def do_sat_analysis(satSetDF, testSetDF):
         row[MetricName.SHORT_NAME] = short_name
         testDF = testDF.append(row, ignore_index=False)[cols]
         codelet_tested += 1
+		    #find the saturation clusters
         all_clusters, all_test_codelets = find_cluster(satSetDF, testDF, short_name, 0, all_clusters, all_test_codelets)
-        #print ("codelet_tested = ", codelet_tested, " Passed = ", si_passed, " Failed = ", si_failed, " No Cluster = ", no_cluster)
+        if RUN_SW_BIAS:
+            sw_bias_df = compute_sw_bias(testDF)
+            testDF = pd.merge(testDF, sw_bias_df)
+            if DO_DEBUG_LOGS:
+               filename=short_name[-9:]
+               re.sub('[^\w\-_\. ]', '_', filename)
+               testDF.to_csv(filename + '_sw_bias.csv', index = True, header=True)
     result_df.to_csv('Result_report.csv', index = True, header=True)
     print ("Total No. of codelets tested : ", codelet_tested)
     print ("Total No. of codelets Passed SI : ", si_passed)
@@ -652,7 +656,7 @@ def main(argv):
     # if 3 arg specified, assumes 3rd is threshold replacement
     # print("No of sys args : ", len(sys.argv))
 
-    test_data_path = gui_resource_path(os.path.join('clusters', 'out.csv'))
+    test_data_path = sys.argv[2]
     #optimal_data_path = gui_resource_path(os.path.join('clusters', 'tier1_L1.csv'))
     test_data_df = pd.read_csv(test_data_path)
 
