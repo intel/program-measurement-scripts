@@ -217,7 +217,6 @@ class DataSourcePanel(ScrolledTreePane):
         def __init__(self, path, name, container):
             super().__init__(path, name+'/', container)
             self.children = []
-            self.url = ''
 
         def user_selection(self, choice, node=None):
             if self.container.win: self.container.win.destroy()
@@ -235,21 +234,25 @@ class DataSourcePanel(ScrolledTreePane):
                 source_path = node.cache_path
                 self.path = os.path.split(source_path)[0]
             # Recreate URL from local directory structure if UVSQ file (.xlsx)
-            if source_path.endswith('.xlsx'): self.create_url()
-            self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None)
-        
-        def create_url(self):
-            self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview'
-            dirs = []
-            path, name = os.path.split(os.path.dirname(self.path)) # dir_path is self.path
-            while (name != 'UVSQ') and (name != 'UVSQ_2020'):
-                dirs.append(name)
-                path, name = os.path.split(path)
-            dirs.reverse()
-            if name == 'UVSQ_2020':
-                self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview2020'
-            for name in dirs:
-                self.url += '/' + name
+            #if source_path.endswith('.xlsx'): self.create_url()
+            self.open_local_file(choice, source_path)
+            #self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None) 
+            
+        def open_local_file(self, choice, source_path):
+            self.container.openLocalFile(choice, self.path, source_path, None)
+
+        # def create_url(self):
+        #     self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview'
+        #     dirs = []
+        #     path, name = os.path.split(os.path.dirname(self.path)) # dir_path is self.path
+        #     while (name != 'UVSQ') and (name != 'UVSQ_2020'):
+        #         dirs.append(name)
+        #         path, name = os.path.split(path)
+        #     dirs.reverse()
+        #     if name == 'UVSQ_2020':
+        #         self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview2020'
+        #     for name in dirs:
+        #         self.url += '/' + name
 
     def __init__(self, parent, loadDataSrcFn, gui, root):
         ScrolledTreePane.__init__(self, parent)
@@ -309,28 +312,46 @@ class DataSourcePanel(ScrolledTreePane):
             self.firstOpen = False
             self.treeview.column('#0', minwidth=600, width=600) # Current fix for horizontal scrolling
 
+    def setupLocalRoot(self, nonCachePath, name):
+        if not os.path.isdir(nonCachePath):
+            return
+
+        self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self) )
+        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(os.path.join(self.cacheRoot.path, name), name, self, nonCachePath))
+
     def setupLocalRoots(self):
         home_dir=expanduser("~")
-        self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
+        cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
+        cache_root_path = os.path.join(cape_cache_path,'Previously Visited')
+        if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
+        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(cache_root_path , 'Previously Visited', self, None) 
+        self.insertNode(self.localNode, self.cacheRoot)
+        
+        self.setupLocalRoot(home_dir, 'Home')
+        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
+
         cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
-        if os.path.isdir(cape_onedrive):
-            self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
-        cape_cache_path= os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
-        if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.localNode, DataSourcePanel.CacheLocalDirNode(cape_cache_path, 'Previously Visited', self) )
+        self.setupLocalRoot(cape_onedrive, 'Intel')
+        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
+
+
+    def setupRemoteRoot(self, url, name):
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, self.cape_path, os.path.join(self.cape_path, name), name, self))
+        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(os.path.join(self.cacheRoot.path, name), name, self, url))
 
     def setupRemoteRoots(self):
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 
-                                                                    self.cape_path, os.path.join(self.cape_path, 'UVSQ'), 'UVSQ', self))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 
-                                                                    self.cape_path, os.path.join(self.cape_path, 'UVSQ_2020'), 'UVSQ_2020', self))
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode('https://vectorization.computer/data/', 
-                                                                    self.cape_path, os.path.join(self.cape_path, 'UIUC'), 'UIUC', self))
+        self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'UVSQ')
+        self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 'UVSQ_2020')
+        self.setupRemoteRoot('https://vectorization.computer/data/', 'UIUC')
 
     # This tree should handle cache directory
     class CacheLocalDirNode(LocalDirNode):
-        def __init__(self, path, name, container):
+        def __init__(self, path, name, container, url):
             super().__init__(path, name, container)
+            self.url = url
+
+        def open_local_file(self, choice, source_path):
+            self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None) 
 
         def open(self):
             print("dir node open:", self.name, self.id)
@@ -342,7 +363,7 @@ class DataSourcePanel(ScrolledTreePane):
                         self.children.append(d)
                         self.fullpath= os.path.join(self.path, d)
                         if os.path.isdir(self.fullpath):
-                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container))
+                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container, self.url+'/'+d))
                         elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
                             self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection))
 
