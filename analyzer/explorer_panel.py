@@ -263,9 +263,11 @@ class DataSourcePanel(ScrolledTreePane):
         self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source')
         self.localNode = DataSourcePanel.MetaTreeNode('Local')
         self.remoteNode = DataSourcePanel.MetaTreeNode('Remote')
+        self.oneDriveNode = DataSourcePanel.MetaTreeNode('OneDrive')
         self.insertNode(None, self.dataSrcNode)
         self.insertNode(self.dataSrcNode, self.localNode)
         self.insertNode(self.dataSrcNode, self.remoteNode)
+        self.insertNode(self.dataSrcNode, self.oneDriveNode)
         self.opening = False
         self.firstOpen = True
         self.win = None
@@ -312,13 +314,14 @@ class DataSourcePanel(ScrolledTreePane):
             self.firstOpen = False
             self.treeview.column('#0', minwidth=600, width=600) # Current fix for horizontal scrolling
 
-    def setupLocalRoot(self, nonCachePath, name):
+    def setupLocalRoot(self, nonCachePath, name, localMetaNode):
         if not os.path.isdir(nonCachePath):
             return
 
-        self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self) )
+        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self) )
         self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(os.path.join(self.cacheRoot.path, name), name, self, nonCachePath))
 
+    # This includes OneDrive sync roots
     def setupLocalRoots(self):
         home_dir=expanduser("~")
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
@@ -327,11 +330,11 @@ class DataSourcePanel(ScrolledTreePane):
         self.cacheRoot = DataSourcePanel.CacheLocalDirNode(cache_root_path , 'Previously Visited', self, None) 
         self.insertNode(self.localNode, self.cacheRoot)
         
-        self.setupLocalRoot(home_dir, 'Home')
+        self.setupLocalRoot(home_dir, 'Home', self.localNode)
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
 
         cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
-        self.setupLocalRoot(cape_onedrive, 'Intel')
+        self.setupLocalRoot(cape_onedrive, 'Intel', self.oneDriveNode)
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
 
 
