@@ -86,7 +86,7 @@ class PlotInteraction():
         options=[]
         for i in range(len(self.df[SHORT_NAME])):
             options.append('[' + self.df[SHORT_NAME][i] + '] ' + self.df[NAME][i] + ' [' + str(self.df[TIMESTAMP][i]) + ']')
-        self.pointSelector = ChecklistBox(self.plotFrame2, options, options, self, listType='pointSelector', bd=1, relief="sunken", background="white")
+        self.pointSelector = ChecklistBox(self.plotFrame2, options, options, self, listType='pointSelector', short_names=self.df[SHORT_NAME].tolist(), names=self.df[NAME].tolist(), timestamps=self.df[TIMESTAMP].tolist(), bd=1, relief="sunken", background="white")
         self.pointSelector.restoreState(self.stateDictionary)
         # Check if we are loading an analysis result and restore if so
         if self.gui.loadedData.restore: self.restoreAnalysisState()

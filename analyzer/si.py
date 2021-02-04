@@ -49,6 +49,17 @@ class SIPlotData(AnalyzerData):
                 data = open(si_dest, 'wb')
                 pickle.dump(self.si_df, data)
                 data.close()
+            # cluster_dest = os.path.join(loadedData.data_dir, 'cluster_df.xlsx')
+            # si_dest = os.path.join(loadedData.data_dir, 'si_df.xlsx')
+            # for name in os.listdir(loadedData.data_dir):
+            #     if name.endswith('cluster_df.xlsx'):
+            #         self.cluster_df = pd.read_excel(cluster_dest)
+            #     elif name.endswith('si_df.xlsx'): 
+            #         self.si_df = pd.read_excel(si_dest)
+            # if self.cluster_df.empty or self.si_df.empty:
+            #     self.cluster_df, self.si_df = find_si_clusters(loadedData.dfs[self.level])
+            #     self.cluster_df.to_excel(cluster_dest)
+            #     self.si_df.to_excel(si_dest)
             self.run_cluster = False
         new_columns = [NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES]
         self.df.drop(columns=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], inplace=True, errors='ignore')

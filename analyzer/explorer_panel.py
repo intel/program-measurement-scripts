@@ -29,9 +29,12 @@ class DataSourcePanel(ScrolledTreePane):
     class DataTreeNode:
         nextId = 0
         nodeDict = {}
-        def __init__(self, name):
+        def __init__(self, name, parent):
             self.name = name
+            self.parent = parent
             self.id = DataSourcePanel.DataTreeNode.nextId
+            self.children = []
+            if parent: parent.children.append(self)
             DataSourcePanel.DataTreeNode.nextId += 1
             DataSourcePanel.DataTreeNode.nodeDict[self.id]=self
 
@@ -43,28 +46,27 @@ class DataSourcePanel(ScrolledTreePane):
             print("node open:", self.name, self.id) 
 
     class MetaTreeNode(DataTreeNode):
-        def __init__(self, name):
-            super().__init__(name)
+        def __init__(self, name, parent):
+            super().__init__(name, parent)
 
     class LocalTreeNode(DataTreeNode):
-        def __init__(self, path, name, container):
-            super().__init__(name)
+        def __init__(self, path, name, container, parent):
+            super().__init__(name, parent)
             self.container = container
             self.path = path
 
     class RemoteTreeNode(DataTreeNode):
-        def __init__(self, path, name, container, time_stamp=None):
-            super().__init__(name)
+        def __init__(self, path, name, container, parent, time_stamp=None):
+            super().__init__(name, parent)
             self.container = container
             self.path = path
             self.time_stamp = time_stamp
 
     class RemoteNode(RemoteTreeNode):
-        def __init__(self, url, cape_path, path, name, container, time_stamp=None):
-            super().__init__(path, name, container, time_stamp)
+        def __init__(self, url, cape_path, path, name, container, parent, time_stamp=None):
+            super().__init__(path, name, container, parent, time_stamp)
             self.cape_path = cape_path
             self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
-            self.children = []
             self.url = url
             self.local_dir_path = ''
             self.local_file_path = ''
@@ -124,15 +126,14 @@ class DataSourcePanel(ScrolledTreePane):
                 # Check if there exists a meta directory
                 if name == 'meta/': #TODO: Only check this once a user has decided to load a file
                     self.check_meta()
-                if (name.endswith('/') or name.endswith('.raw.csv') or name.endswith('.xlsx')) and name not in self.children:
-                    self.children.append(name)
+                if (name.endswith('/') or name.endswith('.raw.csv') or name.endswith('.xlsx')) and name not in [child.name for child in self.children]:
                     full_url = self.url + name
                     short_name = name.split('.raw.csv')[0] if name.endswith('.raw.csv') else name.split('.xlsx')[0]
                     if name.endswith('.raw.csv') or name.endswith('.xlsx'): 
                         time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10] + '_' + link_element.xpath('td[position()=3]/text()')[0][11:13] + '-' + link_element.xpath('td[position()=3]/text()')[0][14:16]
                         full_path = os.path.join(self.path, short_name, time_stamp, name)
                     elif name.endswith('/'): full_path = os.path.join(self.path, name[:-1])
-                    self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, self.cape_path, full_path, short_name, self.container))
+                    self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, self.cape_path, full_path, short_name, self.container, self))
 
         def check_meta(self):
             meta_url = self.url + 'meta/'
@@ -204,9 +205,9 @@ class DataSourcePanel(ScrolledTreePane):
             # gui.loaded_url = self.path # Use live version for now
 
     class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container, select_fn):
+        def __init__(self, path, name, container, select_fn, parent):
             self.user_selection = select_fn
-            super().__init__(path, name, container)
+            super().__init__(path, name, container, parent)
 
         def open(self):
             print("file node open:", self.name, self.id)
@@ -214,8 +215,8 @@ class DataSourcePanel(ScrolledTreePane):
         
 
     class LocalDirNode(LocalTreeNode):
-        def __init__(self, path, name, container):
-            super().__init__(path, name+'/', container)
+        def __init__(self, path, name, container, parent):
+            super().__init__(path, name, container, parent)
             self.children = []
 
         def user_selection(self, choice, node=None):
@@ -260,10 +261,10 @@ class DataSourcePanel(ScrolledTreePane):
         self.loadDataSrcFn = loadDataSrcFn
         self.gui = gui
         self.root = root
-        self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source')
-        self.localNode = DataSourcePanel.MetaTreeNode('Local')
-        self.remoteNode = DataSourcePanel.MetaTreeNode('Remote')
-        self.oneDriveNode = DataSourcePanel.MetaTreeNode('OneDrive')
+        self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source', None)
+        self.localNode = DataSourcePanel.MetaTreeNode('Local', self.dataSrcNode)
+        self.remoteNode = DataSourcePanel.MetaTreeNode('Remote', self.dataSrcNode)
+        self.oneDriveNode = DataSourcePanel.MetaTreeNode('OneDrive', self.dataSrcNode)
         self.insertNode(None, self.dataSrcNode)
         self.insertNode(self.dataSrcNode, self.localNode)
         self.insertNode(self.dataSrcNode, self.remoteNode)
@@ -317,9 +318,10 @@ class DataSourcePanel(ScrolledTreePane):
     def setupLocalRoot(self, nonCachePath, name, localMetaNode):
         if not os.path.isdir(nonCachePath):
             return
-
-        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self) )
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(os.path.join(self.cacheRoot.path, name), name, self, nonCachePath))
+        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self, localMetaNode) )
+        cache_path = os.path.join(self.cacheRoot.path, name)
+        Path(cache_path).mkdir(parents=True, exist_ok=True)
+        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(cache_path, name, self, None, self.cacheRoot))
 
     # This includes OneDrive sync roots
     def setupLocalRoots(self):
@@ -327,7 +329,7 @@ class DataSourcePanel(ScrolledTreePane):
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         cache_root_path = os.path.join(cape_cache_path,'Previously Visited')
         if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
-        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(cache_root_path , 'Previously Visited', self, None) 
+        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(cache_root_path , 'Previously Visited', self, None, self.localNode) 
         self.insertNode(self.localNode, self.cacheRoot)
         
         self.setupLocalRoot(home_dir, 'Home', self.localNode)
@@ -339,41 +341,43 @@ class DataSourcePanel(ScrolledTreePane):
 
 
     def setupRemoteRoot(self, url, name):
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, self.cape_path, os.path.join(self.cape_path, name), name, self))
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(os.path.join(self.cacheRoot.path, name), name, self, url))
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, self.cape_path, os.path.join(self.cape_path, name), name, self, self.remoteNode))
+        cache_path = os.path.join(self.cacheRoot.path, name)
+        Path(cache_path).mkdir(parents=True, exist_ok=True)
+        cacheNode = DataSourcePanel.CacheLocalDirNode(cache_path, name, self, url, self.cacheRoot)
+        self.insertNode(self.cacheRoot, cacheNode)
 
     def setupRemoteRoots(self):
+        self.setupRemoteRoot('https://vectorization.computer/data/', 'UIUC')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'UVSQ')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 'UVSQ_2020')
-        self.setupRemoteRoot('https://vectorization.computer/data/', 'UIUC')
 
     # This tree should handle cache directory
     class CacheLocalDirNode(LocalDirNode):
-        def __init__(self, path, name, container, url):
-            super().__init__(path, name, container)
+        def __init__(self, path, name, container, url, parent):
+            super().__init__(path, name, container, parent)
             self.url = url
 
         def open_local_file(self, choice, source_path):
             self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None) 
 
         def open(self):
-            print("dir node open:", self.name, self.id)
+            print("dir node open:", self.name, self.id, self.url)
             if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', self.name): # timestamp directory holding several files to be loaded
                 self.container.show_options(file_type='data', select_fn=self.user_selection)
             else:
                 for d in os.listdir(self.path):
-                    if d not in self.children:
-                        self.children.append(d)
+                    if d not in [child.name for child in self.children]:
                         self.fullpath= os.path.join(self.path, d)
                         if os.path.isdir(self.fullpath):
-                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container, self.url+'/'+d))
+                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container, self.url+'/'+d if self.url else None, self))
                         elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
-                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection))
+                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection, self))
 
     # This tree should not visit cache directory
     class NonCacheLocalDirNode(LocalDirNode):
-        def __init__(self, path, cape_path, cache_path, name, container):
-            super().__init__(path, name, container)
+        def __init__(self, path, cape_path, cache_path, name, container, parent):
+            super().__init__(path, name, container, parent)
             self.cache_path = cache_path
             self.cape_path = cape_path
 
@@ -381,23 +385,21 @@ class DataSourcePanel(ScrolledTreePane):
             print("noncached dir node open:", self.name, self.id)
             for d in os.listdir(self.path):
                 fullpath = os.path.join(self.path, d)
-                if d not in self.children and not os.path.samefile (fullpath, self.cape_path):
-                    self.children.append(d)
+                if d not in [child.name for child in self.children] and not os.path.samefile (fullpath, self.cape_path):
                     #self.fullpath = fullpath
                     if os.path.isdir(fullpath):
-                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalDirNode(fullpath, self.cape_path, 
-                                                                                             os.path.join(self.cache_path, d), d, self.container))
+                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalDirNode(fullpath, self.cape_path, os.path.join(self.cache_path, d), d, self.container, self))
                     elif os.path.isfile(fullpath) and (fullpath.endswith('.raw.csv') or fullpath.endswith('.xlsx')):
                         short_name = d.split('.raw.csv')[0] if d.endswith('.raw.csv') else d.split('.xlsx')[0]
                         modified_epoch = os.path.getmtime(fullpath)
                         time_stamp = datetime.datetime.fromtimestamp(modified_epoch).strftime('%Y-%m-%d_%H-%M')
                         cache_path = os.path.join(self.cache_path, short_name, time_stamp, d)
-                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalFileNode(fullpath, cache_path, d, self.container, self.user_selection))
+                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalFileNode(fullpath, cache_path, d, self.container, self.user_selection, self))
 
     class NonCacheLocalFileNode(LocalTreeNode):
-        def __init__(self, path, cache_path, name, container, select_fn):
+        def __init__(self, path, cache_path, name, container, select_fn, parent):
             self.user_selection = select_fn
-            super().__init__(path, name, container)
+            super().__init__(path, name, container, parent)
             self.cache_path = cache_path
 
         def open(self):
