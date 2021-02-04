@@ -442,7 +442,7 @@ class ClusterTab(tk.Frame):
             self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class ChecklistBox(tk.Frame):
-    def __init__(self, parent, choices, current_choices, tab, listType='', **kwargs):
+    def __init__(self, parent, choices, current_choices, tab, listType='', short_names=[], names=[], timestamps=[], **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
         self.parent=parent
         self.tab=tab
@@ -461,7 +461,8 @@ class ChecklistBox(tk.Frame):
             if choice not in current_choices:
                 var.set(0)
             self.vars.append(var)
-            self.names.append(choice.split(' ', 1)[-1].rsplit(' ', 1)[0] + choice.rsplit(' ', 1)[-1][1:-1])
+            if short_names and names and timestamps:
+                self.names.append(names[index] + str(timestamps[index]))
             cb = tk.Checkbutton(self, var=var, text=choice,
                                 onvalue=1, offvalue=0,
                                 anchor="w", width=100, background=bg,
