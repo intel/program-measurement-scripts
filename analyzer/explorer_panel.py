@@ -321,7 +321,7 @@ class DataSourcePanel(ScrolledTreePane):
         self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self, localMetaNode) )
         cache_path = os.path.join(self.cacheRoot.path, name)
         Path(cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(cache_path, name, self, nonCachePath, self.cacheRoot))
+        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(cache_path, name, self, None, self.cacheRoot))
 
     # This includes OneDrive sync roots
     def setupLocalRoots(self):
