@@ -171,8 +171,15 @@ class ShortNameTab(tk.Frame):
         table_button_frame.grid(row=3, column=1)
         tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table.model.df)).grid(row=0, column=0)
         tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table)).grid(row=0, column=1)
+        tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace()).grid(row=0, column=2)
         return self.table
 
+    def findAndReplace(self):
+        find=tk.simpledialog.askstring("Find", "Find what:")
+        replace=tk.simpledialog.askstring("Replace", "Replace with:")
+        self.table.model.df['ShortName']=self.table.model.df['ShortName'].str.replace(find, replace)
+        self.table.redraw()
+    
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table_df, clusters=False):
         if self.checkForDuplicates(table_df):
