@@ -5,6 +5,9 @@ from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName
+import numpy as np
+import copy
+
 globals().update(MetricName.__members__)
 
 class AnalyzerData(Observable):
@@ -30,7 +33,7 @@ class AnalyzerData(Observable):
         self.df = loadedData.dfs[self.level].copy(deep=True)
     
 class AnalyzerTab(tk.Frame):
-    def __init__(self, parent, data, title, x_axis, y_axis):
+    def __init__(self, parent, data, title, x_axis, y_axis, extra_metrics):
         super().__init__(parent)
         if data is not None:
             data.add_observers(self)
@@ -47,6 +50,7 @@ class AnalyzerTab(tk.Frame):
         # Each tab has a paned window with the data tables and plot
         self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
+        self.extra_metrics = extra_metrics
 
     def setup(self, metrics):
         # Clear previous plots and meta data tabs TODO: investigate if we can update rather than rebuilding
@@ -63,6 +67,8 @@ class AnalyzerTab(tk.Frame):
         self.tableFrame = tk.Frame(self.window)
         self.window.add(self.tableFrame, stretch='always')
         # Summary Data table
+        for missing in set(metrics)-set(self.df.columns):
+            self.df[missing] = np.nan
         self.summaryDf = self.df[metrics]
         self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
         self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
@@ -90,3 +96,16 @@ class AnalyzerTab(tk.Frame):
         self.shortnameTab.buildLabelTable(self.df, self.shortnameTab)
         if self.level == 'Codelet':
             self.mappingsTab.buildMappingsTab(self.df, self.mappings)
+
+
+    def get_metrics(self):
+        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
+        metrics.extend(self.extra_metrics)
+        metrics.extend(self.data.gui.loadedData.common_columns_end)
+        return metrics
+        
+    def notify(self, data):
+        # Metrics to be displayed in the data table are unique for each plot
+        metrics = self.get_metrics()
+        self.setup(metrics)
+        self.buildTableTabs()

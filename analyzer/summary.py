@@ -26,17 +26,13 @@ class CoverageData(AnalyzerData):
 
 class SummaryTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Summary', 'C_FLOP [GFlop/s]', COVERAGE_PCT)
+        super().__init__(parent, data, 'Summary', 'C_FLOP [GFlop/s]', COVERAGE_PCT, [])
 
     def notify(self, data):
         # GuideTab currently in development so sometimes a child and sometimes not
         try: self.guideTab.destroy()
         except: pass
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
-        metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(metrics)
-        self.buildTableTabs()
+        super().notify(data)
 
     # Create meta tabs
     def buildTableTabs(self):

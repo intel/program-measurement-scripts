@@ -28,13 +28,11 @@ class ScurveAllData(AnalyzerData):
 
 class ScurveAllTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Scurve_all', 'C_FLOP [GFlop/s]', 'C_FLOP [GFlop/s]')
+        super().__init__(parent, data, 'Scurve_all', 
+                         'C_FLOP [GFlop/s]', 'C_FLOP [GFlop/s]', [])
 
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.data.df.columns.tolist()
-        super().setup(metrics)
-        self.buildTableTabs()
+    def get_metrics(self):
+        return self.data.df.columns.tolist()
 
     # Create meta tabs
     def buildTableTabs(self):

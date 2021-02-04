@@ -25,8 +25,9 @@ class CustomData(AnalyzerData):
 
 class CustomTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Custom', RATE_FP_GFLOP_P_S, COVERAGE_PCT)
+        super().__init__(parent, data, 'Custom', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
+    # TODO: Check with Elias - why the complication 
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = self.data.df.columns.tolist()

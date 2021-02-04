@@ -79,17 +79,10 @@ class SIPlotData(AnalyzerData):
 
 class SIPlotTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'FE_tier1', 'Intensity', 'Saturation')
+        super().__init__(parent, data, 'FE_tier1', 'Intensity', 'Saturation',
+                         ['Saturation', 'Intensity', 'SI', NonMetricName.SI_CLUSTER_NAME])
         self.cluster = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
     
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
-        metrics.extend(['Saturation', 'Intensity', 'SI', NonMetricName.SI_CLUSTER_NAME])
-        metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(metrics)
-        self.buildTableTabs()
-
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()

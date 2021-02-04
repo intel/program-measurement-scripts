@@ -25,15 +25,8 @@ class TRAWLData(AnalyzerData):
 
 class TrawlTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'TRAWL', 'C_FLOP [GFlop/s]', SPEEDUP_VEC)
-
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
-        metrics.extend([SPEEDUP_VEC, SPEEDUP_DL1])
-        metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(metrics)
-        self.buildTableTabs()
+        super().__init__(parent, data, 'TRAWL', 'C_FLOP [GFlop/s]', SPEEDUP_VEC,
+                         [SPEEDUP_VEC, SPEEDUP_DL1])
 
     # Create meta tabs
     def buildTableTabs(self):

@@ -37,16 +37,9 @@ class QPlotData(AnalyzerData):
 
 class QPlotTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'QPlot', 'C_FLOP [GFlop/s]', 'C_max [GB/s]')
-
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
-        metrics.extend(['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
+        super().__init__(parent, data, 'QPlot', 'C_FLOP [GFlop/s]', 
+                         'C_max [GB/s]', ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
                 'C_RAM [GB/s]', 'C_max [GB/s]'])
-        metrics.extend(self.data.gui.loadedData.common_columns_end)
-        super().setup(metrics)
-        self.buildTableTabs()
 
     # Create meta tabs
     def buildTableTabs(self):
