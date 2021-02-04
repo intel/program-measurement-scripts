@@ -203,3 +203,5 @@ class NonMetricName(CapeEnum):
     SI_CLUSTER_NAME = "SiClusterName"
     SI_SAT_NODES = "SiSatNodes"
     SI_SAT_TIER = "SiTier"
+
+KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
