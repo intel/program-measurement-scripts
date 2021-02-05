@@ -488,34 +488,20 @@ class ChecklistBox(tk.Frame):
 
     def updatePlot(self, name, index):
         selected = self.vars[index].get()
-        if selected:
-            for tab in self.tab.tabs:
-                tab.plotInteraction.pointSelector.vars[index].set(1)
-                marker = tab.plotInteraction.textData['name:marker'][name]
-                marker.set_alpha(1)
-                text = tab.plotInteraction.textData['marker:text'][marker]
-                text.set_alpha(1)
-                try: tab.plotInteraction.textData['text:arrow'][text].set_visible(True)
-                except: pass
-                try: 
-                    for mapping in tab.plotInteraction.textData['name:mapping'][name]:
-                        mapping.set_alpha(1)
-                except: pass
-                tab.plotInteraction.canvas.draw()
-        else:
-            for tab in self.tab.tabs:
-                tab.plotInteraction.pointSelector.vars[index].set(0)
-                marker = tab.plotInteraction.textData['name:marker'][name]
-                marker.set_alpha(0)
-                text = tab.plotInteraction.textData['marker:text'][marker]
-                text.set_alpha(0)
-                try: tab.plotInteraction.textData['text:arrow'][text].set_visible(False)
-                except: pass
-                try: 
-                    for mapping in tab.plotInteraction.textData['name:mapping'][name]:
-                        mapping.set_alpha(0)
-                except: pass
-                tab.plotInteraction.canvas.draw()
+        selected_value = 1 if selected else 0
+        for tab in self.tab.tabs:
+            tab.plotInteraction.pointSelector.vars[index].set(selected_value)
+            marker = tab.plotInteraction.textData['name:marker'][name]
+            marker.set_alpha(selected_value)
+            text = tab.plotInteraction.textData['marker:text'][marker]
+            text.set_alpha(selected_value) 
+            try: tab.plotInteraction.textData['text:arrow'][text].set_visible(selected)
+            except: pass
+            try: 
+                for mapping in tab.plotInteraction.textData['name:mapping'][name]:
+                    mapping.set_alpha(selected_value)
+            except: pass
+            tab.plotInteraction.canvas.draw()
 
     def getCheckedItems(self):
         values = []
