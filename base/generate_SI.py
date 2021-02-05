@@ -131,10 +131,10 @@ class SiData(CapacityData):
         #cur_run_data_df = cur_run_data_df.append(cur_run_df, ignore_index=False)[column_list]
 
         #cluster_and_cur_run_df = concat_ordered_columns([cluster_df,cur_run_data_df])
-        cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])[column_list]
+        #cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])[column_list]
         # Not limiting the column list based on cluster_df due to a bug cluster_df returns less metrics
         # And no reason to limit columns
-        #cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])
+        cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])
         #self.cluster_df = cluster_df
 
         # Compute Capacity, Saturation and intensity again for all the runs (cluster + current runs).
