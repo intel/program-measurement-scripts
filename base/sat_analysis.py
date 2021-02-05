@@ -50,6 +50,10 @@ def find_clusters(current_codelets_runs_df, memAlusatThreshold = 0.10, cuSatThre
   optimal_data_df = pd.read_csv(optimal_data_path)
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
   all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
+  # filter out the unnecessary columns
+  all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]]
+  all_test_codelets=all_test_codelets[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]]
+
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
   # return the global cluster and test codelets => to use for plotting
   return all_clusters, all_test_codelets
