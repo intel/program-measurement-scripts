@@ -118,7 +118,12 @@ class LoadedData(Observable):
         self.app_mapping = pd.DataFrame()
 
     def resetTabValues(self):
-        self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab, gui.c_scurveTab, gui.c_scurveAllTab,
+        #self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab, \
+        #             gui.c_scurveTab, gui.c_scurveAllTab, \
+        #        gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
+        #        gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
+        self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.summaryTab, \
+                     gui.c_scurveAllTab, \
                 gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
                 gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
         for tab in self.tabs:
@@ -548,7 +553,8 @@ class AnalyzerGui(tk.Frame):
     def clearTabs(self, levels=['All']):
         tabs = []
         if 'Codelet' in levels or 'All' in levels:
-            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveTab, gui.c_scurveAllTab])
+            tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveAllTab])
+            # tabs.extend([gui.summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveTab, gui.c_scurveAllTab])
         if 'Source' in levels or 'All' in levels:
             tabs.extend([gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab])
         if 'Application' in levels or 'All' in levels:
@@ -586,7 +592,10 @@ class AnalyzerGui(tk.Frame):
         self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
         self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
         self.c_3dData = Data3d(self.loadedData, self, root, 'Codelet')
-        self.c_scurveData = ScurveData(self.loadedData, self, root, 'Codelet')
+        # binned scurve break datapoint selection because of different text:marker map
+        # Disable for now as not used.  
+        # To enable, need to compute text:marker to-and-from regular text:marker to binned text:marker
+        # self.c_scurveData = ScurveData(self.loadedData, self, root, 'Codelet')
         self.c_scurveAllData = ScurveAllData(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
         self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
@@ -594,14 +603,14 @@ class AnalyzerGui(tk.Frame):
         self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
         self.c_customTab = CustomTab(codelet_note, self.c_customData)
         self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
-        self.c_scurveTab = ScurveTab(codelet_note, self.c_scurveData)
+        # self.c_scurveTab = ScurveTab(codelet_note, self.c_scurveData)
         self.c_scurveAllTab = ScurveAllTab(codelet_note, self.c_scurveAllData)
         codelet_note.add(self.c_trawlTab, text='TRAWL')
         codelet_note.add(self.c_qplotTab, text='QPlot')
         codelet_note.add(self.c_siPlotTab, text='SI Plot')
         codelet_note.add(self.c_customTab, text='Custom')
         codelet_note.add(self.c_3dTab, text='3D')
-        codelet_note.add(self.c_scurveTab, text='S-Curve (Bins)')
+        # codelet_note.add(self.c_scurveTab, text='S-Curve (Bins)')
         codelet_note.add(self.c_scurveAllTab, text='S-Curve')
         codelet_note.pack(fill=tk.BOTH, expand=True)
         # Source Plot Data
