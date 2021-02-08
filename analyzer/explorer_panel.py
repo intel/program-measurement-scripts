@@ -1,3 +1,6 @@
+# magic for mime type finding for a file
+# need to run pip install python-magic-bin (not python-magic)
+import magic
 import tkinter as tk
 from tkinter import ttk
 import os
@@ -11,6 +14,7 @@ from pathlib import Path
 from utils import center
 import datetime
 from shutil import copyfile
+from abc import ABC, abstractmethod
 
 class ScrolledTreePane(tk.Frame):
     def __init__(self, parent):
@@ -26,6 +30,94 @@ class ScrolledTreePane(tk.Frame):
         self.treeview.pack(fill=tk.BOTH, expand=1)  
 
 class DataSourcePanel(ScrolledTreePane):
+    class DataSource(ABC):
+        pass
+
+    class WebServer(DataSource):
+        def getContentType (self, url):
+            self.page = requests.get(url)
+            return self.page.headers['content-type']
+
+        def get_meta_filenames(self, meta_url):
+            meta_page = requests.get(meta_url)
+            names, link_element = self.directory_file_names(meta_page)
+            return names
+            
+        # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
+        # TODO: just use data_filename to name meta files to avoid looping data files
+        def download_data_and_meta(self, data_url, local_dir):
+            url_parts = data_url.rsplit('/', 1) 
+            dir_url = url_parts[0] + '/' # Get the data directory to download any corresponding files
+            data_filename = url_parts[1]
+            short_name = data_filename.split('.raw.csv')[0] if data_filename.endswith('.raw.csv') else data_filename.split('.xlsx')[0]
+            data_and_meta_exts =  ['.xlsx', '.raw.csv', '.mapping.csv', '.analytics.csv', '.names.csv']
+            data_and_meta_files = [short_name + ext for ext in data_and_meta_exts]
+            dir_page = requests.get(dir_url)
+            tree = html.fromstring(dir_page.content)
+            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
+                file_name = (link_element.xpath('td[position()=2]/a')[0]).get('href')
+                if file_name in data_and_meta_files:
+                    file_data = requests.get(dir_url + file_name)
+                    open(os.path.join(local_dir, file_name), 'wb').write(file_data.content)
+                    # Add new mappings data to database
+                    #if file_name == self.name + '.mapping.csv':
+                    #    pass
+                        # new_mappings = pd.read_csv(os.path.join(local_dir, file_name))
+                        # all_mappings = pd.read_csv(self.mappings_path)
+                        # all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
+                        # all_mappings.to_csv(self.mappings_path, index=False)
+
+        def directory_file_names(self, page):
+            tree = html.fromstring(page.content)
+            names = []
+            link_elements = []
+            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
+                hyperlink = link_element.xpath('td[position()=2]/a')[0]
+                names.append(hyperlink.get('href'))
+                link_elements.append(link_element)
+            names = self.remove_webpages(names)
+            return names, link_elements
+
+        def directory_file_names_timestamps(self, url):
+            page = requests.get(url)
+            names, link_elements = self.directory_file_names(page)
+            raw_timestamps = [link_element.xpath('td[position()=3]/text()')[0] for link_element in link_elements]
+            timestamps = [raw_ts[:10] + '_' + raw_ts[11:13] + '-' + raw_ts[14:16] for raw_ts in raw_timestamps]
+            return names, timestamps
+
+        def remove_webpages(self, names):
+            data_files = [i.split('.xlsx')[0]+'/' for i in names if i.endswith('.xlsx')]
+            return [i for i in names if i not in data_files]
+
+        def get_file(self, src, dst): 
+            file_data = requests.get(src) 
+            open(dst, 'wb').write(file_data.content)
+
+        def isdir(self, fullurl): 
+            return fullurl.endswith('/')
+
+        def isfile(self, fullurl):
+            return not self.isdir(fullurl)
+            
+            
+    class FileSystem(DataSource):
+        def getContentType (self, path):
+            return magic.from_file(path, mime=True)
+        
+        def directory_file_names_timestamps(self, cur_dir):
+            names = os.listdir(cur_dir)
+            fullnames=[os.path.join(cur_dir, n) for n in names]
+            modified_epochs = [os.path.getmtime(fn) for fn in fullnames]
+            time_stamps = [datetime.datetime.fromtimestamp(epoch).strftime('%Y-%m-%d_%H-%M') for epoch in modified_epochs]
+            return names, time_stamps
+
+        def isdir(self, fullpath): 
+            return os.path.isdir(fullpath)
+
+        def isfile(self, fullpath):
+            return os.path.isfile(fullpath)
+            
+    
     class DataTreeNode:
         nextId = 0
         nodeDict = {}
@@ -49,129 +141,84 @@ class DataSourcePanel(ScrolledTreePane):
         def __init__(self, name, parent):
             super().__init__(name, parent)
 
-    class LocalTreeNode(DataTreeNode):
-        def __init__(self, path, name, container, parent):
+    class RealTreeNode(DataTreeNode):
+        def __init__(self, name, parent, virtual_path, real_path, container):
             super().__init__(name, parent)
+            self.virtual_path = virtual_path
+            self.real_path = real_path
             self.container = container
-            self.path = path
 
-    class RemoteTreeNode(DataTreeNode):
-        def __init__(self, path, name, container, parent, time_stamp=None):
-            super().__init__(name, parent)
-            self.container = container
-            self.path = path
-            self.time_stamp = time_stamp
+        def get_root_virtual_path(self):
+            if (isinstance(self.parent, DataSourcePanel.RealTreeNode)):
+                # If parent is also remote node, get root url there
+                return self.parent.get_root_virtual_path()
+            else:
+                # If parent is not remote node, the url of this node is the root
+                return self.virtual_path
+        
+    class InternalNode(RealTreeNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, 
+                     data_source, terminalNodeClass):
+            super().__init__(name, parent, virtual_path, real_path, container)
+            self.data_src = data_source
+            # These class objects are used to create object of internal and terminal nodes
+            self.terminalNodeClass = terminalNodeClass
+            self.internalNodeClass = type(self)
 
-    class RemoteNode(RemoteTreeNode):
-        def __init__(self, url, cape_path, path, name, container, parent, time_stamp=None):
-            super().__init__(path, name, container, parent, time_stamp)
-            self.cape_path = cape_path
-            self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
-            self.url = url
-            self.local_dir_path = ''
-            self.local_file_path = ''
+        # Whether to skip next potential child with name
+        def skip(self, name):
+            return False
+
+
+        # Return names and time_stamps of potential children nodes to visit
+        def get_children_names_timestamps(self):
+            return self.data_src.directory_file_names_timestamps(self.virtual_path)
+            
+        # Create an internal node to be added if name tells us this is internal
+        def makeInternalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path,  name)
+            if self.data_src.isdir(full_virtual_path): 
+                full_real_path = re.sub('/$','', os.path.join(self.real_path, name))
+                # Use self.internalNodeClass rather than explict class name so this handles subclassing automatically
+                return self.internalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
+
+        # Create an terminal node to be added if name tells us this is terminal
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path,  name)
+            if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')): 
+                full_real_path = os.path.join(self.real_path, name, time_stamp, name)
+                # Use self.terminalNodeClass rather than explict class name so this handles subclassing automatically
+                return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
 
         def open(self):
-            print("remote node open:", self.name, self.id) 
-            self.page = requests.get(self.url)
-            content_type = self.page.headers['content-type']
-            # Webpage node
-            if content_type == 'text/html':
-                self.container.show_options(file_type='html', select_fn=self.user_selection)
-            # Data node
-            elif self.path.endswith('.raw.csv') or self.path.endswith('.xlsx'):
-                self.container.show_options(file_type='data', select_fn=self.user_selection)
+            print("internal node open:", self.name, self.id) 
             # Directory node
-            else: self.open_directory()
-
-        def user_selection(self, choice, node=None):
-            if self.container.win: self.container.win.destroy()
-            if choice == 'Cancel': return 
-            elif choice in ['Overwrite', 'Append']: self.get_files()
-            url = None
-            if self.url.endswith('.xlsx'): url = self.url[:-5]
-            elif choice == 'Open Webpage': url = self.url
-            self.container.openLocalFile(choice, os.path.dirname(self.path), self.path, url)
-        
-        def get_files(self):
-            #TODO: Look into combining this when opening LocalDir
-            if not os.path.isfile(self.path): # Then we need to download the data from the server
-                os.makedirs(os.path.dirname(self.path))
-                self.download_data()
-
-        def download_data(self):
-            print("Downloading Data")
-            local_dir = os.path.dirname(self.path)
-            dir_url = self.url.rsplit('/', 1)[0] + '/' # Get the data directory to download any corresponding files
-            dir_page = requests.get(dir_url)
-            tree = html.fromstring(dir_page.content)
-            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
-                file_name = (link_element.xpath('td[position()=2]/a')[0]).get('href')
-                if file_name == self.name + '.xlsx' or file_name == self.name + '.raw.csv' or file_name == self.name + '.mapping.csv' or \
-                    file_name == self.name + '.analytics.csv' or file_name == self.name + '.names.csv':
-                    file_data = requests.get(dir_url + file_name)
-                    open(os.path.join(local_dir, file_name), 'wb').write(file_data.content)
-                    # Add new mappings data to database
-                    if file_name == self.name + '.mapping.csv':
-                        pass
-                        # new_mappings = pd.read_csv(os.path.join(local_dir, file_name))
-                        # all_mappings = pd.read_csv(self.mappings_path)
-                        # all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
-                        # all_mappings.to_csv(self.mappings_path, index=False)
-
-        def open_directory(self):
-            names, link_element = self.directory_file_names(self.page)
+            names, time_stamps = self.get_children_names_timestamps()
             # Show directories and data files (.xlsx or .raw.csv)
-            for name in names:
-                # Check if there exists a meta directory
-                if name == 'meta/': #TODO: Only check this once a user has decided to load a file
-                    self.check_meta()
-                if (name.endswith('/') or name.endswith('.raw.csv') or name.endswith('.xlsx')) and name not in [child.name for child in self.children]:
-                    full_url = self.url + name
-                    short_name = name.split('.raw.csv')[0] if name.endswith('.raw.csv') else name.split('.xlsx')[0]
-                    if name.endswith('.raw.csv') or name.endswith('.xlsx'): 
-                        time_stamp = link_element.xpath('td[position()=3]/text()')[0][:10] + '_' + link_element.xpath('td[position()=3]/text()')[0][11:13] + '-' + link_element.xpath('td[position()=3]/text()')[0][14:16]
-                        full_path = os.path.join(self.path, short_name, time_stamp, name)
-                    elif name.endswith('/'): full_path = os.path.join(self.path, name[:-1])
-                    self.container.insertNode(self, DataSourcePanel.RemoteNode(full_url, self.cape_path, full_path, short_name, self.container, self))
+            for name, time_stamp in zip(names, time_stamps):
+                if name in [child.name for child in self.children]:
+                    continue  # Skip if already added
 
-        def check_meta(self):
-            meta_url = self.url + 'meta/'
-            meta_page = requests.get(meta_url)
-            names, link_element = self.directory_file_names(meta_page)
-            # Get local mapping database max timestamp
-            all_mappings = pd.read_csv(self.mappings_path)
-            before_max = all_mappings['Before Timestamp'].max()
-            after_max = all_mappings['After Timestamp'].max()
-            max_timestamp = before_max if before_max > after_max else after_max
-            # Check each mapping file and add to database if it has a greater timestamp
-            for name in names:
-                meta_timestamp = int(name.split('.csv')[0].split('-')[-1])
-                # if meta_timestamp > max_timestamp:
-                if meta_timestamp > -1: #TODO: Use local database max corresponding to root
-                    # Temporary download, add to database, delete file
-                    file_data = requests.get(meta_url + name)
-                    temp_path = os.path.join(self.cape_path, name)
-                    open(temp_path, 'wb').write(file_data.content)
-                    new_mappings = pd.read_csv(temp_path)
-                    all_mappings = pd.read_csv(self.mappings_path)
-                    all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
-                    all_mappings.to_csv(self.mappings_path, index=False)
-                    os.remove(temp_path)
+                if self.skip(name):
+                    continue
 
-        def directory_file_names(self, page):
-            tree = html.fromstring(page.content)
-            names = []
-            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
-                hyperlink = link_element.xpath('td[position()=2]/a')[0]
-                names.append(hyperlink.get('href'))
-            names = self.remove_webpages(names)
-            return names, link_element
+                node = self.makeInternalNodeOrNone(name, time_stamp)
+                node = node if node else self.makeTerminalNodeOrNone(name, time_stamp)
+                if node: self.container.insertNode(self, node)
 
-        def remove_webpages(self, names):
-            data_files = [i.split('.xlsx')[0]+'/' for i in names if i.endswith('.xlsx')]
-            return [i for i in names if i not in data_files]
-        
+            
+    class TerminalNode(RealTreeNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(name, parent, virtual_path, real_path, container)
+
+
+    class RemoteNode(InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             DataSourcePanel.WebServer(), DataSourcePanel.RemoteDataNode)
+
         # TODO: Integrate this function for downloading HTML, next step is to have it run in the background
         # def open_webpage(self):
             # Download Corresponding HTML files if they don't already exist
@@ -204,56 +251,184 @@ class DataSourcePanel(ScrolledTreePane):
             #         break
             # gui.loaded_url = self.path # Use live version for now
 
-    class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container, select_fn, parent):
-            self.user_selection = select_fn
-            super().__init__(path, name, container, parent)
+    # This tree should handle cache directory.  The only things to browse are directories.
+    # Data will only be loaded under timestamp directories.
+    class CacheLocalDirNode(InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             DataSourcePanel.FileSystem(), DataSourcePanel.CacheTimestampDirNode)
+
+        # Return names and time_stamps of potential children nodes to visit
+        # Override to use real_path
+        def get_children_names_timestamps(self):
+            return self.data_src.directory_file_names_timestamps(self.real_path)
+
+        # Create an internal node to be added if name tells us this is internal
+        def makeInternalNodeOrNone(self, name, time_stamp):
+            full_real_path = os.path.join(self.real_path, name)
+            if self.data_src.isdir(full_real_path) and not re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name):
+                return self.internalNodeClass(self.virtual_path+'/'+name, full_real_path, name, self.container, self)
+            return None
+
+        # Create an terminal node to be added if name tells us this is terminal
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            full_real_path = os.path.join(self.real_path, name)
+            if self.data_src.isdir(full_real_path) and re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name): # timestamp directory holding several files to be loaded 
+                return self.terminalNodeClass(self.virtual_path, full_real_path, name, self.container, self)
+            return None
+
+    # This tree should not visit cache directory
+    class NonCacheLocalDirNode(InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             DataSourcePanel.FileSystem(), DataSourcePanel.NonCacheLocalFileNode)
+
+        # will skip the cape folder
+        def skip(self, name):
+            full_virtual_path = os.path.join(self.virtual_path,  name)
+            return os.path.samefile (full_virtual_path, self.container.cape_path)
+
+        # def open(self):
+        #     print("noncached dir node open:", self.name, self.id)
+        #     names, time_stamps = self.data_src.directory_file_names_timestamps(self.virtual_path)
+        #     for d, time_stamp in zip(names, time_stamps):
+        #         if d in [child.name for child in self.children]:
+        #             continue  # Skip if already added
+
+        #         full_virtual_path = os.path.join(self.virtual_path, d)
+        #         if self.skip(full_virtual_path):
+        #             continue
+
+        #             #self.fullpath = fullpath
+        #         if self.data_src.isdir(full_virtual_path):
+        #             real_path = os.path.join(self.real_path, d) 
+        #             real_path = re.sub('/$','', real_path)
+        #             self.container.insertNode(self, DataSourcePanel.NonCacheLocalDirNode(full_virtual_path, real_path, d, self.container, self))
+        #         elif self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')):
+        #             real_path = os.path.join(self.real_path, d, time_stamp, d)
+        #             self.container.insertNode(self, DataSourcePanel.NonCacheLocalFileNode(full_virtual_path, real_path, d, self.container, self))
+
+    # Terminal node of the tree supposed to be for loading data and no more expansions
+
+    class CacheTimestampDirNode(TerminalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent)
+            self.data_src = DataSourcePanel.FileSystem()
 
         def open(self):
-            print("file node open:", self.name, self.id)
-            self.container.show_options(file_type='data', select_fn=self.user_selection)
+            print("node open:", self.name) 
+            data_file_to_load = self.file_to_load()
+            content_type = self.data_src.getContentType(data_file_to_load)
+
+            self.container.show_options(file_type='data', select_fn=self.open_timestamp_directory)
+
+        def file_to_load(self):
+            data_file_name = os.path.basename(os.path.dirname(self.real_path))
+            return os.path.join(self.real_path, data_file_name)
+            
+        def open_timestamp_directory(self, choice, node):
+            if self.container.win: self.container.win.destroy()
+            if choice == 'Cancel': return 
+            #for data in os.listdir(self.path):
+            #    if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
+            #        source_path = os.path.join(self.path, data)
+            #        break
+            # Recreate URL from local directory structure if UVSQ file (.xlsx)
+            #if source_path.endswith('.xlsx'): self.create_url()
+            url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
+            self.container.openLocalFile(choice, self.real_path, self.file_to_load(), url)
+
+    class NonCacheLocalFileNode(TerminalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent)
+
+        def open(self):
+            print("noncache file node open:", self.name, self.id, self.real_path)
+            self.container.show_options(file_type='data', select_fn=self.open_local_file, node=self)
+
+        def open_local_file(self, choice, node):
+            if self.container.win: self.container.win.destroy()
+            if choice == 'Cancel': return 
+
+            if not os.path.isfile(self.real_path):
+                os.makedirs(os.path.dirname(self.real_path))
+                copyfile(self.virtual_path, self.real_path)
+            real_dir = os.path.split(self.real_path)[0]
+            url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
+            self.container.openLocalFile(choice, real_dir, self.real_path, url)
+
+    class RemoteDataNode(TerminalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, time_stamp=None):
+            super().__init__(virtual_path, real_path, name, container, parent)
+            self.data_src = DataSourcePanel.WebServer()
+
+            
+        def open(self):
+            print("remote node open:", self.name, self.id) 
+            content_type = self.data_src.getContentType(self.virtual_path)
+            # Webpage node
+            if content_type == 'text/html':
+                self.container.show_options(file_type='html', select_fn=self.user_selection)
+                return
+            # Data node
+            elif self.virtual_path.endswith('.raw.csv') or self.virtual_path.endswith('.xlsx'):
+                self.container.show_options(file_type='data', select_fn=self.user_selection)
+                return
+
+        def trim_data_ext(self, filename):
+            pass
         
-
-    class LocalDirNode(LocalTreeNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, name, container, parent)
-            self.children = []
-
         def user_selection(self, choice, node=None):
             if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
-            if not node: # Then the user has selected a timestamp directory and we find the data file
-                for data in os.listdir(self.path):
-                    if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
-                        source_path = os.path.join(self.path, data)
-                        break
-            else: # The user has selected a noncache data file
-                # Check if we need to create cache directory and copy source file
-                if not os.path.isfile(node.cache_path):
-                    os.makedirs(os.path.dirname(node.cache_path))
-                    copyfile(node.path, node.cache_path)
-                source_path = node.cache_path
-                self.path = os.path.split(source_path)[0]
-            # Recreate URL from local directory structure if UVSQ file (.xlsx)
-            #if source_path.endswith('.xlsx'): self.create_url()
-            self.open_local_file(choice, source_path)
-            #self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None) 
-            
-        def open_local_file(self, choice, source_path):
-            self.container.openLocalFile(choice, self.path, source_path, None)
+            elif choice in ['Overwrite', 'Append']: self.get_files()
+            url = None
+            #if self.virtual_path.endswith(('.xlsx', 'raw.csv')): url = self.virtual_path[:-5]
+            if self.virtual_path.endswith(('.xlsx', 'raw.csv')): url = re.sub('\.xlsx$|\.raw\.csv$', '', self.virtual_path)
+            elif choice == 'Open Webpage': url = self.virtual_path
+            if url:
+                # Set url to None if it does not give a valid webpage
+                url = None if requests.get(url).status_code != 200 else url
+            self.container.openLocalFile(choice, os.path.dirname(self.real_path), self.real_path, url)
+        
+        def get_files(self):
+            #TODO: Look into combining this when opening LocalDir
+            if not os.path.isfile(self.real_path): # Then we need to download the data from the server
+                # DW updated: Use Path().mkdir() to allow cases when directory already exists
+                Path(os.path.dirname(self.real_path)).mkdir(parents=True, exist_ok=True)
+                #os.makedirs(os.path.dirname(self.path))
+                self.download_data()
 
-        # def create_url(self):
-        #     self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview'
-        #     dirs = []
-        #     path, name = os.path.split(os.path.dirname(self.path)) # dir_path is self.path
-        #     while (name != 'UVSQ') and (name != 'UVSQ_2020'):
-        #         dirs.append(name)
-        #         path, name = os.path.split(path)
-        #     dirs.reverse()
-        #     if name == 'UVSQ_2020':
-        #         self.url = 'https://datafront.maqao.exascale-computing.eu/public_html/oneview2020'
-        #     for name in dirs:
-        #         self.url += '/' + name
+        def download_data(self):
+            print("Downloading Data")
+            real_dir = os.path.dirname(self.real_path)
+            # Only check this once a user has decided to load a file
+            self.check_meta()
+            self.data_src.download_data_and_meta(self.virtual_path, real_dir)
+
+        def check_meta(self):
+            root_url = self.get_root_virtual_path()
+            meta_url = root_url + 'meta/'
+            names = self.data_src.get_meta_filenames(meta_url)
+            # Get local mapping database max timestamp
+            mappings_path = os.path.join(self.container.cape_path, 'mappings.csv')
+            all_mappings = pd.read_csv(mappings_path)
+            before_max = all_mappings['Before Timestamp'].max()
+            after_max = all_mappings['After Timestamp'].max()
+            max_timestamp = before_max if before_max > after_max else after_max
+            # Check each mapping file and add to database if it has a greater timestamp
+            for name in names:
+                meta_timestamp = int(name.split('.csv')[0].split('-')[-1])
+                # if meta_timestamp > max_timestamp:
+                if meta_timestamp > -1: #TODO: Use local database max corresponding to root
+                    # Temporary download, add to database, delete file
+                    temp_path = os.path.join(self.container.cape_path, name)
+                    self.data_src.get_file(meta_url + name, temp_path)
+                    new_mappings = pd.read_csv(temp_path)
+                    all_mappings = pd.read_csv(mappings_path)
+                    all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
+                    all_mappings.to_csv(mappings_path, index=False)
+                    os.remove(temp_path)
 
     def __init__(self, parent, loadDataSrcFn, gui, root):
         ScrolledTreePane.__init__(self, parent)
@@ -318,10 +493,10 @@ class DataSourcePanel(ScrolledTreePane):
     def setupLocalRoot(self, nonCachePath, name, localMetaNode):
         if not os.path.isdir(nonCachePath):
             return
-        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, self.cape_path, os.path.join(self.cacheRoot.path, name), name, self, localMetaNode) )
-        cache_path = os.path.join(self.cacheRoot.path, name)
+        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(self.cacheRoot.real_path, name), name, self, localMetaNode) )
+        cache_path = os.path.join(self.cacheRoot.real_path, name)
         Path(cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(cache_path, name, self, None, self.cacheRoot))
+        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot))
 
     # This includes OneDrive sync roots
     def setupLocalRoots(self):
@@ -329,7 +504,7 @@ class DataSourcePanel(ScrolledTreePane):
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         cache_root_path = os.path.join(cape_cache_path,'Previously Visited')
         if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
-        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(cache_root_path , 'Previously Visited', self, None, self.localNode) 
+        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(None, cache_root_path , 'Previously Visited', self, self.localNode) 
         self.insertNode(self.localNode, self.cacheRoot)
         
         self.setupLocalRoot(home_dir, 'Home', self.localNode)
@@ -341,10 +516,10 @@ class DataSourcePanel(ScrolledTreePane):
 
 
     def setupRemoteRoot(self, url, name):
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, self.cape_path, os.path.join(self.cape_path, name), name, self, self.remoteNode))
-        cache_path = os.path.join(self.cacheRoot.path, name)
+        cache_path = os.path.join(self.cacheRoot.real_path, name)
+        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, cache_path, name, self, self.remoteNode))
         Path(cache_path).mkdir(parents=True, exist_ok=True)
-        cacheNode = DataSourcePanel.CacheLocalDirNode(cache_path, name, self, url, self.cacheRoot)
+        cacheNode = DataSourcePanel.CacheLocalDirNode(url, cache_path, name, self, self.cacheRoot)
         self.insertNode(self.cacheRoot, cacheNode)
 
     def setupRemoteRoots(self):
@@ -352,59 +527,6 @@ class DataSourcePanel(ScrolledTreePane):
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'UVSQ')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 'UVSQ_2020')
 
-    # This tree should handle cache directory
-    class CacheLocalDirNode(LocalDirNode):
-        def __init__(self, path, name, container, url, parent):
-            super().__init__(path, name, container, parent)
-            self.url = url
-
-        def open_local_file(self, choice, source_path):
-            self.container.openLocalFile(choice, self.path, source_path, self.url if source_path.endswith('.xlsx') else None) 
-
-        def open(self):
-            print("dir node open:", self.name, self.id, self.url)
-            if re.match('\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', self.name): # timestamp directory holding several files to be loaded
-                self.container.show_options(file_type='data', select_fn=self.user_selection)
-            else:
-                for d in os.listdir(self.path):
-                    if d not in [child.name for child in self.children]:
-                        self.fullpath= os.path.join(self.path, d)
-                        if os.path.isdir(self.fullpath):
-                            self.container.insertNode(self, DataSourcePanel.CacheLocalDirNode(self.fullpath, d, self.container, self.url+'/'+d if self.url else None, self))
-                        elif os.path.isfile(self.fullpath) and (self.fullpath.endswith('.raw.csv') or self.fullpath.endswith('.xlsx')):
-                            self.container.insertNode(self, DataSourcePanel.LocalFileNode(self.fullpath, d, self.container, self.user_selection, self))
-
-    # This tree should not visit cache directory
-    class NonCacheLocalDirNode(LocalDirNode):
-        def __init__(self, path, cape_path, cache_path, name, container, parent):
-            super().__init__(path, name, container, parent)
-            self.cache_path = cache_path
-            self.cape_path = cape_path
-
-        def open(self):
-            print("noncached dir node open:", self.name, self.id)
-            for d in os.listdir(self.path):
-                fullpath = os.path.join(self.path, d)
-                if d not in [child.name for child in self.children] and not os.path.samefile (fullpath, self.cape_path):
-                    #self.fullpath = fullpath
-                    if os.path.isdir(fullpath):
-                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalDirNode(fullpath, self.cape_path, os.path.join(self.cache_path, d), d, self.container, self))
-                    elif os.path.isfile(fullpath) and (fullpath.endswith('.raw.csv') or fullpath.endswith('.xlsx')):
-                        short_name = d.split('.raw.csv')[0] if d.endswith('.raw.csv') else d.split('.xlsx')[0]
-                        modified_epoch = os.path.getmtime(fullpath)
-                        time_stamp = datetime.datetime.fromtimestamp(modified_epoch).strftime('%Y-%m-%d_%H-%M')
-                        cache_path = os.path.join(self.cache_path, short_name, time_stamp, d)
-                        self.container.insertNode(self, DataSourcePanel.NonCacheLocalFileNode(fullpath, cache_path, d, self.container, self.user_selection, self))
-
-    class NonCacheLocalFileNode(LocalTreeNode):
-        def __init__(self, path, cache_path, name, container, select_fn, parent):
-            self.user_selection = select_fn
-            super().__init__(path, name, container, parent)
-            self.cache_path = cache_path
-
-        def open(self):
-            print("noncache file node open:", self.name, self.id, self.cache_path)
-            self.container.show_options(file_type='data', select_fn=self.user_selection, node=self)
 
 class AnalysisResultsPanel(ScrolledTreePane):
     class DataTreeNode:
@@ -432,6 +554,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
             super().__init__(name)
             self.container = container
             self.path = path
+            self.data_src = DataSourcePanel.FileSystem()
 
     class LocalFileNode(LocalTreeNode):
         def __init__(self, path, name, container, df=pd.DataFrame(), srcDf=pd.DataFrame(), appDf=pd.DataFrame(), \
