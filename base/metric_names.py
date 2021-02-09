@@ -206,3 +206,6 @@ class NonMetricName(CapeEnum):
     SI_SW_BIAS = "Net_SW_Bias"
 
 KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
+
+# Provides all the enums useful for filtering irrelevant metrics
+ALL_METRICS = list(MetricName) + list(NonMetricName)
