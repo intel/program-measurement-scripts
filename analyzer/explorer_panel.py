@@ -31,43 +31,58 @@ class ScrolledTreePane(tk.Frame):
 
 class DataSourcePanel(ScrolledTreePane):
     class DataSource(ABC):
-        pass
+        # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
+        # TODO: just use data_filename to name meta files to avoid looping data files
+        def download_data_and_meta(self, data_url, local_dir):
+            dir_url = os.path.dirname(data_url) + '/'
+            #dir_url = url_parts[0] + '/' # Get the data directory to download any corresponding files
+            #data_filename = url_parts[1]
+            data_filename = os.path.basename(data_url)
+            short_name = re.sub(r'\.xlsx$|\.raw\.csv$', '', data_filename)
+            meta_exts =  ['.mapping.csv', '.analytics.csv', '.names.csv']
+            meta_files = [short_name + ext for ext in meta_exts]
+
+            self.get_file(data_url, os.path.join(local_dir, data_filename))
+            file_names, timestamps = self.directory_file_names_timestamps(dir_url)
+            for file_name in file_names:
+                if file_name in meta_files:
+                    self.get_file(dir_url + file_name, os.path.join(local_dir, file_name))
+
+        @abstractmethod
+        def directory_file_names_timestamps(self, url):
+            pass
+
+        @abstractmethod
+        def get_file(self, src, dst): 
+            pass
+
+        @abstractmethod
+        def isdir(self, fullurl): 
+            return False
+
+        def isfile(self, fullurl):
+            return not self.isdir(fullurl)
+
+        @abstractmethod
+        def isValidURL(self, fullurl): 
+            return False
+        
 
     class WebServer(DataSource):
         def getContentType (self, url):
             self.page = requests.get(url)
             return self.page.headers['content-type']
 
-        def get_meta_filenames(self, meta_url):
-            meta_page = requests.get(meta_url)
-            names, link_element = self.directory_file_names(meta_page)
-            return names
-            
-        # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
-        # TODO: just use data_filename to name meta files to avoid looping data files
-        def download_data_and_meta(self, data_url, local_dir):
-            url_parts = data_url.rsplit('/', 1) 
-            dir_url = url_parts[0] + '/' # Get the data directory to download any corresponding files
-            data_filename = url_parts[1]
-            short_name = data_filename.split('.raw.csv')[0] if data_filename.endswith('.raw.csv') else data_filename.split('.xlsx')[0]
-            data_and_meta_exts =  ['.xlsx', '.raw.csv', '.mapping.csv', '.analytics.csv', '.names.csv']
-            data_and_meta_files = [short_name + ext for ext in data_and_meta_exts]
-            dir_page = requests.get(dir_url)
-            tree = html.fromstring(dir_page.content)
-            for link_element in tree.xpath('//tr[position()>3 and position()<last()]'):
-                file_name = (link_element.xpath('td[position()=2]/a')[0]).get('href')
-                if file_name in data_and_meta_files:
-                    file_data = requests.get(dir_url + file_name)
-                    open(os.path.join(local_dir, file_name), 'wb').write(file_data.content)
-                    # Add new mappings data to database
-                    #if file_name == self.name + '.mapping.csv':
-                    #    pass
-                        # new_mappings = pd.read_csv(os.path.join(local_dir, file_name))
-                        # all_mappings = pd.read_csv(self.mappings_path)
-                        # all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
-                        # all_mappings.to_csv(self.mappings_path, index=False)
+        def isValidURL(self, fullurl): 
+            try:
+                if requests.get(fullurl).status_code == 200:
+                    return True
+            except:
+                pass
+            return False
 
-        def directory_file_names(self, page):
+        def directory_file_names(self, url):
+            page = requests.get(url)
             tree = html.fromstring(page.content)
             names = []
             link_elements = []
@@ -79,8 +94,7 @@ class DataSourcePanel(ScrolledTreePane):
             return names, link_elements
 
         def directory_file_names_timestamps(self, url):
-            page = requests.get(url)
-            names, link_elements = self.directory_file_names(page)
+            names, link_elements = self.directory_file_names(url)
             raw_timestamps = [link_element.xpath('td[position()=3]/text()')[0] for link_element in link_elements]
             timestamps = [raw_ts[:10] + '_' + raw_ts[11:13] + '-' + raw_ts[14:16] for raw_ts in raw_timestamps]
             return names, timestamps
@@ -96,13 +110,13 @@ class DataSourcePanel(ScrolledTreePane):
         def isdir(self, fullurl): 
             return fullurl.endswith('/')
 
-        def isfile(self, fullurl):
-            return not self.isdir(fullurl)
-            
             
     class FileSystem(DataSource):
         def getContentType (self, path):
             return magic.from_file(path, mime=True)
+
+        def isValidURL(self, fullurl): 
+            return os.path.isfile(os.path.join(fullurl, 'index.html'))
         
         def directory_file_names_timestamps(self, cur_dir):
             names = os.listdir(cur_dir)
@@ -116,6 +130,9 @@ class DataSourcePanel(ScrolledTreePane):
 
         def isfile(self, fullpath):
             return os.path.isfile(fullpath)
+
+        def get_file(self, src, dst): 
+            copyfile(src, dst)
             
     
     class DataTreeNode:
@@ -142,11 +159,12 @@ class DataSourcePanel(ScrolledTreePane):
             super().__init__(name, parent)
 
     class RealTreeNode(DataTreeNode):
-        def __init__(self, name, parent, virtual_path, real_path, container):
+        def __init__(self, name, parent, virtual_path, real_path, container, data_source):
             super().__init__(name, parent)
             self.virtual_path = virtual_path
             self.real_path = real_path
             self.container = container
+            self.data_src = data_source
 
         def get_root_virtual_path(self):
             if (isinstance(self.parent, DataSourcePanel.RealTreeNode)):
@@ -159,8 +177,7 @@ class DataSourcePanel(ScrolledTreePane):
     class InternalNode(RealTreeNode):
         def __init__(self, virtual_path, real_path, name, container, parent, 
                      data_source, terminalNodeClass):
-            super().__init__(name, parent, virtual_path, real_path, container)
-            self.data_src = data_source
+            super().__init__(name, parent, virtual_path, real_path, container, data_source)
             # These class objects are used to create object of internal and terminal nodes
             self.terminalNodeClass = terminalNodeClass
             self.internalNodeClass = type(self)
@@ -192,6 +209,8 @@ class DataSourcePanel(ScrolledTreePane):
                 return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
             return None
 
+            
+
         def open(self):
             print("internal node open:", self.name, self.id) 
             # Directory node
@@ -210,14 +229,110 @@ class DataSourcePanel(ScrolledTreePane):
 
             
     class TerminalNode(RealTreeNode):
-        def __init__(self, virtual_path, real_path, name, container, parent):
-            super().__init__(name, parent, virtual_path, real_path, container)
+        def __init__(self, virtual_path, real_path, name, container, parent, data_source):
+            super().__init__(name, parent, virtual_path, real_path, container, data_source)
+
+        def open(self):
+            print("terminal node open:", self.name, self.id, self.real_path)
+            self.container.show_options_data(select_fn=self.user_selection, node=self)
+
+        # Normally the real path points to the file to load
+        def file_to_load(self):
+            return self.real_path
+
+        # def user_selection(self, choice, node):
+        #     if self.container.win: self.container.win.destroy()
+        #     if choice == 'Cancel': return 
+
+        #     file_to_load = self.file_to_load()
+        #     if choice in ['Overwrite', 'Append']: self.get_files(file_to_load)
+
+        #     url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
+        #     self.container.openLocalFile(choice, os.path.dirname(file_to_load), file_to_load, url)
+
+        def user_selection(self, choice, node=None):
+            if self.container.win: self.container.win.destroy()
+            if choice == 'Cancel': return 
+
+            file_to_load = self.file_to_load()
+            if choice in ['Overwrite', 'Append']: self.get_files(file_to_load)
+
+            #if self.virtual_path.endswith(('.xlsx', 'raw.csv')): url = self.virtual_path[:-5]
+            url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
+            # Set url to None if it does not give a valid webpage
+            url = url if self.data_src.isValidURL(url) else None
+            self.container.openLocalFile(choice, os.path.dirname(file_to_load), file_to_load, url)
+
+
+        def get_files(self, file_to_load):
+            if not os.path.isfile(file_to_load):
+                real_dir = os.path.dirname(file_to_load)
+                Path(real_dir).mkdir(parents=True, exist_ok=True)
+                print("Downloading Data")
+                self.check_meta()
+                self.data_src.download_data_and_meta(self.virtual_path, real_dir)
+
+        def check_meta(self):
+            root_url = self.get_root_virtual_path()
+            meta_url = os.path.join(root_url, 'meta/')
+            names, timestamps = self.data_src.directory_file_names_timestamps(os.path.join(root_url, 'meta/'))
+
+            # Get local mapping database max timestamp
+            mappings_path = os.path.join(self.container.cape_path, 'mappings.csv')
+            all_mappings = pd.read_csv(mappings_path)
+            if not 'DataSource' in all_mappings.columns:
+                all_mappings['DataSource'] =''
+            mask=all_mappings['DataSource']==root_url
+            before_max = all_mappings[mask]['Before Timestamp'].max()
+            #before_max = all_mappings['Before Timestamp'].max()
+            after_max = all_mappings[mask]['After Timestamp'].max()
+            #after_max = all_mappings['After Timestamp'].max()
+            max_timestamp = before_max if before_max > after_max else after_max
+            # Convert nan to -1
+            max_timestamp = -1 if pd.isna(max_timestamp) else max_timestamp
+            # Check each mapping file and add to database if it has a greater timestamp
+            updated = False
+            for name in names:
+                meta_timestamp = int(name.split('.csv')[0].split('-')[-1])
+                # if meta_timestamp > max_timestamp:
+                if meta_timestamp > max_timestamp: 
+                    # Temporary download, add to database, delete file
+                    temp_path = os.path.join(self.container.cape_path, name)
+                    self.data_src.get_file(os.path.join(meta_url, name), temp_path)
+                    new_mappings = pd.read_csv(temp_path)
+                    new_mappings['DataSource']=root_url
+                    all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
+                    updated = True
+                    os.remove(temp_path)
+            if updated: all_mappings.to_csv(mappings_path, index=False)
 
 
     class RemoteNode(InternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
                              DataSourcePanel.WebServer(), DataSourcePanel.RemoteDataNode)
+
+        def user_selection(self, choice, node=None):
+            if self.container.win: self.container.win.destroy()
+            if choice != 'Open Webpage': return 
+            # The only choice is to load HTML
+            url = self.virtual_path
+            # Set url to None if it does not give a valid webpage
+            url = None if requests.get(url).status_code != 200 else url
+            # choice is 'Open Webpage'
+            self.container.openLocalFile(choice, None, None, url)
+
+        # Return names and time_stamps of potential children nodes to visit
+        def get_children_names_timestamps(self):
+            try:
+                names, time_stamps = super().get_children_names_timestamps()
+            except:
+                # Cannot be browsed as directotry tree.  Consider this HTML content
+                self.container.show_options_html(select_fn=self.user_selection)
+                names = []
+                time_stamps = []
+            return names, time_stamps
+
 
         # TODO: Integrate this function for downloading HTML, next step is to have it run in the background
         # def open_webpage(self):
@@ -312,123 +427,28 @@ class DataSourcePanel(ScrolledTreePane):
 
     class CacheTimestampDirNode(TerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
-            super().__init__(virtual_path, real_path, name, container, parent)
-            self.data_src = DataSourcePanel.FileSystem()
+            super().__init__(virtual_path, real_path, name, container, 
+                             parent, DataSourcePanel.FileSystem())
 
-        def open(self):
-            print("node open:", self.name) 
-            data_file_to_load = self.file_to_load()
-            content_type = self.data_src.getContentType(data_file_to_load)
-
-            self.container.show_options(file_type='data', select_fn=self.open_timestamp_directory)
-
+        # For timestamp directory, the file to load is the data file contained
+        # in this directory.
         def file_to_load(self):
             data_file_name = os.path.basename(os.path.dirname(self.real_path))
             return os.path.join(self.real_path, data_file_name)
-            
-        def open_timestamp_directory(self, choice, node):
-            if self.container.win: self.container.win.destroy()
-            if choice == 'Cancel': return 
-            #for data in os.listdir(self.path):
-            #    if (data.endswith('.xlsx') and not data.endswith('summary.xlsx')) or data.endswith('.raw.csv'):
-            #        source_path = os.path.join(self.path, data)
-            #        break
-            # Recreate URL from local directory structure if UVSQ file (.xlsx)
-            #if source_path.endswith('.xlsx'): self.create_url()
-            url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
-            self.container.openLocalFile(choice, self.real_path, self.file_to_load(), url)
 
+        def get_files(self, file_to_load):
+            pass  # Nothing to do when browsing cached directory
+            
     class NonCacheLocalFileNode(TerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
-            super().__init__(virtual_path, real_path, name, container, parent)
-
-        def open(self):
-            print("noncache file node open:", self.name, self.id, self.real_path)
-            self.container.show_options(file_type='data', select_fn=self.open_local_file, node=self)
-
-        def open_local_file(self, choice, node):
-            if self.container.win: self.container.win.destroy()
-            if choice == 'Cancel': return 
-
-            if not os.path.isfile(self.real_path):
-                os.makedirs(os.path.dirname(self.real_path))
-                copyfile(self.virtual_path, self.real_path)
-            real_dir = os.path.split(self.real_path)[0]
-            url = re.sub(r'\.xlsx$|\.raw\.csv$', '', self.virtual_path)
-            self.container.openLocalFile(choice, real_dir, self.real_path, url)
+            super().__init__(virtual_path, real_path, name, container, 
+                             parent, DataSourcePanel.FileSystem())
 
     class RemoteDataNode(TerminalNode):
-        def __init__(self, virtual_path, real_path, name, container, parent, time_stamp=None):
-            super().__init__(virtual_path, real_path, name, container, parent)
-            self.data_src = DataSourcePanel.WebServer()
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, 
+                             parent, DataSourcePanel.WebServer())
 
-            
-        def open(self):
-            print("remote node open:", self.name, self.id) 
-            content_type = self.data_src.getContentType(self.virtual_path)
-            # Webpage node
-            if content_type == 'text/html':
-                self.container.show_options(file_type='html', select_fn=self.user_selection)
-                return
-            # Data node
-            elif self.virtual_path.endswith('.raw.csv') or self.virtual_path.endswith('.xlsx'):
-                self.container.show_options(file_type='data', select_fn=self.user_selection)
-                return
-
-        def trim_data_ext(self, filename):
-            pass
-        
-        def user_selection(self, choice, node=None):
-            if self.container.win: self.container.win.destroy()
-            if choice == 'Cancel': return 
-            elif choice in ['Overwrite', 'Append']: self.get_files()
-            url = None
-            #if self.virtual_path.endswith(('.xlsx', 'raw.csv')): url = self.virtual_path[:-5]
-            if self.virtual_path.endswith(('.xlsx', 'raw.csv')): url = re.sub('\.xlsx$|\.raw\.csv$', '', self.virtual_path)
-            elif choice == 'Open Webpage': url = self.virtual_path
-            if url:
-                # Set url to None if it does not give a valid webpage
-                url = None if requests.get(url).status_code != 200 else url
-            self.container.openLocalFile(choice, os.path.dirname(self.real_path), self.real_path, url)
-        
-        def get_files(self):
-            #TODO: Look into combining this when opening LocalDir
-            if not os.path.isfile(self.real_path): # Then we need to download the data from the server
-                # DW updated: Use Path().mkdir() to allow cases when directory already exists
-                Path(os.path.dirname(self.real_path)).mkdir(parents=True, exist_ok=True)
-                #os.makedirs(os.path.dirname(self.path))
-                self.download_data()
-
-        def download_data(self):
-            print("Downloading Data")
-            real_dir = os.path.dirname(self.real_path)
-            # Only check this once a user has decided to load a file
-            self.check_meta()
-            self.data_src.download_data_and_meta(self.virtual_path, real_dir)
-
-        def check_meta(self):
-            root_url = self.get_root_virtual_path()
-            meta_url = root_url + 'meta/'
-            names = self.data_src.get_meta_filenames(meta_url)
-            # Get local mapping database max timestamp
-            mappings_path = os.path.join(self.container.cape_path, 'mappings.csv')
-            all_mappings = pd.read_csv(mappings_path)
-            before_max = all_mappings['Before Timestamp'].max()
-            after_max = all_mappings['After Timestamp'].max()
-            max_timestamp = before_max if before_max > after_max else after_max
-            # Check each mapping file and add to database if it has a greater timestamp
-            for name in names:
-                meta_timestamp = int(name.split('.csv')[0].split('-')[-1])
-                # if meta_timestamp > max_timestamp:
-                if meta_timestamp > -1: #TODO: Use local database max corresponding to root
-                    # Temporary download, add to database, delete file
-                    temp_path = os.path.join(self.container.cape_path, name)
-                    self.data_src.get_file(meta_url + name, temp_path)
-                    new_mappings = pd.read_csv(temp_path)
-                    all_mappings = pd.read_csv(mappings_path)
-                    all_mappings = all_mappings.append(new_mappings).drop_duplicates().reset_index(drop=True)
-                    all_mappings.to_csv(mappings_path, index=False)
-                    os.remove(temp_path)
 
     def __init__(self, parent, loadDataSrcFn, gui, root):
         ScrolledTreePane.__init__(self, parent)
@@ -451,16 +471,17 @@ class DataSourcePanel(ScrolledTreePane):
         self.setupRemoteRoots()
         self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
 
-    def show_options(self, file_type, select_fn, node=None):
-        if file_type == 'html': # OV webpage with no xlsx file
-            self.create_dialog_win('Missing Data', 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?', ['Open Webpage', 'Cancel'], select_fn)
-        elif file_type == 'data':
-            if len(self.gui.loadedData.sources) >= 2: # Currently can only append max 2 files
-                self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'], select_fn, node)
-            elif len(self.gui.loadedData.sources) >= 1: # User has option to append to existing file
-                self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'], select_fn, node)
-            if not self.gui.loadedData.sources: # Nothing currently loaded so just load the data with no need to warn the user
-                select_fn('Overwrite', node)
+    def show_options_data(self, select_fn, node=None):
+        if len(self.gui.loadedData.sources) >= 2: # Currently can only append max 2 files
+            self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'], select_fn, node)
+        elif len(self.gui.loadedData.sources) >= 1: # User has option to append to existing file
+            self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'], select_fn, node)
+        if not self.gui.loadedData.sources: # Nothing currently loaded so just load the data with no need to warn the user
+            select_fn('Overwrite', node)
+
+    def show_options_html(self, select_fn):
+        # OV webpage with no xlsx file
+        self.create_dialog_win('Missing Data', 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?', ['Open Webpage', 'Cancel'], select_fn)
 
     def create_dialog_win(self, title, message, options, select_fn, node=None):
         self.win = tk.Toplevel()
