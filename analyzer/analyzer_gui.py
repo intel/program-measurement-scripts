@@ -161,11 +161,11 @@ class LoadedData(Observable):
         if data_dir:
             for name in os.listdir(data_dir):
                 if name.endswith('codelet_summary.xlsx'): 
-                    self.summaryDf = pd.read_excel(os.path.join(data_dir, name))
+                    self.summaryDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
                 elif name.endswith('source_summary.xlsx'): 
-                    self.srcDf = pd.read_excel(os.path.join(data_dir, name))
+                    self.srcDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
                 elif name.endswith('app_summary.xlsx'): 
-                    self.appDf = pd.read_excel(os.path.join(data_dir, name))
+                    self.appDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
         # Codelet summary
         if self.summaryDf.empty:
             self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
@@ -215,6 +215,9 @@ class LoadedData(Observable):
         self.srcDf = self.compute_colors(self.srcDf)
         self.appDf = self.compute_colors(self.appDf)
         self.dfs = {'Codelet' : self.summaryDf, 'Source' : self.srcDf, 'Application' : self.appDf}
+        # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
+        for level in self.dfs:
+            self.addShortNames(self.dfs[level])
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
@@ -379,6 +382,14 @@ class LoadedData(Observable):
             self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
             self.all_mappings.to_csv(self.mappings_path, index=False)
         return mappings
+
+    def addShortNames(self, df):
+        all_short_names = pd.read_csv(self.short_names_path)
+        df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
+        for metric in all_short_names.columns:
+            if metric + "_y" in df.columns and metric + "_x" in df.columns:
+                df[metric] = df[metric + "_y"].fillna(df[metric + "_x"])
+                df.drop(columns=[metric + "_y", metric + "_x"], inplace=True, errors='ignore')
 
 class CodeletTab(tk.Frame):
     def __init__(self, parent):
@@ -598,9 +609,9 @@ class AnalyzerGui(tk.Frame):
         # self.c_scurveData = ScurveData(self.loadedData, self, root, 'Codelet')
         self.c_scurveAllData = ScurveAllData(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
-        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
-        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
         self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
+        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
+        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
         self.c_customTab = CustomTab(codelet_note, self.c_customData)
         self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
         # self.c_scurveTab = ScurveTab(codelet_note, self.c_scurveData)
