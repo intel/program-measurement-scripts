@@ -532,7 +532,9 @@ class DataSourcePanel(ScrolledTreePane):
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
 
         cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
-        self.setupLocalRoot(cape_onedrive, 'Intel', self.oneDriveNode)
+        cape_onedrive_ext=os.path.join(home_dir, 'Intel Corporation', 'QProf - Shared Documents', 'Cape GUI Data', 'data_source')
+        self.setupLocalRoot(cape_onedrive, 'Intel (Internal)', self.oneDriveNode)
+        self.setupLocalRoot(cape_onedrive_ext, 'Intel (External)', self.oneDriveNode)
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
 
 
