@@ -37,28 +37,6 @@ PRINT_COLOURED_TIERS = False
 RUN_SI = True
 RUN_SW_BIAS = False
 
-# Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
-# Will return three dataframes: cluster only, cluster+cur_run, cur_run only
-# cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
-
-# For each codelets in current_codelets_runs_df, find their cluster
-#   Store the name of the cluster to the SI_CLUSTER_NAME column
-#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def find_clusters(current_codelets_runs_df, memAlusatThreshold = 0.10, cuSatThreshold = 0.25):
-  # Read the optimal data file
-  optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
-  optimal_data_df = pd.read_csv(optimal_data_path)
-  # Real implementation should have found many cluster dataframes and with the name set to its cluster name
-  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
-  # filter out the unnecessary columns
-  all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]]
-  all_test_codelets=all_test_codelets[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]]
-
-  # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
-  # return the global cluster and test codelets => to use for plotting
-  return all_clusters, all_test_codelets
-
-
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
 CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
 
@@ -77,12 +55,39 @@ memTrafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_L1_GB_P_S
 archIntensityToCheck = []
 
 
-ALL_NODE_LIST =  [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
+ALL_NODE_LIST =  [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S, MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S,
+                            MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 # arith
 
 primaryCuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+
+# Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
+# Will return three dataframes: cluster only, cluster+cur_run, cur_run only
+# cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
+
+# For each codelets in current_codelets_runs_df, find their cluster
+#   Store the name of the cluster to the SI_CLUSTER_NAME column
+#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
+def find_clusters(current_codelets_runs_df, memAlusatThreshold = 0.10, cuSatThreshold = 0.25):
+  # Read the optimal data file
+  optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
+  optimal_data_df = pd.read_csv(optimal_data_path)
+  # Real implementation should have found many cluster dataframes and with the name set to its cluster name
+  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
+
+    # filter out the unnecessary columns
+  all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
+                               ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
+  all_test_codelets=all_test_codelets[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
+                               ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
+
+
+  # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
+  # return the global cluster and test codelets => to use for plotting
+  return all_clusters, all_test_codelets
+
 
 # this dict contains columns + rows of those columns that need to be colored
 # assumption is that you don't add any more rows else dict becomes out of dat
