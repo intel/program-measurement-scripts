@@ -24,7 +24,7 @@ class SIPlotData(AnalyzerData):
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
         print("SIPlotData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
-        # Generate Plot
+        # Check cache/create cluster and si dfs
         chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
         if self.run_cluster:
             self.cluster_df = pd.DataFrame()
@@ -50,20 +50,13 @@ class SIPlotData(AnalyzerData):
                 pickle.dump(self.si_df, data)
                 data.close()
             self.run_cluster = False
-        new_columns = [NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES]
-        self.df.drop(columns=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], inplace=True, errors='ignore')
-        self.df = pd.merge(left=self.df, right=self.si_df[new_columns], how='left', on=[NAME, TIMESTAMP])
-        #cluster_df = pd.read_csv(cluster)
-        self.df, self.fig, self.textData = parse_ip_siplot_df\
-            (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df, variants=self.variants, filtering=filtering, filter_data=filter_data, \
+        self.merge_metrics(self.si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES])
+        # Generate Plot
+        siplot_df, self.fig, self.textData = parse_ip_siplot_df\
+            (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df.copy(deep=True), variants=self.variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
         # Add new metrics to shared dataframe
-        self.loadedData.dfs[self.level].drop(columns=['Saturation', 'Intensity'], inplace=True, errors='ignore')
-        self.loadedData.dfs[self.level] = pd.merge(self.loadedData.dfs[self.level], self.df[[NAME, TIMESTAMP, 'Saturation', 'Intensity']], on=[NAME, TIMESTAMP], how='left')
-        # TODO: Fix analytic variables being dropped in 'def compute_extra' in generate_SI.py
-        if not loadedData.analytics.empty:
-            self.df.drop(columns=loadedData.analytic_columns, errors='ignore', inplace=True)
-            self.df = pd.merge(left=self.df, right=loadedData.summaryDf[loadedData.analytic_columns + [NAME, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
+        self.merge_metrics(siplot_df, ['Saturation', 'Intensity'])
         self.notify_observers()
 
 class SIPlotTab(AnalyzerTab):

@@ -145,34 +145,33 @@ class ShortNameTab(tk.Frame):
             merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
         merged.to_csv(short_names_path, index=False)
 
-    def __init__(self, parent, tab, level=None):
+    def __init__(self, parent, tab, df, level=None):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.level = level
         self.tab = tab
+        self.df = df
         self.cape_path = self.tab.data.gui.loadedData.cape_path
         self.short_names_path = self.tab.data.gui.loadedData.short_names_path
         self.mappings_path = self.tab.data.gui.loadedData.mappings_path
 
     # Create table for Labels tab and update button
-    def buildLabelTable(self, df, tab):
-        short_name_table = df[[NAME, TIMESTAMP, 'Color']]
-        short_name_table[SHORT_NAME] = short_name_table[NAME]
-        merged = self.getShortNames(short_name_table)
-        merged = pd.merge(left=merged, right=df[[NAME, TIMESTAMP, COVERAGE_PCT]], on=[NAME, TIMESTAMP], how='right')
-        # sort label table by coverage to keep consistent with data table
-        merged.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
-        merged = merged[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-        merged.columns = ["{}".format(i) for i in merged.columns]
-        self.table = Table(tab, dataframe=merged, showtoolbar=False, showstatusbar=True)
+    def buildLabelTable(self):
+        self.table = Table(self, dataframe=self.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
         self.table.show()
         self.table.redraw()
-        table_button_frame = tk.Frame(tab)
+        table_button_frame = tk.Frame(self)
         table_button_frame.grid(row=3, column=1)
         tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table.model.df)).grid(row=0, column=0)
         tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table)).grid(row=0, column=1)
         tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace()).grid(row=0, column=2)
         return self.table
+
+    def getShortNames(self, df):
+        all_short_names = pd.read_csv(self.short_names_path)
+        df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
+        df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
+        df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
 
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
@@ -199,15 +198,15 @@ class ShortNameTab(tk.Frame):
         for tab in self.tab.plotInteraction.tabs:
             if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
             else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
-    
-    def getShortNames(self, df):
-        if os.path.getsize(self.short_names_path) > 0:
-            existing_shorts = pd.read_csv(self.short_names_path)
-            current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-            merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
-        else: 
-            merged = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-        return merged
+
+    # def getShortNames(self, df):
+    #     if os.path.getsize(self.short_names_path) > 0:
+    #         existing_shorts = pd.read_csv(self.short_names_path)
+    #         current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+    #         merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
+    #     else: 
+    #         merged = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+    #     return merged
 
     def checkForDuplicates(self, df):
         # Check if there are duplicates short names with the same timestamp
@@ -555,10 +554,10 @@ class VariantTab(tk.Frame):
         deselect_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
 
 class DataTab(tk.Frame):
-    def __init__(self, parent, df):
+    def __init__(self, parent, df, metrics, variants):
         tk.Frame.__init__(self, parent)
         self.parent = parent
-        self.summaryTable = Table(self, dataframe=df, showtoolbar=False, showstatusbar=True)
+        self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
         self.summaryTable.show()
         self.summaryTable.redraw()
         self.table_button_frame = tk.Frame(self)
@@ -674,7 +673,7 @@ class FilteringTab(tk.Frame):
         # Metric drop down menu
         self.metric_selected = tk.StringVar(value='Choose Metric')
         to_remove = [NAME, SHORT_NAME, VARIANT, TIMESTAMP, 'Color']
-        metric_options = [metric for metric in tab.summaryDf.columns.tolist() if metric not in to_remove]
+        metric_options = [metric for metric in tab.df.columns.tolist() if metric not in to_remove]
         metric_options.insert(0, 'Choose Metric')
         self.metric_menu = tk.OptionMenu(self, self.metric_selected, *metric_options)
         self.metric_menu['menu'].insert_separator(1)

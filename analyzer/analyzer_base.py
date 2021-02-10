@@ -30,7 +30,16 @@ class AnalyzerData(Observable):
         if not variants: self.variants = [loadedData.default_variant]
         else: self.variants = variants
         # Get correct dataframe
-        self.df = loadedData.dfs[self.level].copy(deep=True)
+        self.df = loadedData.dfs[self.level]
+
+    def merge_metrics(self, df, metrics):
+        # Add metrics computed in plot functions to master dataframe
+        metrics.extend([NAME, TIMESTAMP])
+        merged = pd.merge(left=self.df, right=df[metrics], on=[NAME, TIMESTAMP], how='left')
+        for metric in metrics:
+            if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
+                merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
+            if metric not in [NAME, TIMESTAMP]: self.df[metric] = merged[metric]
     
 class AnalyzerTab(tk.Frame):
     def __init__(self, parent, data, title, x_axis, y_axis, extra_metrics):
@@ -62,23 +71,23 @@ class AnalyzerTab(tk.Frame):
         self.mappings = self.data.mappings
         self.variants = self.data.variants
         self.textData = self.data.textData
+        self.metrics = metrics
         # Plot/Table setup
-        self.plotInteraction = PlotInteraction(self, self.df, self.fig, self.textData, self.level, self.data.gui, self.data.root)
+        self.plotInteraction = PlotInteraction(self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True), self.fig, self.textData, self.level, self.data.gui, self.data.root)
         self.tableFrame = tk.Frame(self.window)
         self.window.add(self.tableFrame, stretch='always')
-        # Summary Data table
+        # Format columns for pandastable compatibility
+        self.df.columns = ["{}".format(i) for i in self.df.columns]
+        self.df.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
         for missing in set(metrics)-set(self.df.columns):
             self.df[missing] = np.nan
-        self.summaryDf = self.df[metrics]
-        self.summaryDf = self.summaryDf.sort_values(by=COVERAGE_PCT, ascending=False)
-        self.summaryDf.columns = ["{}".format(i) for i in self.summaryDf.columns]
 
     # Create meta tabs for each plot
     def buildTableTabs(self):
         # Meta tabs
         self.tableNote = ttk.Notebook(self.tableFrame)
-        self.dataTab = DataTab(self.tableNote, self.summaryDf)
-        self.shortnameTab = ShortNameTab(self.tableNote, self)
+        self.dataTab = DataTab(self.tableNote, self.df, self.metrics, self.variants)
+        self.shortnameTab = ShortNameTab(self.tableNote, self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True))
         self.labelTab = LabelTab(self.tableNote, self)
         self.variantTab = VariantTab(self.tableNote, self, self.data.loadedData.all_variants, self.variants)
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
@@ -93,7 +102,7 @@ class AnalyzerTab(tk.Frame):
         tk.Button(self.dataTab.table_button_frame, text="Export Summary", command=lambda: exportCSV(self.data.gui.loadedData.summaryDf)).grid(row=0, column=1)
         tk.Button(self.dataTab.table_button_frame, text="Export Summary to Excel", command=lambda: exportXlsx(self.data.gui.loadedData.summaryDf)).grid(row=0, column=2)
         # Initialize meta tabs TODO: do this in the meta tab constructor
-        self.shortnameTab.buildLabelTable(self.df, self.shortnameTab)
+        self.shortnameTab.buildLabelTable()
         if self.level == 'Codelet':
             self.mappingsTab.buildMappingsTab(self.df, self.mappings)
 

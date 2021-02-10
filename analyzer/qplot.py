@@ -28,9 +28,9 @@ class QPlotData(AnalyzerData):
         # Generate Plot 
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
-                (self.df, "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+                (self.df.copy(deep=True), "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
                     source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
-        self.df = df_ORIG if df_ORIG is not None else df_XFORM
+        self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
         self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
         self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
         self.notify_observers()

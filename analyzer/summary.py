@@ -20,8 +20,9 @@ class CoverageData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        self.df, self.fig, self.textData = coverage_plot(self.df, "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
+        coverage_df, self.fig, self.textData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
             variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
+        self.merge_metrics(coverage_df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
         self.notify_observers()
 
 class SummaryTab(AnalyzerTab):
