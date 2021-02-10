@@ -56,7 +56,7 @@ class SIPlotData(AnalyzerData):
             (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df.copy(deep=True), variants=self.variants, filtering=filtering, filter_data=filter_data, \
                 mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
         # Add new metrics to shared dataframe
-        self.merge_metrics(siplot_df, ['Saturation', 'Intensity'])
+        self.merge_metrics(siplot_df, ['Saturation', 'Intensity', 'SI'])
         self.notify_observers()
 
 class SIPlotTab(AnalyzerTab):

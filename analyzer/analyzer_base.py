@@ -36,6 +36,10 @@ class AnalyzerData(Observable):
         # Add metrics computed in plot functions to master dataframe
         metrics.extend([NAME, TIMESTAMP])
         merged = pd.merge(left=self.df, right=df[metrics], on=[NAME, TIMESTAMP], how='left')
+        self.df.sort_values(by=NAME, inplace=True)
+        self.df.reset_index(drop=True, inplace=True)
+        merged.sort_values(by=NAME, inplace=True)
+        merged.reset_index(drop=True, inplace=True)
         for metric in metrics:
             if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
                 merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
