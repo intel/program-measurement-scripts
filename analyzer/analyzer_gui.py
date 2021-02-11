@@ -88,7 +88,7 @@ class LoadedData(Observable):
             pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP, 'Color']).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
-            pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
+            pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', 'Before Variant', 'After Variant', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
@@ -181,9 +181,14 @@ class LoadedData(Observable):
         self.default_variant = self.summaryDf[VARIANT].value_counts().idxmax()
         # Get corresponding mappings from the local database
         self.all_mappings = pd.read_csv(self.mappings_path)
-        self.mapping = MappingsTab.restoreCustom(self.summaryDf.loc[self.summaryDf[VARIANT]==self.default_variant], self.all_mappings)
-        #if not self.mapping.empty:
-            #self.get_speedups(self.mapping)
+        # self.mapping = MappingsTab.restoreCustom(self.summaryDf.loc[self.summaryDf[VARIANT]==self.default_variant], self.all_mappings)
+        self.mapping = MappingsTab.restoreCustom(self.summaryDf, self.all_mappings)
+        if not self.mapping.empty:
+            # TODO: Add before and after variants to mappings that dont have them
+            try:
+                self.get_speedups(self.mapping)
+            except:
+                pass 
         # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
         if not update: self.resetTabValues() 
         # if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
@@ -200,7 +205,7 @@ class LoadedData(Observable):
             if data_dir: self.appDf.to_excel(os.path.join(data_dir, 'app_summary.xlsx'))
         # Add speedups to the corresponding dfs at each level
         if not self.mapping.empty: 
-            #self.add_speedup(self.mapping, self.summaryDf)
+            self.add_speedup(self.mapping, self.summaryDf)
             self.orig_mapping = self.mapping.copy(deep=True) # Used to restore original mappings after viewing end2end
         #if not self.src_mapping.empty: self.add_speedup(self.src_mapping, self.srcDf)
         #if not self.app_mapping.empty: self.add_speedup(self.app_mapping, self.appDf)
@@ -390,6 +395,19 @@ class LoadedData(Observable):
             if metric + "_y" in df.columns and metric + "_x" in df.columns:
                 df[metric] = df[metric + "_y"].fillna(df[metric + "_x"])
                 df.drop(columns=[metric + "_y", metric + "_x"], inplace=True, errors='ignore')
+
+    def merge_metrics(self, df, metrics, level):
+        # Add metrics computed in plot functions to master dataframe
+        metrics.extend([NAME, TIMESTAMP])
+        merged = pd.merge(left=self.dfs[level], right=df[metrics], on=[NAME, TIMESTAMP], how='left')
+        self.dfs[level].sort_values(by=NAME, inplace=True)
+        self.dfs[level].reset_index(drop=True, inplace=True)
+        merged.sort_values(by=NAME, inplace=True)
+        merged.reset_index(drop=True, inplace=True)
+        for metric in metrics:
+            if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
+                merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
+            if metric not in [NAME, TIMESTAMP]: self.dfs[level][metric] = merged[metric]
 
 class CodeletTab(tk.Frame):
     def __init__(self, parent):

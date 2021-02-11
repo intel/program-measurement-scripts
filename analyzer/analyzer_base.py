@@ -33,17 +33,7 @@ class AnalyzerData(Observable):
         self.df = loadedData.dfs[self.level]
 
     def merge_metrics(self, df, metrics):
-        # Add metrics computed in plot functions to master dataframe
-        metrics.extend([NAME, TIMESTAMP])
-        merged = pd.merge(left=self.df, right=df[metrics], on=[NAME, TIMESTAMP], how='left')
-        self.df.sort_values(by=NAME, inplace=True)
-        self.df.reset_index(drop=True, inplace=True)
-        merged.sort_values(by=NAME, inplace=True)
-        merged.reset_index(drop=True, inplace=True)
-        for metric in metrics:
-            if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
-                merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
-            if metric not in [NAME, TIMESTAMP]: self.df[metric] = merged[metric]
+        self.loadedData.merge_metrics(df, metrics, self.level)
     
 class AnalyzerTab(tk.Frame):
     def __init__(self, parent, data, title, x_axis, y_axis, extra_metrics):
