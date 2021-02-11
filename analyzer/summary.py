@@ -41,8 +41,7 @@ class SummaryTab(AnalyzerTab):
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.tableNote.add(self.axesTab, text="Axes")
         #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
-        # Not displaying guideTab yet as we still need to define functions
-        if False and not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns):
+        if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns):
             self.guideTab = GuideTab(self.tableNote, self)
-        if False and not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns): 
+        if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns): 
             self.tableNote.add(self.guideTab, text='Guide')
