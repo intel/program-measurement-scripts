@@ -14,7 +14,7 @@ class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
         super().__init__()
         self.loadedData = loadedData
-        self.mappings = pd.DataFrame()
+    #    self.mappings = pd.DataFrame()
         self.level = level
         self.name = name
         self.gui = gui
@@ -22,15 +22,28 @@ class AnalyzerData(Observable):
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
+    # Make df a property that refer to the right dataframe
+    @property
+    def df(self):
+        # Get correct dataframe
+        return self.loadedData.dfs[self.level]
+
+    @property
+    def mappings(self):
+        return self.loadedData.mappings[self.level]
+        
+
     def notify(self, loadedData, update, variants, mappings):
         # mappings
-        if not mappings.empty: self.mappings = mappings
-        else: self.mappings = loadedData.mappings[self.level]
+
+        #if not mappings.empty: self.mappings = mappings
+        #else: self.mappings = loadedData.mappings[self.level]
+
         # Only show selected variants, default is most frequent variant
-        if not variants: self.variants = [loadedData.default_variant]
+        if not variants: self.variants = [self.loadedData.default_variant]
         else: self.variants = variants
         # Get correct dataframe
-        self.df = loadedData.dfs[self.level]
+        #self.df = loadedData.dfs[self.level]
 
     def merge_metrics(self, df, metrics):
         self.loadedData.merge_metrics(df, metrics, self.level)

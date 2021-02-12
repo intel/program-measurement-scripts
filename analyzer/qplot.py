@@ -15,7 +15,7 @@ class QPlotData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
         super().__init__(loadedData, gui, root, level, 'QPlot')
         # TODO: Try removing all of these attributes
-        self.df = None
+        # self.df = None
         self.fig = None
         self.ax = None
         self.appDf = None
