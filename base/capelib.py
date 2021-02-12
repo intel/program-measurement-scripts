@@ -9,8 +9,39 @@ globals().update(MetricName.__members__)
 
 # Common routines needed for Cape tool chain
 
-Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
-    'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
+class Vecinfo:
+    def __init__(self, SUM=0, SC=0, XMM=0, YMM=0, ZMM=0, FMA=0, DIV=0, SQRT=0, RSQRT=0, RCP=0, CVT=0, PACK=0):
+        self.SUM = SUM
+        self.SC = SC
+        self.XMM = XMM
+        self.YMM = YMM
+        self.ZMM = ZMM
+        self.FMA = FMA
+        self.DIV = DIV
+        self.SQRT = SQRT
+        self.RSQRT = RSQRT
+        self.RCP = RCP
+        self.CVT = CVT
+        self.PACK = PACK
+
+    @classmethod
+    def from_dict(cls, dict):
+        created = cls()
+        for key, value in dict.items():
+            if key in vars(created):
+                setattr(created, key, value)
+            else:
+                raise AttributeError('Attempt to set invalid attribute \'{}\''.format(key))
+        return created
+
+    
+
+# Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
+#     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
+# # Allows defaults values 
+# # See: https://stackoverflow.com/questions/11351032/named-tuple-and-default-values-for-optional-keyword-arguments
+# Vecinfo.__new__.__defaults__ = (0,)*len(Vecinfo._fields)
+
 
 # This function should be called instead of individual calls of
 # add_one_mem_max_level_columns() to ensure consistent thresholds being computed
@@ -53,7 +84,7 @@ def nan2zero(v):
 # For CQA metrics
 def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     vec_ops = all_ops = vec_insts = all_insts = fma_ops = fma_insts = 0
-    itypes = ['FMA', 'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT']
+    itypes = ['FMA', 'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT', 'PACK']
     ops_dict = {itype : 0 for itype in itypes}
     inst_dict = {itype : 0 for itype in itypes}
 
@@ -88,6 +119,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, False)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
     cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
+    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, calculate_packops_counts_per_iter, True)
     memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
@@ -174,11 +206,65 @@ def calculate_flops_counts_per_iter(in_row):
             # Multiple to get count for all cores
             results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) \
                 for ops in [flops, flops_sc, flops_xmm, flops_ymm, flops_zmm, flops_fma, flops_div, flops_sqrt, flops_rsqrt, flops_rcp]]
-        return Vecinfo(*results, 0.0)
+        return Vecinfo(*results)
 
     flops_counts = calculate_flops_counts_with_weights(in_row, 0.5, 1, 2, 4, 8, 2)
     insts_counts = calculate_flops_counts_with_weights(in_row, 1, 1, 1, 1, 1, 1)
     return flops_counts, insts_counts
+
+# Calculate instruction and operation counts per iteration
+# opc_table is a table with Units in Bytes
+# Example of opc_table:
+#  opc_table = [ 
+#     { 'Inst':'DQ2PS', 'SC': None, 'XMM':    16, 'YMM':    32, 'ZMM':   64},
+#     ...
+#     { 'Inst':'SS2SI', 'SC':    4, 'XMM':  None, 'YMM':  None, 'ZMM': None}
+#     ]
+# TODO: If this function works well, unify with other instruction counting.
+def calculate_ops_counts_per_iter(in_row, opc_table, op_type):
+    opc_df = pd.DataFrame(opc_table)
+    # Convert from bytes to DP (64-bit = 8B)
+    opc_df[['SC','XMM', 'YMM', 'ZMM']]=opc_df[['SC', 'XMM', 'YMM', 'ZMM']]/8
+    # Get a prefix of cvt instructions to match with in_row columns
+    cvt_col_prefixes = tuple(["Nb_insn_{}".format(inst) for inst in opc_df.Inst])
+    # Now we got the column names for cvt operations
+    cvt_col_names = [col for col in in_row.keys() if col.startswith(cvt_col_prefixes)]
+    opcount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
+    icount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
+    for cvt_col_name in cvt_col_names:
+        matchobj = re.search(r'Nb_insn_(.+?)_(.MM)$', cvt_col_name)
+        if matchobj:
+            inst = matchobj.group(1)
+            regtype = matchobj.group(2)
+        else:
+            # match again to get rid of Nb_insn_
+            matchobj = re.search(r'Nb_insn_(.+?)$', cvt_col_name)
+            inst = matchobj.group(1)
+            regtype = 'SC'
+        insts = in_row[cvt_col_name]
+        ops = insts * opc_df.loc[opc_df.Inst == inst, regtype].values[0]
+        opcount[regtype] += ops
+        opcount['SUM'] += ops
+        icount[regtype] += insts
+        icount['SUM'] += insts
+    icount[op_type] = icount['SUM']
+    opcount[op_type] = opcount['SUM']
+    return Vecinfo.from_dict(opcount), Vecinfo.from_dict(icount)
+
+def calculate_packops_counts_per_iter(in_row):
+    # Units in bytes
+    opc_table = [
+        { 'Inst':'INSERT/EXTRACT',  'SC': 4,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'COMPRESS/EXPAND', 'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        # { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'BLEND/MERGE',     'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'SHUFFLE/PERM',    'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'BROADCAST',       'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   16, 'ZMM':   64},
+        { 'Inst':'MASKMOV/MOV2M',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'Other_packing',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+    ]
+    return calculate_ops_counts_per_iter(in_row, opc_table, 'PACK')
 
 def calculate_cvtops_counts_per_iter(in_row):
     # Units in Bytes
@@ -205,36 +291,7 @@ def calculate_cvtops_counts_per_iter(in_row):
         { 'Inst':'SI2SD', 'SC':    8, 'XMM':  None, 'YMM':  None, 'ZMM': None},
         { 'Inst':'SS2SI', 'SC':    4, 'XMM':  None, 'YMM':  None, 'ZMM': None}
         ]
-    opc_df = pd.DataFrame(opc_table)
-    # Convert from bytes to DP (64-bit = 8B)
-    opc_df[['SC','XMM', 'YMM', 'ZMM']]=opc_df[['SC', 'XMM', 'YMM', 'ZMM']]/8
-    # Get a prefix of cvt instructions to match with in_row columns
-    cvt_col_prefixes = tuple(["Nb_insn_{}".format(inst) for inst in opc_df.Inst])
-    # Now we got the column names for cvt operations
-    cvt_col_names = [col for col in in_row.keys() if col.startswith(cvt_col_prefixes)]
-    opcount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
-    icount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
-    for cvt_col_name in cvt_col_names:
-        matchobj = re.search(r'Nb_insn_(.+?)_(.MM)$', cvt_col_name)
-        if matchobj:
-            inst = matchobj.group(1)
-            regtype = matchobj.group(2)
-        else:
-            # match again to get rid of Nb_insn_
-            matchobj = re.search(r'Nb_insn_(.+?)$', cvt_col_name)
-            inst = matchobj.group(1)
-            regtype = 'SC'
-        insts = in_row[cvt_col_name]
-        ops = insts * opc_df.loc[opc_df.Inst == inst, regtype].values[0]
-        opcount[regtype] += ops
-        opcount['SUM'] += ops
-        icount[regtype] += insts
-        icount['SUM'] += insts
-        
-    return Vecinfo(opcount['SUM'], opcount['SC'], opcount['XMM'], opcount['YMM'], opcount['ZMM'], 
-                   0, 0, 0, 0, 0, opcount['SUM']), \
-                       Vecinfo(icount['SUM'], icount['SC'], icount['XMM'], icount['YMM'], icount['ZMM'], 
-                               0, 0, 0, 0, 0, icount['SUM'])
+    return calculate_ops_counts_per_iter(in_row, opc_table, 'CVT')
 
 def calculate_iops_counts_per_iter(in_row):
     def calculate_iops_counts_with_weights(in_row, w_sc, w_vec_xmm, w_vec_ymm, w_vec_zmm, w_sad, w_fma):
@@ -284,7 +341,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
         results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) \
             for ops in [iops ,iops_sc, iops_xmm, iops_ymm, iops_zmm, iops_fma, 0, 0, 0, 0]]
-        return Vecinfo(*results, 0.0)
+        return Vecinfo(*results)
 
     iops_counts = calculate_iops_counts_with_weights(in_row, w_sc=0.5, w_vec_xmm=2, w_vec_ymm=4, w_vec_zmm=8, w_sad=5, w_fma=2)
     insts_counts = calculate_iops_counts_with_weights(in_row, w_sc=1, w_vec_xmm=1, w_vec_ymm=1, w_vec_zmm=1, w_sad=1, w_fma=1)    
@@ -324,9 +381,9 @@ def vector_ext_str(type2percent):
     
 def find_vector_ext(flop_counts, iop_counts):
     if iop_counts is None:
-        iop_counts = Vecinfo(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        iop_counts = Vecinfo()
     if flop_counts is None:
-        flop_counts = Vecinfo(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        flop_counts = Vecinfo()
         
     out = zip([ "SC", "XMM", "YMM", "ZMM" ],
               [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) \
