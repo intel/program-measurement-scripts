@@ -251,7 +251,6 @@ class CapePlot:
         xmin=min(finiteXs)
         ymin=min(finiteYs)
 
-
         # Set specified axis scales
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
 

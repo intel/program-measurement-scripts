@@ -45,7 +45,7 @@ __cqa_user_data = {
       "cycles instruction queue", "cycles decoding", "cycles micro-operation queue",
       "cycles ROB-read", "[ia32_x86_64] cycles front end", "dispatch",
       "cycles dispatch", "RecMII",
-      "packed ratio INT", "packed ratio FP", "packed ratio",
+      "packed ratio INT", "packed ratio FP", "packed ratio", "packing instructions",
       "vec eff ratio INT", "vec eff ratio FP", "vec eff ratio",
       "[ia32_x86_64] cycles",
       "cycles L1 if fully vectorized", "cycles L1 if nomem vectorized",
