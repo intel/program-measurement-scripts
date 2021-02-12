@@ -256,11 +256,11 @@ def calculate_packops_counts_per_iter(in_row):
     opc_table = [
         { 'Inst':'INSERT/EXTRACT',  'SC': 4,    'XMM': None, 'YMM': None, 'ZMM': None},
         { 'Inst':'COMPRESS/EXPAND', 'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
-        # { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
         { 'Inst':'BLEND/MERGE',     'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'SHUFFLE/PERM',    'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'BROADCAST',       'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
-        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   16, 'ZMM':   64},
+        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'MASKMOV/MOV2M',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'Other_packing',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
     ]
@@ -317,6 +317,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops_ymm += calculate_iops(w_vec_ymm, 'Nb_INT_logic_insn_{}_YMM', itypes)
         iops_zmm += calculate_iops(w_vec_zmm, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
         # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
+        # TODO: Need to check why ANDN and TEST instructions are included in FMA counting.
         iops_fma_xmm = w_vec_xmm * (getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_XMM')
                                  + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
         iops_xmm += iops_fma_xmm
