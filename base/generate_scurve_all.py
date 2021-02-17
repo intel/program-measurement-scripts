@@ -22,9 +22,9 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class ScurveAllPlot(CapePlot):
-    def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
+    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
                  source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis='C_FLOP [GFlop/s]', mappings=mappings, short_names_path=short_names_path)
     
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
@@ -71,6 +71,8 @@ def scurve_all_plot(df, outputfile, scale, title, no_plot, variants, gui=False, 
     df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-    plot = ScurveAllPlot('ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
+    data = CapeData(df)
+    data.compute()
+    plot = ScurveAllPlot(data, 'ORIG', outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)

@@ -238,10 +238,11 @@ capacity_formula= {
     }
 
 class SiPlot(CapePlot):
-    def __init__(self, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, cur_run_df, variants, 
+    def __init__(self, data, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, variants, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-        super().__init__(variant, cur_run_df, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
-                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, short_names_path=short_names_path)
+        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
+                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
+                         short_names_path=short_names_path)
         # cur_run_df already set when self.data is created
         self.data.set_chosen_node_set (chosen_node_set)
         self.data.set_norm(norm)
@@ -370,16 +371,23 @@ def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df
     cur_run_df = cur_run_df.loc[cur_run_df[VARIANT].isin(variants)].reset_index(drop=True)
 
     #return compute_and_plot('ORIG', full_df, 'SIPLOT', norm, title, chosen_node_set, target_df, variants=variants, filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
-    plot = SiPlot ('ORIG', 'SIPLOT', norm, title, chosen_node_set, cluster_df, cur_run_df, variants=variants, \
+    siData = mk_data(cluster_df, norm, cur_run_df, chosen_node_set)
+    siData.compute()
+    plot = SiPlot (siData, 'ORIG', 'SIPLOT', norm, title, chosen_node_set, cluster_df, variants=variants, \
         filtering=filtering, filter_data=filter_data, mappings=mappings, scale=scale, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
     
-def compute_only(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
+
+def mk_data(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
     siData = SiData(cur_run_df)
     siData.set_chosen_node_set(chosen_node_set)
     siData.set_norm(norm)
     siData.set_cluster_df(cluster_df)
+    return siData
+
+def compute_only(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
+    siData = mk_data(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET)
     siData.compute()
     return siData.cluster_df, siData.cluster_and_cur_run_df, siData.df
 

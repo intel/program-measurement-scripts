@@ -11,6 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
+from capeplot import CapacityData
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -19,14 +20,13 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class Plot3d(CapacityPlot):
-    def __init__(self, variant, df, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+    def __init__(self, data, variant, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame(), short_names_path=''):
+        super().__init__(data, chosen_node_set, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=COVERAGE_PCT.value, mappings=mappings, short_names_path=short_names_path)
         self.z_axis = z_axis
         self.default_z_axis = 'C_FLOP [GFlop/s]'
 
     def compute_and_plot(self):
-        self.compute_extra()
         variant = self.variant
         outputfile_prefix = self.outputfile_prefix
         scale = self.scale
@@ -212,8 +212,11 @@ def plot_3d(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=N
     df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-    plot = Plot3d(
-        'ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings, short_names_path=short_names_path)
+    data = CapacityData(df)
+    data.set_chosen_node_set(chosen_node_set)
+    data.compute()
+    plot = Plot3d(data, 
+        'ORIG', outputfile, scale, title, chosen_node_set, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
 

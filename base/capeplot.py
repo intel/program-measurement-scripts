@@ -107,10 +107,9 @@ class CapacityData(CapeData):
 
 # Base class for all plots
 class CapePlot:
-    def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
-
-        self.mk_data(df)
+        self.data = data
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
         self.ctxs = []
@@ -137,10 +136,6 @@ class CapePlot:
     def df(self, v):
         self.data.df = v
 
-    # Subclass override this to create the right data object
-    def mk_data(self, df):
-        self.data = CapeData(df)
-        
     def mk_labels(self):
         df = self.df
         try:
@@ -157,16 +152,11 @@ class CapePlot:
         return "{}\nvariant={}, scale={}".format(title, variant, scale)
         
 
-    # Override to compute more metrics
-    def compute_extra(self):
-        self.data.compute()
-
     # Override to update the data frame containing plot data.
     def filter_data_points(self, in_df):
         return in_df
         
     def compute_and_plot(self):
-        self.compute_extra()
         variant = self.variant
         outputfile_prefix = self.outputfile_prefix
         scale = self.scale
@@ -399,21 +389,14 @@ class CapePlot:
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
-    def __init__(self, chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
-        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, chosen_node_set, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), \
+            short_names_path=''):
+        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
-        self.data.set_chosen_node_set (chosen_node_set)
-
-    def mk_data(self, df):
-        self.data = CapacityData(df)
+        self.default_x_axis = self.data.op_metric_name
 
     # Getter of chosen_node_set, delegate to self.data
     @property
     def chosen_node_set(self):
         return self.data.chosen_node_set
-
-    def compute_extra(self):
-        super().compute_extra()
-        self.default_x_axis = self.data.op_metric_name
-        

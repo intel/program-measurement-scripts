@@ -18,6 +18,7 @@ from matplotlib import style
 from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
+from capeplot import CapacityData
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -26,9 +27,9 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class QPlot(CapacityPlot):
-	def __init__(self, variant, df, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, 
+	def __init__(self, data, variant, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, 
               source_order=None, mappings=pd.DataFrame(), short_names_path=''): 
-		super().__init__(chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+		super().__init__(data, chosen_node_set, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                    default_y_axis='C_max [GB/s]',  mappings=mappings, short_names_path=short_names_path)
 		self.source_order = source_order
 
@@ -84,7 +85,10 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
-	plot = QPlot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
+	data = CapacityData(df)
+	data.set_chosen_node_set(chosen_node_set) 
+	data.compute()
+	plot = QPlot(data, 'ORIG', outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
 	plot.compute_and_plot()
 	return (df_XFORM, fig_XFORM, textData_XFORM, plot.df, plot.fig, plot.plotData)
 
