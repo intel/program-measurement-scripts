@@ -3,6 +3,8 @@ from utils import Observable
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_QPlot import parse_ip_df as parse_ip_qplot_df
+from generate_QPlot import QPlot
+from capeplot import CapacityData
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
@@ -26,13 +28,27 @@ class QPlotData(AnalyzerData):
         print("QPlotData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
-                (self.df.copy(deep=True), "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                    source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
-        self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
-        self.fig = fig_ORIG if fig_ORIG is not None else fig_XFORM
-        self.textData = textData_ORIG if textData_ORIG is not None else textData_XFORM
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]']) 
+
+        df = self.df.copy(deep=True)
+        data = CapacityData(df)
+        data.set_chosen_node_set(chosen_node_set) 
+        data.compute()
+        self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+
+
+        plot = QPlot(data, 'ORIG', "test", scale, "QPlot", chosen_node_set, False, True, None, None, 
+                     loadedData.source_order, self.mappings, self.gui.loadedData.short_names_path)
+        plot.compute_and_plot()
+        
+        #df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
+        #        (self.df.copy(deep=True), "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #            source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
+        self.fig = plot.fig
+        self.textData = plot.plotData
+        #self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+        #self.fig = fig_ORIG 
+        #self.textData = textData_ORIG 
         self.notify_observers()
 
 class QPlotTab(AnalyzerTab):

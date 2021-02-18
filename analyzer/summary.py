@@ -2,7 +2,9 @@ import tkinter as tk
 from utils import Observable
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
+from capeplot import CapacityData
 from generate_coveragePlot import coverage_plot
+from generate_coveragePlot import CoveragePlot
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
@@ -20,9 +22,22 @@ class CoverageData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        coverage_df, self.fig, self.textData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
-            variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
-        self.merge_metrics(coverage_df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+
+        df0 = self.df.copy(deep=True)
+        data = CapacityData(df0)
+        data.set_chosen_node_set(chosen_node_set)
+        data.compute()
+        self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+
+
+        plot = CoveragePlot(data, 'ORIG', "test", scale, "Coverage", chosen_node_set=chosen_node_set, no_plot=False, gui=True, 
+                            x_axis=None, y_axis=None, mappings=self.mappings)
+        plot.compute_and_plot()
+        self.fig = plot.fig
+        self.textData = plot.plotData
+        
+        #coverage_df, self.fig, self.textData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
+        #    variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
 class SummaryTab(AnalyzerTab):

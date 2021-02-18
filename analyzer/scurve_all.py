@@ -6,6 +6,8 @@ from utils import Observable
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_scurve_all import scurve_all_plot
+from generate_scurve_all import ScurveAllPlot
+from capeplot import CapeData
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
@@ -22,8 +24,18 @@ class ScurveAllData(AnalyzerData):
         print("Scurve_allData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
-        scurve_df, self.fig, self.textData = scurve_all_plot(self.df.copy(deep=True), 'test', scale, 'S-Curve All', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
+        df = self.df.copy(deep=True)
+        df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        data = CapeData(df)
+        data.compute()
+        plot = ScurveAllPlot(data, 'ORIG', 'test', scale, 'S-Curve All', no_plot=False, gui=True, 
+                             x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order, 
+                             mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
+        plot.compute_and_plot()
+        self.fig = plot.fig
+        self.textData = plot.plotData
+        #scurve_df, self.fig, self.textData = scurve_all_plot(self.df.copy(deep=True), 'test', scale, 'S-Curve All', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
 class ScurveAllTab(AnalyzerTab):

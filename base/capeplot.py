@@ -236,10 +236,10 @@ class CapePlot:
 
         finiteXs = xs[np.isfinite(xs)]
         finiteYs = ys[np.isfinite(ys)]
-        xmax=max(finiteXs)*1.2
-        ymax=max(finiteYs)*1.2  
-        xmin=min(finiteXs)
-        ymin=min(finiteYs)
+        xmax=max(finiteXs, default=1)*1.2
+        ymax=max(finiteYs, default=1)*1.2  
+        xmin=min(finiteXs, default=0)
+        ymin=min(finiteYs, default=0)
 
         # Set specified axis scales
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
