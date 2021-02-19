@@ -11,7 +11,7 @@ from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path
 from metric_names import MetricName
-from metric_names import NonMetricName
+from metric_names import NonMetricName, KEY_METRICS
 globals().update(MetricName.__members__)
 
 class AxesTab(tk.Frame):
@@ -428,7 +428,7 @@ class ClusterTab(tk.Frame):
 
     def updateColors(self):
         table_df = self.tab.shortnameTab.table.model.df
-        table_df = pd.merge(left=table_df, right=self.tab.df[[NAME, TIMESTAMP, NonMetricName.SI_CLUSTER_NAME]], how='left', on=[NAME, TIMESTAMP])
+        table_df = pd.merge(left=table_df, right=self.tab.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]], how='left', on=KEY_METRICS)
         table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
         table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
         self.tab.shortnameTab.updateLabels(table_df, True)

@@ -46,7 +46,7 @@ from plot_interaction import PlotInteraction
 from capeplot import CapacityData
 from generate_SI import SiData
 from sat_analysis import find_clusters as find_si_clusters
-from metric_names import NonMetricName
+from metric_names import NonMetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -453,8 +453,8 @@ class LoadedData(Observable):
 
     def merge_metrics(self, df, metrics, level):
         # Add metrics computed in plot functions to master dataframe
-        metrics.extend([NAME, TIMESTAMP])
-        merged = pd.merge(left=self.dfs[level], right=df[metrics], on=[NAME, TIMESTAMP], how='left')
+        metrics.extend(KEY_METRICS)
+        merged = pd.merge(left=self.dfs[level], right=df[metrics], on=KEY_METRICS, how='left')
         self.dfs[level].sort_values(by=NAME, inplace=True)
         self.dfs[level].reset_index(drop=True, inplace=True)
         merged.sort_values(by=NAME, inplace=True)
@@ -462,7 +462,7 @@ class LoadedData(Observable):
         for metric in metrics:
             if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
                 merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
-            if metric not in [NAME, TIMESTAMP]: self.dfs[level][metric] = merged[metric]
+            if metric not in KEY_METRICS: self.dfs[level][metric] = merged[metric]
 
 class CodeletTab(tk.Frame):
     def __init__(self, parent):

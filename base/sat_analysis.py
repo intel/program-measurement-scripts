@@ -11,8 +11,7 @@ import sys
 import re
 import importlib
 from pathlib import Path
-from metric_names import NonMetricName
-from metric_names import MetricName
+from metric_names import NonMetricName, MetricName, KEY_METRICS
 from generate_SI import compute_only
 from generate_SI import BASIC_NODE_SET
 from sw_bias import compute_sw_bias
@@ -76,11 +75,10 @@ def find_clusters(current_codelets_runs_df, memAlusatThreshold = 0.10, cuSatThre
   optimal_data_df = pd.read_csv(optimal_data_path)
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
   all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
-
     # filter out the unnecessary columns
   all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
                                ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
-  all_test_codelets=all_test_codelets[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
+  all_test_codelets=all_test_codelets[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
                                ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
 
 
@@ -621,8 +619,7 @@ def do_sat_analysis(satSetDF, testSetDF):
     codelet_tested = 0
     print ("Memory Node Saturation Threshold : ", satThreshold)
     print ("Control Node Saturation Threshold : ", cuSatThreshold)
-    cols = satSetDF.columns.tolist()
-    cols.append(MetricName.TIMESTAMP)
+    cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
         testDF = pd.DataFrame(columns=cols)
