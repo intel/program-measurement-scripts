@@ -20,9 +20,9 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class CoveragePlot(CapacityPlot):
-    def __init__(self, data, variant, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, 
+    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui=False, 
                  x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(data, chosen_node_set, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=COVERAGE_PCT.value, mappings=mappings, short_names_path=short_names_path)
 
     def mk_labels(self):

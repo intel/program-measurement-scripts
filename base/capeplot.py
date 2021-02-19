@@ -389,12 +389,12 @@ class CapePlot:
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
-    def __init__(self, data, chosen_node_set, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), \
             short_names_path=''):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
-        self.default_x_axis = self.data.op_metric_name
+        #self.default_x_axis = self.data.op_metric_name
 
     # Getter of chosen_node_set, delegate to self.data
     @property

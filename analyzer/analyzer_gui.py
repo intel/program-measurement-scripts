@@ -43,6 +43,10 @@ from scurve import ScurveData, ScurveTab
 from scurve_all import ScurveAllData, ScurveAllTab
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab
 from plot_interaction import PlotInteraction
+from capeplot import CapacityData
+from generate_SI import SiData
+from sat_analysis import find_clusters as find_si_clusters
+from metric_names import NonMetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -80,6 +84,9 @@ class LoadedData(Observable):
         self.restore = False
         self.removedIntermediates = False
         self.transitions = 'disabled'
+        # Following maps will use level to lookup
+        self.capacityDataDict = {}
+        self.siDataDict = {}
 
     def check_cape_paths(self):
         if not os.path.isfile(self.short_names_path):
@@ -220,11 +227,59 @@ class LoadedData(Observable):
         self.srcDf = self.compute_colors(self.srcDf)
         self.appDf = self.compute_colors(self.appDf)
         self.dfs = {'Codelet' : self.summaryDf, 'Source' : self.srcDf, 'Application' : self.appDf}
+        self.capacityDataDict.clear() 
+        self.siDataDict.clear()
+
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         for level in self.dfs:
-            self.addShortNames(self.dfs[level])
+            df = self.dfs[level]
+            self.addShortNames(df)
+            # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+            data = CapacityData(df)
+            data.set_chosen_node_set(chosen_node_set)
+            data.compute()
+            self.capacityDataDict[level] = data
+            self.siDataDict[level] = self.computeSi(level)
+
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
+
+    def computeSi(self, level):
+        # Check cache/create cluster and si dfs
+        chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
+        run_cluster = True
+        if run_cluster:
+            cluster_df = pd.DataFrame()
+            si_df = pd.DataFrame()
+            cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
+            si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
+            # Check to see if we can use cached cluster and si dataframes
+            if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
+                data = open(cluster_dest, 'rb') 
+                cluster_df = pickle.load(data)
+                data.close()
+                data = open(si_dest, 'rb') 
+                si_df = pickle.load(data)
+                data.close()
+            else:
+                cluster_df, si_df = find_si_clusters(self.dfs[level])
+                data = open(cluster_dest, 'wb')
+                pickle.dump(cluster_df, data)
+                data.close()
+                data = open(si_dest, 'wb')
+                pickle.dump(si_df, data)
+                data.close()
+        self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
+        # Generate Plot
+        cur_run_df = self.dfs[level]
+        siData = SiData(cur_run_df)
+        siData.set_chosen_node_set(chosen_node_set)
+        siData.set_norm("row")
+        siData.set_cluster_df(cluster_df)
+        siData.compute()
+        #self.merge_metrics(siData.df, ['Saturation', 'Intensity', 'SI'], level)
+        return siData
 
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()

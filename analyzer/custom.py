@@ -22,20 +22,20 @@ class CustomData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings) 
         
         
-        df = self.df.copy(deep=True)
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
-        data = CapacityData(df)
-        data.set_chosen_node_set(chosen_node_set)
-        data.compute()
+        # df = self.df.copy(deep=True)
+        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        # data = CapacityData(df)
+        # data.set_chosen_node_set(chosen_node_set)
+#        data.compute()
 
         
 
-        plot = CustomPlot(data, 'ORIG', 'test', scale, 'Custom', chosen_node_set, 
-                          no_plot=False, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
-        plot.compute_and_plot()
-        self.fig = plot.fig
-        self.textData = plot.plotData
+        # plot = CustomPlot(self.capacityData, 'ORIG', 'test', scale, 'Custom', no_plot=False, gui=True, 
+        #                   x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
+        # plot.compute_and_plot()
+        # self.fig = plot.fig
+        # self.textData = plot.plotData
 
         # Generate Plot
         #custom_df, self.fig, self.textData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
@@ -57,3 +57,8 @@ class CustomTab(AnalyzerTab):
         super().buildTableTabs()
         self.axesTab = AxesTab(self.tableNote, self, 'Custom')
         self.tableNote.add(self.axesTab, text="Axes")
+
+    def mk_plot(self):
+        return CustomPlot(self.data.capacityData, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 
+                          x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
+                          mappings=self.mappings, short_names_path=self.data.gui.loadedData.short_names_path)

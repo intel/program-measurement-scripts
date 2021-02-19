@@ -238,19 +238,18 @@ capacity_formula= {
     }
 
 class SiPlot(CapePlot):
-    def __init__(self, data, variant, outputfile_prefix, norm, title, chosen_node_set, cluster_df, variants, 
+    def __init__(self, data, variant, outputfile_prefix, norm, title, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
                          default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
                          short_names_path=short_names_path)
         # cur_run_df already set when self.data is created
-        self.data.set_chosen_node_set (chosen_node_set)
-        self.data.set_norm(norm)
-        self.data.set_cluster_df(cluster_df)
+        #self.data.set_chosen_node_set (chosen_node_set)
+        #self.data.set_norm(norm)
+        #self.data.set_cluster_df(cluster_df)
         #self.norm = norm
         #self.cur_run_df = cur_run_df
         #self.cluster_df = cluster_df
-        self.variants = variants
         self.filter_data = filter_data
 
     # df here is the cur_run_df

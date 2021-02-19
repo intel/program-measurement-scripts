@@ -21,16 +21,16 @@ class Data3d(AnalyzerData):
         print("Data3d Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        df = self.df.copy(deep=True)
-        data = CapacityData(df)
-        data.set_chosen_node_set(chosen_node_set)
-        data.compute()
-        plot = Plot3d(data, 'ORIG', 'test', scale, '3D', chosen_node_set, no_plot=False, gui=True, 
-                      x_axis=x_axis, y_axis=y_axis, z_axis=None, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
-        plot.compute_and_plot()
-        self.fig = plot.fig
-        self.textData = plot.plotData
+        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        # df = self.df.copy(deep=True)
+        # data = CapacityData(df)
+        # data.set_chosen_node_set(chosen_node_set)
+# #        data.compute()
+#         plot = Plot3d(self.capacityData, 'ORIG', 'test', scale, '3D', no_plot=False, gui=True, 
+#                       x_axis=x_axis, y_axis=y_axis, z_axis=None, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
+#         plot.compute_and_plot()
+#         self.fig = plot.fig
+#         self.textData = plot.plotData
         #df_3d, self.fig, self.textData = plot_3d(self.df.copy(deep=True), 'test', scale, '3D', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
@@ -50,3 +50,8 @@ class Tab3d(AnalyzerTab):
         super().buildTableTabs()
         self.axesTab = AxesTab(self.tableNote, self, 'Custom')
         self.tableNote.add(self.axesTab, text="Axes")
+
+    def mk_plot(self):
+        return Plot3d(self.data.capacityData, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
+                      x_axis=self.data.x_axis, y_axis=self.data.y_axis, z_axis=None, mappings=self.mappings, 
+                      short_names_path=self.data.gui.loadedData.short_names_path)
