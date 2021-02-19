@@ -488,7 +488,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
             input_data_source = sys.stdin if (inputfile == '-') else inputfile
             cur_df = pd.read_csv(input_data_source, delimiter=',')
             # For CapeScripts data, just use experiment timestamp as the time stamp
-            cur_df['Timestamp#'] = cur_df['Expr TS#']
+            #cur_df['Timestamp#'] = cur_df['Expr TS#']
+            cur_df['Timestamp#'] = cur_df['TS#']
             cur_df['Source Name'] = None
         else:
             # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
