@@ -22,17 +22,17 @@ class TRAWLData(AnalyzerData):
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
 
-        df = self.df.copy(deep=True)
-        df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
-        data = CapeData(df)
-        data.compute()
-        plot = TrawlPlot(data, 'ORIG', 'test', scale, 'TRAWL', no_plot=False, 
-                         gui=True, x_axis=x_axis, y_axis=y_axis, 
-                         source_order=loadedData.source_order, mappings=self.mappings, 
-                         short_names_path=self.gui.loadedData.short_names_path)
-        plot.compute_and_plot()
-        self.fig = plot.fig
-        self.textData = plot.plotData
+        # df = self.df.copy(deep=True)
+        # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        # data = CapeData(df)
+        # # data.compute()
+        # plot = TrawlPlot(data, 'ORIG', 'test', scale, 'TRAWL', no_plot=False, 
+        #                  gui=True, x_axis=x_axis, y_axis=y_axis, 
+        #                  source_order=loadedData.source_order, mappings=self.mappings, 
+        #                  short_names_path=self.gui.loadedData.short_names_path)
+        # plot.compute_and_plot()
+        # self.fig = plot.fig
+        # self.textData = plot.plotData
 
         #trawl_df, self.fig, self.textData = trawl_plot(self.df.copy(deep=True), 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
@@ -48,3 +48,9 @@ class TrawlTab(AnalyzerTab):
         super().buildTableTabs()
         self.axesTab = AxesTab(self.tableNote, self, 'TRAWL')
         self.tableNote.add(self.axesTab, text="Axes")
+
+    def mk_plot(self):
+        return TrawlPlot(self.data.capacityData, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
+                         gui=True, x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
+                         source_order=self.data.loadedData.source_order, mappings=self.mappings, 
+                         short_names_path=self.data.gui.loadedData.short_names_path)

@@ -26,50 +26,13 @@ class SIPlotData(AnalyzerData):
         filtering=False, filter_data=None, scale='linear', level='All', mappings=pd.DataFrame()):
         print("SIPlotData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
-        # Check cache/create cluster and si dfs
-        chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
-        if self.run_cluster:
-            self.cluster_df = pd.DataFrame()
-            self.si_df = pd.DataFrame()
-            cluster_dest = os.path.join(loadedData.data_dir, 'cluster_df.pkl')
-            si_dest = os.path.join(loadedData.data_dir, 'si_df.pkl')
-            # Check to see if we can use cached cluster and si dataframes
-            for name in os.listdir(loadedData.data_dir):
-                if name.endswith('cluster_df.pkl'):
-                    data = open(cluster_dest, 'rb') 
-                    self.cluster_df = pickle.load(data)
-                    data.close()
-                elif name.endswith('si_df.pkl'): 
-                    data = open(si_dest, 'rb') 
-                    self.si_df = pickle.load(data)
-                    data.close()
-            if self.cluster_df.empty or self.si_df.empty:
-                self.cluster_df, self.si_df = find_si_clusters(loadedData.dfs[self.level])
-                data = open(cluster_dest, 'wb')
-                pickle.dump(self.cluster_df, data)
-                data.close()
-                data = open(si_dest, 'wb')
-                pickle.dump(self.si_df, data)
-                data.close()
-            self.run_cluster = False
-        self.merge_metrics(self.si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES])
-        # Generate Plot
-        cur_run_df = self.df.copy(deep=True)
-        siData = SiData(cur_run_df)
-        siData.set_chosen_node_set(chosen_node_set)
-        siData.set_norm("row")
-        siData.set_cluster_df(self.cluster_df)
-        siData.compute()
-        self.merge_metrics(siData.df, ['Saturation', 'Intensity', 'SI'])
 
-        
-
-        plot = SiPlot (siData, 'ORIG', 'SIPLOT', "row", title, chosen_node_set, self.cluster_df, variants=variants, 
-                       filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, 
-                       short_names_path=self.gui.loadedData.short_names_path) 
-        plot.compute_and_plot()
-        self.fig = plot.fig
-        self.textData = plot.plotData
+        # plot = SiPlot (self.siData, 'ORIG', 'SIPLOT', "row", title, 
+        #                filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=self.scale, 
+        #                short_names_path=self.gui.loadedData.short_names_path) 
+        # plot.compute_and_plot()
+        # self.fig = plot.fig
+        # self.textData = plot.plotData
 
         #siplot_df, self.fig, self.textData = parse_ip_siplot_df\
         #    (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df.copy(deep=True), variants=self.variants, filtering=filtering, filter_data=filter_data, \
@@ -90,4 +53,10 @@ class SIPlotTab(AnalyzerTab):
         self.filteringTab = FilteringTab(self.tableNote, self)
         self.tableNote.add(self.clusterTab, text='Clusters')
         self.tableNote.add(self.filteringTab, text='Filtering')
-        
+
+    def mk_plot(self):
+        # TODO: Work with Elias to use cherry pick rather than passing in filter data
+        return SiPlot (self.data.siData, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
+                       filtering=False, filter_data=None, mappings=self.mappings, 
+                       scale=self.data.scale, 
+                       short_names_path=self.data.gui.loadedData.short_names_path) 

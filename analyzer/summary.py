@@ -21,20 +21,20 @@ class CoverageData(AnalyzerData):
         print("CoverageData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
 
-        df0 = self.df.copy(deep=True)
-        data = CapacityData(df0)
-        data.set_chosen_node_set(chosen_node_set)
-        data.compute()
-        self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+        #df0 = self.df.copy(deep=True)
+        #data = CapacityData(df0)
+        #data.set_chosen_node_set(chosen_node_set)
+        # data.compute()
+        #self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
 
 
-        plot = CoveragePlot(data, 'ORIG', "test", scale, "Coverage", chosen_node_set=chosen_node_set, no_plot=False, gui=True, 
-                            x_axis=None, y_axis=None, mappings=self.mappings)
-        plot.compute_and_plot()
-        self.fig = plot.fig
-        self.textData = plot.plotData
+        # plot = CoveragePlot(self.capacityData, 'ORIG', "test", scale, "Coverage", no_plot=False, gui=True, 
+        #                     x_axis=None, y_axis=None, mappings=self.mappings)
+        # plot.compute_and_plot()
+        # self.fig = plot.fig
+        # self.textData = plot.plotData
         
         #coverage_df, self.fig, self.textData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
         #    variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
@@ -60,3 +60,7 @@ class SummaryTab(AnalyzerTab):
             self.guideTab = GuideTab(self.tableNote, self)
         if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns): 
             self.tableNote.add(self.guideTab, text='Guide')
+
+    def mk_plot(self):
+        return CoveragePlot(self.data.capacityData, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
+                            x_axis=None, y_axis=None, mappings=self.mappings)

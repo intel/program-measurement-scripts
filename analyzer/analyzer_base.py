@@ -19,6 +19,9 @@ class AnalyzerData(Observable):
         self.name = name
         self.gui = gui
         self.root = root
+        self.scale = "linear"
+        self.x_axis = None
+        self.y_axis = None
         # Watch for updates in loaded data
         loadedData.add_observers(self)
 
@@ -31,7 +34,18 @@ class AnalyzerData(Observable):
     @property
     def mappings(self):
         return self.loadedData.mappings[self.level]
+
+    @property
+    def capacityData(self):
+        return self.loadedData.capacityDataDict[self.level]
+
+    @property
+    def siData(self):
+        return self.loadedData.siDataDict[self.level]
         
+    @property
+    def siData(self):
+        return self.loadedData.siDataDict[self.level]
 
     def notify(self, loadedData, update, variants, mappings):
         # mappings
@@ -68,16 +82,34 @@ class AnalyzerTab(tk.Frame):
         self.window.pack(fill=tk.BOTH,expand=True)
         self.extra_metrics = extra_metrics
 
+    @property
+    def mappings(self):
+        return self.data.mappings
+
+    # TODO: Bring this back
+    # TODO: request Elias to move non-tkinter data to Data object for cleaner
+    #       MVC design
+    #@property
+    #def variants(self):
+    #    return self.data.variants
+
+    # Subclass needs to override this method
+    def mk_plot(self):
+        raise Exception("Method needs to be overriden to create plots")
+    
     def setup(self, metrics):
         # Clear previous plots and meta data tabs TODO: investigate if we can update rather than rebuilding
         for w in self.window.winfo_children():
             w.destroy()
         # Update attributes
+        plot = self.mk_plot()
+        plot.compute_and_plot()
+        self.fig, self.textData = plot.fig, plot.plotData
+        #self.textData = self.data.textData
+
         self.df = self.data.df
-        self.fig = self.data.fig
-        self.mappings = self.data.mappings
+        # self.mappings = self.data.mappings
         self.variants = self.data.variants
-        self.textData = self.data.textData
         self.metrics = metrics
         # Plot/Table setup
         self.plotInteraction = PlotInteraction(self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True), self.fig, self.textData, self.level, self.data.gui, self.data.root)
