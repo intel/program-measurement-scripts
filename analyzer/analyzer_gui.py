@@ -232,6 +232,8 @@ class LoadedData(Observable):
 
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
         chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        # TO UPDATE
+        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
         for level in self.dfs:
             df = self.dfs[level]
             self.addShortNames(df)
@@ -247,7 +249,7 @@ class LoadedData(Observable):
 
     def computeSi(self, level):
         # Check cache/create cluster and si dfs
-        chosen_node_set = set(['RAM [GB/s]','L2 [GB/s]','FE','FLOP [GFlop/s]','L1 [GB/s]','VR [GB/s]','L3 [GB/s]'])
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
         run_cluster = True
         if run_cluster:
             cluster_df = pd.DataFrame()

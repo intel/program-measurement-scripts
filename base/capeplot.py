@@ -54,6 +54,33 @@ class CapacityData(CapeData):
 	    'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
 	    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
 	    'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
+        # NEW STUFF TO UPDATE
+        # 'C_FLOP [GB/s]': (lambda df : df[RATE_FP_GFLOP_P_S]*8),
+        # 'C_L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
+        # 'C_L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
+        # 'C_L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
+        # 'C_SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
+        # 'C_RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
+        # 'C_VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]), 
+        
+        # 'C_FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
+        # 'C_L1 [GW/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
+        # 'C_L2 [GW/s]': (lambda df : df[RATE_L2_GB_P_S]/8), 
+        # 'C_L3 [GW/s]': (lambda df : df[RATE_L3_GB_P_S]/8), 
+        # 'C_SIMD [GW/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/8),
+        # 'C_RAM [GW/s]': (lambda df : df[RATE_RAM_GB_P_S]/8), 
+        # 'C_VR [GW/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/8), 
+
+        # 'C_rmax [GB/s]': (lambda df : (df[['', '', '']]).max()), 
+
+        # 'FE [GB/s]': (lambda df : (df[STALL_FE_PCT]/100)*df['C_rmax [GB/s]']), 
+        # 'FE [GW/s]': (lambda df : (df[STALL_FE_PCT]/100)*(df['C_rmax [GW/s]'])), 
+        # 'SB [GB/s]': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_rmax [GB/s]'])), 
+        # 'SB [GW/s]': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_rmax [GW/s]'])), 
+        # 'LM [GB/s]': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_rmax [GB/s]'])), 
+        # 'LM [GW/s]': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_rmax [GW/s]'])), 
+        # 'RS [GB/s]': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_rmax [GB/s]'])), 
+        # 'RS [GW/s]': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_rmax [GW/s]'])), 
     }
 
     def __init__(self, df):
