@@ -3,6 +3,8 @@ from utils import Observable
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_TRAWL import trawl_plot
+from generate_TRAWL import TrawlPlot
+from capeplot import CapeData
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
@@ -19,8 +21,21 @@ class TRAWLData(AnalyzerData):
         print("TRAWLData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
-        trawl_df, self.fig, self.textData = trawl_plot(self.df.copy(deep=True), 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-                source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
+
+        df = self.df.copy(deep=True)
+        df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        data = CapeData(df)
+        data.compute()
+        plot = TrawlPlot(data, 'ORIG', 'test', scale, 'TRAWL', no_plot=False, 
+                         gui=True, x_axis=x_axis, y_axis=y_axis, 
+                         source_order=loadedData.source_order, mappings=self.mappings, 
+                         short_names_path=self.gui.loadedData.short_names_path)
+        plot.compute_and_plot()
+        self.fig = plot.fig
+        self.textData = plot.plotData
+
+        #trawl_df, self.fig, self.textData = trawl_plot(self.df.copy(deep=True), 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
 class TrawlTab(AnalyzerTab):

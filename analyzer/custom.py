@@ -3,6 +3,8 @@ from utils import Observable
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_custom import custom_plot
+from generate_custom import CustomPlot
+from capeplot import CapacityData
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
@@ -17,10 +19,27 @@ class CustomData(AnalyzerData):
 
     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("CustomData Notified from ", loadedData)
-        super().notify(loadedData, update, variants, mappings)
+        super().notify(loadedData, update, variants, mappings) 
+        
+        
+        df = self.df.copy(deep=True)
+        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        data = CapacityData(df)
+        data.set_chosen_node_set(chosen_node_set)
+        data.compute()
+
+        
+
+        plot = CustomPlot(data, 'ORIG', 'test', scale, 'Custom', chosen_node_set, 
+                          no_plot=False, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
+        plot.compute_and_plot()
+        self.fig = plot.fig
+        self.textData = plot.plotData
+
         # Generate Plot
-        custom_df, self.fig, self.textData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-            variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
+        #custom_df, self.fig, self.textData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
 class CustomTab(AnalyzerTab):

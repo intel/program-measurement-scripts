@@ -3,6 +3,8 @@ from utils import Observable, resource_path
 from analyzer_base import AnalyzerTab, AnalyzerData
 import pandas as pd
 from generate_SI import parse_ip_df as parse_ip_siplot_df
+from generate_SI import SiData
+from generate_SI import SiPlot
 import copy
 import os
 import pickle
@@ -52,11 +54,27 @@ class SIPlotData(AnalyzerData):
             self.run_cluster = False
         self.merge_metrics(self.si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES])
         # Generate Plot
-        siplot_df, self.fig, self.textData = parse_ip_siplot_df\
-            (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df.copy(deep=True), variants=self.variants, filtering=filtering, filter_data=filter_data, \
-                mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
+        cur_run_df = self.df.copy(deep=True)
+        siData = SiData(cur_run_df)
+        siData.set_chosen_node_set(chosen_node_set)
+        siData.set_norm("row")
+        siData.set_cluster_df(self.cluster_df)
+        siData.compute()
+        self.merge_metrics(siData.df, ['Saturation', 'Intensity', 'SI'])
+
+        
+
+        plot = SiPlot (siData, 'ORIG', 'SIPLOT', "row", title, chosen_node_set, self.cluster_df, variants=variants, 
+                       filtering=filtering, filter_data=filter_data, mappings=self.mappings, scale=scale, 
+                       short_names_path=self.gui.loadedData.short_names_path) 
+        plot.compute_and_plot()
+        self.fig = plot.fig
+        self.textData = plot.plotData
+
+        #siplot_df, self.fig, self.textData = parse_ip_siplot_df\
+        #    (self.cluster_df, "FE_tier1", "row", title, chosen_node_set, self.df.copy(deep=True), variants=self.variants, filtering=filtering, filter_data=filter_data, \
+        #        mappings=self.mappings, scale=scale, short_names_path=self.gui.loadedData.short_names_path)
         # Add new metrics to shared dataframe
-        self.merge_metrics(siplot_df, ['Saturation', 'Intensity', 'SI'])
         self.notify_observers()
 
 class SIPlotTab(AnalyzerTab):
