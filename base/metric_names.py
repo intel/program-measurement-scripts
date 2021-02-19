@@ -205,7 +205,7 @@ class NonMetricName(CapeEnum):
     SI_SAT_TIER = "SiTier"
     SI_SW_BIAS = "Net_SW_Bias"
 
-KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
+KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP, MetricName.DATA_SET]
 
 # Provides all the enums useful for filtering irrelevant metrics
 ALL_METRICS = list(MetricName) + list(NonMetricName)
