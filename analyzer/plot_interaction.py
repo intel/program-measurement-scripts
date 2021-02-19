@@ -193,8 +193,7 @@ class PlotInteraction():
     def A_filter(self, relate, metric, threshold, highlight=True, remove=False, show=False, points=[], getNames=False):
         df = self.gui.loadedData.summaryDf
         names = []
-        if metric: names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
-        # Temporary hardcoded option while Dave works on specific formulas
+        if metric and metric in df.columns.tolist(): names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
         names.extend(points)
         if getNames: return names
         for name in names:

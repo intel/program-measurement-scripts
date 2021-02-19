@@ -56,10 +56,10 @@ class SummaryTab(AnalyzerTab):
         self.axesTab = AxesTab(self.tableNote, self, 'Summary')
         self.tableNote.add(self.axesTab, text="Axes")
         #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
-        if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns):
-            self.guideTab = GuideTab(self.tableNote, self)
-        if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns): 
-            self.tableNote.add(self.guideTab, text='Guide')
+        # if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns):
+        self.guideTab = GuideTab(self.tableNote, self)
+        # if not self.data.gui.urls and self.data.gui.loadedData.analytic_columns and set(self.data.gui.loadedData.analytic_columns).issubset(self.data.gui.loadedData.summaryDf.columns): 
+        self.tableNote.add(self.guideTab, text='Guide')
 
     def mk_plot(self):
         return CoveragePlot(self.data.capacityData, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 

@@ -608,6 +608,7 @@ class LabelTab(tk.Frame):
         if self.metric1.get() != 'Metric 1': current_metrics.append(self.metric1.get())
         if self.metric2.get() != 'Metric 2': current_metrics.append(self.metric2.get())
         if self.metric3.get() != 'Metric 3': current_metrics.append(self.metric3.get())
+        current_metrics = [metric for metric in current_metrics if metric in self.tab.plotInteraction.df.columns.tolist()]
         if not current_metrics: return # User hasn't selected any label metrics
         for tab in self.tab.plotInteraction.tabs:
             if tab.name != 'Scurve':
@@ -737,8 +738,8 @@ class FSM(Observable):
         self.title = self.tab.plotInteraction.textData['title']
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
         # Temporary hardcoded points for each state
-        self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
-        self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
+        # self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
+        # self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
         transitions = [{'trigger':'proceed', 'source':'INIT', 'dest':'AStart', 'after':'AStart'},
                 {'trigger':'details', 'source':'AStart', 'dest':'A1', 'after':'A1'},
                 {'trigger':'details', 'source':'A1', 'dest':'A11', 'after':'A11'},
@@ -772,8 +773,8 @@ class FSM(Observable):
         self.save_graph()
         # Get points that we want to save for each state
         self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, getNames=True) # Highlight SIDO codelets
-        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, points=self.a2_points, getNames=True) # Highlight RHS codelets
-        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, points=self.a3_points, getNames=True) # Highlight FMA codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, getNames=True) # Highlight RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, getNames=True) # Highlight FMA codelets
 
     def INIT(self):
         print("In INIT")
@@ -818,7 +819,7 @@ class FSM(Observable):
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
         self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
-        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=True, show=True, points=self.a2_points) # Highlight RHS codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=True, show=True) # Highlight RHS codelets
         self.updateLabels(COUNT_OPS_RHS_OP)
         self.notify_observers()
 
@@ -826,8 +827,8 @@ class FSM(Observable):
         print("In A3")
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
-        self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=False, remove=True, points=self.a2_points) # Remove RHS codelets
-        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.a3_points) # Highlight FMA codelets
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=False, remove=True) # Remove RHS codelets
+        self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True) # Highlight FMA codelets
         self.updateLabels(COUNT_OPS_FMA_PCT)
         self.notify_observers()
 
