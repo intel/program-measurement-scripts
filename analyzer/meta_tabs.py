@@ -131,7 +131,10 @@ class AxesTab(tk.Frame):
         self.tab.plotInteraction.save_plot_state()
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
-            self.tab.data.notify(self.tab.data.gui.loadedData, x_axis="{}".format(self.tab.x_axis), y_axis="{}".format(self.tab.y_axis), variants=self.tab.variants, scale=self.tab.x_scale+self.tab.y_scale, level=self.tab.level)
+            self.tab.data.scale = self.tab.x_scale + self.tab.y_scale
+            self.tab.data.y_axis = "{}".format(self.tab.y_axis)
+            self.tab.data.x_axis = "{}".format(self.tab.x_axis)
+            self.tab.data.notify(self.tab.data.gui.loadedData)
 
 class ShortNameTab(tk.Frame):
     @staticmethod
@@ -188,13 +191,13 @@ class ShortNameTab(tk.Frame):
             if not clusters: ShortNameTab.addShortNames(table_df)
             # Change the short name in each of the main dfs
             for level in self.tab.data.loadedData.dfs:
-                df = self.tab.data.loadedData.dfs[level]
+                df = self.tab.data.df
                 df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
                 df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
                 df['Color'] = df["Color_y"].fillna(df["Color_x"])
                 df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
                 df = self.tab.data.gui.loadedData.compute_colors(df, clusters)
-                self.tab.data.loadedData.dfs[level] = df.copy(deep=True)
+                self.tab.data.df = df.copy(deep=True)
         for tab in self.tab.plotInteraction.tabs:
             if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
             else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
