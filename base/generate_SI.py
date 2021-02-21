@@ -10,7 +10,7 @@ import datetime
 import copy
 from capeplot import CapacityPlot
 from capeplot import CapePlot
-from capeplot import CapacityData
+from capeplot import NodeCentricData
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -28,7 +28,7 @@ globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-class SiData(CapacityData):
+class SiData(NodeCentricData):
     def __init__(self, df):
         super().__init__(df)
 
@@ -44,9 +44,16 @@ class SiData(CapacityData):
 
     def set_norm(self, norm):
         self.norm = norm
+        return self
     
     def set_cluster_df (self, cluster_df):
         self.cluster_df = cluster_df
+        return self
+
+    # Override this because for SI the chosen node will be specific to units
+    def set_chosen_node_set(self, chosen_node_set):
+        self.chosen_node_set = {"{} {}".format(n, NODE_UNIT_DICT[n]) for n in chosen_node_set}
+        return self
 
     def compute_capacity(self, df):
         chosen_node_set = self.chosen_node_set
@@ -56,32 +63,33 @@ class SiData(CapacityData):
         chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
         chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
         chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
-        for node in chosen_basic_node_set:
-            print ("The current node : ", node)
-            formula=capacity_formula[node]
-            df['C_{}'.format(node)]=formula(df)
+        # for node in chosen_basic_node_set:
+        #     print ("The current node : ", node)
+        #     formula=capacity_formula[node]
+        #     df['C_{}'.format(node)]=formula(df)
 
-        self.compute_norm(norm, df, chosen_basic_node_set, 'C_max [GB/s]')
-        print ("<=====compute_capacity======>")
+        # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
+        #self.compute_norm(norm, df, chosen_basic_node_set, 'C_max [GB/s]')
+        #print ("<=====compute_capacity======>")
         self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
         print ("<=====compute_cu_scalar======>")
 
         for node in chosen_buffer_node_set:
             formula=capacity_formula[node]
             df['C_{}'.format(node)]=formula(df)
-        # Compute memory level 
-        chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
-        # Below will get the C_* name with max value
-        df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-        # Remove the first two characters which is 'C_'
-        df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
-        # Drop the unit
-        df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+        # # Compute memory level 
+        # chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
+        # # Below will get the C_* name with max value
+        # df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+        # # Remove the first two characters which is 'C_'
+        # df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
+        # # Drop the unit
+        # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
     def compute_norm(self, norm, df, node_set, lhs):
         # First go ahead to compute the row norm
         # Get the right column names for the sat node by prepending C_ to node names.  Store the results in 'SatCaps' column
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), set(ns) & BASIC_NODE_SET)))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.get_caps(set(ns) & BASIC_NODE_SET))
         # Get the max of the columns specified in 'SatCaps' column
         df[lhs] = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
         if norm == 'matrix':
@@ -104,38 +112,26 @@ class SiData(CapacityData):
         # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
         return final_df[columns_ordered]
 
-    def compute(self):
+    # Return (expected inputs, expected outputs)
+    def input_output_args(self):
+        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, 'C_allmax [GB/s]']+self.get_caps(self.chosen_node_set)
+        output_args = ['Saturation', 'Intensity', 'SI']
+        return input_args, output_args
+
+    def compute_impl(self, df):
         cluster_df = self.cluster_df
-        cur_run_df = self.cur_run_df
+        cur_run_df = df
         self.compute_CSI(cluster_df)
         cluster_df['SI']=cluster_df['Saturation'] * cluster_df['Intensity'] 
-        # Capcacity already computed in compute_capacity() method so commented below
-        # for node in sorted(chosen_node_set):
-        #     formula=capacity_formula[node]
-        #     cluster_df['C_{}'.format(node)]=formula(cluster_df)
-        # cluster_df['SI']=cluster_df['Saturation'] * cluster_df['Intensity'] 
-        # Use the 1.0 speedup for now.  If cluster file has speedup metric, make sure it 
-        # is using "Speedup" name starting with capital "S"
-        #target_df['speedup'] = cluster_df['speedup']
-        cluster_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
+        #cluster_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
 
-        #column_list = cluster_df.columns.tolist()
-        #column_list.extend([TIME_APP_S, TIMESTAMP, COVERAGE_PCT, 'Color'])
         cluster_df[TIMESTAMP]=0
         cluster_df[TIME_APP_S]=0.0
         cluster_df[COVERAGE_PCT]=0.0
         cluster_df['Color'] = ""
         column_list = cluster_df.columns
 
-        #cur_run_data_df = pd.DataFrame(columns=column_list)
-        #cur_run_data_df = cur_run_data_df.append(cur_run_df, ignore_index=False)[column_list]
-
-        #cluster_and_cur_run_df = concat_ordered_columns([cluster_df,cur_run_data_df])
-        #cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])[column_list]
-        # Not limiting the column list based on cluster_df due to a bug cluster_df returns less metrics
-        # And no reason to limit columns
         cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])
-        #self.cluster_df = cluster_df
 
         # Compute Capacity, Saturation and intensity again for all the runs (cluster + current runs).
         self.compute_CSI(cluster_and_cur_run_df)
@@ -143,27 +139,11 @@ class SiData(CapacityData):
 
         self.cluster_and_cur_run_df = cluster_and_cur_run_df
         # Select the rows corresponding to cur_run_df for plotting
-        self.df = cluster_and_cur_run_df.tail(len(cur_run_df))
+        df = cluster_and_cur_run_df.tail(len(cur_run_df))
 
-        # out_df looks unused so groupped together and commented out below
-        # out_df = pd.DataFrame()
-        # out_df[[NAME, SHORT_NAME, VARIANT]] = cluster_and_cur_run_df[[NAME, SHORT_NAME, VARIANT]]
-        # for node in sorted(chosen_node_set):
-        #     formula=capacity_formula[node]
-        #     out_df['C_{}'.format(node)]=formula(cluster_and_cur_run_df)
-        # # out_df['C_scalar'] = cluster_and_cur_run_df['C_scalar']
-        # out_df['Saturation'] = cluster_and_cur_run_df['Saturation']
-        # out_df['Intensity'] = cluster_and_cur_run_df['Intensity']
-        # out_df['k'] = cluster_and_cur_run_df['Saturation'] * cluster_and_cur_run_df['Intensity']
-        # out_df['speedup'] = cluster_and_cur_run_df['speedup']
-
-        # below also looked unused so commented out
-        # indices = cluster_and_cur_run_df[SHORT_NAME]
-        # k = cluster_and_cur_run_df['SI']
-        # k_avg = k.mean()
-
-        cluster_and_cur_run_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup    
+        #cluster_and_cur_run_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup    
         self.Ns = len(self.chosen_node_set)
+        return df
 
     def compute_CSI(self, df_to_update):
         # If SiSatNodes columns not exist.  Fill in default values here
@@ -177,12 +157,16 @@ class SiData(CapacityData):
 
         # Fill the NA entries with ''
         df_to_update.fillna({NonMetricName.SI_CLUSTER_NAME:''}, inplace=True)
-        self.compute_capacity(df_to_update)
+        #self.compute_capacity(df_to_update)
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
 
+    @classmethod
+    def get_caps(cls, nodes):
+        return list(map(lambda n: "C_{}".format(n), nodes))
+        
     def compute_saturation(self, df, chosen_node_set):
-        listOfCapacityColumns = list(map(lambda n: "C_{}".format(n), chosen_node_set))
+        listOfCapacityColumns = self.get_caps(chosen_node_set)
         #nodeMax=df[listOfCapacityColumns].max(axis=0)
         # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
         # The transform() will send the max values back to the original dataframe
@@ -202,40 +186,33 @@ class SiData(CapacityData):
 
 
     def compute_intensity(self, df, chosen_node_set):
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "C_{}".format(n), ns)))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.get_caps(ns))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
         csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
+        df['Intensity']=node_cnt*df['C_allmax [GB/s]'] / csum
 
         #node_cnt = len(chosen_node_set)
         #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
         #df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
         df.drop('SatCaps', axis=1, inplace=True)
 
-BASIC_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
 MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
+REG_NODE_SET={'VR [GB/s]'}
+OP_NODE_SET={'FLOP [GFlop/s]'}
+BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
 SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
+BUFFER_NODE_SET={'FE [GB/s]', 'CU [GB/s]', 'SB [GB/s]', 'LM [GB/s]', 'RS [GB/s]'}
+ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
+# Dictionary to lookup node name to its unit to use
+NODE_UNIT_DICT = dict(node_unit.split(" ") for node_unit in ALL_NODE_SET)
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FE'}
 # For L1, L2, L3, FLOP 4 node runs
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'VR'}
-DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]'}
+DEFAULT_CHOSEN_NODE_SET=BASIC_NODE_SET
 
-# For node using derived metrics (e.g. FE), make sure the depended metrics are computed
-capacity_formula= {
-    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
-    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]/8),
-    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]/8),
-    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
-    'VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/24),
-    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]/8),
-    'FE': (lambda df : (df[STALL_FE_PCT]/100)*(df['C_max [GB/s]'])),
-    'SB': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_max [GB/s]'])),
-    'LM': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_max [GB/s]'])),
-    'RS': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_max [GB/s]'])),
-    'CU': (lambda df : ((df[STALL_FE_PCT]/100)*df['C_scalar'] + (df[STALL_LB_PCT]/100)*df['C_scalar'] + 
-                        (df[STALL_SB_PCT]/100)*df['C_scalar'] + (df[STALL_LM_PCT]/100)*df['C_scalar']))
-    }
+# # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
+# capacity_formula= {
+#     }
 
 class SiPlot(CapePlot):
     def __init__(self, data, variant, outputfile_prefix, norm, title, 

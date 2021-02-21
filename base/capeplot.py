@@ -9,17 +9,20 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 import copy
 from metric_names import MetricName
+from abc import ABC, abstractmethod
+from collections import UserDict
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
 from capelib import add_mem_max_level_columns
+from metric_names import KEY_METRICS
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
 
 # Base class for plot data without GUI specific data
 # Subclass should override for plot specific data processing.
-class CapeData:
+class CapeData(ABC):
     def __init__(self, df):
         self._df = df
 
@@ -29,83 +32,208 @@ class CapeData:
     def df(self):
         return self._df
     
-    # Setter of df (May remove)
-    @df.setter
-    def df(self, v):
-        self._df = v
+    # # Setter of df (remove so cannot change it)
+    # @df.setter
+    # def df(self, v):
+    #     self._df = v
+
         
+    # Should check merge_metrics() in LoadedData class (they should be doing the same thing)
     def compute(self):
-        pass
+        # Copy-in copy-out
+        inputs, outputs = self.input_output_args()
+        inputs = sorted(inputs)
+        outputs = sorted(outputs)
+        copy_df = self.df[KEY_METRICS + inputs]
+        result_df = self.compute_impl(copy_df)
+        result_df = result_df[KEY_METRICS + outputs]
+        existing_outputs = self.df.columns & outputs
+        if len(existing_outputs) > 0:
+            # Drop columns if there is existing columns to be overwritten
+            warnings.warn("Trying to override existing columns: {}".format(existing_outputs))
+            self.df.drop(columns=existing_outputs, inplace=True, errors='ignore')
+        merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
+        assert self.df[KEY_METRICS].equals(merged[KEY_METRICS])
+        for col in outputs:
+            self.df[col] = merged[col]
+        return self
 
-class CapacityData(CapeData):
-    MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-    OP_NODE_SET={'FLOP [GFlop/s]', 'SIMD [GB/s]'}
-    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET
+    @abstractmethod
+    # Process data.  Input from df and return results
+    # The data processing outside will supply expected columns specified by input_output_args() method
+    # On return, only the expected ouptut columns specified by input_output_args() method will be incorporated
+    def compute_impl(self, df):
+        return df
+    
+    @abstractmethod
+    # Return (expected inputs, expected outputs)
+    # This is a contract of the data computation
+    # SEE ALSO: compute_impl()
+    def input_output_args(self):
+        return None, None
 
-    BUFFER_NODE_SET={'FE'}
-    DEFAULT_CHOSEN_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]', 'FLOP [GFlop/s]'}
-
-    # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
-    capacity_formula= {
-	    'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
-	    'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
-	    'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
-	    'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
-	    'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
-	    'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
-	    'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
-        # NEW STUFF TO UPDATE
-        # 'C_FLOP [GB/s]': (lambda df : df[RATE_FP_GFLOP_P_S]*8),
-        # 'C_L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
-        # 'C_L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
-        # 'C_L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
-        # 'C_SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
-        # 'C_RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
-        # 'C_VR [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]), 
-        
-        # 'C_FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
-        # 'C_L1 [GW/s]': (lambda df : df[RATE_L1_GB_P_S]/8),
-        # 'C_L2 [GW/s]': (lambda df : df[RATE_L2_GB_P_S]/8), 
-        # 'C_L3 [GW/s]': (lambda df : df[RATE_L3_GB_P_S]/8), 
-        # 'C_SIMD [GW/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/8),
-        # 'C_RAM [GW/s]': (lambda df : df[RATE_RAM_GB_P_S]/8), 
-        # 'C_VR [GW/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]/8), 
-
-        # 'C_rmax [GB/s]': (lambda df : (df[['', '', '']]).max()), 
-
-        # 'FE [GB/s]': (lambda df : (df[STALL_FE_PCT]/100)*df['C_rmax [GB/s]']), 
-        # 'FE [GW/s]': (lambda df : (df[STALL_FE_PCT]/100)*(df['C_rmax [GW/s]'])), 
-        # 'SB [GB/s]': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_rmax [GB/s]'])), 
-        # 'SB [GW/s]': (lambda df : (df[STALL_SB_PCT]/100)*(df['C_rmax [GW/s]'])), 
-        # 'LM [GB/s]': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_rmax [GB/s]'])), 
-        # 'LM [GW/s]': (lambda df : (df[STALL_LM_PCT]/100)*(df['C_rmax [GW/s]'])), 
-        # 'RS [GB/s]': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_rmax [GB/s]'])), 
-        # 'RS [GW/s]': (lambda df : (df[STALL_RS_PCT]/100)*(df['C_rmax [GW/s]'])), 
-    }
-
+class NodeCentricData(CapeData):
     def __init__(self, df):
         super().__init__(df)
+        self.chosen_node_set = set()
 
     def set_chosen_node_set(self, chosen_node_set):
         self.chosen_node_set = chosen_node_set
+        return self
+
+class CapacityData(NodeCentricData):
+    MEM_NODE_SET={'L1', 'L2', 'L3', 'RAM'}
+    REG_NODE_SET={'VR'}
+    OP_NODE_SET={'FLOP'}
+    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
+
+    BUFFER_NODE_SET={'FE'}
+    DEFAULT_CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'RAM', 'FLOP'}
+
+    # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
+    capacity_formula= [
+	    # 'L1 [GB/s]': (lambda df : df[RATE_L1_GB_P_S]),
+	    # 'L2 [GB/s]': (lambda df : df[RATE_L2_GB_P_S]),
+	    # 'L3 [GB/s]': (lambda df : df[RATE_L3_GB_P_S]),
+	    # 'FLOP [GFlop/s]': (lambda df : df[RATE_FP_GFLOP_P_S]),
+	    # 'SIMD [GB/s]': (lambda df : df[RATE_REG_SIMD_GB_P_S]),
+	    # 'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
+	    # 'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
+
+        ('C_FLOP [GB/s]', (lambda df,nodes : df[RATE_FP_GFLOP_P_S]*8 if "FLOP" in nodes else None)),
+        ('C_L1 [GB/s]', (lambda df,nodes : df[RATE_L1_GB_P_S] if "L1" in nodes else None)),
+        ('C_L2 [GB/s]', (lambda df,nodes : df[RATE_L2_GB_P_S] if "L2" in nodes else None)),
+        ('C_L3 [GB/s]', (lambda df,nodes : df[RATE_L3_GB_P_S] if "L3" in nodes else None)),
+        ('C_RAM [GB/s]', (lambda df,nodes : df[RATE_RAM_GB_P_S] if "RAM" in nodes else None)),
+        # NOTE: C_VR has 1/3 factor built in for SI use
+        ('C_VR [GB/s]', (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/3 if "VR" in nodes else None)), 
+
+        ('C_FLOP [GFlop/s]', (lambda df,nodes : df[RATE_FP_GFLOP_P_S] if "FLOP" in nodes else None)),
+        ('C_L1 [GW/s]', (lambda df,nodes : df[RATE_L1_GB_P_S]/8 if "L1" in nodes else None)),
+        ('C_L2 [GW/s]', (lambda df,nodes : df[RATE_L2_GB_P_S]/8 if "L2" in nodes else None)), 
+        ('C_L3 [GW/s]', (lambda df,nodes : df[RATE_L3_GB_P_S]/8 if "L3" in nodes else None)), 
+        ('C_RAM [GW/s]', (lambda df,nodes : df[RATE_RAM_GB_P_S]/8 if "RAM" in nodes else None)), 
+        # NOTE: C_VR has 1/3 factor built in for SI use
+        ('C_VR [GW/s]', (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/8/3 if "VR" in nodes else None)), 
+
+        ('C_max [GB/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
+        ('C_max [GW/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
+
+        ('C_allmax [GB/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.BASIC_NODE_SET])]).max(axis=1))), 
+        ('C_allmax [GW/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.BASIC_NODE_SET])]).max(axis=1))), 
         
-    def compute(self):
-        self.compute_capacity()
+        # Same formula as C_max [*] (for now) (used for SI)
+        ('C_scalar [GB/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
+        ('C_scalar [GW/s]', (lambda df,nodes : 
+            (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
 
-    def compute_capacity(self):
-        df = self.df
+        ('C_FE [GB/s]', (lambda df,nodes : (df[STALL_FE_PCT]/100)*df['C_allmax [GB/s]'])), 
+        ('C_FE [GW/s]', (lambda df,nodes : (df[STALL_FE_PCT]/100)*(df['C_allmax [GW/s]']))), 
+        ('C_SB [GB/s]', (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df['C_allmax [GB/s]']))), 
+        ('C_SB [GW/s]', (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df['C_allmax [GW/s]']))), 
+        ('C_LM [GB/s]', (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df['C_allmax [GB/s]']))), 
+        ('C_LM [GW/s]', (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df['C_allmax [GW/s]']))), 
+        ('C_RS [GB/s]', (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df['C_allmax [GB/s]']))), 
+        ('C_RS [GW/s]', (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df['C_allmax [GW/s]']))),
+
+        # used for SI
+        ('C_CU [GW/s]', (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
+                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df['C_scalar [GW/s]']))),
+        ('C_CU [GB/s]', (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
+                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df['C_scalar [GB/s]'])))
+    ]
+
+
+
+    def __init__(self, df):
+        super().__init__(df)
+    # A dictionary/dataframe like object passed to go through formula to 
+    # record input and output variables.
+    class RecordDict(UserDict):
+        def __init__(self):
+            super().__init__()
+            self.input_keys = set() 
+            self.output_keys = set() 
+            self.drop_keys = set() 
+            
+            
+        def seenKey(self, key, keys):
+            if type(key) is list:
+                newkeys = key
+            else:
+                newkeys = {key}
+            keys.update(newkeys)
+            return newkeys
+
+        def __getitem__(self, key):
+            keys = self.seenKey(key, self.input_keys)
+            # Return a dummy dataframe to get it going
+            return pd.DataFrame([{k:0 for k in keys}])
+        
+        def __setitem__(self, key, value):
+            self.seenKey(key, self.output_keys)
+
+        def drop(self, columns, inplace):
+            self.drop_keys = self.drop_keys.union(columns)
+            
+    @classmethod
+    def nodesToCaps(cls, nodes):
+        # Simply returns all capacity variable names starting with C_n where n in nodes
+        return [caps for (caps,f) in cls.capacity_formula if caps.startswith(tuple(["C_{}".format(n) for n in nodes]))]
+
+    @classmethod
+    def nodesToCapsGB_s(cls, nodes):
+        return [caps for caps in cls.nodesToCaps(nodes) if caps.endswith('[GB/s]')]
+
+    @classmethod
+    def nodesToCapsGW_s(cls, nodes):
+        # NOTE here we choose *not* to check GW/s explicitly because unit for FLOP is GFlop/s
+        return [caps for caps in cls.nodesToCaps(nodes) if not caps.endswith('[GB/s]')]
+
+    def input_output_args(self):
+        dict_record = CapacityData.RecordDict()
+        self.apply_formula(dict_record)
+        output_args = dict_record.output_keys
+        input_args = dict_record.input_keys.difference(output_args)
+        output_args = output_args.difference(dict_record.drop_keys)
+        return input_args, output_args
+
+        
+    def compute_impl(self, df):
+        return self.compute_capacity(df)
+
+
+    def apply_formula(self, df):
         chosen_node_set = self.chosen_node_set
-        print("The node list are as follows :")
-        print(chosen_node_set)
-        chosen_mem_node_set = CapacityData.MEM_NODE_SET & chosen_node_set
-        for node in chosen_mem_node_set:
-            print ("The current node : ", node)
-            formula=CapacityData.capacity_formula[node]
-            df['C_{}'.format(node)]=formula(df)
+        # Including C_max needed to compute control unit capacities
+        maxCaps = self.nodesToCaps({'allmax'})
+        allCaps = set(self.nodesToCaps(chosen_node_set.union({'max', 'scalar'}))).union(set(maxCaps))
 
-        node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
-        metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
-        add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
+        for lhs,formula in self.capacity_formula:
+            if lhs in allCaps: df[lhs] = formula(df, chosen_node_set)
+
+        # Drop the C_max capacities as QPlot use the name for other use.
+        #df.drop(columns=maxCaps, inplace=True)
+        
+
+    def compute_capacity(self, df):
+        # df = self.df
+        self.apply_formula(df)
+
+        # chosen_mem_node_set = CapacityData.MEM_NODE_SET & chosen_node_set
+        # for node in chosen_mem_node_set:
+        #     print ("The current node : ", node)
+        #     formula=CapacityData.capacity_formula[node]
+        #     df['C_{}'.format(node)]=formula(df)
+
+        # node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
+        #metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
+        # add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
 		# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
 		# df = df[df['C_max [GB/s]'].notna()]
 		# df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
@@ -116,7 +244,7 @@ class CapacityData(CapeData):
         print ("<=====compute_capacity======>")
 	#	print(df['C_max'])
 
-        chosen_op_node_set = CapacityData.OP_NODE_SET & chosen_node_set
+        chosen_op_node_set = CapacityData.OP_NODE_SET & self.chosen_node_set
         if len(chosen_op_node_set) > 1:
             print("Too many op node selected: {}".format(chosen_op_node_set))
             sys.exit(-1)
@@ -124,12 +252,13 @@ class CapacityData(CapeData):
             print("No op node selected")
             sys.exit(-1)
 		# Exactly 1 op node selected below
-        op_node = chosen_op_node_set.pop()
-        op_metric_name = 'C_{}'.format(op_node)
-        formula=CapacityData.capacity_formula[op_node]
-        df[op_metric_name]=formula(df)
-        self.df = df
-        self.op_metric_name = op_metric_name
+        # op_node = chosen_op_node_set.pop()
+        # op_metric_name = 'C_{}'.format(op_node)
+        # formula=CapacityData.capacity_formula[op_node]
+        # df[op_metric_name]=formula(df)
+        #self.df = df
+        return df
+        #self.op_metric_name = op_metric_name
     
 
 # Base class for all plots
@@ -158,10 +287,10 @@ class CapePlot:
     def df(self):
         return self.data.df
     
-    # Setter of df (May remove), delegate to self.data
-    @df.setter
-    def df(self, v):
-        self.data.df = v
+    # # Setter of df (May remove), delegate to self.data
+    # @df.setter
+    # def df(self, v):
+    #     self.data.df = v
 
     def mk_labels(self):
         df = self.df
@@ -227,7 +356,7 @@ class CapePlot:
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
-        self.df = df
+        # self.df = df
 
     def draw_contours(self, xmax, ymax, color_labels):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty

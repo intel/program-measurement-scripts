@@ -75,7 +75,7 @@ class Plot3d(CapacityPlot):
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, zs, mytext, 
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings)
-        self.df = df
+        #self.df = df
 
     def plot_data(self, title, filename, xs, ys, zs, mytexts, scale, df, color_labels=None, \
         x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame()):
