@@ -55,6 +55,7 @@ globals().update(MetricName.__members__)
 logging.disable(logging.CRITICAL)
 
 class LoadedData(Observable):
+    CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     def __init__(self):
         super().__init__()
         self.data_items=[]
@@ -231,15 +232,14 @@ class LoadedData(Observable):
         self.siDataDict.clear()
 
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        # TO UPDATE
-        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
+        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
+        #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
         for level in self.dfs:
             df = self.dfs[level]
             self.addShortNames(df)
             # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
             data = CapacityData(df)
-            data.set_chosen_node_set(chosen_node_set)
+            data.set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)
             data.compute()
             self.capacityDataDict[level] = data
             self.siDataDict[level] = self.computeSi(level)
@@ -249,39 +249,28 @@ class LoadedData(Observable):
 
     def computeSi(self, level):
         # Check cache/create cluster and si dfs
-        chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
         run_cluster = True
         if run_cluster:
-            cluster_df = pd.DataFrame()
-            si_df = pd.DataFrame()
             cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
             si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
             # Check to see if we can use cached cluster and si dataframes
             if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
-                data = open(cluster_dest, 'rb') 
-                cluster_df = pickle.load(data)
-                data.close()
-                data = open(si_dest, 'rb') 
-                si_df = pickle.load(data)
-                data.close()
+                # Using with stmt for brief code handling close() automatically.
+                with open(cluster_dest, 'rb') as cluster_dest_data, open(si_dest, 'rb') as si_dest_data:
+                    cluster_df = pickle.load(cluster_dest_data)
+                    si_df = pickle.load(si_dest_data)
             else:
                 cluster_df, si_df = find_si_clusters(self.dfs[level])
-                data = open(cluster_dest, 'wb')
-                pickle.dump(cluster_df, data)
-                data.close()
-                data = open(si_dest, 'wb')
-                pickle.dump(si_df, data)
-                data.close()
+                with open(cluster_dest, 'wb') as cluster_dest_data, open(si_dest, 'wb') as si_dest_data:
+                    pickle.dump(cluster_df, cluster_dest_data)
+                    pickle.dump(si_df, si_dest_data)
         self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
         # Generate Plot
         cur_run_df = self.dfs[level]
-        siData = SiData(cur_run_df)
-        siData.set_chosen_node_set(chosen_node_set)
-        siData.set_norm("row")
-        siData.set_cluster_df(cluster_df)
-        siData.compute()
-        #self.merge_metrics(siData.df, ['Saturation', 'Intensity', 'SI'], level)
-        return siData
+        # Both below has method chaining so return valus is the Data Object
+        # while last compute() call updates the data frame
+        CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
+        return SiData(cur_run_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
 
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
