@@ -34,7 +34,7 @@ class QPlotData(AnalyzerData):
         # data = CapacityData(df)
         # data.set_chosen_node_set(chosen_node_set) 
         # # data.compute()
-        # # self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+        # # self.merge_metrics(data.df, [MetricName.CAP_L3_GB_P_S, MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S])
 
 
         # plot = QPlot(self.capacityData, 'ORIG', "test", scale, "QPlot", False, True, None, None, 
@@ -46,16 +46,16 @@ class QPlotData(AnalyzerData):
         # #            source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         # self.fig = plot.fig
         # self.textData = plot.plotData
-        #self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+        #self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, [MetricName.CAP_L3_GB_P_S, MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S])
         #self.fig = fig_ORIG 
         #self.textData = textData_ORIG 
         self.notify_observers()
 
 class QPlotTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'QPlot', 'C_FLOP [GFlop/s]', 
-                         'C_max [GB/s]', ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', \
-                'C_RAM [GB/s]', 'C_max [GB/s]'])
+        super().__init__(parent, data, 'QPlot', MetricName.CAP_FP_GFLOP_P_S, 
+                         MetricName.CAP_MEMMAX_GB_P_S, [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, \
+                MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S])
 
     # Create meta tabs
     def buildTableTabs(self):

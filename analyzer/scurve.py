@@ -18,7 +18,7 @@ class ScurveData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
         super().__init__(loadedData, gui, root, level, 'Scurve')
     
-    def notify(self, loadedData, x_axis=None, y_axis='C_FLOP [GFlop/s]', variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=MetricName.CAP_FP_GFLOP_P_S, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("ScurveData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
@@ -28,7 +28,7 @@ class ScurveData(AnalyzerData):
 
 class ScurveTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Scurve', 'C_FLOP [GFlop/s]', 'C_FLOP [GFlop/s]', [])
+        super().__init__(parent, data, 'Scurve', MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 
     #def notify(self, data):
     #    # Metrics to be displayed in the data table are unique for each plot

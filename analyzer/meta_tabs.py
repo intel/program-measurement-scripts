@@ -24,12 +24,12 @@ class AxesTab(tk.Frame):
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in [SPEEDUP_VEC, SPEEDUP_DL1, 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S, VARIANT]:
+        for metric in [SPEEDUP_VEC, SPEEDUP_DL1, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S, VARIANT]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # QPlot
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='QPlot', menu=menu)
-        for metric in ['C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]:
+        for metric in [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # SIPlot
         menu = tk.Menu(main_menu, tearoff=False)
@@ -79,13 +79,13 @@ class AxesTab(tk.Frame):
         metric_label = tk.Label(self, text='Metrics:')
         self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
         self.x_selected = tk.StringVar(value='Choose X Axis Metric')
-        x_options = ['Choose X Axis Metric', 'C_FLOP [GFlop/s]', RATE_INST_GI_P_S]
+        x_options = ['Choose X Axis Metric', MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S]
         if self.plotType == 'Custom' or self.plotType == 'Scurve':
             x_menu = AxesTab.custom_axes(self, self.x_selected, self.tab.data.gui)
             y_menu = AxesTab.custom_axes(self, self.y_selected, self.tab.data.gui)
         else:  
             if self.plotType == 'QPlot':
-                y_options = ['Choose Y Axis Metric', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_L3 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]']
+                y_options = ['Choose Y Axis Metric', MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S]
             elif self.plotType == 'TRAWL':
                 y_options = ['Choose Y Axis Metric', SPEEDUP_VEC, SPEEDUP_DL1]
             elif self.plotType == 'Summary':

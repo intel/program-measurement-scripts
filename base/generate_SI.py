@@ -69,7 +69,7 @@ class SiData(NodeCentricData):
         #     df['C_{}'.format(node)]=formula(df)
 
         # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
-        #self.compute_norm(norm, df, chosen_basic_node_set, 'C_max [GB/s]')
+        #self.compute_norm(norm, df, chosen_basic_node_set, MetricName.CAP_MEMMAX_GB_P_S)
         #print ("<=====compute_capacity======>")
         self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
         print ("<=====compute_cu_scalar======>")
@@ -86,10 +86,11 @@ class SiData(NodeCentricData):
         # # Drop the unit
         # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
+
     def compute_norm(self, norm, df, node_set, lhs):
         # First go ahead to compute the row norm
         # Get the right column names for the sat node by prepending C_ to node names.  Store the results in 'SatCaps' column
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.get_caps(set(ns) & BASIC_NODE_SET))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(set(ns) & BASIC_NODE_SET))
         # Get the max of the columns specified in 'SatCaps' column
         df[lhs] = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
         if norm == 'matrix':
@@ -114,7 +115,7 @@ class SiData(NodeCentricData):
 
     # Return (expected inputs, expected outputs)
     def input_output_args(self):
-        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, 'C_allmax [GB/s]']+self.get_caps(self.chosen_node_set)
+        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GB_P_S]+self.capacities(self.chosen_node_set)
         output_args = ['Saturation', 'Intensity', 'SI']
         return input_args, output_args
 
@@ -162,11 +163,16 @@ class SiData(NodeCentricData):
         self.compute_intensity(df_to_update, chosen_node_set)
 
     @classmethod
-    def get_caps(cls, nodes):
-        return list(map(lambda n: "C_{}".format(n), nodes))
+    def capacities(cls, nodesWithUnit):
+        return list(map(lambda n: cls.capacity(n), nodesWithUnit))
         
+    @classmethod
+    def capacity(cls, nodeWithUnit):
+        # Remove brackets and then use the splitted node + unit to get the enum
+        return MetricName.cap(*nodeWithUnit.replace("[", "").replace("]", "").split(" "))
+
     def compute_saturation(self, df, chosen_node_set):
-        listOfCapacityColumns = self.get_caps(chosen_node_set)
+        listOfCapacityColumns = self.capacities(chosen_node_set)
         #nodeMax=df[listOfCapacityColumns].max(axis=0)
         # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
         # The transform() will send the max values back to the original dataframe
@@ -176,7 +182,7 @@ class SiData(NodeCentricData):
         print ("<=====compute_saturation======>")
         for node in chosen_node_set:
             #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-            df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / newNodeMax['C_{}'.format(node)]
+            df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
         df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
         df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
         #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
@@ -186,14 +192,14 @@ class SiData(NodeCentricData):
 
 
     def compute_intensity(self, df, chosen_node_set):
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.get_caps(ns))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(ns))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
         csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        df['Intensity']=node_cnt*df['C_allmax [GB/s]'] / csum
+        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GB_P_S] / csum
 
         #node_cnt = len(chosen_node_set)
         #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
-        #df['Intensity']=node_cnt*df['C_max [GB/s]'] / csum
+        #df['Intensity']=node_cnt*df[MetricName.CAP_MEMMAX_GB_P_S] / csum
         df.drop('SatCaps', axis=1, inplace=True)
 
 MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}

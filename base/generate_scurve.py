@@ -25,7 +25,7 @@ class ScurvePlot(CapePlot):
     def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
                  source_order=None, mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
-                         default_y_axis='C_FLOP [GFlop/s]', mappings=mappings, short_names_path=short_names_path)
+                         default_y_axis=MetricName.CAP_FP_GFLOP_P_S, mappings=mappings, short_names_path=short_names_path)
     
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
@@ -59,7 +59,7 @@ class ScurvePlot(CapePlot):
 
 def scurve_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
     source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+    df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     plot = ScurvePlot('ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)

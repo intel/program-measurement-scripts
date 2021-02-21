@@ -32,6 +32,9 @@ def _ropeStr(ekind, ikind):
 def _memlevelStr(threshold):
     return 'MaxMemlevel[{}%]'.format(threshold)
 
+def _capStr(node, unit):
+    return 'C_{} [{}]'.format(node, unit)
+
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class CapeEnum(str, Enum):
     def __str__(self):
@@ -148,6 +151,40 @@ class MetricName(CapeEnum):
     RECURRENCE_BOOL = 'recurrence'
     SCORE_CLU_PCT = 'clu_scores'
 
+    # Capacities
+    CAP_FP_GFLOP_P_S = _capStr('FLOP', 'GFlop/s')
+    CAP_FP_GB_P_S = _capStr('FLOP', 'GB/s')
+    CAP_L1_GW_P_S = _capStr('L1', 'GW/s')
+    CAP_L1_GB_P_S = _capStr('L1', 'GB/s')
+    CAP_L2_GW_P_S = _capStr('L2', 'GW/s')
+    CAP_L2_GB_P_S = _capStr('L2', 'GB/s')
+    CAP_L3_GW_P_S = _capStr('L3', 'GW/s')
+    CAP_L3_GB_P_S = _capStr('L3', 'GB/s')
+    CAP_RAM_GW_P_S = _capStr('RAM', 'GW/s')
+    CAP_RAM_GB_P_S = _capStr('RAM', 'GB/s')
+    CAP_VR_GW_P_S = _capStr('VR', 'GW/s')
+    CAP_VR_GB_P_S = _capStr('VR', 'GB/s')
+    CAP_MEMMAX_GW_P_S = _capStr('max', 'GW/s')
+    CAP_MEMMAX_GB_P_S = _capStr('max', 'GB/s')
+    CAP_ALLMAX_GW_P_S = _capStr('allmax', 'GW/s')
+    CAP_ALLMAX_GB_P_S = _capStr('allmax', 'GB/s')
+    CAP_SCALAR_GW_P_S = _capStr('scalar', 'GW/s')
+    CAP_SCALAR_GB_P_S = _capStr('scalar', 'GB/s')
+    CAP_FE_GW_P_S = _capStr('FE', 'GW/s')
+    CAP_FE_GB_P_S = _capStr('FE', 'GB/s')
+    CAP_SB_GW_P_S = _capStr('SB', 'GW/s')
+    CAP_SB_GB_P_S = _capStr('SB', 'GB/s')
+    CAP_LM_GW_P_S = _capStr('LM', 'GW/s')
+    CAP_LM_GB_P_S = _capStr('LM', 'GB/s')
+    CAP_RS_GW_P_S = _capStr('RS', 'GW/s')
+    CAP_RS_GB_P_S = _capStr('RS', 'GB/s')
+    CAP_CU_GW_P_S = _capStr('CU', 'GW/s')
+    CAP_CU_GB_P_S = _capStr('CU', 'GB/s')
+
+    @classmethod
+    def cap(cls, node, unit):
+        return cls(_capStr(node, unit))
+        
     @classmethod
     def opsPct(cls, type):
         return cls(_opsPctStr(type))

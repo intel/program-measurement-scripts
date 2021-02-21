@@ -24,7 +24,7 @@ class CustomData(AnalyzerData):
         
         # df = self.df.copy(deep=True)
         # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
         # data = CapacityData(df)
         # data.set_chosen_node_set(chosen_node_set)
 #        data.compute()

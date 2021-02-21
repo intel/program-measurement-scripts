@@ -27,7 +27,7 @@ class CoverageData(AnalyzerData):
         #data = CapacityData(df0)
         #data.set_chosen_node_set(chosen_node_set)
         # data.compute()
-        #self.merge_metrics(data.df, ['C_L3 [GB/s]', 'C_L1 [GB/s]', 'C_L2 [GB/s]', 'C_RAM [GB/s]', 'C_max [GB/s]', 'C_FLOP [GFlop/s]'])
+        #self.merge_metrics(data.df, [MetricName.CAP_L3_GB_P_S, MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S])
 
 
         # plot = CoveragePlot(self.capacityData, 'ORIG', "test", scale, "Coverage", no_plot=False, gui=True, 
@@ -42,7 +42,7 @@ class CoverageData(AnalyzerData):
 
 class SummaryTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Summary', 'C_FLOP [GFlop/s]', COVERAGE_PCT, [])
+        super().__init__(parent, data, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
     def notify(self, data):
         # GuideTab currently in development so sometimes a child and sometimes not

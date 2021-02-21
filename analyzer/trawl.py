@@ -23,7 +23,7 @@ class TRAWLData(AnalyzerData):
         # Generate Plot 
 
         # df = self.df.copy(deep=True)
-        # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
         # data = CapeData(df)
         # # data.compute()
         # plot = TrawlPlot(data, 'ORIG', 'test', scale, 'TRAWL', no_plot=False, 
@@ -40,7 +40,7 @@ class TRAWLData(AnalyzerData):
 
 class TrawlTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'TRAWL', 'C_FLOP [GFlop/s]', SPEEDUP_VEC,
+        super().__init__(parent, data, 'TRAWL', MetricName.CAP_FP_GFLOP_P_S, SPEEDUP_VEC,
                          [SPEEDUP_VEC, SPEEDUP_DL1])
 
     # Create meta tabs

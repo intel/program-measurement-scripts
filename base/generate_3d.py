@@ -24,7 +24,7 @@ class Plot3d(CapacityPlot):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=COVERAGE_PCT.value, mappings=mappings, short_names_path=short_names_path)
         self.z_axis = z_axis
-        self.default_z_axis = 'C_FLOP [GFlop/s]'
+        self.default_z_axis = MetricName.CAP_FP_GFLOP_P_S
 
     def compute_and_plot(self):
         variant = self.variant
@@ -209,7 +209,7 @@ def plot_3d(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=N
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+    df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     data = CapacityData(df)

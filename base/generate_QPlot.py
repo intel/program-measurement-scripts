@@ -30,7 +30,7 @@ class QPlot(CapacityPlot):
 	def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
               source_order=None, mappings=pd.DataFrame(), short_names_path=''): 
 		super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
-                   default_y_axis='C_max [GB/s]',  mappings=mappings, short_names_path=short_names_path)
+                   default_y_axis=MetricName.CAP_MEMMAX_GB_P_S,  mappings=mappings, short_names_path=short_names_path)
 		self.source_order = source_order
 
 	def mk_labels(self):

@@ -100,52 +100,52 @@ class CapacityData(NodeCentricData):
 	    # 'RAM [GB/s]': (lambda df : df[RATE_RAM_GB_P_S]),
 	    # 'FE [GB/s]': (lambda df : df[STALL_FE_PCT]*df['C_max'])	
 
-        ('C_FLOP [GB/s]', (lambda df,nodes : df[RATE_FP_GFLOP_P_S]*8 if "FLOP" in nodes else None)),
-        ('C_L1 [GB/s]', (lambda df,nodes : df[RATE_L1_GB_P_S] if "L1" in nodes else None)),
-        ('C_L2 [GB/s]', (lambda df,nodes : df[RATE_L2_GB_P_S] if "L2" in nodes else None)),
-        ('C_L3 [GB/s]', (lambda df,nodes : df[RATE_L3_GB_P_S] if "L3" in nodes else None)),
-        ('C_RAM [GB/s]', (lambda df,nodes : df[RATE_RAM_GB_P_S] if "RAM" in nodes else None)),
+        (MetricName.CAP_FP_GB_P_S, (lambda df,nodes : df[RATE_FP_GFLOP_P_S]*8 if "FLOP" in nodes else None)),
+        (MetricName.CAP_L1_GB_P_S, (lambda df,nodes : df[RATE_L1_GB_P_S] if "L1" in nodes else None)),
+        (MetricName.CAP_L2_GB_P_S, (lambda df,nodes : df[RATE_L2_GB_P_S] if "L2" in nodes else None)),
+        (MetricName.CAP_L3_GB_P_S, (lambda df,nodes : df[RATE_L3_GB_P_S] if "L3" in nodes else None)),
+        (MetricName.CAP_RAM_GB_P_S, (lambda df,nodes : df[RATE_RAM_GB_P_S] if "RAM" in nodes else None)),
         # NOTE: C_VR has 1/3 factor built in for SI use
-        ('C_VR [GB/s]', (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/3 if "VR" in nodes else None)), 
+        (MetricName.CAP_VR_GB_P_S, (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/3 if "VR" in nodes else None)), 
 
-        ('C_FLOP [GFlop/s]', (lambda df,nodes : df[RATE_FP_GFLOP_P_S] if "FLOP" in nodes else None)),
-        ('C_L1 [GW/s]', (lambda df,nodes : df[RATE_L1_GB_P_S]/8 if "L1" in nodes else None)),
-        ('C_L2 [GW/s]', (lambda df,nodes : df[RATE_L2_GB_P_S]/8 if "L2" in nodes else None)), 
-        ('C_L3 [GW/s]', (lambda df,nodes : df[RATE_L3_GB_P_S]/8 if "L3" in nodes else None)), 
-        ('C_RAM [GW/s]', (lambda df,nodes : df[RATE_RAM_GB_P_S]/8 if "RAM" in nodes else None)), 
+        (MetricName.CAP_FP_GFLOP_P_S, (lambda df,nodes : df[RATE_FP_GFLOP_P_S] if "FLOP" in nodes else None)),
+        (MetricName.CAP_L1_GW_P_S, (lambda df,nodes : df[RATE_L1_GB_P_S]/8 if "L1" in nodes else None)),
+        (MetricName.CAP_L2_GW_P_S, (lambda df,nodes : df[RATE_L2_GB_P_S]/8 if "L2" in nodes else None)), 
+        (MetricName.CAP_L3_GW_P_S, (lambda df,nodes : df[RATE_L3_GB_P_S]/8 if "L3" in nodes else None)), 
+        (MetricName.CAP_RAM_GW_P_S, (lambda df,nodes : df[RATE_RAM_GB_P_S]/8 if "RAM" in nodes else None)), 
         # NOTE: C_VR has 1/3 factor built in for SI use
-        ('C_VR [GW/s]', (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/8/3 if "VR" in nodes else None)), 
+        (MetricName.CAP_VR_GW_P_S, (lambda df,nodes : df[RATE_REG_SIMD_GB_P_S]/8/3 if "VR" in nodes else None)), 
 
-        ('C_max [GB/s]', (lambda df,nodes : 
+        (MetricName.CAP_MEMMAX_GB_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
-        ('C_max [GW/s]', (lambda df,nodes : 
+        (MetricName.CAP_MEMMAX_GW_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
 
-        ('C_allmax [GB/s]', (lambda df,nodes : 
+        (MetricName.CAP_ALLMAX_GB_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.BASIC_NODE_SET])]).max(axis=1))), 
-        ('C_allmax [GW/s]', (lambda df,nodes : 
+        (MetricName.CAP_ALLMAX_GW_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.BASIC_NODE_SET])]).max(axis=1))), 
         
         # Same formula as C_max [*] (for now) (used for SI)
-        ('C_scalar [GB/s]', (lambda df,nodes : 
+        (MetricName.CAP_SCALAR_GB_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGB_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
-        ('C_scalar [GW/s]', (lambda df,nodes : 
+        (MetricName.CAP_SCALAR_GW_P_S, (lambda df,nodes : 
             (df[CapacityData.nodesToCapsGW_s([n for n in nodes if n in CapacityData.MEM_NODE_SET])]).max(axis=1))), 
 
-        ('C_FE [GB/s]', (lambda df,nodes : (df[STALL_FE_PCT]/100)*df['C_allmax [GB/s]'])), 
-        ('C_FE [GW/s]', (lambda df,nodes : (df[STALL_FE_PCT]/100)*(df['C_allmax [GW/s]']))), 
-        ('C_SB [GB/s]', (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df['C_allmax [GB/s]']))), 
-        ('C_SB [GW/s]', (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df['C_allmax [GW/s]']))), 
-        ('C_LM [GB/s]', (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df['C_allmax [GB/s]']))), 
-        ('C_LM [GW/s]', (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df['C_allmax [GW/s]']))), 
-        ('C_RS [GB/s]', (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df['C_allmax [GB/s]']))), 
-        ('C_RS [GW/s]', (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df['C_allmax [GW/s]']))),
+        (MetricName.CAP_FE_GB_P_S, (lambda df,nodes : (df[STALL_FE_PCT]/100)*df[MetricName.CAP_ALLMAX_GB_P_S])), 
+        (MetricName.CAP_FE_GW_P_S, (lambda df,nodes : (df[STALL_FE_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))), 
+        (MetricName.CAP_SB_GB_P_S, (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df[MetricName.CAP_ALLMAX_GB_P_S]))), 
+        (MetricName.CAP_SB_GW_P_S, (lambda df,nodes : (df[STALL_SB_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))), 
+        (MetricName.CAP_LM_GB_P_S, (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df[MetricName.CAP_ALLMAX_GB_P_S]))), 
+        (MetricName.CAP_LM_GW_P_S, (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))), 
+        (MetricName.CAP_RS_GB_P_S, (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df[MetricName.CAP_ALLMAX_GB_P_S]))), 
+        (MetricName.CAP_RS_GW_P_S, (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))),
 
         # used for SI
-        ('C_CU [GW/s]', (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
-                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df['C_scalar [GW/s]']))),
-        ('C_CU [GB/s]', (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
-                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df['C_scalar [GB/s]'])))
+        (MetricName.CAP_CU_GW_P_S, (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
+                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df[MetricName.CAP_SCALAR_GW_P_S]))),
+        (MetricName.CAP_CU_GB_P_S, (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
+                                             df[STALL_SB_PCT]/100 + df[STALL_LM_PCT]/100)*df[MetricName.CAP_SCALAR_GB_P_S])))
     ]
 
 
@@ -233,9 +233,9 @@ class CapacityData(NodeCentricData):
 
         # node_list = list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))
         #metric_to_memlevel = lambda v: re.sub(r" \[.*\]", "", v[2:])
-        # add_mem_max_level_columns(df, node_list, 'C_max [GB/s]', metric_to_memlevel)
-		# df['C_max [GB/s]']=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
-		# df = df[df['C_max [GB/s]'].notna()]
+        # add_mem_max_level_columns(df, node_list, MetricName.CAP_MEMMAX_GB_P_S, metric_to_memlevel)
+		# df[MetricName.CAP_MEMMAX_GB_P_S]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].max(axis=1)
+		# df = df[df[MetricName.CAP_MEMMAX_GB_P_S].notna()]
 		# df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
 		# # Remove the first two characters which is 'C_'
 		# df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
@@ -264,7 +264,7 @@ class CapacityData(NodeCentricData):
 # Base class for all plots
 class CapePlot:
     def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
-        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+        default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         self.data = data
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
@@ -546,7 +546,7 @@ class CapePlot:
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
-        default_y_axis, default_x_axis = 'C_FLOP [GFlop/s]', filtering = False, mappings=pd.DataFrame(), \
+        default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), \
             short_names_path=''):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)

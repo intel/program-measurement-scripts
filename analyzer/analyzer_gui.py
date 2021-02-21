@@ -61,7 +61,7 @@ class LoadedData(Observable):
         self.data_items=[]
         self.sources=[]
         self.source_order=[]
-        self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, 'C_FLOP [GFlop/s]', COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
+        self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, MetricName.CAP_FP_GFLOP_P_S, COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         self.analytic_columns = []
         self.mappings = pd.DataFrame()
@@ -237,7 +237,7 @@ class LoadedData(Observable):
         for level in self.dfs:
             df = self.dfs[level]
             self.addShortNames(df)
-            # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+            # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
             data = CapacityData(df)
             data.set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)
             data.compute()

@@ -20,12 +20,12 @@ class ScurveAllData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
         super().__init__(loadedData, gui, root, level, 'Scurve_all')
     
-    def notify(self, loadedData, x_axis=None, y_axis='C_FLOP [GFlop/s]', variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    def notify(self, loadedData, x_axis=None, y_axis=MetricName.CAP_FP_GFLOP_P_S, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
         print("Scurve_allData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
         # df = self.df.copy(deep=True)
-        # df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+        # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
         # data = CapeData(df)
         # data.compute()
         plot = ScurveAllPlot(self.capacityData, 'ORIG', 'test', scale, 'S-Curve All', no_plot=False, gui=True, 
@@ -41,7 +41,7 @@ class ScurveAllData(AnalyzerData):
 class ScurveAllTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Scurve_all', 
-                         'C_FLOP [GFlop/s]', 'C_FLOP [GFlop/s]', [])
+                         MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 
     def get_metrics(self):
         return self.data.df.columns.tolist()

@@ -31,7 +31,7 @@ def custom_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_ax
     if not mappings.empty:
         mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
         'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+    df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     # df, fig, plotData = compute_and_plot(
