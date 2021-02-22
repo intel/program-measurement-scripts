@@ -35,6 +35,9 @@ def _memlevelStr(threshold):
 def _capStr(node, unit):
     return 'C_{} [{}]'.format(node, unit)
 
+def _capWUnitStr(node_w_unit):
+    return 'C_{}'.format(node_w_unit)
+
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class CapeEnum(str, Enum):
     def __str__(self):
@@ -184,6 +187,10 @@ class MetricName(CapeEnum):
     @classmethod
     def cap(cls, node, unit):
         return cls(_capStr(node, unit))
+
+    @classmethod
+    def capWUnit(cls, node_w_unit):
+        return cls(_capWUnitStr(node_w_unit))
         
     @classmethod
     def opsPct(cls, type):
@@ -246,3 +253,5 @@ KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
 
 # Provides all the enums useful for filtering irrelevant metrics
 ALL_METRICS = list(MetricName) + list(NonMetricName)
+
+CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
