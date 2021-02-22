@@ -10,7 +10,7 @@ import datetime
 import copy
 from capeplot import CapacityPlot
 from capeplot import CapePlot
-from capeplot import NodeCentricData
+from capeplot import NodeWithUnitData
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -28,9 +28,9 @@ globals().update(MetricName.__members__)
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
-class SiData(NodeCentricData):
+class SiData(NodeWithUnitData):
     def __init__(self, df):
-        super().__init__(df)
+        super().__init__(df, NODE_UNIT_DICT)
 
     # Getter of cur_run_df
     @property
@@ -48,11 +48,6 @@ class SiData(NodeCentricData):
     
     def set_cluster_df (self, cluster_df):
         self.cluster_df = cluster_df
-        return self
-
-    # Override this because for SI the chosen node will be specific to units
-    def set_chosen_node_set(self, chosen_node_set):
-        self.chosen_node_set = {"{} {}".format(n, NODE_UNIT_DICT[n]) for n in chosen_node_set}
         return self
 
     def compute_capacity(self, df):
@@ -153,8 +148,9 @@ class SiData(NodeCentricData):
         if not NonMetricName.SI_CLUSTER_NAME in df_to_update.columns: 
             df_to_update[NonMetricName.SI_CLUSTER_NAME]=''
         # Union of all sets of SI_SAT_NODES
-        self.chosen_node_set = set().union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
-        chosen_node_set = self.chosen_node_set
+        #self.chosen_node_set = set().union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
+        #chosen_node_set = self.chosen_node_set
+        chosen_node_set = set().union(*df_to_update[NonMetricName.SI_SAT_NODES].tolist())    
 
         # Fill the NA entries with ''
         df_to_update.fillna({NonMetricName.SI_CLUSTER_NAME:''}, inplace=True)
@@ -363,13 +359,13 @@ def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df
 
 def mk_data(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
     siData = SiData(cur_run_df)
-    siData.set_chosen_node_set(chosen_node_set)
+    siData.set_chosen_node_set_with_unit(chosen_node_set)
     siData.set_norm(norm)
     siData.set_cluster_df(cluster_df)
     return siData
 
 def compute_only(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET):
-    siData = mk_data(cluster_df, norm, cur_run_df, chosen_node_set = DEFAULT_CHOSEN_NODE_SET)
+    siData = mk_data(cluster_df, norm, cur_run_df, chosen_node_set)
     siData.compute()
     return siData.cluster_df, siData.cluster_and_cur_run_df, siData.df
 
