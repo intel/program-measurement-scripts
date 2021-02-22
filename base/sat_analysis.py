@@ -14,6 +14,10 @@ from pathlib import Path
 from metric_names import NonMetricName, MetricName, KEY_METRICS
 from generate_SI import compute_only
 from generate_SI import BASIC_NODE_SET
+from generate_SI import NODE_UNIT_DICT
+from generate_SI import SiData
+from capeplot import CapacityData
+from capeplot import NodeWithUnitData
 from sw_bias import compute_sw_bias
 import os
 # GUI import
@@ -37,7 +41,7 @@ RUN_SI = True
 RUN_SW_BIAS = False
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
-CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
+CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GB/s]', MetricName.STALL_LB_PCT:'LB [GB/s]', MetricName.STALL_SB_PCT:'SB [GB/s]', MetricName.STALL_LM_PCT:'LM [GB/s]', MetricName.STALL_RS_PCT:'RS [GB/s]'}
 
 # No Frontend
 #CU_NODE_SET={MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
@@ -62,6 +66,22 @@ primaryCuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Me
 cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 
+
+class SatAnalysisData(NodeWithUnitData):
+  def __init__(self, df):
+    super().__init__(df, NODE_UNIT_DICT) 
+
+  def compute_impl(self, df):
+    self.cluster_df, si_df = find_clusters(df, self.chosen_node_set)
+    return si_df
+
+  # Return (expected inputs, expected outputs)
+  def input_output_args(self):
+    input_args = SiData.capacities(self.chosen_node_set)+[MetricName.SHORT_NAME]+ALL_NODE_LIST+[MetricName.CAP_ALLMAX_GB_P_S]
+    output_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
+    return input_args, output_args
+
+
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
 # cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
@@ -69,12 +89,14 @@ subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Metr
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def find_clusters(current_codelets_runs_df, memAlusatThreshold = 0.10, cuSatThreshold = 0.25):
+def find_clusters(current_codelets_runs_df, chosen_node_set, memAlusatThreshold = 0.10, cuSatThreshold = 0.25):
   # Read the optimal data file
   optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
   optimal_data_df = pd.read_csv(optimal_data_path)
+  nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+  CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute() 
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
-  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df)
+  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df, chosen_node_set)
     # filter out the unnecessary columns
   all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
                                ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
@@ -508,11 +530,12 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
        findMaxInColumnsToColor(full_df, trafficToCheck, percentsToCheck)
        colorMaxInColumn(full_df, coloured_maxOfColumn, opBlue, highlightSheet)
        tier_book.save(tier_book_path)
+    # Moved this out of if check so else part also have chosen_node_set defined.
+    chosen_node_set = set(BASIC_NODE_LIST)
     if check_codlet_in_this_tier == True:
         #print (satTrafficList)
         peer_codelet_df = findPeerCodelets(satSetDF, trafficToCheck, primaryCuTrafficToCheck, satTrafficList, short_name)
         peer_cdlt_count = peer_codelet_df.shape[0]
-        chosen_node_set = set(BASIC_NODE_LIST)
         sat_rng_string = ''
         for elem in satTrafficList:
             sat_rng_string += elem
@@ -544,7 +567,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
             peer_codelet_df[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(peer_codelet_df)
             peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
-            my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF)
+            my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF, chosen_node_set)
             all_test_codelets = all_test_codelets.append(my_test_df)
             # cluster_name = str(codelet_tier) + str(satTrafficList)
             cluster_name = str(codelet_tier) + ' ' + satTrafficString
@@ -608,7 +631,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             ignore_index = True) 
     return all_clusters, all_test_codelets
 
-def do_sat_analysis(satSetDF, testSetDF):
+def do_sat_analysis(satSetDF, testSetDF, chosen_node_set):
     all_clusters = pd.DataFrame()
     all_test_codelets = pd.DataFrame()
     short_name=''
@@ -619,7 +642,9 @@ def do_sat_analysis(satSetDF, testSetDF):
     codelet_tested = 0
     print ("Memory Node Saturation Threshold : ", satThreshold)
     print ("Control Node Saturation Threshold : ", cuSatThreshold)
-    cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))
+    capsToRetain = [MetricName.capWUnit(n) for n in chosen_node_set]+[MetricName.CAP_ALLMAX_GB_P_S]
+    #cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))+capsToRetain
+    cols = set(satSetDF.columns) | set(KEY_METRICS) | set(capsToRetain)
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
         testDF = pd.DataFrame(columns=cols)
@@ -627,6 +652,7 @@ def do_sat_analysis(satSetDF, testSetDF):
         short_name = 'test-' + short_name
         row[MetricName.SHORT_NAME] = short_name
         testDF = testDF.append(row, ignore_index=False)[cols]
+        testDF = testDF.astype({MetricName.TIMESTAMP: 'int64'})
         codelet_tested += 1
 		    #find the saturation clusters
         all_clusters, all_test_codelets = find_cluster(satSetDF, testDF, short_name, 0, all_clusters, all_test_codelets)
@@ -668,7 +694,7 @@ def main(argv):
 
     print("Read test data successful!")
 
-    find_clusters(test_data_df)
+    find_clusters(test_data_df, BASIC_NODE_SET)
 
 
 if __name__ == "__main__":
