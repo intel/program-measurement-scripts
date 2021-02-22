@@ -46,6 +46,7 @@ from plot_interaction import PlotInteraction
 from capeplot import CapacityData
 from generate_SI import SiData
 from sat_analysis import find_clusters as find_si_clusters
+from sat_analysis import SatAnalysisData
 from metric_names import NonMetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -55,7 +56,9 @@ globals().update(MetricName.__members__)
 logging.disable(logging.CRITICAL)
 
 class LoadedData(Observable):
-    CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
+    #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
+    # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
+    CHOSEN_NODE_SET = CapacityData.ALL_NODE_SET
     def __init__(self):
         super().__init__()
         self.data_items=[]
@@ -87,6 +90,7 @@ class LoadedData(Observable):
         self.transitions = 'disabled'
         # Following maps will use level to lookup
         self.capacityDataDict = {}
+        self.satAnalysisDataDict = {}
         self.siDataDict = {}
 
     def check_cape_paths(self):
@@ -238,11 +242,11 @@ class LoadedData(Observable):
             df = self.dfs[level]
             self.addShortNames(df)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
-            data = CapacityData(df)
-            data.set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)
-            data.compute()
-            self.capacityDataDict[level] = data
-            self.siDataDict[level] = self.computeSi(level)
+            self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute()
+            self.satAnalysisDataDict[level] = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute()
+            cluster_df = self.satAnalysisDataDict[level].cluster_df
+            CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
+            self.siDataDict[level] = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
 
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
@@ -254,6 +258,7 @@ class LoadedData(Observable):
             cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
             si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
             # Check to see if we can use cached cluster and si dataframes
+
             if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
                 # Using with stmt for brief code handling close() automatically.
                 with open(cluster_dest, 'rb') as cluster_dest_data, open(si_dest, 'rb') as si_dest_data:
@@ -265,8 +270,11 @@ class LoadedData(Observable):
                     pickle.dump(cluster_df, cluster_dest_data)
                     pickle.dump(si_df, si_dest_data)
         self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
+
         # Generate Plot
         cur_run_df = self.dfs[level]
+        # Below method chain call returns SatAnslysis Data
+        cluster_df = self.satAnalysisDataDict[level].cluster_df
         # Both below has method chaining so return valus is the Data Object
         # while last compute() call updates the data frame
         CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
