@@ -47,11 +47,14 @@ class CapeData(ABC):
         copy_df = self.df[KEY_METRICS + inputs]
         result_df = self.compute_impl(copy_df)
         result_df = result_df[KEY_METRICS + outputs]
+        #result_df = result_df.astype({MetricName.TIMESTAMP: 'int64'})
         existing_outputs = self.df.columns & outputs
         if len(existing_outputs) > 0:
             # Drop columns if there is existing columns to be overwritten
             warnings.warn("Trying to override existing columns: {}".format(existing_outputs))
             self.df.drop(columns=existing_outputs, inplace=True, errors='ignore')
+        self.df.reset_index(drop=True, inplace=True)
+        result_df.reset_index(drop=True, inplace=True)
         merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
         assert self.df[KEY_METRICS].equals(merged[KEY_METRICS])
         for col in outputs:
@@ -81,11 +84,29 @@ class NodeCentricData(CapeData):
         self.chosen_node_set = chosen_node_set
         return self
 
+class NodeWithUnitData(NodeCentricData):
+    def __init__(self, df, node_dict):
+        super().__init__(df)
+        self.chosen_node_set = set()
+        self.node_dict = node_dict 
+
+    # Override this because for node with units
+    # Expect the chosen_node_set has not units and to be computed
+    def set_chosen_node_set(self, chosen_node_set):
+        self.chosen_node_set = {"{} {}".format(n, self.node_dict[n]) for n in chosen_node_set}
+        return self
+
+    def set_chosen_node_set_with_unit(self, chosen_node_set_with_unit):
+        self.chosen_node_set = chosen_node_set_with_unit
+        return self
+
 class CapacityData(NodeCentricData):
     MEM_NODE_SET={'L1', 'L2', 'L3', 'RAM'}
     REG_NODE_SET={'VR'}
     OP_NODE_SET={'FLOP'}
     BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
+    BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
+    ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
 
     BUFFER_NODE_SET={'FE'}
     DEFAULT_CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'RAM', 'FLOP'}
