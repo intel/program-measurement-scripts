@@ -282,7 +282,21 @@ class SiPlot(CapePlot):
 
     def mk_plot_title(self, title, variant, scale):
         chosen_node_set = self.chosen_node_set
-        return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
+        # If chosen_node_set is too long then we need to add more new lines as matplotlib doesn't handle this automatically
+        # 80 chars is the max that will fit on a line
+        title = "{} : n = {}\n".format(title, len(chosen_node_set))
+        nodes = sorted(list(chosen_node_set))
+        chars = 0
+        for i, node in enumerate(nodes):
+            chars += len(node)
+            if chars > 80:
+                title += "\n"
+                chars = 0
+            title += node
+            if i != len(nodes) - 1:
+                title += ", "
+        return title
+        # return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
 
     def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
         ax = self.ax
