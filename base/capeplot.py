@@ -429,7 +429,7 @@ class CapePlot:
         color_labels = dict()
         user_colors = [i for i in self.colors if i not in df['Color'].unique()]
         i = 0
-        for color in df['Color'].unique():
+        for color in sorted(df['Color'].unique()):
             if color not in self.colors: # If it is user-specified then we want to display that in the legend
                 color_labels[color] = user_colors[i]
                 i += 1
@@ -544,7 +544,7 @@ class CapePlot:
     def mk_legend(self, color_labels):
         ax = self.ax
         patches = []
-        if color_labels and len(color_labels) >= 2:
+        if color_labels:
             for color_label in color_labels:
                 patch = mpatches.Patch(label=color_label, color=color_labels[color_label])
                 patches.append(patch)

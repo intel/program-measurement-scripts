@@ -191,13 +191,13 @@ class ShortNameTab(tk.Frame):
             if not clusters: ShortNameTab.addShortNames(table_df)
             # Change the short name in each of the main dfs
             for level in self.tab.data.loadedData.dfs:
-                df = self.tab.data.df
-                df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
+                df = self.tab.data.loadedData.dfs[level]
+                df = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
                 df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
                 df['Color'] = df["Color_y"].fillna(df["Color_x"])
                 df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
                 df = self.tab.data.gui.loadedData.compute_colors(df, clusters)
-                self.tab.data.df = df.copy(deep=True)
+                self.tab.data.loadedData.dfs[level] = df
         for tab in self.tab.plotInteraction.tabs:
             if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
             else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
@@ -212,8 +212,8 @@ class ShortNameTab(tk.Frame):
     #     return merged
 
     def checkForDuplicates(self, df):
+        return False
         # Check if there are duplicates short names with the same timestamp
-        pass
         # df.reset_index(drop=True, inplace=True)
         # duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
         # if duplicate_rows.any():

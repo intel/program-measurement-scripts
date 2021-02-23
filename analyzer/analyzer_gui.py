@@ -243,8 +243,8 @@ class LoadedData(Observable):
         CapeData.set_cache_dir(self.data_dir)
         for level in self.dfs:
             df = self.dfs[level]
+            # self.addShortNames(level)
             MetaData(df).set_filename(self.short_names_path).compute()
-            #self.addShortNames(df)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
             self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
                 .compute(f'capacity-{level}')
@@ -392,7 +392,7 @@ class LoadedData(Observable):
         if not clusters and os.path.getsize(self.short_names_path) > 0:
             all_short_names = pd.read_csv(self.short_names_path)
             df.drop(columns=['Color'], inplace=True, errors='ignore')
-            df = pd.merge(left=df, right=all_short_names[[NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
+            df = pd.merge(left=df, right=all_short_names[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
             toAdd = df[df['Color'].notnull()]
             colorDf = colorDf.append(toAdd, ignore_index=True)
         elif clusters:
@@ -446,19 +446,15 @@ class LoadedData(Observable):
                 match['after_short_name'] = match['Short Name']
                 match = match[['Before Timestamp', 'Before Name', 'before_short_name', 'After Timestamp', 'After Name', 'after_short_name']]
                 mappings = mappings.append(match, ignore_index=True)
-        if not mappings.empty: 
+        if not mappings.empty:
             mappings = self.get_speedups(mappings)
             self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
             self.all_mappings.to_csv(self.mappings_path, index=False)
         return mappings
 
-    def addShortNames(self, df):
+    def addShortNames(self, level):
         all_short_names = pd.read_csv(self.short_names_path)
-        df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
-        for metric in all_short_names.columns:
-            if metric + "_y" in df.columns and metric + "_x" in df.columns:
-                df[metric] = df[metric + "_y"].fillna(df[metric + "_x"])
-                df.drop(columns=[metric + "_y", metric + "_x"], inplace=True, errors='ignore')
+        self.merge_metrics(all_short_names, [SHORT_NAME, 'Color'], level)
 
     def merge_metrics(self, df, metrics, level):
         # Add metrics computed in plot functions to master dataframe
