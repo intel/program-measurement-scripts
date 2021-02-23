@@ -98,7 +98,8 @@ class CapeData(ABC):
         self.df.reset_index(drop=True, inplace=True)
         result_df.reset_index(drop=True, inplace=True)
         merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
-        assert self.df[KEY_METRICS].equals(merged[KEY_METRICS])
+        assert self.df[MetricName.NAME].equals(merged[MetricName.NAME])
+        assert self.df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
         for col in outputs:
             self.df[col] = merged[col]
         return self
@@ -445,6 +446,16 @@ class CapePlot:
                 color_labels[app_name] = color
         return color_labels
 
+    @classmethod
+    def get_min_max(cls, xs, ys):
+        finiteXs = xs[np.isfinite(xs)]
+        finiteYs = ys[np.isfinite(ys)]
+        xmax=max(finiteXs, default=1)*1.2
+        ymax=max(finiteYs, default=1)*1.2  
+        xmin=min(finiteXs, default=0)
+        ymin=min(finiteYs, default=0)
+        return xmin, xmax, ymin, ymax
+        
     # Set filename to [] for GUI output
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
@@ -453,12 +464,7 @@ class CapePlot:
         self.fig, ax = plt.subplots()
         self.ax = ax
 
-        finiteXs = xs[np.isfinite(xs)]
-        finiteYs = ys[np.isfinite(ys)]
-        xmax=max(finiteXs, default=1)*1.2
-        ymax=max(finiteYs, default=1)*1.2  
-        xmin=min(finiteXs, default=0)
-        ymin=min(finiteYs, default=0)
+        xmin, xmax, ymin, ymax = self.get_min_max(xs, ys)
 
         # Set specified axis scales
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
