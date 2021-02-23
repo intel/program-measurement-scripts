@@ -382,7 +382,7 @@ class LoadedData(Observable):
         if not clusters and os.path.getsize(self.short_names_path) > 0:
             all_short_names = pd.read_csv(self.short_names_path)
             df.drop(columns=['Color'], inplace=True, errors='ignore')
-            df = pd.merge(left=df, right=all_short_names[[NAME, TIMESTAMP, 'Color']], on=[NAME, TIMESTAMP], how='left')
+            df = pd.merge(left=df, right=all_short_names[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
             toAdd = df[df['Color'].notnull()]
             colorDf = colorDf.append(toAdd, ignore_index=True)
         elif clusters:
