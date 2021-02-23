@@ -78,21 +78,23 @@ class PlotInteraction():
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
+        # Point selection table
+        options=[]
+        for i in range(len(self.df[SHORT_NAME])):
+            options.append('[' + self.df[SHORT_NAME][i] + '] ' + self.df[NAME][i] + ' [' + str(self.df[TIMESTAMP][i]) + ']')
+        self.pointSelector = ChecklistBox(self.plotFrame2, options, options, self, short_names=self.df[SHORT_NAME].tolist(), names=self.df[NAME].tolist(), timestamps=self.df[TIMESTAMP].tolist(), bd=1, relief="sunken", background="white")
+        self.selector_update_button = tk.Button(self.plotFrame3, text='Update Points', command=self.pointSelector.updatePlot)
+        self.pointSelector.restoreState(self.stateDictionary)
         # Plot/toolbar
         self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
         self.canvas.mpl_connect('button_press_event', self.onClick)
         self.canvas.mpl_connect('draw_event', self.onDraw)
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame3)
-        # Point selection table
-        options=[]
-        for i in range(len(self.df[SHORT_NAME])):
-            options.append('[' + self.df[SHORT_NAME][i] + '] ' + self.df[NAME][i] + ' [' + str(self.df[TIMESTAMP][i]) + ']')
-        self.pointSelector = ChecklistBox(self.plotFrame2, options, options, self, listType='pointSelector', short_names=self.df[SHORT_NAME].tolist(), names=self.df[NAME].tolist(), timestamps=self.df[TIMESTAMP].tolist(), bd=1, relief="sunken", background="white")
-        self.pointSelector.restoreState(self.stateDictionary)
         # Check if we are loading an analysis result and restore if so
         if self.gui.loadedData.restore: self.restoreAnalysisState()
         # Grid Layout
         self.toolbar.grid(column=7, row=0, sticky=tk.S)
+        self.selector_update_button.grid(column=6, row=0, sticky=tk.S, pady=2)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
@@ -100,6 +102,7 @@ class PlotInteraction():
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
         self.save_state_button.grid(column=0, row=0, sticky=tk.S, pady=2)
         self.plotFrame3.grid_rowconfigure(0, weight=1)
+        # self.selector_update_button.pack(side=tk.BOTTOM, anchor=tk.SE)
         self.pointSelector.pack(side=tk.RIGHT, anchor=tk.N, fill=tk.Y)
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
         self.toolbar.update()
