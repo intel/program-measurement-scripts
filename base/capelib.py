@@ -24,6 +24,12 @@ class Vecinfo:
         self.CVT = CVT
         self.PACK = PACK
 
+    def __add__(self, other):
+        return Vecinfo(SUM = self.SUM + other.SUM, SC = self.SC + other.SC, XMM = self.XMM + other.XMM, 
+        YMM = self.YMM + other.YMM, ZMM = self.ZMM + other.ZMM, FMA = self.FMA + other.FMA, \
+        DIV = self.DIV + other.DIV, SQRT = self.SQRT + other.SQRT, RSQRT = self.RSQRT + other.RSQRT, \
+        RCP = self.RCP + other.RCP, CVT = self.CVT + other.CVT, PACK = self.PACK + other.PACK)
+
     @classmethod
     def from_dict(cls, dict):
         created = cls()
@@ -33,6 +39,9 @@ class Vecinfo:
             else:
                 raise AttributeError('Attempt to set invalid attribute \'{}\''.format(key))
         return created
+
+    def __str__(self):
+        return str(vars(self))
 
     
 
@@ -116,7 +125,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             return None, None
 
     flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, False)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, True)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
     cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
     pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, calculate_packops_counts_per_iter, True)
@@ -137,8 +146,9 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             # Just set to CQA value for now.  (Pending check with Emmanuel)
             out_row[COUNT_INSTS_VEC_PCT] = cqa_vec_ratio
     except:
-        pass
-    out_row[COUNT_VEC_TYPE_OPS_PCT]=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
+        pass 
+    out_row[COUNT_VEC_TYPE_OPS_PCT] = find_vector_ext (flop_cnts_per_iter + iop_cnts_per_iter 
+         + memop_cnts_per_iter + cvt_cnts_per_iter + pack_cnts_per_iter)
 
 
 def calculate_flops_counts_per_iter(in_row):
@@ -256,11 +266,11 @@ def calculate_packops_counts_per_iter(in_row):
     opc_table = [
         { 'Inst':'INSERT/EXTRACT',  'SC': 4,    'XMM': None, 'YMM': None, 'ZMM': None},
         { 'Inst':'COMPRESS/EXPAND', 'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
-        # { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
         { 'Inst':'BLEND/MERGE',     'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'SHUFFLE/PERM',    'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'BROADCAST',       'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
-        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   16, 'ZMM':   64},
+        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'MASKMOV/MOV2M',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
         { 'Inst':'Other_packing',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
     ]
@@ -317,6 +327,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops_ymm += calculate_iops(w_vec_ymm, 'Nb_INT_logic_insn_{}_YMM', itypes)
         iops_zmm += calculate_iops(w_vec_zmm, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
         # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
+        # TODO: Need to check why ANDN and TEST instructions are included in FMA counting.
         iops_fma_xmm = w_vec_xmm * (getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_XMM')
                                  + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
         iops_xmm += iops_fma_xmm
@@ -379,15 +390,13 @@ def calculate_memops_counts_per_iter(in_row):
 def vector_ext_str(type2percent):
     return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in type2percent if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
     
-def find_vector_ext(flop_counts, iop_counts):
-    if iop_counts is None:
-        iop_counts = Vecinfo()
-    if flop_counts is None:
-        flop_counts = Vecinfo()
+def find_vector_ext(op_counts):
+    if op_counts is None:
+        op_counts = Vecinfo()
         
     out = zip([ "SC", "XMM", "YMM", "ZMM" ],
-              [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) \
-                  if flop_counts.SUM or iop_counts.SUM else None \
+              [ getattr(op_counts, metric) / (op_counts.SUM) \
+                  if op_counts.SUM  else None \
                       for metric in ["SC", "XMM", "YMM", "ZMM"] ])
     return vector_ext_str(out)
 
