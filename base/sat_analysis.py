@@ -66,6 +66,9 @@ primaryCuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Me
 cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 
+OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
+NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+NEEDED_TEST_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS
 
 class SatAnalysisData(NodeWithUnitData):
   def __init__(self, df):
@@ -78,7 +81,7 @@ class SatAnalysisData(NodeWithUnitData):
   # Return (expected inputs, expected outputs)
   def input_output_args(self):
     input_args = SiData.capacities(self.chosen_node_set)+[MetricName.SHORT_NAME]+ALL_NODE_LIST+[MetricName.CAP_ALLMAX_GB_P_S]
-    output_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
+    output_args = OUTPUT_COLUMNS
     return input_args, output_args
 
 
@@ -107,10 +110,8 @@ def find_clusters(current_codelets_runs_df, chosen_node_set, memAlusatThreshold 
   # Real implementation should have found many cluster dataframes and with the name set to its cluster name
   all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df, chosen_node_set)
     # filter out the unnecessary columns
-  all_clusters = all_clusters[[MetricName.NAME, MetricName.TIMESTAMP, NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
-                               ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
-  all_test_codelets=all_test_codelets[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] +
-                               ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]]
+  all_clusters = all_clusters[NEEDED_CLUSTER_DF_COLUMNS]
+  all_test_codelets=all_test_codelets[NEEDED_CLUSTER_DF_COLUMNS]
 
 
   # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
@@ -641,8 +642,8 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
     return all_clusters, all_test_codelets
 
 def do_sat_analysis(satSetDF, testSetDF, chosen_node_set):
-    all_clusters = pd.DataFrame()
-    all_test_codelets = pd.DataFrame()
+    all_clusters = pd.DataFrame(columns = NEEDED_CLUSTER_DF_COLUMNS)
+    all_test_codelets = pd.DataFrame(columns = NEEDED_TEST_DF_COLUMNS)
     short_name=''
     # Creating an empty Dataframe with column names only
     #print("Empty Dataframe ", dfObj, sep='\n')
