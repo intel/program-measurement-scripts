@@ -118,7 +118,6 @@ class SiData(NodeWithUnitData):
         cluster_df = self.cluster_df
         cur_run_df = df
         self.compute_CSI(cluster_df)
-        cluster_df['SI']=cluster_df['Saturation'] * cluster_df['Intensity'] 
         #cluster_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
 
         cluster_df[TIMESTAMP]=0
@@ -131,7 +130,6 @@ class SiData(NodeWithUnitData):
 
         # Compute Capacity, Saturation and intensity again for all the runs (cluster + current runs).
         self.compute_CSI(cluster_and_cur_run_df)
-        cluster_and_cur_run_df['SI']=cluster_and_cur_run_df['Saturation'] * cluster_and_cur_run_df['Intensity'] 
 
         self.cluster_and_cur_run_df = cluster_and_cur_run_df
         # Select the rows corresponding to cur_run_df for plotting
@@ -152,6 +150,8 @@ class SiData(NodeWithUnitData):
         return [self.cluster_df, self.cluster_and_cur_run_df, self.Ns]
 
     def compute_CSI(self, df_to_update):
+        if len(df_to_update) == 0:
+            return  # Nothing to do for empty data
         # If SiSatNodes columns not exist.  Fill in default values here
         if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
             df_to_update[NonMetricName.SI_SAT_NODES]=[DEFAULT_CHOSEN_NODE_SET]*len(df_to_update)
@@ -167,6 +167,7 @@ class SiData(NodeWithUnitData):
         #self.compute_capacity(df_to_update)
         self.compute_saturation(df_to_update, chosen_node_set)
         self.compute_intensity(df_to_update, chosen_node_set)
+        df_to_update['SI'] = df_to_update['Saturation'] * df_to_update['Intensity'] 
 
     @classmethod
     def capacities(cls, nodesWithUnit):
@@ -288,10 +289,11 @@ class SiPlot(CapePlot):
         ax = self.ax
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
-        xmax=max(max(cluster_and_cur_run_xs)*1.2, xmax)
-        ymax=max(max(cluster_and_cur_run_ys)*1.2, ymax)
-        xmin=min(min(cluster_and_cur_run_xs), xmin)
-        ymin=min(min(cluster_and_cur_run_ys), ymin)
+        min_xs, max_xs, min_ys, max_ys = self.get_min_max(cluster_and_cur_run_xs, cluster_and_cur_run_ys)
+        xmax=max(max_xs, xmax)
+        ymax=max(max_ys, ymax)
+        xmin=min(min_xs, xmin)
+        ymin=min(min_ys, ymin)
 
         # Set specified axis scales
         if scale == 'linear' or scale == 'linearlinear':
@@ -315,8 +317,9 @@ class SiPlot(CapePlot):
     def draw_contours(self, maxx, maxy, color_labels):
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
-        maxx=max(max(cluster_and_cur_run_xs)*1.2, maxx)
-        maxy=max(max(cluster_and_cur_run_ys)*1.2, maxy)
+        min_xs, max_xs, min_ys, max_ys = self.get_min_max(cluster_and_cur_run_xs, cluster_and_cur_run_ys)
+        maxx=max(max_xs, maxx)
+        maxy=max(max_ys, maxy)
 
         Ns = self.data.Ns
         ax = self.ax
