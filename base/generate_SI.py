@@ -139,7 +139,17 @@ class SiData(NodeWithUnitData):
 
         #cluster_and_cur_run_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup    
         self.Ns = len(self.chosen_node_set)
-        return df
+        return df 
+    
+    # Subclass override to set the fields give more data
+    def extra_data_to_restore(self, more_data):
+        assert len(more_data) == 3
+        self.cluster_df, self.cluster_and_cur_run_df, self.Ns = more_data
+        assert len(self.cluster_and_cur_run_df) >= len(self.cluster_df) 
+        
+    # Subclass override to provide more data to be written
+    def extra_data_to_save(self):
+        return [self.cluster_df, self.cluster_and_cur_run_df, self.Ns]
 
     def compute_CSI(self, df_to_update):
         # If SiSatNodes columns not exist.  Fill in default values here
