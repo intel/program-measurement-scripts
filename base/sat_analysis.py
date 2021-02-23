@@ -82,6 +82,15 @@ class SatAnalysisData(NodeWithUnitData):
     return input_args, output_args
 
 
+  # Subclass override to set the fields give more data
+  def extra_data_to_restore(self, more_data):
+    self.cluster_df = more_data.pop()
+    assert len(more_data) == 0
+    
+  # Subclass override to provide more data to be written
+  def extra_data_to_save(self):
+    return [self.cluster_df]
+
 # Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
 # Will return three dataframes: cluster only, cluster+cur_run, cur_run only
 # cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 

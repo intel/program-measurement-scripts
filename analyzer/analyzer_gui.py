@@ -43,6 +43,7 @@ from scurve import ScurveData, ScurveTab
 from scurve_all import ScurveAllData, ScurveAllTab
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab
 from plot_interaction import PlotInteraction
+from capeplot import CapeData
 from capeplot import CapacityData
 from generate_SI import SiData
 from sat_analysis import find_clusters as find_si_clusters
@@ -238,15 +239,19 @@ class LoadedData(Observable):
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
         # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
+        CapeData.set_cache_dir(self.data_dir)
         for level in self.dfs:
             df = self.dfs[level]
             self.addShortNames(df)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
-            self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute()
-            self.satAnalysisDataDict[level] = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute()
+            self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
+                .compute(f'capacity-{level}')
+            self.satAnalysisDataDict[level] = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
+                .compute(f'sat_analysis-{level}')
             cluster_df = self.satAnalysisDataDict[level].cluster_df
-            CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
-            self.siDataDict[level] = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
+            CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{level}') 
+            self.siDataDict[level] = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
+                .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
 
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()

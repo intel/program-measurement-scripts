@@ -1,4 +1,5 @@
 import re
+import os
 import sys
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 import copy
+import pickle
 from metric_names import MetricName
 from abc import ABC, abstractmethod
 from collections import UserDict
@@ -37,16 +39,56 @@ class CapeData(ABC):
     # def df(self, v):
     #     self._df = v
 
+    cache_dir = None
+    # Class variable to remember path to cache data file
+    # Set to None to reset
+    @classmethod
+    def set_cache_dir(cls, data_dir):
+        cls.cache_dir = data_dir
+
         
+    # Subclass could override to read more data
+    def try_read_cache(self, filename_prefix):
+        cache_file = os.path.join(self.cache_dir, f'{filename_prefix}_dfs.pkl') if self.cache_dir and filename_prefix else None
+        if cache_file and os.path.isfile(cache_file):
+            with open(cache_file, 'rb') as cache_data:
+                data_read = pickle.load(cache_data)
+                df = data_read.pop()  # extra the last dataframe which is the df to return
+                self.extra_data_to_restore(data_read)
+                return df
+        return None
+
+    # Subclass could override to save more data
+    def try_write_cache(self, df, filename_prefix):
+        cache_file = os.path.join(self.cache_dir, f'{filename_prefix}_dfs.pkl') if self.cache_dir and filename_prefix else None
+        if cache_file:
+            with open(cache_file, 'wb') as cache_data:
+                more_data_to_write = self.extra_data_to_save()
+                # df insert at the end so it can be popped by the read call
+                pickle.dump(more_data_to_write + [df], cache_data)
+             
+    # Subclass override to set the fields give more data
+    def extra_data_to_restore(self, more_data):
+        pass
+    
+    # Subclass override to provide more data to be written
+    def extra_data_to_save(self):
+        return []
+
     # Should check merge_metrics() in LoadedData class (they should be doing the same thing)
-    def compute(self):
+    def compute(self, cache_filename_prefix=None):
         # Copy-in copy-out
         inputs, outputs = self.input_output_args()
         inputs = sorted(inputs)
         outputs = sorted(outputs)
-        copy_df = self.df[KEY_METRICS + inputs]
-        result_df = self.compute_impl(copy_df)
-        result_df = result_df[KEY_METRICS + outputs]
+
+        result_df = self.try_read_cache(cache_filename_prefix)
+        if result_df is None:
+            copy_df = self.df[KEY_METRICS + inputs] 
+            result_df = self.compute_impl(copy_df)
+            result_df = result_df[KEY_METRICS + outputs]
+            self.try_write_cache(result_df, cache_filename_prefix)
+
         #result_df = result_df.astype({MetricName.TIMESTAMP: 'int64'})
         existing_outputs = self.df.columns & outputs
         if len(existing_outputs) > 0:
