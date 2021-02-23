@@ -13,6 +13,7 @@ from capelib import calculate_energy_derived_metrics
 from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from collections import OrderedDict
+from capeplot import CapeData
 
 from xlsxgen import XlsxGenerator
 
@@ -25,6 +26,7 @@ import pandas as pd
 import warnings
 
 from metric_names import MetricName
+from metric_names import KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -68,6 +70,29 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
 
 LFBFields = [MetricName.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
+
+
+class MetaData(CapeData): 
+    def __init__(self, df):
+        super().__init__(df) 
+        self.filename = None
+    
+    def set_filename(self, filename):
+        self.filename = filename
+        return self
+        
+    def compute_impl(self, df):
+        data = pd.read_csv(self.filename)
+        df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
+        naMask = df[MetricName.SHORT_NAME].isna()
+        df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
+        return df 
+
+    def input_output_args(self):
+        input_args = []
+        output_args = [ MetricName.SHORT_NAME ]
+        return input_args, output_args
+    
 
 def counter_sum(row, cols):
     sum = 0

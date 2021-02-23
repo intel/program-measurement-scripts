@@ -9,6 +9,7 @@ import os
 from os.path import expanduser
 from summarize import summary_report_df
 from summarize import compute_speedup
+from summarize import MetaData
 from aggregate_summary import aggregate_runs_df
 from compute_transitions import compute_end2end_transitions
 import tempfile
@@ -242,7 +243,8 @@ class LoadedData(Observable):
         CapeData.set_cache_dir(self.data_dir)
         for level in self.dfs:
             df = self.dfs[level]
-            self.addShortNames(level)
+            # self.addShortNames(level)
+            MetaData(df).set_filename(self.short_names_path).compute()
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
             self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
                 .compute(f'capacity-{level}')
@@ -253,37 +255,40 @@ class LoadedData(Observable):
             self.siDataDict[level] = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
                 .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
 
+                
+
+
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
-    def computeSi(self, level):
-        # Check cache/create cluster and si dfs
-        run_cluster = True
-        if run_cluster:
-            cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
-            si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
-            # Check to see if we can use cached cluster and si dataframes
+    # def computeSi(self, level):
+    #     # Check cache/create cluster and si dfs
+    #     run_cluster = True
+    #     if run_cluster:
+    #         cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
+    #         si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
+    #         # Check to see if we can use cached cluster and si dataframes
 
-            if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
-                # Using with stmt for brief code handling close() automatically.
-                with open(cluster_dest, 'rb') as cluster_dest_data, open(si_dest, 'rb') as si_dest_data:
-                    cluster_df = pickle.load(cluster_dest_data)
-                    si_df = pickle.load(si_dest_data)
-            else:
-                cluster_df, si_df = find_si_clusters(self.dfs[level])
-                with open(cluster_dest, 'wb') as cluster_dest_data, open(si_dest, 'wb') as si_dest_data:
-                    pickle.dump(cluster_df, cluster_dest_data)
-                    pickle.dump(si_df, si_dest_data)
-        self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
+    #         if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
+    #             # Using with stmt for brief code handling close() automatically.
+    #             with open(cluster_dest, 'rb') as cluster_dest_data, open(si_dest, 'rb') as si_dest_data:
+    #                 cluster_df = pickle.load(cluster_dest_data)
+    #                 si_df = pickle.load(si_dest_data)
+    #         else:
+    #             cluster_df, si_df = find_si_clusters(self.dfs[level])
+    #             with open(cluster_dest, 'wb') as cluster_dest_data, open(si_dest, 'wb') as si_dest_data:
+    #                 pickle.dump(cluster_df, cluster_dest_data)
+    #                 pickle.dump(si_df, si_dest_data)
+    #     self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
 
-        # Generate Plot
-        cur_run_df = self.dfs[level]
-        # Below method chain call returns SatAnslysis Data
-        cluster_df = self.satAnalysisDataDict[level].cluster_df
-        # Both below has method chaining so return valus is the Data Object
-        # while last compute() call updates the data frame
-        CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
-        return SiData(cur_run_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
+    #     # Generate Plot
+    #     cur_run_df = self.dfs[level]
+    #     # Below method chain call returns SatAnslysis Data
+    #     cluster_df = self.satAnalysisDataDict[level].cluster_df
+    #     # Both below has method chaining so return valus is the Data Object
+    #     # while last compute() call updates the data frame
+    #     CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
+    #     return SiData(cur_run_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
 
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
