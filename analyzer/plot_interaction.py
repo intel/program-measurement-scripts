@@ -137,11 +137,11 @@ class PlotInteraction():
         if not os.path.isdir(dest):
             Path(dest).mkdir(parents=True, exist_ok=True)
         # Store data for all levels
-        df = self.gui.loadedData.summaryDf.copy(deep=True)
+        df = self.gui.loadedData.get_df('Codelet').copy(deep=True)
         df.columns = ["{}".format(i) for i in df.columns]
-        srcDf = self.gui.loadedData.srcDf.copy(deep=True)
+        srcDf = self.gui.loadedData.get_df('Source').copy(deep=True)
         srcDf.columns = ["{}".format(i) for i in srcDf.columns]
-        appDf = self.gui.loadedData.appDf.copy(deep=True)
+        appDf = self.gui.loadedData.get_df('Application').copy(deep=True)
         appDf.columns = ["{}".format(i) for i in appDf.columns]
         codelet = {'textData' : self.gui.c_customTab.plotInteraction.textData, 'df' : df, 'mapping' : self.gui.loadedData.mapping, \
             'summary_dest' : os.path.join(dest, 'summary.xlsx'), 'mapping_dest' : os.path.join(dest, 'mapping.xlsx'), \

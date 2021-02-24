@@ -23,10 +23,12 @@ import tempfile
 import math
 import os
 import pandas as pd
+import numpy as np
 import warnings
 
 from metric_names import MetricName
 from metric_names import KEY_METRICS
+from metric_names import SUMMARY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -92,7 +94,6 @@ class MetaData(CapeData):
         input_args = []
         output_args = [ MetricName.SHORT_NAME ]
         return input_args, output_args
-    
 
 def counter_sum(row, cols):
     sum = 0
@@ -339,9 +340,9 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 
     try:
         total_dram_energy = calculate_total_dram_energy()
-        calculate_derived_metrics('DRAM', total_dram_energy)
     except:
-        return
+        total_dram_energy = np.nan
+    calculate_derived_metrics('DRAM', total_dram_energy)
 
     total_energy = total_pkg_energy + total_dram_energy
     calculate_derived_metrics('PKG+DRAM', total_energy)

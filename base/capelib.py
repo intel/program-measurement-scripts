@@ -97,7 +97,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     ops_dict = {itype : 0 for itype in itypes}
     inst_dict = {itype : 0 for itype in itypes}
 
-    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
+    def calculate_rate_and_counts(op_rate_name, inst_rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
@@ -108,7 +108,8 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             nonlocal ops_dict
             nonlocal inst_dict
             cnts_per_iter, inst_cnts_per_iter = calculate_counts_per_iter(in_row)
-            out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            out_row[op_rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            if inst_rate_name: out_row[inst_rate_name] = (inst_cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
                 vec_ops += nan2zero(cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
@@ -124,12 +125,12 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, True)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, None, calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, None, calculate_iops_counts_per_iter, True)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
-    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
-    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, calculate_packops_counts_per_iter, True)
-    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, calculate_memops_counts_per_iter, True)
+    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, None, calculate_cvtops_counts_per_iter, True)
+    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, None, calculate_packops_counts_per_iter, True)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, RATE_LDST_GI_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
     out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0

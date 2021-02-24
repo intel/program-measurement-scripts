@@ -29,7 +29,7 @@ class AnalyzerData(Observable):
     @property
     def df(self):
         # Get correct dataframe
-        return self.loadedData.dfs[self.level]
+        return self.loadedData.get_df(self.level)
 
     @property
     def mappings(self):
@@ -37,15 +37,15 @@ class AnalyzerData(Observable):
 
     @property
     def capacityData(self):
-        return self.loadedData.capacityDataDict[self.level]
+        return self.loadedData.levelData[self.level].capacityData
 
     @property
     def siData(self):
-        return self.loadedData.siDataDict[self.level]
+        return self.loadedData.levelData[self.level].siData
         
     @property
-    def siData(self):
-        return self.loadedData.siDataDict[self.level]
+    def satAnalysisData(self):
+        return self.loadedData.levelData[self.level].satAnalysisData
 
     def notify(self, loadedData, update, variants, mappings):
         # mappings
@@ -57,7 +57,6 @@ class AnalyzerData(Observable):
         if not variants: self.variants = [self.loadedData.default_variant]
         else: self.variants = variants
         # Get correct dataframe
-        #self.df = loadedData.dfs[self.level]
 
     def merge_metrics(self, df, metrics):
         self.loadedData.merge_metrics(df, metrics, self.level)

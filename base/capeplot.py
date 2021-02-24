@@ -84,22 +84,30 @@ class CapeData(ABC):
 
         result_df = self.try_read_cache(cache_filename_prefix)
         if result_df is None:
-            copy_df = self.df[KEY_METRICS + inputs] 
+            copy_df = self.df[KEY_METRICS + [n for n in inputs if n not in KEY_METRICS]] 
             result_df = self.compute_impl(copy_df)
-            result_df = result_df[KEY_METRICS + outputs]
+            result_df = result_df[KEY_METRICS + [n for n in outputs if n not in KEY_METRICS]]
             self.try_write_cache(result_df, cache_filename_prefix)
 
         #result_df = result_df.astype({MetricName.TIMESTAMP: 'int64'})
-        existing_outputs = self.df.columns & outputs
+        # Exclude key metrics not to be overwritten - except when self.df is empty which will be checked below
+        existing_outputs = (set(self.df.columns) & set(outputs)) - set(KEY_METRICS)
         if len(existing_outputs) > 0:
             # Drop columns if there is existing columns to be overwritten
             warnings.warn("Trying to override existing columns: {}".format(existing_outputs))
             self.df.drop(columns=existing_outputs, inplace=True, errors='ignore')
         self.df.reset_index(drop=True, inplace=True)
         result_df.reset_index(drop=True, inplace=True)
-        merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
-        assert self.df[MetricName.NAME].equals(merged[MetricName.NAME])
-        assert self.df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+        if len(self.df) > 0:
+            # Not empty self.df case
+            merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
+            # Make sure join order is consistent with original self.df order
+            assert self.df[MetricName.NAME].equals(merged[MetricName.NAME])
+            assert self.df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+        else:
+            # Empty self.df case, result_df must have all the KEY_METRICS
+            assert set(result_df.columns) & set(KEY_METRICS) == set(KEY_METRICS) 
+            merged = result_df
         for col in outputs:
             self.df[col] = merged[col]
         return self
