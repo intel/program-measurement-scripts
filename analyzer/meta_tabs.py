@@ -449,7 +449,7 @@ class ClusterTab(tk.Frame):
             self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class ChecklistBox(tk.Frame):
-    def __init__(self, parent, choices, current_choices, tab, listType='', short_names=[], names=[], timestamps=[], **kwargs):
+    def __init__(self, parent, choices, current_choices, tab, short_names=[], names=[], timestamps=[], **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
         self.parent=parent
         self.tab=tab
@@ -476,8 +476,6 @@ class ChecklistBox(tk.Frame):
                                 relief="flat", highlightthickness=0
             )
             self.cbs.append(cb)
-            if listType == 'pointSelector':
-                cb['command'] = lambda name=self.names[index], index=index : self.updatePlot(name, index)
             checklist.window_create("end", window=cb)
             checklist.insert("end", "\n")
         checklist.config(yscrollcommand=scrollbar.set)
@@ -493,21 +491,23 @@ class ChecklistBox(tk.Frame):
                 self.vars[index].set(0)
             except: pass
 
-    def updatePlot(self, name, index):
-        selected = self.vars[index].get()
-        selected_value = 1 if selected else 0
+    def updatePlot(self):
         for tab in self.tab.tabs:
-            tab.plotInteraction.pointSelector.vars[index].set(selected_value)
-            marker = tab.plotInteraction.textData['name:marker'][name]
-            marker.set_alpha(selected_value)
-            text = tab.plotInteraction.textData['marker:text'][marker]
-            text.set_alpha(selected_value) 
-            try: tab.plotInteraction.textData['text:arrow'][text].set_visible(selected)
-            except: pass
-            try: 
-                for mapping in tab.plotInteraction.textData['name:mapping'][name]:
-                    mapping.set_alpha(selected_value)
-            except: pass
+            for index, var in enumerate(self.vars):
+                selected = var.get()
+                selected_value = 1 if selected else 0
+                name = self.names[index]
+                tab.plotInteraction.pointSelector.vars[index].set(selected_value)
+                marker = tab.plotInteraction.textData['name:marker'][name]
+                marker.set_alpha(selected_value)
+                text = tab.plotInteraction.textData['marker:text'][marker]
+                text.set_alpha(selected_value) 
+                try: tab.plotInteraction.textData['text:arrow'][text].set_visible(selected)
+                except: pass
+                try: 
+                    for mapping in tab.plotInteraction.textData['name:mapping'][name]:
+                        mapping.set_alpha(selected_value)
+                except: pass
             tab.plotInteraction.canvas.draw()
 
     def getCheckedItems(self):

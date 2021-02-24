@@ -214,7 +214,7 @@ REG_NODE_SET={'VR [GB/s]'}
 OP_NODE_SET={'FLOP [GFlop/s]'}
 BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
 SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-BUFFER_NODE_SET={'FE [GB/s]', 'CU [GB/s]', 'SB [GB/s]', 'LM [GB/s]', 'RS [GB/s]'}
+BUFFER_NODE_SET={'FE [GB/s]', 'CU [GB/s]', 'SB [GB/s]', 'LM [GB/s]', 'RS [GB/s]', 'LB [GB/s]'}
 ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
 # Dictionary to lookup node name to its unit to use
 NODE_UNIT_DICT = dict(node_unit.split(" ") for node_unit in ALL_NODE_SET)

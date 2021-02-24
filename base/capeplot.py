@@ -156,7 +156,7 @@ class CapacityData(NodeCentricData):
     REG_NODE_SET={'VR'}
     OP_NODE_SET={'FLOP'}
     BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
-    BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS'}
+    BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS', 'LB'}
     ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
 
     BUFFER_NODE_SET={'FE'}
@@ -212,6 +212,8 @@ class CapacityData(NodeCentricData):
         (MetricName.CAP_LM_GW_P_S, (lambda df,nodes : (df[STALL_LM_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))), 
         (MetricName.CAP_RS_GB_P_S, (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df[MetricName.CAP_ALLMAX_GB_P_S]))), 
         (MetricName.CAP_RS_GW_P_S, (lambda df,nodes : (df[STALL_RS_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))),
+        (MetricName.CAP_LB_GB_P_S, (lambda df,nodes : (df[STALL_LB_PCT]/100)*(df[MetricName.CAP_ALLMAX_GB_P_S]))),
+        (MetricName.CAP_LB_GW_P_S, (lambda df,nodes : (df[STALL_LB_PCT]/100)*(df[MetricName.CAP_ALLMAX_GW_P_S]))),
 
         # used for SI
         (MetricName.CAP_CU_GW_P_S, (lambda df,nodes : ((df[STALL_FE_PCT]/100 + df[STALL_LB_PCT]/100 + 
