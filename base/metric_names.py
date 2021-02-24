@@ -183,6 +183,9 @@ class MetricName(CapeEnum):
     CAP_RS_GB_P_S = _capStr('RS', 'GB/s')
     CAP_CU_GW_P_S = _capStr('CU', 'GW/s')
     CAP_CU_GB_P_S = _capStr('CU', 'GB/s')
+    CAP_LB_GW_P_S = _capStr('LB', 'GW/s')
+    CAP_LB_GB_P_S = _capStr('LB', 'GB/s')
+    
 
     @classmethod
     def cap(cls, node, unit):
