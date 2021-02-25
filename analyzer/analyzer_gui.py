@@ -10,7 +10,7 @@ import re
 from os.path import expanduser
 from summarize import summary_report_df
 from summarize import compute_speedup
-from summarize import MetaData
+from capedata import AnalyticsData
 from capedata import SummaryData
 from capedata import AggregateData
 from aggregate_summary import aggregate_runs_df
@@ -120,14 +120,21 @@ class LoadedData(Observable):
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
+    def meta_filename(self, ext):
+        data_dir = self.data_dir
+        # data_dir is timestamped directory /path/to/datafile/<timestamp>
+        # so dropped <timesampt> will get back datafile 
+        datafile = os.path.basename(os.path.dirname(data_dir))
+        return os.path.join(data_dir, re.sub(r'\.xlsx$|\.raw\.csv$', '', datafile)+ext)
+
+        
     def set_meta_data(self):
         data_dir = self.data_dir
         if not data_dir:
             return
-        # data_dir is timestamped directory /path/to/datafile/<timestamp>
-        # so dropped <timesampt> will get back datafile 
         datafile = os.path.basename(os.path.dirname(data_dir))
         shortnamefile = os.path.join(data_dir, re.sub(r'\.xlsx$|\.raw\.csv$', '', datafile)+'.names.csv')
+        shortnamefile = self.meta_filename('.names.csv')
         names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(KEY_METRICS + NAME_FILE_METRICS, index=False)
         short_names_db = pd.read_csv(self.short_names_path) if os.path.isfile(self.short_names_path) else pd.DataFrame(KEY_METRICS + NAME_FILE_METRICS, index=False)
         # Only add entries not already in short_names_db
@@ -197,10 +204,14 @@ class LoadedData(Observable):
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False
         if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
-        summaryDf = self.get_df('Codelet')
-        srcDf = self.get_df('Source')
-        appDf = self.get_df('Application')
+        dfs = { n : pd.DataFrame(columns = KEY_METRICS) for n in self.allLevels }
+        summaryDf = dfs['Codelet']
+        srcDf = dfs['Source']
+        appDf = dfs['Application']
+        # NOTE: sources is a list of loaded file and the last one is to be loaded
+        # data_dir is the data directory of the last one which is to be loaded
         self.sources = sources
+        last_source = sources[-1]  # Get the last source to be loaded
         self.data_dir = data_dir
 
         # Add meta data from the timestamp directory.  Will read short names to global database
@@ -209,7 +220,8 @@ class LoadedData(Observable):
         # Get path to short name database
         short_names_path = self.short_names_path if os.path.isfile(self.short_names_path) else None
 
-        SummaryData(summaryDf).set_sources(sources).set_short_names_path(short_names_path).compute('summary-Codelet')
+        SummaryData(summaryDf).set_sources([last_source]).set_short_names_path(short_names_path).compute('summary-Codelet')
+        AnalyticsData(summaryDf).set_filename(self.meta_filename('.analytics.csv')).compute()
         AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).compute('summary-Source')
         AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).compute('summary-Application')
 
@@ -245,7 +257,7 @@ class LoadedData(Observable):
         # if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
         # Add diagnostic variables from analyticsDf
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        if not self.analytics.empty: self.add_analytics(self.analytics)
+        #if not self.analytics.empty: self.add_analytics(self.analytics)
 
         # Add speedups to the corresponding df at each level
         if not self.mapping.empty: 
@@ -272,11 +284,10 @@ class LoadedData(Observable):
         CapeData.set_cache_dir(self.data_dir)
         for level in self.levelData:
             levelData = self.levelData[level]
-            df = levelData.df
-            self.merge_metrics(self.compute_colors(df), ['Color'], level)
+            df = dfs[level]
+            df = self.compute_colors(df)
 
             # self.addShortNames(level)
-            MetaData(df).set_filename(self.short_names_path).compute()
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
             levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
             levelData.satAnalysisData = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{level}')
@@ -284,14 +295,19 @@ class LoadedData(Observable):
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{level}') 
             levelData.siData = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
                 .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
-
-                
-
+            LoadedData.append_df(self.get_df(level), df)
 
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
 
+    @staticmethod
+    def append_df(df, append_df):
+        merged = df.append(append_df, ignore_index=True)
+        df.drop(columns=df.columns, inplace=True)
+        for col in merged.columns:
+            df[col] = merged[col]
+    
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
         gui.loaded_url = None
@@ -627,13 +643,14 @@ class AnalyzerGui(tk.Frame):
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources = [source]
+            self.loadedData.add_data(self.sources, data_dir, update=False)
         elif choice == 'Append':
             if url: 
                 self.urls.append(url)
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources.append(source)
-        self.loadedData.add_data(self.sources, data_dir)
+            self.loadedData.add_data(self.sources, data_dir, update=True)
 
     def overwrite(self): # Clear out any previous saved dataframes/plots
         self.sources = []

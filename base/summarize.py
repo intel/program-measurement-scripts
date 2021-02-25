@@ -29,6 +29,7 @@ import warnings
 from metric_names import MetricName
 from metric_names import KEY_METRICS
 from metric_names import SUMMARY_METRICS
+from metric_names import ANALYTICS_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -73,26 +74,43 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
 LFBFields = [MetricName.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
 
-
-class MetaData(CapeData): 
+class SummaryData(CapeData): 
     def __init__(self, df):
         super().__init__(df) 
-        self.filename = None
+        self.sources = []
     
-    def set_filename(self, filename):
-        self.filename = filename
+    def set_sources(self, sources):
+        self.sources = sources
+        return self
+
+    def set_short_names_path(self, short_names_path):
+        self.short_names_path = short_names_path
         return self
         
     def compute_impl(self, df):
-        data = pd.read_csv(self.filename)
-        df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
-        naMask = df[MetricName.SHORT_NAME].isna()
-        df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
+        in_files = self.sources
+        exts = [ os.path.splitext(src)[1] for src in in_files ]
+        in_files_format = [ 'csv' if ext == '.csv' else 'xlsx' for ext in exts ]
+
+        # in_files_format = [None] * len(sources)
+        # for index, source in enumerate(sources):
+        #     in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
+        user_op_file = None
+        request_no_cqa = False
+        request_use_cpi = False
+        request_skip_energy = False
+        request_skip_stalls = False
+
+        # Codelet summary
+        # mapping not used 
+        df, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, request_use_cpi, 
+                                             request_skip_energy, request_skip_stalls, self.short_names_path, False, True, None)
+        
         return df 
 
     def input_output_args(self):
         input_args = []
-        output_args = [ MetricName.SHORT_NAME ]
+        output_args = SUMMARY_METRICS
         return input_args, output_args
 
 def counter_sum(row, cols):

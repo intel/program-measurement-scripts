@@ -1,8 +1,9 @@
 import os
+import pandas as pd
 from capeplot import CapeData
 from summarize import summary_report_df
 from aggregate_summary import aggregate_runs_df
-from metric_names import SUMMARY_METRICS, MetricName
+from metric_names import KEY_METRICS, SUMMARY_METRICS, ANALYTICS_METRICS, MetricName
 
 class SummaryGenerationData(CapeData):
     def __init__(self, df):
@@ -80,4 +81,35 @@ class AggregateData(SummaryGenerationData):
     def input_output_args(self):
         input_args, output_args = super().input_output_args()
         output_args = [out for out in output_args if out != MetricName.SRC_NAME]
+        return input_args, output_args
+
+class MetaData(CapeData): 
+    def __init__(self, df):
+        super().__init__(df) 
+        self.filename = None
+    
+    def set_filename(self, filename):
+        self.filename = filename
+        return self
+        
+    def compute_impl(self, df):
+        if not os.path.isfile(self.filename):
+            return pd.DataFrame(columns=KEY_METRICS + self.output_args())
+        data = pd.read_csv(self.filename)
+        df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
+        naMask = df[MetricName.SHORT_NAME].isna()
+        df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
+        return df 
+
+    def output_args(self):
+        input_args, output_args = self.input_output_args()
+        return output_args
+
+class AnalyticsData(MetaData): 
+    def __init__(self, df):
+        super().__init__(df) 
+
+    def input_output_args(self):
+        input_args = []
+        output_args = ANALYTICS_METRICS
         return input_args, output_args

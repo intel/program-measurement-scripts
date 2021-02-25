@@ -185,6 +185,24 @@ class MetricName(CapeEnum):
     CAP_CU_GB_P_S = _capStr('CU', 'GB/s')
     CAP_LB_GW_P_S = _capStr('LB', 'GW/s')
     CAP_LB_GB_P_S = _capStr('LB', 'GB/s')
+
+    # Analytic metrics including Source level metrics and general metrics
+
+    SRC_RHS_OP_COUNT = "Src[Exp[RhsOpCount]]"
+    SRC_INIT_ONLY_B = "Src[Exp[InitOnly]]"
+    SRC_RECURRENCE_B = "Src[Expr[Recurrence]]"
+    SRC_SCALAR_REDUCTION_B = "Src[Expr[ScalarReduction]]"
+
+    SRC_DDG_TRUE_CYCLIC_B = "Src[Ddg[TrueCyclic]]"
+    SRC_DDG_ARTIFICIAL_CYCLIC_B = "Src[Ddg[ArtificialCyclic]]"
+
+    SRC_ARRAY_ACCESS_OFFSETS = "Src[Array[Offsets]]"
+
+    SRC_LOOP_LIMITS = "Src[Loop[Limits]]"
+
+    GENERAL_RATING = "General[Rating]"
+    GENERAL_ADVICE = "General[Advice]"
+    GENERAL_INFO_URL = "General[InfoUrl]"
     
 
     @classmethod
@@ -288,4 +306,9 @@ SUMMARY_METRICS = RUN_INFO_METRICS + TIME_METRICS + COUNT_METRICS + RATE_METRICS
     + BRANCH_METRICS + STALL_METRICS + MEM_ACCESS_METRICS + WHATIF_SPEEDUP_METRICS + ENERGY_METRICS  
 
 NAME_FILE_METRICS = [ MetricName.SHORT_NAME, MetricName.VARIANT ]
+GENERAL_METRICS = [ MetricName.GENERAL_RATING, MetricName.GENERAL_ADVICE, MetricName.GENERAL_INFO_URL ]
+SRC_METRICS = [ MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_INIT_ONLY_B, MetricName.SRC_RECURRENCE_B,
+    MetricName.SRC_SCALAR_REDUCTION_B, MetricName.SRC_DDG_TRUE_CYCLIC_B, MetricName.SRC_DDG_ARTIFICIAL_CYCLIC_B, 
+    MetricName.SRC_ARRAY_ACCESS_OFFSETS, MetricName.SRC_LOOP_LIMITS ]  
+ANALYTICS_METRICS = SRC_METRICS + GENERAL_METRICS
 CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
