@@ -4,11 +4,33 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 import numpy as np
 import copy
 
 globals().update(MetricName.__members__)
+class PerLevelGuiState:
+    def __init__(self, loadedData, level):
+        self.level = level
+        self.loadedData = loadedData
+        # Should have size <= 3
+        self.labels = []
+        # For data filtering
+        # The following variants and filter metric set up a mask to select data point
+        self.selectedVariants = []
+        self.filterMetric = None
+        self.filterMinThreshold = 0
+        self.filterMaxThreshold = 0
+
+        # The final mask used to select data points
+        self.selectedDataPoints = []
+
+        self.map = pd.DataFrame(columns=KEY_METRICS + [MetricName.VARIANT, 'Color'])
+        # A map from color to color name for plotting
+        self.colorDict = {}
+
+    # Write methods to update the fields and then call 
+    # self.loadedData.levelData[level].updated() to notify all observers
 
 class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
@@ -24,6 +46,7 @@ class AnalyzerData(Observable):
         self.y_axis = None
         # Watch for updates in loaded data
         loadedData.add_observers(self)
+        loadedData.levelData[level].add_observers(self)
 
     # Make df a property that refer to the right dataframe
     @property

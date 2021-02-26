@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import re
 from os.path import expanduser
+from analyzer_base import PerLevelGuiState
 from summarize import summary_report_df
 from summarize import compute_speedup
 from capedata import AnalyticsData
@@ -61,19 +62,28 @@ globals().update(MetricName.__members__)
 logging.disable(logging.CRITICAL)
 
 class LoadedData(Observable):
-    class PerLevelData:
+        
+    class PerLevelData(Observable):
         def __init__(self, level):
+            super().__init__()
             self.level = level
             self.df = pd.DataFrame(columns=KEY_METRICS)
             self.capacityData = None
             self.satAnalysisData = None
             self.siData = None 
             self.mapping = pd.DataFrame()
+            # Put this here but may move it out.
+            self.guiState = PerLevelGuiState(self, level)
             
         def resetStates(self):
             self.df.drop(columns=self.df.columns, inplace=True)
             for col in KEY_METRICS:
                 self.df[col] = None
+
+        # Invoke this method after updating this object (and undelying objects like 
+        # GUI state)
+        def updated(self):
+            self.notify_observers() 
 
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
@@ -559,7 +569,6 @@ class AnalyzerGui(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.loadedData = LoadedData()
-        self.guiState = GuiState()
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
