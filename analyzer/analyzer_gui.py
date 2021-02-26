@@ -68,6 +68,7 @@ class LoadedData(Observable):
             self.capacityData = None
             self.satAnalysisData = None
             self.siData = None 
+            self.mapping = pd.DataFrame()
             
         def resetStates(self):
             self.df.drop(columns=self.df.columns, inplace=True)
@@ -97,8 +98,6 @@ class LoadedData(Observable):
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
         self.analysis_results_path = os.path.join(self.cape_path, 'Analysis Results')
-        self.test_mapping_path = os.path.join(self.cape_path, 'demo_mappins.csv')
-        self.test_summary_path = os.path.join(self.cape_path, 'demo_summary.csv')
         self.check_cape_paths()
         self.resetStates()
         self.data = {}
@@ -560,6 +559,7 @@ class AnalyzerGui(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.loadedData = LoadedData()
+        self.guiState = GuiState()
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
