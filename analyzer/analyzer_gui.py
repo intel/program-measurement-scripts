@@ -144,8 +144,8 @@ class LoadedData(Observable):
         datafile = os.path.basename(os.path.dirname(data_dir))
         shortnamefile = os.path.join(data_dir, re.sub(r'\.xlsx$|\.raw\.csv$', '', datafile)+'.names.csv')
         shortnamefile = self.meta_filename('.names.csv')
-        names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(KEY_METRICS + NAME_FILE_METRICS, index=False)
-        short_names_db = pd.read_csv(self.short_names_path) if os.path.isfile(self.short_names_path) else pd.DataFrame(KEY_METRICS + NAME_FILE_METRICS, index=False)
+        names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
+        short_names_db = pd.read_csv(self.short_names_path) if os.path.isfile(self.short_names_path) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
         # Only add entries not already in short_names_db
         merged = pd.merge(left=short_names_db, right=names, on=KEY_METRICS, how='outer')
         updated = False
