@@ -6,10 +6,14 @@ from argparse import ArgumentParser
 from pandastable import Table
 import pandas as pd
 import os
+import re
 from os.path import expanduser
+from analyzer_base import PerLevelGuiState
 from summarize import summary_report_df
 from summarize import compute_speedup
-from summarize import MetaData
+from capedata import AnalyticsData
+from capedata import SummaryData
+from capedata import AggregateData
 from aggregate_summary import aggregate_runs_df
 from compute_transitions import compute_end2end_transitions
 import tempfile
@@ -49,7 +53,7 @@ from capeplot import CapacityData
 from generate_SI import SiData
 from sat_analysis import find_clusters as find_si_clusters
 from sat_analysis import SatAnalysisData
-from metric_names import NonMetricName, KEY_METRICS
+from metric_names import NonMetricName, KEY_METRICS, NAME_FILE_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -58,11 +62,36 @@ globals().update(MetricName.__members__)
 logging.disable(logging.CRITICAL)
 
 class LoadedData(Observable):
+        
+    class PerLevelData(Observable):
+        def __init__(self, level):
+            super().__init__()
+            self.level = level
+            self.df = pd.DataFrame(columns=KEY_METRICS)
+            self.capacityData = None
+            self.satAnalysisData = None
+            self.siData = None 
+            self.mapping = pd.DataFrame()
+            # Put this here but may move it out.
+            self.guiState = PerLevelGuiState(self, level)
+            
+        def resetStates(self):
+            self.df.drop(columns=self.df.columns, inplace=True)
+            for col in KEY_METRICS:
+                self.df[col] = None
+
+        # Invoke this method after updating this object (and undelying objects like 
+        # GUI state)
+        def updated(self):
+            self.notify_observers() 
+
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
     CHOSEN_NODE_SET = CapacityData.ALL_NODE_SET
     def __init__(self):
         super().__init__()
+        self.allLevels = ['Codelet',  'Source', 'Application']
+        self.levelData = { lvl : LoadedData.PerLevelData(lvl) for lvl in self.allLevels }
         self.data_items=[]
         self.sources=[]
         self.source_order=[]
@@ -73,60 +102,91 @@ class LoadedData(Observable):
         self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
         self.app_mapping = pd.DataFrame()
-        self.summaryDf = pd.DataFrame()
-        self.srcDf = pd.DataFrame()
-        self.appDf = pd.DataFrame()
         self.analytics = pd.DataFrame()
         self.names = pd.DataFrame()
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
         self.analysis_results_path = os.path.join(self.cape_path, 'Analysis Results')
-        self.test_mapping_path = os.path.join(self.cape_path, 'demo_mappins.csv')
-        self.test_summary_path = os.path.join(self.cape_path, 'demo_summary.csv')
         self.check_cape_paths()
         self.resetStates()
         self.data = {}
         self.restore = False
         self.removedIntermediates = False
         self.transitions = 'disabled'
-        # Following maps will use level to lookup
-        self.capacityDataDict = {}
-        self.satAnalysisDataDict = {}
-        self.siDataDict = {}
 
+    def get_df(self, level):
+        return self.levelData[level].df
+    
     def check_cape_paths(self):
         if not os.path.isfile(self.short_names_path):
             Path(self.cape_path).mkdir(parents=True, exist_ok=True)
-            open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=[NAME, SHORT_NAME, TIMESTAMP, 'Color']).to_csv(self.short_names_path, index=False)
+            #open(self.short_names_path, 'wb') 
+            pd.DataFrame(columns=KEY_METRICS+NAME_FILE_METRICS+ ['Color']).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
             pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', 'Before Variant', 'After Variant', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']).to_csv(self.mappings_path, index=False)
         if not os.path.isdir(self.analysis_results_path):
             Path(self.analysis_results_path).mkdir(parents=True, exist_ok=True)
 
-    def set_meta_data(self, data_dir):
-        self.analytics = pd.DataFrame()
-        for name in os.listdir(data_dir):
-            local_path = os.path.join(data_dir, name)
-            if name.endswith('.names.csv'): 
-                self.names = pd.read_csv(local_path)
-                self.names.rename(columns={'name':NAME, 'timestamp#':TIMESTAMP, \
-                    'short_name':SHORT_NAME, 'variant':VARIANT}, inplace=True)
-            # elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
-            elif name.endswith('.analytics.csv'): 
-                # TODO: Ask for naming in analytics to conform to naming convention
-                self.analytics = pd.read_csv(local_path)
+    def meta_filename(self, ext):
+        data_dir = self.data_dir
+        # data_dir is timestamped directory /path/to/datafile/<timestamp>
+        # so dropped <timesampt> will get back datafile 
+        datafile = os.path.basename(os.path.dirname(data_dir))
+        return os.path.join(data_dir, re.sub(r'\.xlsx$|\.raw\.csv$', '', datafile)+ext)
+
+        
+    def set_meta_data(self):
+        data_dir = self.data_dir
+        if not data_dir:
+            return
+        datafile = os.path.basename(os.path.dirname(data_dir))
+        shortnamefile = os.path.join(data_dir, re.sub(r'\.xlsx$|\.raw\.csv$', '', datafile)+'.names.csv')
+        shortnamefile = self.meta_filename('.names.csv')
+        names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
+        short_names_db = pd.read_csv(self.short_names_path) if os.path.isfile(self.short_names_path) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
+        # Only add entries not already in short_names_db
+        merged = pd.merge(left=short_names_db, right=names, on=KEY_METRICS, how='outer')
+        updated = False
+        for n in NAME_FILE_METRICS:
+            need_update = merged[n+'_x'].isna()  
+            merged.loc[need_update, n+'_x'] = merged.loc[need_update, n+'_y']
+            updated = updated | need_update
+
+        if updated.any():
+            # For key metrics, move them as is
+            for n in KEY_METRICS:
+                short_names_db[n] = merged[n]
+            # For short name metrics, move the merged metrics *_x to db
+            for n in NAME_FILE_METRICS:
+                short_names_db[n] = merged[n+'_x']
+            short_names_db.to_csv(self.short_names_path, index=False)
+
+        # self.analytics = pd.DataFrame()
+        # for name in os.listdir(data_dir):
+        #     local_path = os.path.join(data_dir, name)
+        #     if name.endswith('.names.csv'): 
+        #         self.names = pd.read_csv(local_path)
+        #         self.names.rename(columns={'name':NAME, 'timestamp#':TIMESTAMP, \
+        #             'short_name':SHORT_NAME, 'variant':VARIANT}, inplace=True)
+        #     # elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
+        #     elif name.endswith('.analytics.csv'): 
+        #         # TODO: Ask for naming in analytics to conform to naming convention
+        #         self.analytics = pd.read_csv(local_path)
     
+    # TODO: remove this property
+    @property
+    def summaryDf(self):
+        return self.get_df('Codelet')
+
     def resetStates(self):
         # Track points/labels that have been hidden/highlighted by the user
         self.c_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.s_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
         self.a_plot_state = {'hidden_names' : [], 'highlighted_names' : []}
-        self.summaryDf = pd.DataFrame()
-        self.srcDf = pd.DataFrame()
-        self.appDf = pd.DataFrame()
+        for level in self.allLevels:
+            self.levelData[level].resetStates()
         self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
         self.app_mapping = pd.DataFrame()
@@ -153,50 +213,48 @@ class LoadedData(Observable):
     def add_data(self, sources, data_dir='', update=False):
         self.restore = False
         if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
+        dfs = { n : pd.DataFrame(columns = KEY_METRICS) for n in self.allLevels }
+        summaryDf = dfs['Codelet']
+        srcDf = dfs['Source']
+        appDf = dfs['Application']
+        # NOTE: sources is a list of loaded file and the last one is to be loaded
+        # data_dir is the data directory of the last one which is to be loaded
         self.sources = sources
-        # Add meta data from the timestamp directory
-        if data_dir: 
-            self.data_dir = data_dir
-            self.set_meta_data(data_dir)
-        # Add short names to cape short names file
-        if not self.names.empty:
-            ShortNameTab.addShortNames(self.names)
-        in_files = sources
-        in_files_format = [None] * len(sources)
-        for index, source in enumerate(sources):
-            in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
-        user_op_file = None
-        request_no_cqa = False
-        request_use_cpi = False
-        request_skip_energy = False
-        request_skip_stalls = False
+        last_source = sources[-1]  # Get the last source to be loaded
+        self.data_dir = data_dir
+
+        # Add meta data from the timestamp directory.  Will read short names to global database
+        self.set_meta_data()
+
+        # Get path to short name database
         short_names_path = self.short_names_path if os.path.isfile(self.short_names_path) else None
-        # Check if we can use cached summary sheets
-        if data_dir:
-            for name in os.listdir(data_dir):
-                if name.endswith('codelet_summary.xlsx'): 
-                    self.summaryDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
-                elif name.endswith('source_summary.xlsx'): 
-                    self.srcDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
-                elif name.endswith('app_summary.xlsx'): 
-                    self.appDf = pd.read_excel(os.path.join(data_dir, name), index_col=0)
-        # Codelet summary
-        if self.summaryDf.empty:
-            self.summaryDf, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, \
-                request_use_cpi, request_skip_energy, request_skip_stalls, short_names_path, \
-                False, True, self.mapping)
-            if data_dir: self.summaryDf.to_excel(os.path.join(data_dir, 'codelet_summary.xlsx'))
+
+        SummaryData(summaryDf).set_sources([last_source]).set_short_names_path(short_names_path).compute('summary-Codelet')
+        AnalyticsData(summaryDf).set_filename(self.meta_filename('.analytics.csv')).compute()
+        AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).compute('summary-Source')
+        AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).compute('summary-Application')
+
+        # TODO: Append other levels?
+        self.names = summaryDf[KEY_METRICS+NAME_FILE_METRICS]
+
+        # Add short names to cape short names file
+        #if not self.names.empty:
+        #    ShortNameTab.addShortNames(self.names)
+
+        # TODO: get rid of special handling of VARIANT
         # self.mapping = self.get_speedups(self.mapping)
         # Add variants from namesDf to summaryDf and mapping file if it exists
-        if not self.names.empty: self.add_variants(self.names)
+        # if not self.names.empty: self.add_variants(self.names)
         # Store all unique variants for variant tab options
-        self.all_variants = self.summaryDf[VARIANT].dropna().unique()
+        self.all_variants = summaryDf[VARIANT].dropna().unique()
         # Get default variant (most frequent)
-        self.default_variant = self.summaryDf[VARIANT].value_counts().idxmax()
+        self.default_variant = summaryDf[VARIANT].value_counts().idxmax()
+
         # Get corresponding mappings from the local database
         self.all_mappings = pd.read_csv(self.mappings_path)
         # self.mapping = MappingsTab.restoreCustom(self.summaryDf.loc[self.summaryDf[VARIANT]==self.default_variant], self.all_mappings)
-        self.mapping = MappingsTab.restoreCustom(self.summaryDf, self.all_mappings)
+        self.mapping = MappingsTab.restoreCustom(summaryDf, self.all_mappings)
+
         if not self.mapping.empty:
             # TODO: Add before and after variants to mappings that dont have them
             try:
@@ -208,18 +266,11 @@ class LoadedData(Observable):
         # if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
         # Add diagnostic variables from analyticsDf
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        if not self.analytics.empty: self.add_analytics(self.analytics)
-        # Source summary
-        if self.srcDf.empty:
-            self.srcDf, self.src_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='src', name_file=short_names_path)
-            if data_dir: self.srcDf.to_excel(os.path.join(data_dir, 'source_summary.xlsx'))
-        # Application summary
-        if self.appDf.empty:
-            self.appDf, self.app_mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), level='app', name_file=short_names_path)
-            if data_dir: self.appDf.to_excel(os.path.join(data_dir, 'app_summary.xlsx'))
-        # Add speedups to the corresponding dfs at each level
+        #if not self.analytics.empty: self.add_analytics(self.analytics)
+
+        # Add speedups to the corresponding df at each level
         if not self.mapping.empty: 
-            self.add_speedup(self.mapping, self.summaryDf)
+            self.add_speedup(self.mapping, self.get_df('Codelet'))
             self.orig_mapping = self.mapping.copy(deep=True) # Used to restore original mappings after viewing end2end
         #if not self.src_mapping.empty: self.add_speedup(self.src_mapping, self.srcDf)
         #if not self.app_mapping.empty: self.add_speedup(self.app_mapping, self.appDf)
@@ -230,66 +281,42 @@ class LoadedData(Observable):
             # Check if we have custom mappings stored in the Cape directory
             self.mapping = self.getMappings()
         # Generate color column (Currently doesn't support multiple UIUC files because each file doesn't have a unique timestamp like UVSQ)
-        self.summaryDf = self.compute_colors(self.summaryDf)
-        self.srcDf = self.compute_colors(self.srcDf)
-        self.appDf = self.compute_colors(self.appDf)
-        self.dfs = {'Codelet' : self.summaryDf, 'Source' : self.srcDf, 'Application' : self.appDf}
-        self.capacityDataDict.clear() 
-        self.siDataDict.clear()
+        # self.summaryDf = self.compute_colors(self.summaryDf)
+        # self.srcDf = self.compute_colors(self.srcDf)
+        # self.appDf = self.compute_colors(self.appDf)
+
+        #self.dfs = {'Codelet' : self.summaryDf, 'Source' : self.srcDf, 'Application' : self.appDf}
 
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
         # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
         CapeData.set_cache_dir(self.data_dir)
-        for level in self.dfs:
-            df = self.dfs[level]
+        for level in self.levelData:
+            levelData = self.levelData[level]
+            df = dfs[level]
+            df = self.compute_colors(df)
+
             # self.addShortNames(level)
-            MetaData(df).set_filename(self.short_names_path).compute()
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
-            self.capacityDataDict[level] = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
-                .compute(f'capacity-{level}')
-            self.satAnalysisDataDict[level] = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
-                .compute(f'sat_analysis-{level}')
-            cluster_df = self.satAnalysisDataDict[level].cluster_df
+            levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
+            levelData.satAnalysisData = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{level}')
+            cluster_df = levelData.satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{level}') 
-            self.siDataDict[level] = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
+            levelData.siData = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
                 .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
-
-                
-
+            LoadedData.append_df(self.get_df(level), df)
 
         self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
-    # def computeSi(self, level):
-    #     # Check cache/create cluster and si dfs
-    #     run_cluster = True
-    #     if run_cluster:
-    #         cluster_dest = os.path.join(self.data_dir, 'cluster_df-{}.pkl'.format(level))
-    #         si_dest = os.path.join(self.data_dir, 'si_df-{}.pkl'.format(level))
-    #         # Check to see if we can use cached cluster and si dataframes
 
-    #         if os.path.isfile(cluster_dest) and os.path.isfile(si_dest):
-    #             # Using with stmt for brief code handling close() automatically.
-    #             with open(cluster_dest, 'rb') as cluster_dest_data, open(si_dest, 'rb') as si_dest_data:
-    #                 cluster_df = pickle.load(cluster_dest_data)
-    #                 si_df = pickle.load(si_dest_data)
-    #         else:
-    #             cluster_df, si_df = find_si_clusters(self.dfs[level])
-    #             with open(cluster_dest, 'wb') as cluster_dest_data, open(si_dest, 'wb') as si_dest_data:
-    #                 pickle.dump(cluster_df, cluster_dest_data)
-    #                 pickle.dump(si_df, si_dest_data)
-    #     self.merge_metrics(si_df, [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES], level)
-
-    #     # Generate Plot
-    #     cur_run_df = self.dfs[level]
-    #     # Below method chain call returns SatAnslysis Data
-    #     cluster_df = self.satAnalysisDataDict[level].cluster_df
-    #     # Both below has method chaining so return valus is the Data Object
-    #     # while last compute() call updates the data frame
-    #     CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute() 
-    #     return SiData(cur_run_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute()
-
+    @staticmethod
+    def append_df(df, append_df):
+        merged = df.append(append_df, ignore_index=True)
+        df.drop(columns=df.columns, inplace=True)
+        for col in merged.columns:
+            df[col] = merged[col]
+    
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
         gui.loaded_url = None
@@ -459,15 +486,17 @@ class LoadedData(Observable):
     def merge_metrics(self, df, metrics, level):
         # Add metrics computed in plot functions to master dataframe
         metrics.extend(KEY_METRICS)
-        merged = pd.merge(left=self.dfs[level], right=df[metrics], on=KEY_METRICS, how='left')
-        self.dfs[level].sort_values(by=NAME, inplace=True)
-        self.dfs[level].reset_index(drop=True, inplace=True)
+        #target_df = self.dfs[level]
+        target_df = self.get_df(level)
+        merged = pd.merge(left=target_df, right=df[metrics], on=KEY_METRICS, how='left')
+        target_df.sort_values(by=NAME, inplace=True)
+        target_df.reset_index(drop=True, inplace=True)
         merged.sort_values(by=NAME, inplace=True)
         merged.reset_index(drop=True, inplace=True)
         for metric in metrics:
             if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
                 merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
-            if metric not in KEY_METRICS: self.dfs[level][metric] = merged[metric]
+            if metric not in KEY_METRICS: target_df[metric] = merged[metric]
 
 class CodeletTab(tk.Frame):
     def __init__(self, parent):
@@ -623,13 +652,14 @@ class AnalyzerGui(tk.Frame):
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources = [source]
+            self.loadedData.add_data(self.sources, data_dir, update=False)
         elif choice == 'Append':
             if url: 
                 self.urls.append(url)
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources.append(source)
-        self.loadedData.add_data(self.sources, data_dir)
+            self.loadedData.add_data(self.sources, data_dir, update=True)
 
     def overwrite(self): # Clear out any previous saved dataframes/plots
         self.sources = []

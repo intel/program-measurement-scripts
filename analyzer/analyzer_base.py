@@ -4,11 +4,33 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 import numpy as np
 import copy
 
 globals().update(MetricName.__members__)
+class PerLevelGuiState:
+    def __init__(self, loadedData, level):
+        self.level = level
+        self.loadedData = loadedData
+        # Should have size <= 3
+        self.labels = []
+        # For data filtering
+        # The following variants and filter metric set up a mask to select data point
+        self.selectedVariants = []
+        self.filterMetric = None
+        self.filterMinThreshold = 0
+        self.filterMaxThreshold = 0
+
+        # The final mask used to select data points
+        self.selectedDataPoints = []
+
+        self.map = pd.DataFrame(columns=KEY_METRICS + [MetricName.VARIANT, 'Color'])
+        # A map from color to color name for plotting
+        self.colorDict = {}
+
+    # Write methods to update the fields and then call 
+    # self.loadedData.levelData[level].updated() to notify all observers
 
 class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
@@ -24,12 +46,13 @@ class AnalyzerData(Observable):
         self.y_axis = None
         # Watch for updates in loaded data
         loadedData.add_observers(self)
+        loadedData.levelData[level].add_observers(self)
 
     # Make df a property that refer to the right dataframe
     @property
     def df(self):
         # Get correct dataframe
-        return self.loadedData.dfs[self.level]
+        return self.loadedData.get_df(self.level)
 
     @property
     def mappings(self):
@@ -37,15 +60,15 @@ class AnalyzerData(Observable):
 
     @property
     def capacityData(self):
-        return self.loadedData.capacityDataDict[self.level]
+        return self.loadedData.levelData[self.level].capacityData
 
     @property
     def siData(self):
-        return self.loadedData.siDataDict[self.level]
+        return self.loadedData.levelData[self.level].siData
         
     @property
-    def siData(self):
-        return self.loadedData.siDataDict[self.level]
+    def satAnalysisData(self):
+        return self.loadedData.levelData[self.level].satAnalysisData
 
     def notify(self, loadedData, update, variants, mappings):
         # mappings
@@ -57,7 +80,6 @@ class AnalyzerData(Observable):
         if not variants: self.variants = [self.loadedData.default_variant]
         else: self.variants = variants
         # Get correct dataframe
-        #self.df = loadedData.dfs[self.level]
 
     def merge_metrics(self, df, metrics):
         self.loadedData.merge_metrics(df, metrics, self.level)

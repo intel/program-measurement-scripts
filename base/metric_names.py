@@ -185,6 +185,24 @@ class MetricName(CapeEnum):
     CAP_CU_GB_P_S = _capStr('CU', 'GB/s')
     CAP_LB_GW_P_S = _capStr('LB', 'GW/s')
     CAP_LB_GB_P_S = _capStr('LB', 'GB/s')
+
+    # Analytic metrics including Source level metrics and general metrics
+
+    SRC_RHS_OP_COUNT = "Src[Exp[RhsOpCount]]"
+    SRC_INIT_ONLY_B = "Src[Exp[InitOnly]]"
+    SRC_RECURRENCE_B = "Src[Expr[Recurrence]]"
+    SRC_SCALAR_REDUCTION_B = "Src[Expr[ScalarReduction]]"
+
+    SRC_DDG_TRUE_CYCLIC_B = "Src[Ddg[TrueCyclic]]"
+    SRC_DDG_ARTIFICIAL_CYCLIC_B = "Src[Ddg[ArtificialCyclic]]"
+
+    SRC_ARRAY_ACCESS_OFFSETS = "Src[Array[Offsets]]"
+
+    SRC_LOOP_LIMITS = "Src[Loop[Limits]]"
+
+    GENERAL_RATING = "General[Rating]"
+    GENERAL_ADVICE = "General[Advice]"
+    GENERAL_INFO_URL = "General[InfoUrl]"
     
 
     @classmethod
@@ -257,4 +275,40 @@ KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
 # Provides all the enums useful for filtering irrelevant metrics
 ALL_METRICS = list(MetricName) + list(NonMetricName)
 
+
+RUN_INFO_METRICS = KEY_METRICS + [ MetricName.SHORT_NAME, MetricName.VARIANT, 
+                    MetricName.NUM_CORES, MetricName.DATA_SET, MetricName.PREFETCHERS, 
+                    MetricName.REPETITIONS, MetricName.SRC_NAME]
+TIME_METRICS = [ MetricName.TIME_LOOP_S, MetricName.RECIP_TIME_LOOP_MHZ, 
+                MetricName.TIME_APP_S, MetricName.COVERAGE_PCT]
+
+COUNT_METRICS = [ m for m in ALL_METRICS if m.startswith("Count[") ] + [MetricName.COUNT_VEC_TYPE_OPS_PCT]
+
+RATE_METRICS = [ m for m in ALL_METRICS if m.startswith("Rate[") ] 
+
+BRANCH_METRICS = [ MetricName.BRANCHES_MISP_PCT, MetricName.EXE_PER_RET_UOPS ]
+
+ENERGY_METRICS = [ MetricName.E_PKG_J, MetricName.P_PKG_W, MetricName.E_DRAM_J, MetricName.P_DRAM_W, 
+                  MetricName.E_PKGDRAM_J, MetricName.P_PKGDRAM_W, MetricName.EPO_PKG_INST_J_P_GI, 
+                  MetricName.RPE_INST_PKG_GI_P_JS, MetricName.ROPE_INST_PKG_GI2_P_JS, 
+                  MetricName.EPO_DRAM_INST_J_P_GI, MetricName.RPE_INST_DRAM_GI_P_JS, 
+                  MetricName.ROPE_INST_DRAM_GI2_P_JS, MetricName.EPO_PKGDRAM_INST_J_P_GI, 
+                  MetricName.RPE_INST_PKGDRAM_GI_P_JS, MetricName.ROPE_INST_PKGDRAM_GI2_P_JS ]
+
+
+STALL_METRICS = [m for m in ALL_METRICS if m.startswith("Stall[") ] 
+
+MEM_ACCESS_METRICS = [ MetricName.MAX_MEM_LEVEL_100, MetricName.MAX_MEM_LEVEL_85, MetricName.ARRAY_EFFICIENCY_PCT]
+
+WHATIF_SPEEDUP_METRICS = [ MetricName.SPEEDUP_DL1, MetricName.SPEEDUP_VEC ]
+
+SUMMARY_METRICS = RUN_INFO_METRICS + TIME_METRICS + COUNT_METRICS + RATE_METRICS \
+    + BRANCH_METRICS + STALL_METRICS + MEM_ACCESS_METRICS + WHATIF_SPEEDUP_METRICS + ENERGY_METRICS  
+
+NAME_FILE_METRICS = [ MetricName.SHORT_NAME, MetricName.VARIANT ]
+GENERAL_METRICS = [ MetricName.GENERAL_RATING, MetricName.GENERAL_ADVICE, MetricName.GENERAL_INFO_URL ]
+SRC_METRICS = [ MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_INIT_ONLY_B, MetricName.SRC_RECURRENCE_B,
+    MetricName.SRC_SCALAR_REDUCTION_B, MetricName.SRC_DDG_TRUE_CYCLIC_B, MetricName.SRC_DDG_ARTIFICIAL_CYCLIC_B, 
+    MetricName.SRC_ARRAY_ACCESS_OFFSETS, MetricName.SRC_LOOP_LIMITS ]  
+ANALYTICS_METRICS = SRC_METRICS + GENERAL_METRICS
 CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
