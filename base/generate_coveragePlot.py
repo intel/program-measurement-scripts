@@ -46,9 +46,6 @@ class CoveragePlot(CapacityPlot):
 def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
     # Normalize the column names
     #df, op_metric_name = compute_capacity(df, chosen_node_set)
-    if not mappings.empty:
-        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     #df, fig, textData = compute_and_plot('ORIG', df, outputfile, scale, title, no_plot, gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
