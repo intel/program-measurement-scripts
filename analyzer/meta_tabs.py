@@ -192,9 +192,13 @@ class ShortNameTab(tk.Frame):
             # Change the short name in each of the main df
             for level in self.tab.data.loadedData.allLevels:
                 df = self.tab.data.loadedData.get_df(level)
-                merged = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
-                merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
-                merged['Color'] = merged["Color_y"].fillna(df["Color_x"])
+                # Follow df index to preserve order on merge
+                # TODO: merge this implementation with merge_metrics and also 
+                # the capedata data incorporate in 1 place (e.g. in capelib).
+                reindexed_table_df = table_df.set_index(df.index)
+                merged = pd.merge(left=df, right=reindexed_table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
+                merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
+                merged['Color'] = merged["Color_y"].fillna(merged["Color_x"])
                 merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
                 merged = self.tab.data.gui.loadedData.compute_colors(merged, clusters)
                 #self.tab.data.loadedData.dfs[level] = df
