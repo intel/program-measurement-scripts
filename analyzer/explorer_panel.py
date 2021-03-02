@@ -184,7 +184,9 @@ class DataSourcePanel(ScrolledTreePane):
 
         # Whether to skip next potential child with name
         def skip(self, name):
-            return False
+            #return False
+            # Skip meta path
+            return os.path.join(self.virtual_path, name) == os.path.join(self.get_root_virtual_path(), "meta")
 
 
         # Return names and time_stamps of potential children nodes to visit
@@ -216,7 +218,8 @@ class DataSourcePanel(ScrolledTreePane):
             # Directory node
             names, time_stamps = self.get_children_names_timestamps()
             # Show directories and data files (.xlsx or .raw.csv)
-            for name, time_stamp in zip(names, time_stamps):
+            # Iterate internal nodes following revserse order of timestamps
+            for time_stamp, name in sorted(zip(time_stamps, names), reverse=True):
                 if name in [child.name for child in self.children]:
                     continue  # Skip if already added
 
@@ -401,7 +404,7 @@ class DataSourcePanel(ScrolledTreePane):
         # will skip the cape folder
         def skip(self, name):
             full_virtual_path = os.path.join(self.virtual_path,  name)
-            return os.path.samefile (full_virtual_path, self.container.cape_path)
+            return super().skip(name) or os.path.samefile (full_virtual_path, self.container.cape_path)
 
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
