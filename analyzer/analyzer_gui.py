@@ -427,7 +427,7 @@ class LoadedData(Observable):
             colorDf = colorDf.append(toAdd, ignore_index=True)
         # Group data by timestamps if less than 2
         #TODO: This is a quick fix for getting multiple colors for whole files, use design doc specs in future
-        if (self.source_order) or (len(self.sources) > 1 and len(timestamps <= 2)):
+        if (self.source_order) or (len(self.sources) > 1 and len(timestamps) <= 2):
             if self.source_order: timestamps = self.source_order
             for index, timestamp in enumerate(timestamps):
                 curDf = df.loc[(df['Timestamp#']==timestamp)]
