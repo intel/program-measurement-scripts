@@ -97,8 +97,9 @@ class MetaData(CapeData):
             return pd.DataFrame(columns=KEY_METRICS + self.output_args())
         data = pd.read_csv(self.filename)
         df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
-        naMask = df[MetricName.SHORT_NAME].isna()
-        df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
+        if MetricName.SHORT_NAME in df.columns:
+            naMask = df[MetricName.SHORT_NAME].isna()
+            df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
         return df 
 
     def output_args(self):
