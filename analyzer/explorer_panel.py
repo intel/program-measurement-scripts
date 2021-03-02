@@ -154,9 +154,12 @@ class DataSourcePanel(ScrolledTreePane):
         def open(self):
             print("node open:", self.name, self.id) 
 
+    # Meta tree node including "Previously Visited"
+    # Meta node may/may not have real_path but does not have virtual_path
     class MetaTreeNode(DataTreeNode):
-        def __init__(self, name, parent):
+        def __init__(self, name, parent, real_path=None):
             super().__init__(name, parent)
+            self.real_path=real_path
 
     class RealTreeNode(DataTreeNode):
         def __init__(self, name, parent, virtual_path, real_path, container, data_source):
@@ -523,8 +526,9 @@ class DataSourcePanel(ScrolledTreePane):
     def setupLocalRoot(self, nonCachePath, name, localMetaNode):
         if not os.path.isdir(nonCachePath):
             return
-        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(self.cacheRoot.real_path, name), name, self, localMetaNode) )
-        cache_path = os.path.join(self.cacheRoot.real_path, name)
+        cacheRootRealPath = self.cacheRoot.real_path
+        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(cacheRootRealPath, name), name, self, localMetaNode) )
+        cache_path = os.path.join(cacheRootRealPath, name)
         Path(cache_path).mkdir(parents=True, exist_ok=True)
         self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot))
 
@@ -534,7 +538,8 @@ class DataSourcePanel(ScrolledTreePane):
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         cache_root_path = os.path.join(cape_cache_path,'Previously Visited')
         if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
-        self.cacheRoot = DataSourcePanel.CacheLocalDirNode(None, cache_root_path , 'Previously Visited', self, self.localNode) 
+        #self.cacheRoot = DataSourcePanel.CacheLocalDirNode(None, cache_root_path , 'Previously Visited', self, self.localNode) 
+        self.cacheRoot = DataSourcePanel.MetaTreeNode('Previously Visited', self.localNode, cache_root_path)
         self.insertNode(self.localNode, self.cacheRoot)
         
         self.setupLocalRoot(home_dir, 'Home', self.localNode)
