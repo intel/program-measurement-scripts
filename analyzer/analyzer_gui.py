@@ -389,7 +389,7 @@ class LoadedData(Observable):
         if mappings.empty:
             mappings = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', 'Difference'])
             mappings = mappings.append(pd.Series(name='temp'))
-        self.get_speedups(level, mappings)
+        # self.get_speedups(level, mappings)
         # self.add_speedup(self.mapping, self.get_df('Codelet'))
         self.levelData[level].mapping = mappings
 
