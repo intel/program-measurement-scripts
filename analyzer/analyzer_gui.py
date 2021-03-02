@@ -98,9 +98,6 @@ class LoadedData(Observable):
         self.source_order=[]
         self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, MetricName.CAP_FP_GFLOP_P_S, COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        self.analytic_columns = []
-        self.mappings = pd.DataFrame()
-        self.mapping = pd.DataFrame()
         self.src_mapping = pd.DataFrame()
         self.app_mapping = pd.DataFrame()
         self.analytics = pd.DataFrame()
@@ -170,18 +167,6 @@ class LoadedData(Observable):
             for n in NAME_FILE_METRICS:
                 short_names_db[n] = merged[n+'_x']
             short_names_db.to_csv(self.short_names_path, index=False)
-
-        # self.analytics = pd.DataFrame()
-        # for name in os.listdir(data_dir):
-        #     local_path = os.path.join(data_dir, name)
-        #     if name.endswith('.names.csv'): 
-        #         self.names = pd.read_csv(local_path)
-        #         self.names.rename(columns={'name':NAME, 'timestamp#':TIMESTAMP, \
-        #             'short_name':SHORT_NAME, 'variant':VARIANT}, inplace=True)
-        #     # elif name.endswith('.mapping.csv'): self.mapping = pd.read_csv(local_path)
-        #     elif name.endswith('.analytics.csv'): 
-        #         # TODO: Ask for naming in analytics to conform to naming convention
-        #         self.analytics = pd.read_csv(local_path)
     
     # TODO: remove this property
     @property
@@ -242,13 +227,7 @@ class LoadedData(Observable):
         # TODO: Append other levels?
         self.names = summaryDf[KEY_METRICS+NAME_FILE_METRICS]
 
-        # Add short names to cape short names file
-        #if not self.names.empty:
-        #    ShortNameTab.addShortNames(self.names)
-
         # TODO: get rid of special handling of VARIANT
-        # Add variants from namesDf to summaryDf and mapping file if it exists
-        # if not self.names.empty: self.add_variants(self.names)
         # Store all unique variants for variant tab options
         self.all_variants = summaryDf[VARIANT].dropna().unique()
         # Get default variant (most frequent)
@@ -256,20 +235,12 @@ class LoadedData(Observable):
 
         # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
         if not update: self.resetTabValues() 
-        # if not self.mapping.empty: self.mapping = compute_speedup(self.summaryDf, self.mapping)
         # Add diagnostic variables from analyticsDf
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        #if not self.analytics.empty: self.add_analytics(self.analytics)
-
-        # Add speedups to the corresponding df at each level
-        # if not self.mapping.empty: 
-        #     self.add_speedup(self.mapping, self.get_df('Codelet'))
-        #     self.orig_mapping = self.mapping.copy(deep=True) # Used to restore original mappings after viewing end2end
         
         # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
         # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
         #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
-        # CapeData.set_cache_dir(self.data_dir)
         for level in self.levelData:
             levelData = self.levelData[level]
             df = dfs[level]
@@ -286,7 +257,6 @@ class LoadedData(Observable):
             # Add mappings to levelData for each level
             self.loadMapping(level)
 
-        # self.mappings = {'Codelet' : self.mapping, 'Source' : self.src_mapping, 'Application' : self.app_mapping}
         self.notify_observers()
 
 
@@ -320,19 +290,6 @@ class LoadedData(Observable):
                 if observer.name in self.levels[level]['data']:
                     observer.notify(self, x_axis=self.levels[level]['data'][observer.name]['x_axis'], y_axis=self.levels[level]['data'][observer.name]['y_axis'], \
                         scale=self.levels[level]['data'][observer.name]['x_scale'] + self.levels[level]['data'][observer.name]['y_scale'], level=level, mappings=self.levels[level]['mapping'])
-    
-    def add_variants(self, namesDf):
-        self.summaryDf.drop(columns=[VARIANT], inplace=True)
-        namesDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP, 'timestamp#':TIMESTAMP, 'short_name':SHORT_NAME}, inplace=True)
-        self.summaryDf = pd.merge(left=self.summaryDf, right=namesDf[[NAME, VARIANT, TIMESTAMP]], on=[NAME, TIMESTAMP], how='left')
-
-    def add_analytics(self, analyticsDf):
-        analyticsDf.rename(columns={'name':NAME, 'timestamp':TIMESTAMP, 'timestamp#':TIMESTAMP}, inplace=True)
-        self.summaryDf = pd.merge(left=self.summaryDf, right=analyticsDf, on=[NAME, TIMESTAMP], how='left')
-        self.summaryDf.rename(columns={'ArrayEfficiency_%_x':'ArrayEfficiency_%'}, inplace=True)
-        self.analytics.drop(columns=[NAME, TIMESTAMP], inplace=True)
-        self.analytic_columns = self.analytics.columns.tolist()
-        self.common_columns_end.extend(self.analytics.columns)
 
     def add_speedup(self, mappings, df):
         if mappings.empty or df.empty:

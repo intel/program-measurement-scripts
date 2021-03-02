@@ -43,11 +43,11 @@ class AxesTab(tk.Frame):
             for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
-        if gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
-            menu = tk.Menu(main_menu, tearoff=False)
-            main_menu.add_cascade(label='Diagnostics', menu=menu)
-            for metric in gui.loadedData.analytic_columns:
-                menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # if gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+        #     menu = tk.Menu(main_menu, tearoff=False)
+        #     main_menu.add_cascade(label='Diagnostics', menu=menu)
+        #     for metric in gui.loadedData.analytic_columns:
+        #         menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='Summary', menu=summary_menu)
