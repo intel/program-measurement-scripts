@@ -168,10 +168,10 @@ class DataSourcePanel(ScrolledTreePane):
 
         def get_root_virtual_path(self):
             if (isinstance(self.parent, DataSourcePanel.RealTreeNode)):
-                # If parent is also remote node, get root url there
+                # If parent is also real node, get root url there
                 return self.parent.get_root_virtual_path()
             else:
-                # If parent is not remote node, the url of this node is the root
+                # If parent is not real node, the url of this node is the root
                 return self.virtual_path
         
     class InternalNode(RealTreeNode):
@@ -371,10 +371,16 @@ class DataSourcePanel(ScrolledTreePane):
 
     # This tree should handle cache directory.  The only things to browse are directories.
     # Data will only be loaded under timestamp directories.
+    # For cache local directory, virtual_path refers to original path and real_path refers to the cache path
+    # - same as other nodes
     class CacheLocalDirNode(InternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
-                             DataSourcePanel.FileSystem(), DataSourcePanel.CacheTimestampDirNode)
+                             DataSourcePanel.FileSystem(), DataSourcePanel.CacheTimestampDirNode) 
+        # Whether to skip next potential child with name
+        # Don't skip any directories under cache local directory
+        def skip(self, name):
+            return False
 
         # Return names and time_stamps of potential children nodes to visit
         # Override to use real_path
