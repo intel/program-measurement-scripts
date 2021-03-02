@@ -7,6 +7,8 @@ from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, 
 from metric_names import MetricName, KEY_METRICS
 import numpy as np
 import copy
+import os
+from os.path import expanduser
 
 globals().update(MetricName.__members__)
 class PerLevelGuiState:
@@ -29,8 +31,28 @@ class PerLevelGuiState:
         # A map from color to color name for plotting
         self.colorDict = {}
 
+        # Cape paths
+        self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
+        self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
+        self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
+
     # Write methods to update the fields and then call 
     # self.loadedData.levelData[level].updated() to notify all observers
+    def add_mapping(self, toAdd):
+        all_mappings = pd.read_csv(self.mappings_path)
+        all_mappings = all_mappings.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
+        all_mappings.to_csv(self.mappings_path, index=False)
+        self.loadedData.mapping = self.loadedData.mapping.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
+
+    def remove_mapping(self, toRemove):
+        all_mappings = pd.read_csv(self.mappings_path)
+        to_update = [all_mappings, self.loadedData.mapping]
+        for mapping in to_update:
+            mapping.drop(mapping[(mapping['Before Name']==toRemove['Before Name'].iloc[0]) & \
+                        (mapping['Before Timestamp']==toRemove['Before Timestamp'].iloc[0]) & \
+                        (mapping['After Name']==toRemove['After Name'].iloc[0]) & \
+                        (mapping['After Timestamp']==toRemove['After Timestamp'].iloc[0])].index, inplace=True)
+        all_mappings.to_csv(self.mappings_path, index=False)
 
 class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
@@ -56,7 +78,7 @@ class AnalyzerData(Observable):
 
     @property
     def mappings(self):
-        return self.loadedData.mappings[self.level]
+        return self.loadedData.get_mapping(self.level)
 
     @property
     def capacityData(self):
@@ -165,7 +187,7 @@ class AnalyzerTab(tk.Frame):
         # Initialize meta tabs TODO: do this in the meta tab constructor
         self.shortnameTab.buildLabelTable()
         if self.level == 'Codelet':
-            self.mappingsTab.buildMappingsTab(self.df, self.mappings)
+            self.mappingsTab.buildMappingsTab()
 
 
     def get_metrics(self):

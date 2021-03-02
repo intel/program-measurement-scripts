@@ -47,6 +47,10 @@ class ScurveAllPlot(CapePlot):
         super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
             x_axis, y_axis, mappings)
 
+    def mk_mappings(self, mappings, df, x_axis, y_axis, xmax, ymax):
+        # Mappings implementation not ready yet for s-curve
+        return dict(), []
+
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
         markers = []

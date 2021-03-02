@@ -570,15 +570,16 @@ class CapePlot:
         ax = self.ax
         name_mapping = dict()
         mymappings = []
+        mappings = pd.read_csv(os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv'))
         if not mappings.empty:
             for i in mappings.index:
-                name_mapping[mappings['before_name'][i]+str(mappings['before_timestamp#'][i])] = []
-                name_mapping[mappings['after_name'][i]+str(mappings['after_timestamp#'][i])] = []
+                name_mapping[mappings['Before Name'][i]+str(mappings['Before Timestamp'][i])] = []
+                name_mapping[mappings['After Name'][i]+str(mappings['After Timestamp'][i])] = []
             for index in mappings.index:
-                before_row = df.loc[(df[NAME]==mappings['before_name'][index]) & \
-                    (df[TIMESTAMP]==mappings['before_timestamp#'][index])].reset_index(drop=True)
-                after_row = df.loc[(df[NAME]==mappings['after_name'][index]) & \
-                    (df[TIMESTAMP]==mappings['after_timestamp#'][index])].reset_index(drop=True)
+                before_row = df.loc[(df[NAME]==mappings['Before Name'][index]) & \
+                    (df[TIMESTAMP]==mappings['Before Timestamp'][index])].reset_index(drop=True)
+                after_row = df.loc[(df[NAME]==mappings['After Name'][index]) & \
+                    (df[TIMESTAMP]==mappings['After Timestamp'][index])].reset_index(drop=True)
                 if not before_row.empty and not after_row.empty:
                     x_axis = x_axis if x_axis else self.default_x_axis
                     y_axis = y_axis if y_axis else self.default_y_axis

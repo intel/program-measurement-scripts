@@ -38,6 +38,7 @@ class ScurveAllData(AnalyzerData):
         #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
+
 class ScurveAllTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Scurve_all', 

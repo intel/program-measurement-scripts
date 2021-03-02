@@ -28,9 +28,6 @@ def custom_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_ax
     mappings=pd.DataFrame(), short_names_path=''):
     chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
     #df, op_metric_name = compute_capacity(df, chosen_node_set)
-    if not mappings.empty:
-        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)

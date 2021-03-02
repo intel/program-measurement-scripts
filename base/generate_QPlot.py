@@ -70,9 +70,6 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 
 def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
-	if not mappings.empty:
-		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
 		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
 	df_XFORM, fig_XFORM, textData_XFORM = None, None, None

@@ -43,11 +43,11 @@ class AxesTab(tk.Frame):
             for metric in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Diagnostic Variables
-        if gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
-            menu = tk.Menu(main_menu, tearoff=False)
-            main_menu.add_cascade(label='Diagnostics', menu=menu)
-            for metric in gui.loadedData.analytic_columns:
-                menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # if gui.loadedData.analytic_columns and set(gui.loadedData.analytic_columns).issubset(gui.loadedData.summaryDf.columns):
+        #     menu = tk.Menu(main_menu, tearoff=False)
+        #     main_menu.add_cascade(label='Diagnostics', menu=menu)
+        #     for metric in gui.loadedData.analytic_columns:
+        #         menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='Summary', menu=summary_menu)
@@ -244,8 +244,75 @@ class MappingsTab(tk.Frame):
         self.parent = parent
         self.tab = tab
         self.level = level
-        self.mappings_path = self.tab.data.gui.loadedData.mappings_path
-        self.short_names_path = self.tab.data.gui.loadedData.short_names_path
+        self.loadedData = self.tab.data.gui.loadedData
+        self.mappings_path = self.loadedData.mappings_path
+        self.short_names_path = self.loadedData.short_names_path
+
+    @property
+    def df(self):
+        return self.loadedData.get_df(self.level)
+
+    @property
+    def mappings(self):
+        return self.loadedData.get_mapping(self.level)
+
+    def buildMappingsTab(self):
+        # If no mappings then
+        self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
+        self.placeholderCheck()
+        self.table.show()
+        self.table.redraw()
+        self.addCustomOptions()
+        # TODO: Fix showing/hiding intermediate mappings
+        #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
+        #else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
+
+    def updateTable(self):
+        self.table.redraw()
+        self.win.destroy()
+
+    def addMapping(self):
+        # extract timestamp,name,short_name from selected before and after to add to mappings
+        toAdd = pd.DataFrame()
+        toAdd['Before Timestamp'] = [int(self.before_selected.get().rsplit('[')[2][:-1])]
+        toAdd['Before Name'] = [self.before_selected.get().split(']')[1].split('[')[0][1:-1]]
+        toAdd['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
+        toAdd['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
+        toAdd['Difference'] = self.df.loc[(self.df[NAME] == toAdd['After Name'][0]) & (self.df[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
+        self.loadedData.add_mapping(self.level, toAdd)
+        self.table.model.df = self.mappings
+        self.updateTable()
+    
+    def removeMapping(self):
+        toRemove = pd.DataFrame()
+        toRemove['Before Name'] = [self.before_selected.get().split(']')[1].split('[')[0][1:-1]]
+        toRemove['Before Timestamp'] = [int(self.before_selected.get().rsplit('[')[2][:-1])]
+        toRemove['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
+        toRemove['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
+        # Update loadedData and database mappings
+        self.loadedData.remove_mapping(self.level, toRemove)
+        self.placeholderCheck()
+        self.updateTable()
+
+    def placeholderCheck(self):
+        # Add placeholder row if current mappings table is now empty for proper GUI display
+        if self.mappings.empty:
+            self.table.model.df = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', 'Difference'])
+            self.table.model.df = self.table.model.df.append(pd.Series(name='temp'))
+        else: self.table.model.df = self.mappings
+
+    def updateMappings(self):
+        # Update observers with the new mappings
+        if self.table.model.df.iloc[0].name == 'temp': mappings = pd.DataFrame()
+        else: mappings = self.mappings
+        for tab in self.tab.plotInteraction.tabs:
+            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=mappings)
+            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=mappings)
+
+    def addCustomOptions(self):
+        options = "[" + self.df[SHORT_NAME] + "] " + self.df[NAME] + " [" + self.df[TIMESTAMP].map(str) + "]"
+        tk.Button(self, text="Edit", command=lambda options=list(options): self.editMappings(options)).grid(row=10, column=0)
+        tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
 
     def editMappings(self, options):
         self.win = tk.Toplevel()
@@ -262,88 +329,6 @@ class MappingsTab(tk.Frame):
         tk.Button(self.win, text="Add", command=self.addMapping).grid(row=2, column=1, padx=10, pady=10)
         tk.Button(self.win, text="Remove", command=self.removeMapping).grid(row=3, column=1, padx=10, pady=10)
 
-    def addMapping(self):
-        # extract timestamp,name,short_name from selected before and after to add to mappings
-        toAdd = pd.DataFrame()
-        toAdd['Before Timestamp'] = [int(self.before_selected.get().rsplit('[')[2][:-1])]
-        toAdd['Before Name'] = [self.before_selected.get().split(']')[1].split('[')[0][1:-1]]
-        toAdd['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
-        toAdd['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
-        toAdd['Difference'] = self.tab.data.gui.loadedData.summaryDf.loc[(self.tab.data.gui.loadedData.summaryDf[NAME] == toAdd['After Name'][0]) & \
-                                                            (self.tab.data.gui.loadedData.summaryDf[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
-        # Update mapping database and remove duplicates
-        self.all_mappings = self.all_mappings.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
-        self.all_mappings.to_csv(self.mappings_path, index=False)
-        # Check if this is the first time adding -> need to remove NaN placeholder row
-        if self.mappings.iloc[0].name == 'temp':
-            self.mappings.drop('temp', inplace=True)
-        self.mappings = self.mappings.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
-        self.updateTable()
-    
-    def removeMapping(self):
-        before_name = self.before_selected.get().split(']')[1].split('[')[0][1:-1]
-        before_timestamp = int(self.before_selected.get().rsplit('[')[2][:-1])
-        after_name = self.after_selected.get().split(']')[1].split('[')[0][1:-1]
-        after_timestamp = int(self.after_selected.get().rsplit('[')[2][:-1])
-        # Update mapping table/database
-        to_update = [self.all_mappings, self.mappings]
-        for mapping in to_update:
-            mapping.drop(mapping[(mapping['Before Name']==before_name) & \
-                (mapping['Before Timestamp']==before_timestamp) & \
-                (mapping['After Name']==after_name) & \
-                (mapping['After Timestamp']==after_timestamp)].index, inplace=True)
-        # Update the mappings for this level
-        self.tab.data.gui.loadedData.mappings[self.level] = self.mappings
-        # Add placeholder row if current mappings table is now empty
-        if self.mappings.empty:
-            self.mappings = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', \
-                'Difference'])
-            self.mappings = self.mappings.append(pd.Series(name='temp'))
-        # Save updated mappings and update the GUI table
-        self.all_mappings.to_csv(self.mappings_path, index=False)
-        self.updateTable()
-    
-    def updateTable(self):
-        self.table.destroy()
-        self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
-        self.table.show()
-        self.table.redraw()
-        self.win.destroy()
-
-    def updateMappings(self):
-        # Replace any previous mappings for the current files with the current mappings in the table
-        # self.all_mappings = self.all_mappings.loc[(self.all_mappings['Before Timestamp']!=self.source_order[0]) & \
-        #                         (self.all_mappings['After Timestamp']!=self.source_order[1])].reset_index(drop=True)
-        # self.all_mappings = self.all_mappings.append(self.mappings, ignore_index=True)
-        # self.all_mappings.to_csv(self.mappings_path, index=False)
-        # Check if there are actually mappings to update
-        if self.mappings.iloc[0].name == 'temp': mappings = pd.DataFrame()
-        else: mappings = self.mappings
-        for tab in self.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=mappings)
-            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=mappings)
-
-    def buildMappingsTab(self, df, mappings):
-        self.df = df
-        # Check if we already have custom mappings for the file(s)
-        self.all_mappings = pd.read_csv(self.mappings_path)
-        self.mappings = MappingsTab.restoreCustom(self.df, self.all_mappings)
-        if self.mappings.empty:
-            # Create empty mappings dataframe for user to add to
-            self.mappings = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', \
-                'Difference'])
-            self.mappings = self.mappings.append(pd.Series(name='temp'))
-        self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
-        self.table.show()
-        self.table.redraw()
-        self.addCustomOptions(df)
-        #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
-        #else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
-        # Add options for custom mapppings if multiple files loaded
-
-        # Edit button allows the user to add/delete mappings
-        # Options will be "Short_Name [TIMESTAMP]"
-
     @staticmethod
     def restoreCustom(df, all_mappings):
         # for each row in all_mappings
@@ -356,29 +341,14 @@ class MappingsTab(tk.Frame):
         before = pd.merge(left=df[[NAME, TIMESTAMP]], right=all_mappings, left_on=[NAME, TIMESTAMP], right_on=['Before Name', 'Before Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
         mappings = pd.merge(left=df[[NAME, TIMESTAMP]], right=before, left_on=[NAME, TIMESTAMP], right_on=['After Name', 'After Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
         return mappings
+    
+    def cancelAction(self):
+        self.choice = 'cancel'
+        self.win.destroy()
 
-    def addCustomOptions(self, df):
-        #df = gui.loadedData.summaryDf
-        options = "[" + df[SHORT_NAME] + "] " + df[NAME] + " [" + df[TIMESTAMP].map(str) + "]"
-        tk.Button(self, text="Edit", command=lambda options=list(options): self.editMappings(options)).grid(row=10, column=0)
-        tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
-
-    def addCustomOptions1(self, df):
-        before = df.loc[df[TIMESTAMP] == self.source_order[0]]
-        after = df.loc[df[TIMESTAMP] == self.source_order[1]]
-        if os.path.getsize(self.short_names_path) > 0:
-            short_names = pd.read_csv(self.short_names_path)
-            for index in before.index:
-                short_name = short_names.loc[(short_names[NAME]==before[NAME][index]) & (short_names[TIMESTAMP]==self.source_order[0])].reset_index(drop=True)
-                if not short_name.empty: # Add short name to end of full codelet name in brackets
-                    before[NAME][index] += '[' + short_name[SHORT_NAME][0] + ']'
-            for index in after.index:
-                short_name = short_names.loc[(short_names[NAME]==after[NAME][index]) & (short_names[TIMESTAMP]==self.source_order[1])].reset_index(drop=True)
-                if not short_name.empty: after[NAME][index] = after[NAME][index] + '[' + \
-                    short_name[SHORT_NAME][0] + ']'
-        tk.Button(self, text="Edit", command=lambda before=list(before[NAME]), after=list(after[NAME]) : \
-            self.editMappings(before, after)).grid(row=10, column=0)
-        tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
+    def selectAction(self, metric):
+        self.choice = metric
+        self.win.destroy()
 
     def showIntermediates(self):
         self.tab.data.gui.loadedData.mapping = self.tab.data.gui.loadedData.orig_mapping.copy(deep=True)
@@ -389,14 +359,6 @@ class MappingsTab(tk.Frame):
             (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
         for data, tab in data_tab_pairs:
             data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
-    
-    def cancelAction(self):
-        self.choice = 'cancel'
-        self.win.destroy()
-
-    def selectAction(self, metric):
-        self.choice = metric
-        self.win.destroy()
     
     def removeIntermediates(self):
         # Ask the user which speedup metric they'd like to use for end2end transitions
@@ -412,13 +374,13 @@ class MappingsTab(tk.Frame):
             b.grid(row=index+1, column=1, padx=20, pady=10)
         root.wait_window(self.win)
         if self.choice == 'cancel': return
-        self.tab.data.gui.loadedData.mapping = self.tab.data.gui.loadedData.get_end2end(self.tab.data.gui.loadedData.mapping, self.choice)
-        self.tab.data.gui.loadedData.mapping = self.tab.data.gui.loadedData.get_speedups(self.tab.data.gui.loadedData.mapping)
-        self.tab.data.gui.loadedData.add_speedup(self.tab.data.gui.loadedData.mapping, self.tab.data.gui.loadedData.summaryDf)
-        self.tab.data.gui.loadedData.removedIntermediates = True
+        self.loadedData.levelData[self.level].mapping = self.loadedData.get_end2end(self.loadedData.get_mapping(self.level), self.choice)
+        self.loadedData.levelData[self.level].mapping = self.loadedData.get_speedups(self.level, self.loadedData.get_mapping(self.level))
+        self.loadedData.add_speedup(self.loadedData.get_mapping(self.level), self.loadedData.get_df(self.level))
+        self.loadedData.removedIntermediates = True
         data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
         for data, tab in data_tab_pairs:
-            data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
+            data.notify(self.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
 
 class ClusterTab(tk.Frame):
     def __init__(self, parent, tab):

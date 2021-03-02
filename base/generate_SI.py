@@ -367,9 +367,6 @@ class SiPlot(CapePlot):
 
 
 def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-    if not mappings.empty:
-        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
     # Computation to get SI in the cluster df and then combine with the summary df
 
     # Only show selected variants, default is 'ORIG'
