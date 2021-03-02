@@ -45,7 +45,6 @@ class SummaryTab(AnalyzerTab):
         super().__init__(parent, data, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
     def notify(self, data):
-        self.guideTab.destroy()
         super().notify(data)
 
     # Create meta tabs

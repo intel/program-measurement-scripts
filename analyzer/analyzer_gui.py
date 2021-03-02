@@ -386,12 +386,23 @@ class LoadedData(Observable):
         all_mappings = pd.read_csv(self.mappings_path)
         before = pd.merge(left=df[KEY_METRICS], right=all_mappings, left_on=KEY_METRICS, right_on=['Before Name', 'Before Timestamp'], how='inner').drop(columns=KEY_METRICS)
         mappings = pd.merge(left=df[KEY_METRICS], right=before, left_on=KEY_METRICS, right_on=['After Name', 'After Timestamp'], how='inner').drop(columns=KEY_METRICS)
-        if mappings.empty:
-            mappings = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', 'Difference'])
-            mappings = mappings.append(pd.Series(name='temp'))
-        # self.get_speedups(level, mappings)
+        if not mappings.empty:
+            # Add variants from summary to mappings
+            mappings = self.addMappingVariants(level, mappings)
+            self.get_speedups(level, mappings)
         # self.add_speedup(self.mapping, self.get_df('Codelet'))
         self.levelData[level].mapping = mappings
+
+    def addMappingVariants(self, level, mappings):
+        df = self.get_df(level)  
+        mappings.drop(columns=['Before Variant', 'After Variant'], inplace=True, errors='ignore')
+        mappings = pd.merge(mappings, df[KEY_METRICS + [VARIANT]], \
+            left_on=['Before Name', 'Before Timestamp'], right_on=KEY_METRICS, \
+            how='inner').drop(columns=KEY_METRICS).rename(columns={VARIANT:'Before Variant'})
+        mappings = pd.merge(mappings, df[KEY_METRICS + [VARIANT]], \
+            left_on=['After Name', 'After Timestamp'], right_on=KEY_METRICS,  \
+            how='inner').drop(columns=KEY_METRICS).rename(columns={VARIANT:'After Variant'})
+        return mappings
 
     def createMappings(self, df):
         mappings = pd.DataFrame()

@@ -2,7 +2,7 @@ import re
 import math
 from collections import namedtuple
 import pandas as pd
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -418,15 +418,20 @@ def getter(in_row, *argv, **kwargs):
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):
-    keyColumns=[NAME, TIMESTAMP, VARIANT]
+    # keyColumns=[NAME, TIMESTAMP, VARIANT]
     timeColumns=[TIME_LOOP_S, TIME_APP_S]
     rateColumns=[RATE_FP_GFLOP_P_S]
-    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    # perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    perf_df = output_rows[KEY_METRICS + timeColumns + rateColumns]
 
-    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
-                              right_on=keyColumns, how='left')
-    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
-                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    # new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
+    #                           right_on=keyColumns, how='left')
+    # new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
+    #                           right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+                              right_on=KEY_METRICS, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+                              right_on=KEY_METRICS, suffixes=('_before', '_after'), how='left')
     for timeColumn in timeColumns: 
         new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
             new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]

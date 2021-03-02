@@ -257,7 +257,9 @@ class MappingsTab(tk.Frame):
         return self.loadedData.get_mapping(self.level)
 
     def buildMappingsTab(self):
+        # If no mappings then
         self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
+        self.placeholderCheck()
         self.table.show()
         self.table.redraw()
         self.addCustomOptions()
@@ -278,9 +280,7 @@ class MappingsTab(tk.Frame):
         toAdd['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
         toAdd['Difference'] = self.df.loc[(self.df[NAME] == toAdd['After Name'][0]) & (self.df[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
         self.loadedData.add_mapping(self.level, toAdd)
-        # Check if this is the first time adding -> need to remove NaN placeholder row
-        if self.table.model.df.iloc[0].name == 'temp':
-            self.table.model.df = self.mappings
+        self.table.model.df = self.mappings
         self.updateTable()
     
     def removeMapping(self):
@@ -291,12 +291,15 @@ class MappingsTab(tk.Frame):
         toRemove['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
         # Update loadedData and database mappings
         self.loadedData.remove_mapping(self.level, toRemove)
+        self.placeholderCheck()
+        self.updateTable()
+
+    def placeholderCheck(self):
         # Add placeholder row if current mappings table is now empty for proper GUI display
         if self.mappings.empty:
             self.table.model.df = pd.DataFrame(columns=['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name', 'Difference'])
             self.table.model.df = self.table.model.df.append(pd.Series(name='temp'))
         else: self.table.model.df = self.mappings
-        self.updateTable()
 
     def updateMappings(self):
         # Update observers with the new mappings
