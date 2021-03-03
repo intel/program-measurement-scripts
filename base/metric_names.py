@@ -57,7 +57,7 @@ class MetricName(CapeEnum):
     #MEM_LEVEL = 'Memlevel'
     MAX_MEM_LEVEL_100 = _memlevelStr(100)
     MAX_MEM_LEVEL_85 = _memlevelStr(85)
-    MEM_LEVEL = MAX_MEM_LEVEL_100
+    MEM_LEVEL = MAX_MEM_LEVEL_85
     PREFETCHERS = 'Prefetchers'
     REPETITIONS = 'Repetitions'
     TIME_LOOP_S = 'Time[Loop]_s'
