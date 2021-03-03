@@ -406,6 +406,7 @@ class PlotInteraction():
             self.adjustText()
 
     def thread_adjustText(self):
+        print('Adjusting text...')
         if self.adjusted: # Remove old adjusted texts/arrows and create new texts before calling adjust_text again
             # Store index of hidden texts to update the new texts
             hiddenTexts = []
@@ -439,6 +440,7 @@ class PlotInteraction():
         self.root.after(0, self.canvas.draw)
         self.adjusted = True
         self.adjusting = False
+        print('Done Adjust text')
     
     def adjustText(self):
         if not self.adjusting: 
