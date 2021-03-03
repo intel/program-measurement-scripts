@@ -264,6 +264,7 @@ class LoadedData(Observable):
     def append_df(df, append_df):
         merged = df.append(append_df, ignore_index=True)
         df.drop(columns=df.columns, inplace=True)
+        df.drop(df.index, inplace=True)
         for col in merged.columns:
             df[col] = merged[col]
     
