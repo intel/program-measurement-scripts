@@ -20,10 +20,9 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class TrawlPlot(CapePlot):
     def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
-                 source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+                 mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=SPEEDUP_DL1.value, mappings=mappings, short_names_path=short_names_path)
-        self.source_order = source_order
 
     def draw_contours(self, xmax, ymax, color_labels):
         plt.axvline(x=xmax/2)
@@ -31,21 +30,16 @@ class TrawlPlot(CapePlot):
 
 
 def trawl_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
-    source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+    mappings=pd.DataFrame(), short_names_path=''):
     df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-    # df, fig, plotData = compute_and_plot(
-    #     'ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
-    # Return dataframe and figure for GUI
     data = CapeData(df)
     data.compute()
     plot = TrawlPlot(data, 
-        'ORIG', outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
+        'ORIG', outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
-
-    # return (df, fig, plotData)
 
 
 

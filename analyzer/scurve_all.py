@@ -24,18 +24,12 @@ class ScurveAllData(AnalyzerData):
         print("Scurve_allData Notified from ", loadedData)
         super().notify(loadedData, update, variants, mappings)
         # Generate Plot 
-        # df = self.df.copy(deep=True)
-        # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
-        # data = CapeData(df)
-        # data.compute()
         plot = ScurveAllPlot(self.capacityData, 'ORIG', 'test', scale, 'S-Curve All', no_plot=False, gui=True, 
-                             x_axis=x_axis, y_axis=y_axis, source_order=loadedData.source_order, 
+                             x_axis=x_axis, y_axis=y_axis, 
                              mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         plot.compute_and_plot()
         self.fig = plot.fig
         self.textData = plot.plotData
-        #scurve_df, self.fig, self.textData = scurve_all_plot(self.df.copy(deep=True), 'test', scale, 'S-Curve All', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
-        #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 
 
@@ -55,5 +49,5 @@ class ScurveAllTab(AnalyzerTab):
 
     def mk_plot(self):
         return ScurveAllPlot(self.data.capacityData, 'ORIG', 'test', self.data.scale, 'S-Curve All', no_plot=False, gui=True, 
-                             x_axis=self.data.x_axis, y_axis=self.data.y_axis, source_order=self.data.loadedData.source_order, 
+                             x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
                              mappings=self.mappings, short_names_path=self.data.gui.loadedData.short_names_path)

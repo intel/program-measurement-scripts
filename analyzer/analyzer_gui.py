@@ -95,7 +95,6 @@ class LoadedData(Observable):
         self.levelData = { lvl : LoadedData.PerLevelData(lvl) for lvl in self.allLevels }
         self.data_items=[]
         self.sources=[]
-        self.source_order=[]
         self.common_columns_start = [NAME, SHORT_NAME, COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S, MetricName.CAP_FP_GFLOP_P_S, COUNT_OPS_FMA_PCT, COUNT_INSTS_FMA_PCT, VARIANT, MEM_LEVEL]
         self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
         self.src_mapping = pd.DataFrame()
@@ -124,6 +123,19 @@ class LoadedData(Observable):
 
     def add_mapping(self, level, toAdd):
         self.levelData[level].guiState.add_mapping(toAdd)
+
+    def update_mapping(self, level):
+        self.levelData[level].updated()
+
+    def update_short_names(self, new_short_names):
+        # Update local database
+        all_short_names = pd.read_csv(self.short_names_path)
+        merged = pd.concat([all_short_names, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
+        merged.to_csv(self.short_names_path, index=False)
+        # Next update summary sheets for each level and notify observers
+        for level in self.levelData:
+            self.merge_metrics(new_short_names, [SHORT_NAME, VARIANT, 'Color'], level)
+            self.levelData[level].updated()
     
     def check_cape_paths(self):
         if not os.path.isfile(self.short_names_path):
@@ -245,7 +257,6 @@ class LoadedData(Observable):
             levelData = self.levelData[level]
             df = dfs[level]
             df = self.compute_colors(df)
-            # self.addShortNames(level)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
             levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
             levelData.satAnalysisData = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{level}')
@@ -318,36 +329,36 @@ class LoadedData(Observable):
         self.add_speedup(newMappings, self.summaryDf)
         return newMappings
     
-    def cancelAction(self):
-        # If user quits the window we set a default before/after order
-        self.source_order = list(self.summaryDf['Timestamp#'].unique())
-        self.win.destroy()
+    # def cancelAction(self):
+    #     # If user quits the window we set a default before/after order
+    #     self.source_order = list(self.summaryDf['Timestamp#'].unique())
+    #     self.win.destroy()
 
-    def orderAction(self, button, ts):
-        self.source_order.append(ts)
-        button.destroy()
-        if len(self.source_order) == len(self.sources):
-            self.win.destroy()
+    # def orderAction(self, button, ts):
+    #     self.source_order.append(ts)
+    #     button.destroy()
+    #     if len(self.source_order) == len(self.sources):
+    #         self.win.destroy()
 
-    def get_order(self):
-        self.win = tk.Toplevel()
-        center(self.win)
-        self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
-        self.win.title('Order Data')
-        message = 'Select the order of data files from oldest to newest'
-        tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        # Need to link the datafile name with the timestamp
-        for index, source in enumerate(self.sources):
-            expr_summ_df = pd.read_excel(source, sheet_name='Experiment_Summary')
-            ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
-            ts_string = ts_row.iloc[0,1]
-            date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
-            ts = int(date_time_obj.timestamp())
-            path, source_file = os.path.split(source)
-            b = tk.Button(self.win, text=source_file.split('.')[0])
-            b['command'] = lambda b=b, ts=ts : self.orderAction(b, ts) 
-            b.grid(row=index+1, column=1, padx=20, pady=10)
-        root.wait_window(self.win)
+    # def get_order(self):
+    #     self.win = tk.Toplevel()
+    #     center(self.win)
+    #     self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+    #     self.win.title('Order Data')
+    #     message = 'Select the order of data files from oldest to newest'
+    #     tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+    #     # Need to link the datafile name with the timestamp
+    #     for index, source in enumerate(self.sources):
+    #         expr_summ_df = pd.read_excel(source, sheet_name='Experiment_Summary')
+    #         ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
+    #         ts_string = ts_row.iloc[0,1]
+    #         date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
+    #         ts = int(date_time_obj.timestamp())
+    #         path, source_file = os.path.split(source)
+    #         b = tk.Button(self.win, text=source_file.split('.')[0])
+    #         b['command'] = lambda b=b, ts=ts : self.orderAction(b, ts) 
+    #         b.grid(row=index+1, column=1, padx=20, pady=10)
+    #     root.wait_window(self.win)
 
     def compute_colors(self, df, clusters=False):
         colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
@@ -365,8 +376,7 @@ class LoadedData(Observable):
             colorDf = colorDf.append(toAdd, ignore_index=True)
         # Group data by timestamps if less than 2
         #TODO: This is a quick fix for getting multiple colors for whole files, use design doc specs in future
-        if (self.source_order) or (len(self.sources) > 1 and len(timestamps) <= 2):
-            if self.source_order: timestamps = self.source_order
+        if len(self.sources) > 1 and len(timestamps) <= 2:
             for index, timestamp in enumerate(timestamps):
                 curDf = df.loc[(df['Timestamp#']==timestamp)]
                 curDf = curDf[curDf['Color'].isna()]
@@ -405,37 +415,36 @@ class LoadedData(Observable):
             how='inner').drop(columns=KEY_METRICS).rename(columns={VARIANT:'After Variant'})
         return mappings
 
-    def createMappings(self, df):
-        mappings = pd.DataFrame()
-        df['map_name'] = df['Name'].map(lambda x: x.split(' ')[1].split(',')[-1].split('_')[-1])
-        before = df.loc[df['Timestamp#'] == self.source_order[0]]
-        after = df.loc[df['Timestamp#'] == self.source_order[1]]
-        for index in before.index:
-            match = after.loc[after['map_name'] == before['map_name'][index]].reset_index(drop=True) 
-            if not match.empty:
-                match = match.iloc[[0]]
-                match['Before Timestamp'] = before['Timestamp#'][index]
-                match['Before Name'] = before['Name'][index]
-                match['before_short_name'] = before['Short Name'][index]
-                match['After Timestamp'] = match['Timestamp#']
-                match['After Name'] = match['Name']
-                match['after_short_name'] = match['Short Name']
-                match = match[['Before Timestamp', 'Before Name', 'before_short_name', 'After Timestamp', 'After Name', 'after_short_name']]
-                mappings = mappings.append(match, ignore_index=True)
-        if not mappings.empty:
-            mappings = self.get_speedups(mappings)
-            self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
-            self.all_mappings.to_csv(self.mappings_path, index=False)
-        return mappings
+    # def createMappings(self, df):
+    #     mappings = pd.DataFrame()
+    #     df['map_name'] = df['Name'].map(lambda x: x.split(' ')[1].split(',')[-1].split('_')[-1])
+    #     before = df.loc[df['Timestamp#'] == self.source_order[0]]
+    #     after = df.loc[df['Timestamp#'] == self.source_order[1]]
+    #     for index in before.index:
+    #         match = after.loc[after['map_name'] == before['map_name'][index]].reset_index(drop=True) 
+    #         if not match.empty:
+    #             match = match.iloc[[0]]
+    #             match['Before Timestamp'] = before['Timestamp#'][index]
+    #             match['Before Name'] = before['Name'][index]
+    #             match['before_short_name'] = before['Short Name'][index]
+    #             match['After Timestamp'] = match['Timestamp#']
+    #             match['After Name'] = match['Name']
+    #             match['after_short_name'] = match['Short Name']
+    #             match = match[['Before Timestamp', 'Before Name', 'before_short_name', 'After Timestamp', 'After Name', 'after_short_name']]
+    #             mappings = mappings.append(match, ignore_index=True)
+    #     if not mappings.empty:
+    #         mappings = self.get_speedups(mappings)
+    #         self.all_mappings = self.all_mappings.append(mappings, ignore_index=True)
+    #         self.all_mappings.to_csv(self.mappings_path, index=False)
+    #     return mappings
 
-    def addShortNames(self, level):
-        all_short_names = pd.read_csv(self.short_names_path)
-        self.merge_metrics(all_short_names, [SHORT_NAME, 'Color'], level)
+    # def addShortNames(self, level):
+    #     all_short_names = pd.read_csv(self.short_names_path)
+    #     self.merge_metrics(all_short_names, [SHORT_NAME, 'Color'], level)
 
     def merge_metrics(self, df, metrics, level):
         # Add metrics computed in plot functions to master dataframe
         metrics.extend(KEY_METRICS)
-        #target_df = self.dfs[level]
         target_df = self.get_df(level)
         merged = pd.merge(left=target_df, right=df[metrics], on=KEY_METRICS, how='left')
         target_df.sort_values(by=NAME, inplace=True)
@@ -583,7 +592,6 @@ class AnalyzerGui(tk.Frame):
             tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
             root.wait_window(self.win)
         if self.choice == 'Cancel': return
-        self.source_order = []
         self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
         self.loadedData.add_saved_data(levels)
 
@@ -613,7 +621,6 @@ class AnalyzerGui(tk.Frame):
     def overwrite(self): # Clear out any previous saved dataframes/plots
         self.sources = []
         gui.loadedData.analytics = pd.DataFrame()
-        gui.loadedData.mapping = pd.DataFrame()
         gui.loadedData.names = pd.DataFrame()
         gui.oneviewTab.removePages() # Remove any previous OV HTML
         # Clear summary dataframes

@@ -93,11 +93,6 @@ class AnalyzerData(Observable):
         return self.loadedData.levelData[self.level].satAnalysisData
 
     def notify(self, loadedData, update, variants, mappings):
-        # mappings
-
-        #if not mappings.empty: self.mappings = mappings
-        #else: self.mappings = loadedData.mappings[self.level]
-
         # Only show selected variants, default is most frequent variant
         if not variants: self.variants = [self.loadedData.default_variant]
         else: self.variants = variants
@@ -170,7 +165,7 @@ class AnalyzerTab(tk.Frame):
         # Meta tabs
         self.tableNote = ttk.Notebook(self.tableFrame)
         self.dataTab = DataTab(self.tableNote, self.df, self.metrics, self.variants)
-        self.shortnameTab = ShortNameTab(self.tableNote, self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True))
+        self.shortnameTab = ShortNameTab(self.tableNote, self, self.level)
         self.labelTab = LabelTab(self.tableNote, self)
         self.variantTab = VariantTab(self.tableNote, self, self.data.loadedData.all_variants, self.variants)
         self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
@@ -181,9 +176,9 @@ class AnalyzerTab(tk.Frame):
         self.tableNote.add(self.mappingsTab, text="Mappings")
         self.tableNote.pack(fill=tk.BOTH, expand=True)
         # Summary Export Buttons
-        tk.Button(self.dataTab.table_button_frame, text="Export", command=lambda: self.shortnameTab.exportCSV(self.dataTab.summaryTable)).grid(row=0, column=0)
-        tk.Button(self.dataTab.table_button_frame, text="Export Summary", command=lambda: exportCSV(self.data.gui.loadedData.summaryDf)).grid(row=0, column=1)
-        tk.Button(self.dataTab.table_button_frame, text="Export Summary to Excel", command=lambda: exportXlsx(self.data.gui.loadedData.summaryDf)).grid(row=0, column=2)
+        tk.Button(self.dataTab.table_button_frame, text="Export GUI Table", command=lambda: self.shortnameTab.exportCSV(self.dataTab.summaryTable)).grid(row=0, column=0)
+        tk.Button(self.dataTab.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df)).grid(row=0, column=1)
+        tk.Button(self.dataTab.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df)).grid(row=0, column=2)
         # Initialize meta tabs TODO: do this in the meta tab constructor
         self.shortnameTab.buildLabelTable()
         if self.level == 'Codelet':

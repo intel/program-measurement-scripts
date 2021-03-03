@@ -28,10 +28,9 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class QPlot(CapacityPlot):
 	def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
-              source_order=None, mappings=pd.DataFrame(), short_names_path=''): 
+              mappings=pd.DataFrame(), short_names_path=''): 
 		super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                    default_y_axis=MetricName.CAP_MEMMAX_GB_P_S,  mappings=mappings, short_names_path=short_names_path)
-		self.source_order = source_order
 
 	def mk_labels(self):
 		df = self.df
@@ -68,7 +67,7 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df = pd.read_csv(input_data_source)
 	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 
-def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
 		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
@@ -85,7 +84,7 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	data = CapacityData(df)
 	data.set_chosen_node_set(chosen_node_set) 
 	data.compute()
-	plot = QPlot(data, 'ORIG', outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
+	plot = QPlot(data, 'ORIG', outputfile, scale, title, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	plot.compute_and_plot()
 	return (df_XFORM, fig_XFORM, textData_XFORM, plot.df, plot.fig, plot.plotData)
 

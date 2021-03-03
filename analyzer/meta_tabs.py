@@ -137,30 +137,34 @@ class AxesTab(tk.Frame):
             self.tab.data.notify(self.tab.data.gui.loadedData)
 
 class ShortNameTab(tk.Frame):
-    @staticmethod
-    def addShortNames(namesDf):
-        short_names_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'short_names.csv')
-        if 'Color' not in namesDf.columns: namesDf['Color'] = pd.Series()
-        if os.path.getsize(short_names_path) > 0:
-            existing_shorts = pd.read_csv(short_names_path)
-            merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
-        else: 
-            merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-        merged.to_csv(short_names_path, index=False)
+    # @staticmethod
+    # def addShortNames(namesDf):
+    #     short_names_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'short_names.csv')
+    #     if 'Color' not in namesDf.columns: namesDf['Color'] = pd.Series()
+    #     if os.path.getsize(short_names_path) > 0:
+    #         existing_shorts = pd.read_csv(short_names_path)
+    #         merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
+    #     else: 
+    #         merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
+    #     merged.to_csv(short_names_path, index=False)
 
-    def __init__(self, parent, tab, df, level=None):
+    def __init__(self, parent, tab, level):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.level = level
         self.tab = tab
-        self.df = df
-        self.cape_path = self.tab.data.gui.loadedData.cape_path
-        self.short_names_path = self.tab.data.gui.loadedData.short_names_path
-        self.mappings_path = self.tab.data.gui.loadedData.mappings_path
+        self.loadedData = self.tab.data.gui.loadedData
+        self.cape_path = self.loadedData.cape_path
+        self.short_names_path = self.loadedData.short_names_path
+        self.mappings_path = self.loadedData.mappings_path
+        
+    @property
+    def df(self):
+        return self.loadedData.get_df(self.level)[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]].loc[self.loadedData.get_df(self.level)[VARIANT].isin(self.tab.variants)].reset_index(drop=True)
 
     # Create table for Labels tab and update button
     def buildLabelTable(self):
-        self.table = Table(self, dataframe=self.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], showtoolbar=False, showstatusbar=True)
+        self.table = Table(self, dataframe=self.df, showtoolbar=False, showstatusbar=True)
         self.table.show()
         self.table.redraw()
         table_button_frame = tk.Frame(self)
@@ -170,12 +174,6 @@ class ShortNameTab(tk.Frame):
         tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace()).grid(row=0, column=2)
         return self.table
 
-    def getShortNames(self, df):
-        all_short_names = pd.read_csv(self.short_names_path)
-        df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
-        df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
-        df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
-
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
         replace=tk.simpledialog.askstring("Replace", "Replace with:")
@@ -183,34 +181,44 @@ class ShortNameTab(tk.Frame):
         self.table.redraw()
     
     # Merge user input labels with current mappings and replot
-    def updateLabels(self, table_df, clusters=False):
-        if self.checkForDuplicates(table_df):
-            return
-        else:
-            # Add to local database 
-            if not clusters: ShortNameTab.addShortNames(table_df)
-            # Change the short name in each of the main df
-            for level in self.tab.data.loadedData.allLevels:
-                df = self.tab.data.loadedData.get_df(level)
-                # Follow df index to preserve order on merge
-                # TODO: merge this implementation with merge_metrics and also 
-                # the capedata data incorporate in 1 place (e.g. in capelib).
-                merged = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
-                merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
-                merged['Color'] = merged["Color_y"].fillna(merged["Color_x"])
-                merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
-                merged = self.tab.data.gui.loadedData.compute_colors(merged, clusters)
-                # Reset the index to follow df order
-                merged = merged.set_index(df.index)
-                #self.tab.data.loadedData.dfs[level] = df
-                assert df[MetricName.NAME].equals(merged[MetricName.NAME])
-                assert df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
-                df[SHORT_NAME] = merged[SHORT_NAME]
-                df['Color'] = merged['Color']
+    def updateLabels(self, table_df):
+        # Update short names in each of the main dfs
+        self.loadedData.update_short_names(table_df)
 
-        for tab in self.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
-            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
+    def exportCSV(self, table):
+        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+        table.model.df.to_csv(export_file_path, index=False, header=True)
+
+    # def getShortNames(self, df):
+    #     all_short_names = pd.read_csv(self.short_names_path)
+    #     df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
+    #     df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
+    #     df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
+
+        # # Add to local database 
+        # if not clusters: ShortNameTab.addShortNames(table_df)
+        # # Change the short name in each of the main df
+        # for level in self.tab.data.loadedData.allLevels:
+        #     df = self.tab.data.loadedData.get_df(level)
+        #     # Follow df index to preserve order on merge
+        #     # TODO: merge this implementation with merge_metrics and also 
+        #     # the capedata data incorporate in 1 place (e.g. in capelib).
+        #     merged = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
+        #     merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
+        #     merged['Color'] = merged["Color_y"].fillna(merged["Color_x"])
+        #     merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
+        #     merged = self.tab.data.gui.loadedData.compute_colors(merged, clusters)
+        #     # Reset the index to follow df order
+        #     merged = merged.set_index(df.index)
+        #     #self.tab.data.loadedData.dfs[level] = df
+        #     assert df[MetricName.NAME].equals(merged[MetricName.NAME])
+        #     assert df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+        #     df[SHORT_NAME] = merged[SHORT_NAME]
+        #     df['Color'] = merged['Color']
+
+        # for tab in self.tab.plotInteraction.tabs:
+        #     if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
+        #     else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
 
     # def getShortNames(self, df):
     #     if os.path.getsize(self.short_names_path) > 0:
@@ -221,8 +229,7 @@ class ShortNameTab(tk.Frame):
     #         merged = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
     #     return merged
 
-    def checkForDuplicates(self, df):
-        return False
+    # def checkForDuplicates(self, df):
         # Check if there are duplicates short names with the same timestamp
         # df.reset_index(drop=True, inplace=True)
         # duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
@@ -234,10 +241,6 @@ class ShortNameTab(tk.Frame):
         #         + message)
         #     return True
         # return False
-
-    def exportCSV(self, table):
-        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
-        table.model.df.to_csv(export_file_path, index=False, header=True)
 
 class MappingsTab(tk.Frame):
     def __init__(self, parent, tab, level):
@@ -302,18 +305,14 @@ class MappingsTab(tk.Frame):
             self.table.model.df = self.table.model.df.append(pd.Series(name='temp'))
         else: self.table.model.df = self.mappings
 
-    def updateMappings(self):
+    def updateMapping(self):
         # Update observers with the new mappings
-        if self.table.model.df.iloc[0].name == 'temp': mappings = pd.DataFrame()
-        else: mappings = self.mappings
-        for tab in self.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=mappings)
-            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=mappings)
+        self.loadedData.update_mapping(self.level)
 
     def addCustomOptions(self):
         options = "[" + self.df[SHORT_NAME] + "] " + self.df[NAME] + " [" + self.df[TIMESTAMP].map(str) + "]"
         tk.Button(self, text="Edit", command=lambda options=list(options): self.editMappings(options)).grid(row=10, column=0)
-        tk.Button(self, text="Update", command=self.updateMappings).grid(row=10, column=1, sticky=tk.W)
+        tk.Button(self, text="Update", command=self.updateMapping).grid(row=10, column=1, sticky=tk.W)
 
     def editMappings(self, options):
         self.win = tk.Toplevel()
@@ -406,7 +405,7 @@ class ClusterTab(tk.Frame):
         table_df = pd.merge(left=table_df, right=self.tab.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]], how='left', on=KEY_METRICS)
         table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
         table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
-        self.tab.shortnameTab.updateLabels(table_df, True)
+        self.tab.shortnameTab.updateLabels(table_df)
     
     def update(self):
         if self.cluster_selected.get() != 'Choose Cluster':
