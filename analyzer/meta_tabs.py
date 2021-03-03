@@ -195,12 +195,13 @@ class ShortNameTab(tk.Frame):
                 # Follow df index to preserve order on merge
                 # TODO: merge this implementation with merge_metrics and also 
                 # the capedata data incorporate in 1 place (e.g. in capelib).
-                reindexed_table_df = table_df.set_index(df.index)
-                merged = pd.merge(left=df, right=reindexed_table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
+                merged = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
                 merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
                 merged['Color'] = merged["Color_y"].fillna(merged["Color_x"])
                 merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
                 merged = self.tab.data.gui.loadedData.compute_colors(merged, clusters)
+                # Reset the index to follow df order
+                merged = merged.set_index(df.index)
                 #self.tab.data.loadedData.dfs[level] = df
                 assert df[MetricName.NAME].equals(merged[MetricName.NAME])
                 assert df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
