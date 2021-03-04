@@ -137,17 +137,6 @@ class AxesTab(tk.Frame):
             self.tab.data.notify(self.tab.data.gui.loadedData)
 
 class ShortNameTab(tk.Frame):
-    # @staticmethod
-    # def addShortNames(namesDf):
-    #     short_names_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'short_names.csv')
-    #     if 'Color' not in namesDf.columns: namesDf['Color'] = pd.Series()
-    #     if os.path.getsize(short_names_path) > 0:
-    #         existing_shorts = pd.read_csv(short_names_path)
-    #         merged = pd.concat([existing_shorts, namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
-    #     else: 
-    #         merged = namesDf[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-    #     merged.to_csv(short_names_path, index=False)
-
     def __init__(self, parent, tab, level):
         tk.Frame.__init__(self, parent)
         self.parent = parent
@@ -188,59 +177,6 @@ class ShortNameTab(tk.Frame):
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
-
-    # def getShortNames(self, df):
-    #     all_short_names = pd.read_csv(self.short_names_path)
-    #     df = pd.merge(left=df, right=all_short_names, on=[NAME, TIMESTAMP], how='left')
-    #     df[SHORT_NAME] = df[SHORT_NAME + "_y"].fillna(df[SHORT_NAME + "_x"])
-    #     df.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x"], inplace=True, errors='ignore')
-
-        # # Add to local database 
-        # if not clusters: ShortNameTab.addShortNames(table_df)
-        # # Change the short name in each of the main df
-        # for level in self.tab.data.loadedData.allLevels:
-        #     df = self.tab.data.loadedData.get_df(level)
-        #     # Follow df index to preserve order on merge
-        #     # TODO: merge this implementation with merge_metrics and also 
-        #     # the capedata data incorporate in 1 place (e.g. in capelib).
-        #     merged = pd.merge(left=df, right=table_df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']], on=KEY_METRICS, how='left')
-        #     merged[SHORT_NAME] = merged[SHORT_NAME + "_y"].fillna(merged[SHORT_NAME + "_x"])
-        #     merged['Color'] = merged["Color_y"].fillna(merged["Color_x"])
-        #     merged.drop(columns=[SHORT_NAME + "_y", SHORT_NAME + "_x", 'Color_x', 'Color_y'], inplace=True, errors='ignore')
-        #     merged = self.tab.data.gui.loadedData.compute_colors(merged, clusters)
-        #     # Reset the index to follow df order
-        #     merged = merged.set_index(df.index)
-        #     #self.tab.data.loadedData.dfs[level] = df
-        #     assert df[MetricName.NAME].equals(merged[MetricName.NAME])
-        #     assert df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
-        #     df[SHORT_NAME] = merged[SHORT_NAME]
-        #     df['Color'] = merged['Color']
-
-        # for tab in self.tab.plotInteraction.tabs:
-        #     if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=tab.mappings)
-        #     else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=tab.mappings)
-
-    # def getShortNames(self, df):
-    #     if os.path.getsize(self.short_names_path) > 0:
-    #         existing_shorts = pd.read_csv(self.short_names_path)
-    #         current_shorts = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-    #         merged = pd.concat([current_shorts, existing_shorts]).drop_duplicates([NAME, TIMESTAMP], keep='last').reset_index(drop=True)
-    #     else: 
-    #         merged = df[[NAME, SHORT_NAME, TIMESTAMP, 'Color']]
-    #     return merged
-
-    # def checkForDuplicates(self, df):
-        # Check if there are duplicates short names with the same timestamp
-        # df.reset_index(drop=True, inplace=True)
-        # duplicate_rows = df.duplicated(subset=[SHORT_NAME, TIMESTAMP], keep=False)
-        # if duplicate_rows.any():
-        #     message = str()
-        #     for index, row in df[duplicate_rows].iterrows():
-        #         message = message + 'row: ' + str(index + 1) + ', ShortName: ' + row[SHORT_NAME] + '\n'
-        #     messagebox.showerror("Duplicate Short Names", "You currently have two or more duplicate short names from the same file. Please change them to continue. \n\n" \
-        #         + message)
-        #     return True
-        # return False
 
 class MappingsTab(tk.Frame):
     def __init__(self, parent, tab, level):
@@ -356,7 +292,7 @@ class MappingsTab(tk.Frame):
         self.tab.data.gui.loadedData.removedIntermediates = False
         data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), \
             (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), \
-            (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
+            (self.tab.data.gui.coverageData, self.tab.data.gui.c_summaryTab)]
         for data, tab in data_tab_pairs:
             data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
     
@@ -378,7 +314,7 @@ class MappingsTab(tk.Frame):
         self.loadedData.levelData[self.level].mapping = self.loadedData.get_speedups(self.level, self.loadedData.get_mapping(self.level))
         self.loadedData.add_speedup(self.loadedData.get_mapping(self.level), self.loadedData.get_df(self.level))
         self.loadedData.removedIntermediates = True
-        data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), (self.tab.data.gui.coverageData, self.tab.data.gui.summaryTab)]
+        data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), (self.tab.data.gui.coverageData, self.tab.data.gui.c_summaryTab)]
         for data, tab in data_tab_pairs:
             data.notify(self.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
 
@@ -538,10 +474,11 @@ class DataTab(tk.Frame):
         self.table_button_frame.grid(row=3, column=1)
 
 class LabelTab(tk.Frame):
-    def __init__(self, parent, tab):
+    def __init__(self, parent, tab, level):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
+        self.loadedData = self.tab.data.gui.loadedData
         self.metric1 = tk.StringVar(value='Metric 1')
         self.metric2 = tk.StringVar(value='Metric 2')
         self.metric3 = tk.StringVar(value='Metric 3')
@@ -561,6 +498,7 @@ class LabelTab(tk.Frame):
         self.metric1.set('Metric 1')
         self.metric2.set('Metric 2')
         self.metric3.set('Metric 3')
+        # self.loadedData.levelData[level].reset_labels()
 
     def reset(self):
         self.resetMetrics()

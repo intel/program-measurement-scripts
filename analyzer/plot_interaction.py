@@ -44,10 +44,10 @@ class PlotInteraction():
         self.cur_xlim = self.home_xlim = self.textData['ax'].get_xlim()
         self.cur_ylim = self.home_ylim = self.textData['ax'].get_ylim()
         # Create lists of tabs that need to be synchronized according to the level and update the plot with the saved state
-        # self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.summaryTab, self.gui.c_scurveTab, self.gui.c_scurveAllTab]
-        self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.summaryTab, self.gui.c_scurveAllTab]
-        self.source_tabs = [self.gui.s_trawlTab, self.gui.s_qplotTab, self.gui.s_customTab]
-        self.application_tabs = [self.gui.a_trawlTab, self.gui.a_qplotTab, self.gui.a_customTab]
+        # self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.c_summaryTab, self.gui.c_scurveTab, self.gui.c_scurveAllTab]
+        self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.c_summaryTab, self.gui.c_scurveAllTab]
+        self.source_tabs = [self.gui.s_trawlTab, self.gui.s_qplotTab, self.gui.s_customTab, self.gui.s_summaryTab]
+        self.application_tabs = [self.gui.a_trawlTab, self.gui.a_qplotTab, self.gui.a_customTab, self.gui.a_summaryTab]
         if self.level == 'Codelet': 
             self.tabs = self.codelet_tabs
             self.stateDictionary = self.gui.loadedData.c_plot_state
@@ -107,6 +107,8 @@ class PlotInteraction():
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
         self.toolbar.update()
         self.canvas.draw()
+        # PlotInteraction observes changes in several meta tabs
+        # self.tab.labelTab.add_observers(self)
 
     def restoreAnalysisState(self):
         self.restoreState(self.gui.loadedData.levels[self.level]['data'])
@@ -178,7 +180,7 @@ class PlotInteraction():
                 selected_summary = level['df'].loc[(level['df']['Name']+level['df']['Timestamp#'].astype(str)).isin(level['data']['visible_names'])]
                 selected_summary.to_excel(level['summary_dest'], index=False)
             # variants apply to all levels
-            level['data']['variants'] = self.gui.summaryTab.variants
+            level['data']['variants'] = self.gui.c_summaryTab.variants
             # Each tab has its own dictionary with it's current plot selections
             for tab in level['tabs']:
                 level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
@@ -217,7 +219,7 @@ class PlotInteraction():
         elif self.level == 'Application': dictionary = self.gui.loadedData.a_plot_state
         dictionary['hidden_names'] = []
         dictionary['highlighted_names'] = []
-        # try: dictionary['self.guide_A_state'] = self.gui.summaryTab.self.guideTab.aTab.aLabel['text']
+        # try: dictionary['self.guide_A_state'] = self.gui.c_summaryTab.self.guideTab.aTab.aLabel['text']
         # except: pass
         for marker in self.textData['markers']:
             if not marker.get_alpha():
