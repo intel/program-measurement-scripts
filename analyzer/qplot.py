@@ -64,5 +64,5 @@ class QPlotTab(AnalyzerTab):
         self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return QPlot(self.data.capacityData, 'ORIG', "test", self.data.scale, "QPlot", False, True, None, None, 
+        return QPlot(self.data.capacityDataItems, 'ORIG', "test", self.data.scale, "QPlot", False, True, None, None, 
                      self.data.mappings, self.data.gui.loadedData.short_names_path)

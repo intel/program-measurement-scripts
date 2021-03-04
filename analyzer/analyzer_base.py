@@ -81,16 +81,16 @@ class AnalyzerData(Observable):
         return self.loadedData.get_mapping(self.level)
 
     @property
-    def capacityData(self):
-        return self.loadedData.levelData[self.level].capacityData
+    def capacityDataItems(self):
+        return self.loadedData.levelData[self.level].capacityDataItems
 
     @property
-    def siData(self):
-        return self.loadedData.levelData[self.level].siData
+    def siDataItems(self):
+        return self.loadedData.levelData[self.level].siDataItems
         
     @property
-    def satAnalysisData(self):
-        return self.loadedData.levelData[self.level].satAnalysisData
+    def satAnalysisDataItems(self):
+        return self.loadedData.levelData[self.level].satAnalysisDataItems
 
     def notify(self, loadedData, update, variants, mappings):
         # Only show selected variants, default is most frequent variant

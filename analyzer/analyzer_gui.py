@@ -9,6 +9,7 @@ import os
 import re
 from os.path import expanduser
 from analyzer_base import PerLevelGuiState
+import capelib as cl
 from summarize import summary_report_df
 from summarize import compute_speedup
 from capedata import AnalyticsData
@@ -67,24 +68,84 @@ class LoadedData(Observable):
         def __init__(self, level):
             super().__init__()
             self.level = level
-            self.df = pd.DataFrame(columns=KEY_METRICS)
-            self.capacityData = None
-            self.satAnalysisData = None
-            self.siData = None 
+            #self._df = pd.DataFrame(columns=KEY_METRICS)
+            self._dfs = []
+            self._capacityDataItems = []
+            self._satAnalysisDataItems = []
+            self._siDataItems = [] 
             self.mapping = pd.DataFrame()
             # Put this here but may move it out.
             self.guiState = PerLevelGuiState(self, level)
             
+
+        @classmethod
+        def update_list(cls, lst, data, append):
+            if not append:
+                lst.clear()
+            lst.append(data)
+            return data
+            
+        def setup_df(self, df, append):
+            df = self.update_list(self._dfs, df, append)
+            self.update_list(self._capacityDataItems, CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{self.level}'), append)
+            satAnalysisData = self.update_list(self._satAnalysisDataItems, SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{self.level}'), append)
+
+            cluster_df = satAnalysisData.cluster_df
+            CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
+            self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
+        
+        @property
+        def df(self):
+            return pd.concat(self._dfs, ignore_index=True)
+
+        @property
+        def capacityDataItems(self):
+            return self._capacityDataItems
+
+        @property
+        def satAnalysisDataItems(self):
+            return self._satAnalysisDataItems
+
+        @property
+        def siDataItems(self):
+            return self._siDataItems
+
+        def clear_df(self):
+            self._dfs.clear()
+            self._capacityDataItems.clear()
+            self._satAnalysisDataItems.clear()
+            self._siDataItems.clear()
+        
         def resetStates(self):
-            self.df.drop(columns=self.df.columns, inplace=True)
-            for col in KEY_METRICS:
-                self.df[col] = None
+            self.clear_df()
+            #for col in KEY_METRICS:
+            #    self.df[col] = None
             self.mapping = pd.DataFrame()
 
         # Invoke this method after updating this object (and underlying objects like 
         # GUI state)
         def updated(self):
             self.notify_observers() 
+
+            
+        def merge_metrics(self, df, metrics):
+            #metrics.extend(KEY_METRICS)
+            for target_df in self._dfs:
+                cl.import_dataframe_columns(target_df, df, metrics)
+
+
+            # Incorporated following implementation in capelib.py already but keep it here for reference
+            # # as there is some minor difference still.  Will delete later when code is stablized.
+            # merged = pd.merge(left=target_df, right=df[metrics], on=KEY_METRICS, how='left')
+            # target_df.sort_values(by=NAME, inplace=True)
+            # target_df.reset_index(drop=True, inplace=True)
+            # merged.sort_values(by=NAME, inplace=True)
+            # merged.reset_index(drop=True, inplace=True)
+            # for metric in metrics:
+            #     if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
+            #         merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
+            #     if metric not in KEY_METRICS: target_df[metric] = merged[metric]
+
 
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
@@ -212,13 +273,9 @@ class LoadedData(Observable):
         # Reset cluster var for SIPlotData so find_si_clusters() is called again 
         gui.c_siplotData.run_cluster = True
 
-    def add_data(self, sources, data_dir='', update=False):
+    def add_data(self, sources, data_dir='', append=False):
         self.restore = False
-        if not update: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
-        dfs = { n : pd.DataFrame(columns = KEY_METRICS) for n in self.allLevels }
-        summaryDf = dfs['Codelet']
-        srcDf = dfs['Source']
-        appDf = dfs['Application']
+        if not append: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
         # NOTE: sources is a list of loaded file and the last one is to be loaded
         # data_dir is the data directory of the last one which is to be loaded
         self.sources = sources
@@ -230,11 +287,37 @@ class LoadedData(Observable):
 
         # Get path to short name database
         short_names_path = self.short_names_path if os.path.isfile(self.short_names_path) else None
+
         CapeData.set_cache_dir(self.data_dir)
+
+        dfs = { n : pd.DataFrame(columns = KEY_METRICS) for n in self.allLevels }
+        summaryDf = dfs['Codelet']
+        srcDf = dfs['Source']
+        appDf = dfs['Application']
         SummaryData(summaryDf).set_sources([last_source]).set_short_names_path(short_names_path).compute('summary-Codelet')
         AnalyticsData(summaryDf).set_filename(self.meta_filename('.analytics.csv')).compute()
         AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).compute('summary-Source')
         AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).compute('summary-Application')
+        
+        for level in self.levelData:
+            df = dfs[level]
+            # TODO: avoid adding Color to df
+            # NOTE: Will returns a new df after this call
+            df = self.compute_colors(df)
+            self.levelData[level].setup_df(df, append)
+            # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
+
+            # levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
+            # levelData.satAnalysisData = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{level}')
+
+            # cluster_df = levelData.satAnalysisData.cluster_df
+            # CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{level}') 
+            # levelData.siData = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
+            #     .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
+
+            # cl.append_dataframe_rows(self.get_df(level), df)
+            # Add mappings to levelData for each level
+            self.loadMapping(level)
 
         # TODO: Append other levels?
         self.names = summaryDf[KEY_METRICS+NAME_FILE_METRICS]
@@ -245,28 +328,11 @@ class LoadedData(Observable):
         # Get default variant (most frequent)
         self.default_variant = summaryDf[VARIANT].value_counts().idxmax()
 
-        # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
-        if not update: self.resetTabValues() 
         # Add diagnostic variables from analyticsDf
-        self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-        
-        # Add short names to each master dataframe TODO: Check if this is already happening in the summary df generators
-        # chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-        #chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]','VR [GB/s]','FE'])
-        for level in self.levelData:
-            levelData = self.levelData[level]
-            df = dfs[level]
-            df = self.compute_colors(df)
-            # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
-            levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
-            levelData.satAnalysisData = SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{level}')
-            cluster_df = levelData.satAnalysisData.cluster_df
-            CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{level}') 
-            levelData.siData = SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET)\
-                .set_norm("row").set_cluster_df(cluster_df).compute(f'si-{level}')
-            LoadedData.append_df(self.get_df(level), df)
-            # Add mappings to levelData for each level
-            self.loadMapping(level)
+        #self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
+        # Reset tab axis metrics/scale to default values (Do we want to do this if appending data?)
+        if not append: self.resetTabValues() 
+
 
         self.notify_observers()
 
@@ -274,10 +340,7 @@ class LoadedData(Observable):
     @staticmethod
     def append_df(df, append_df):
         merged = df.append(append_df, ignore_index=True)
-        df.drop(columns=df.columns, inplace=True)
-        df.drop(df.index, inplace=True)
-        for col in merged.columns:
-            df[col] = merged[col]
+        cl.replace_dataframe_content(df, merged)
     
     def add_saved_data(self, levels=[]):
         gui.oneviewTab.removePages()
@@ -444,17 +507,7 @@ class LoadedData(Observable):
 
     def merge_metrics(self, df, metrics, level):
         # Add metrics computed in plot functions to master dataframe
-        metrics.extend(KEY_METRICS)
-        target_df = self.get_df(level)
-        merged = pd.merge(left=target_df, right=df[metrics], on=KEY_METRICS, how='left')
-        target_df.sort_values(by=NAME, inplace=True)
-        target_df.reset_index(drop=True, inplace=True)
-        merged.sort_values(by=NAME, inplace=True)
-        merged.reset_index(drop=True, inplace=True)
-        for metric in metrics:
-            if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
-                merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
-            if metric not in KEY_METRICS: target_df[metric] = merged[metric]
+        self.levelData[level].merge_metrics(df, metrics)
 
 class CodeletTab(tk.Frame):
     def __init__(self, parent):
@@ -609,14 +662,14 @@ class AnalyzerGui(tk.Frame):
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources = [source]
-            self.loadedData.add_data(self.sources, data_dir, update=False)
+            self.loadedData.add_data(self.sources, data_dir, append=False)
         elif choice == 'Append':
             if url: 
                 self.urls.append(url)
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
             self.sources.append(source)
-            self.loadedData.add_data(self.sources, data_dir, update=True)
+            self.loadedData.add_data(self.sources, data_dir, append=True)
 
     def overwrite(self): # Clear out any previous saved dataframes/plots
         self.sources = []
@@ -625,7 +678,7 @@ class AnalyzerGui(tk.Frame):
         gui.oneviewTab.removePages() # Remove any previous OV HTML
         # Clear summary dataframes
         for level in self.loadedData.levelData:
-            self.loadedData.levelData[level].df = pd.DataFrame()
+            self.loadedData.levelData[level].clear_df()
         self.clearTabs()
 
     def clearTabs(self, levels=['All']):

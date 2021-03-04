@@ -442,3 +442,28 @@ def compute_speedup(output_rows, mapping_df):
     retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
     retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
     return new_mapping_df[retainColumns]
+
+    
+def clear_dataframe(df):
+    df.drop(columns=df.columns, inplace=True)
+    df.drop(df.index, inplace=True)
+
+def replace_dataframe_content(to_df, from_df):
+    clear_dataframe(to_df)
+    for col in from_df.columns:
+        to_df[col] = from_df[col]
+
+def import_dataframe_columns(to_df, from_df, cols):
+    merged = pd.merge(left=to_df, right=from_df[KEY_METRICS+list(cols)], on=KEY_METRICS, how='left')      
+    merged = merged.set_index(to_df.index)
+    assert to_df[MetricName.NAME].equals(merged[MetricName.NAME])
+    assert to_df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+    for col in cols:
+        if col + "_y" in merged.columns and col + "_x" in merged.columns:
+            # _y is incoming df data so use it and fill in _x (original) if missing
+            merged[col] = merged[col + "_y"].fillna(merged[col + "_x"])
+        to_df[col] = merged[col]
+    
+def append_dataframe_rows(df, append_df):
+    merged = df.append(append_df, ignore_index=True)
+    replace_dataframe_content(df, merged)

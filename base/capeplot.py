@@ -103,6 +103,9 @@ class CapeData(ABC):
             merged = pd.merge(left=self.df, right=result_df, how='left', on=KEY_METRICS)
             # Make sure join order is consistent with original self.df order
             assert self.df[MetricName.NAME].equals(merged[MetricName.NAME])
+
+            self.df[MetricName.TIMESTAMP].astype('int64')
+            merged[MetricName.TIMESTAMP].astype('int64')
             assert self.df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
         else:
             # Empty self.df case, result_df must have all the KEY_METRICS
@@ -339,6 +342,7 @@ class CapacityData(NodeCentricData):
 class CapePlot:
     def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+        # Data is a list of data
         self.data = data
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
@@ -359,7 +363,8 @@ class CapePlot:
     # Getter of df, delegate to self.data
     @property
     def df(self):
-        return self.data.df
+        return pd.concat([data.df for data in self.data], ignore_index=True)
+        # return self.data.df
     
     # # Setter of df (May remove), delegate to self.data
     # @df.setter
@@ -633,6 +638,10 @@ class CapacityPlot(CapePlot):
         #self.default_x_axis = self.data.op_metric_name
 
     # Getter of chosen_node_set, delegate to self.data
+   # @property
+   # def chosen_node_set(self):
+   #     return self.data.chosen_node_set
+
     @property
     def chosen_node_set(self):
-        return self.data.chosen_node_set
+        return set().union(*[data.chosen_node_set for data in self.data])    

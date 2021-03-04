@@ -227,7 +227,7 @@ DEFAULT_CHOSEN_NODE_SET=BASIC_NODE_SET
 # capacity_formula= {
 #     }
 
-class SiPlot(CapePlot):
+class SiPlot(CapacityPlot):
     def __init__(self, data, variant, outputfile_prefix, norm, title, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
         super().__init__(data, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
@@ -243,23 +243,34 @@ class SiPlot(CapePlot):
         self.filter_data = filter_data
 
     # df here is the cur_run_df
-    def mk_data(self, df):
-        self.data = SiData(df)
-
-    # Getter of chosen_node_set, delegate to self.data
-    @property
-    def chosen_node_set(self):
-        return self.data.chosen_node_set
+    # def mk_data(self, df):
+    #     self.data = SiData(df)
 
     # Getter of cluster_and_cur_run_df, delegate to self.data
     @property
     def cluster_and_cur_run_df(self):
-        return self.data.cluster_and_cur_run_df
+        cluster_df = self.cluster_df
+        cur_run_df = self.df
+        return pd.concat([cluster_df, cur_run_df], ignore_index=True)
+        #return self.data.cluster_and_cur_run_df
         
+    @property
+    def cur_run_df(self):
+        return self.df
+
+    @property
+    def Ns(self):
+        return max([data.Ns for data in self.data], default=0)
+    
     # Getter of cluster_df, delegate to self.data
     @property
     def cluster_df(self):
-        return self.data.cluster_df
+        # In case need to use drop_duplicates(uture.  We can use the following trick
+        # df = pd.concat([data.cluster_df for data in self.data])
+        # return df.loc[df.astype(str).drop_duplicates().index]
+        return pd.concat([data.cluster_df for data in self.data], ignore_index=True)
+
+        #return self.data.cluster_df
 
     # Getter of norm, delegate to self.data
     @property
@@ -335,7 +346,7 @@ class SiPlot(CapePlot):
         maxx=max(max_xs, maxx)
         maxy=max(max_ys, maxy)
 
-        Ns = self.data.Ns
+        Ns = self.Ns
         ax = self.ax
         ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
         npoints=40
