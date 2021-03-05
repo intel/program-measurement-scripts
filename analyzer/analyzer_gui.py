@@ -52,7 +52,7 @@ from plot_interaction import PlotInteraction
 from capeplot import CapeData
 from capeplot import CapacityData
 from generate_SI import SiData
-from sat_analysis import find_clusters as find_si_clusters
+from sat_analysis import do_sat_analysis as find_si_clusters
 from sat_analysis import SatAnalysisData
 from metric_names import NonMetricName, KEY_METRICS, NAME_FILE_METRICS
 # Importing the MetricName enums to global variable space

@@ -14,7 +14,7 @@ from pandastable import Table
 from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName
 from metric_names import NonMetricName
-from sat_analysis import find_clusters as find_si_clusters
+from sat_analysis import do_sat_analysis as find_si_clusters
 globals().update(MetricName.__members__)
 
 class SIPlotData(AnalyzerData):

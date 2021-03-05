@@ -75,7 +75,7 @@ class SatAnalysisData(NodeWithUnitData):
     super().__init__(df, NODE_UNIT_DICT) 
 
   def compute_impl(self, df):
-    self.cluster_df, si_df = find_clusters(df, self.chosen_node_set)
+    self.cluster_df, si_df = do_sat_analysis(df, self.chosen_node_set)
     return si_df
 
   # Return (expected inputs, expected outputs)
@@ -93,31 +93,6 @@ class SatAnalysisData(NodeWithUnitData):
   # Subclass override to provide more data to be written
   def extra_data_to_save(self):
     return [self.cluster_df]
-
-# Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
-# Will return three dataframes: cluster only, cluster+cur_run, cur_run only
-# cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
-
-# For each codelets in current_codelets_runs_df, find their cluster
-#   Store the name of the cluster to the SI_CLUSTER_NAME column
-#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def find_clusters(current_codelets_runs_df, chosen_node_set, memAlusatThreshold = 0.10, cuSatThreshold = 0.25):
-  # Read the optimal data file
-  optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
-  optimal_data_df = pd.read_csv(optimal_data_path)
-  nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
-  CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute() 
-  # Real implementation should have found many cluster dataframes and with the name set to its cluster name
-  all_clusters, all_test_codelets = do_sat_analysis(optimal_data_df, current_codelets_runs_df, chosen_node_set)
-    # filter out the unnecessary columns
-  all_clusters = all_clusters[NEEDED_CLUSTER_DF_COLUMNS]
-  all_test_codelets=all_test_codelets[NEEDED_CLUSTER_DF_COLUMNS]
-
-
-  # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
-  # return the global cluster and test codelets => to use for plotting
-  return all_clusters, all_test_codelets
-
 
 # this dict contains columns + rows of those columns that need to be colored
 # assumption is that you don't add any more rows else dict becomes out of dat
@@ -641,12 +616,31 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             ignore_index = True) 
     return all_clusters, all_test_codelets
 
-def do_sat_analysis(satSetDF, testSetDF, chosen_node_set):
+# Chosen node set not needed compute_only() will get the nodes to consider from SI_SAT_NODES
+# Will return three dataframes: cluster only, cluster+cur_run, cur_run only
+# cluster_df, cluster_and_run_df, cur_run_df = compute_only(cluster_df, norm, cur_run_df) 
+
+# For each codelets in current_codelets_runs_df, find their cluster
+#   Store the name of the cluster to the SI_CLUSTER_NAME column
+#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
+def do_sat_analysis(testSetDF, chosen_node_set, disable = False):
     all_clusters = pd.DataFrame(columns = NEEDED_CLUSTER_DF_COLUMNS)
     all_test_codelets = pd.DataFrame(columns = NEEDED_TEST_DF_COLUMNS)
     short_name=''
-    # Creating an empty Dataframe with column names only
-    #print("Empty Dataframe ", dfObj, sep='\n')
+    # Read the optimal data file
+    optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
+    optimal_data_df = pd.read_csv(optimal_data_path)
+    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+    CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute()
+    satSetDF = optimal_data_df
+
+    # If SI Analysis is disabled
+    # Creating an empty Dataframe with column names only SI_SAT_NODES and SI_CLUSTER_NAME
+    if disable:
+      testSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
+      testSetDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testSetDF)
+      all_test_codelets = all_test_codelets.append(testSetDF)
+      return all_clusters, all_test_codelets
     global satThreshold
     global cuSatThreshold
     codelet_tested = 0
@@ -690,6 +684,12 @@ def do_sat_analysis(satSetDF, testSetDF, chosen_node_set):
        stats_df.to_csv('statistcs.csv', mode='a', header=False, index=False)
     else :
        stats_df.to_csv('statistcs.csv', mode='w', header=True, index=False)
+
+    # filter out the unnecessary columns
+    all_clusters = all_clusters[NEEDED_CLUSTER_DF_COLUMNS]
+    all_test_codelets=all_test_codelets[NEEDED_CLUSTER_DF_COLUMNS]
+    # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
+    # return the global cluster and test codelets => to use for plotting
     return all_clusters, all_test_codelets
 
 
@@ -704,7 +704,7 @@ def main(argv):
 
     print("Read test data successful!")
 
-    find_clusters(test_data_df, BASIC_NODE_SET)
+    do_sat_analysis(test_data_df, BASIC_NODE_SET)
 
 
 if __name__ == "__main__":
