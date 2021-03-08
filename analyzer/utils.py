@@ -13,6 +13,9 @@ class Observable:
     def notify_observers(self):
         for observer in self.observers:
             observer.notify(self)
+    def notify_plot_observers(self):
+        for observer in self.observers:
+            observer.plot_notify(self)
             
 class Observer:
     def __init__(self, observable):

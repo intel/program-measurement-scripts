@@ -3,7 +3,7 @@ import pandas as pd
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
+# from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName, KEY_METRICS
 import numpy as np
 import copy
@@ -17,6 +17,8 @@ class PerLevelGuiState:
         self.loadedData = loadedData
         # Should have size <= 3
         self.labels = []
+        self.hidden = []
+        self.highlighted = []
         # For data filtering
         # The following variants and filter metric set up a mask to select data point
         self.selectedVariants = []
@@ -53,6 +55,19 @@ class PerLevelGuiState:
                         (mapping['After Name']==toRemove['After Name'].iloc[0]) & \
                         (mapping['After Timestamp']==toRemove['After Timestamp'].iloc[0])].index, inplace=True)
         all_mappings.to_csv(self.mappings_path, index=False)
+
+    def reset_labels(self):
+        self.labels = []
+
+    def setFilter(self, metric, minimum, maximum, names):
+        self.filterMetric = metric
+        self.filterMinThreshold = minimum
+        self.filterMaxThreshold = maximum
+        self.hidden = names
+
+    def reset_state(self):
+        self.hidden = []
+        self.highlighted = []
 
 class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
@@ -102,7 +117,7 @@ class AnalyzerData(Observable):
         self.loadedData.merge_metrics(df, metrics, self.level)
     
 class AnalyzerTab(tk.Frame):
-    def __init__(self, parent, data, title, x_axis, y_axis, extra_metrics):
+    def __init__(self, parent, data, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
         super().__init__(parent)
         if data is not None:
             data.add_observers(self)
@@ -116,10 +131,10 @@ class AnalyzerTab(tk.Frame):
         self.y_axis = self.orig_y_axis = y_axis
         self.variants = []
         self.current_labels = []
-        # Each tab has a paned window with the data tables and plot
-        self.window = tk.PanedWindow(self, orient=tk.VERTICAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
-        self.window.pack(fill=tk.BOTH,expand=True)
         self.extra_metrics = extra_metrics
+        self.mappings_path = self.data.loadedData.mappings_path
+        self.short_names_path = self.data.loadedData.short_names_path
+        self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
 
     @property
     def mappings(self):
@@ -138,7 +153,7 @@ class AnalyzerTab(tk.Frame):
     
     def setup(self, metrics):
         # Clear previous plots and meta data tabs TODO: investigate if we can update rather than rebuilding
-        for w in self.window.winfo_children():
+        for w in self.winfo_children():
             w.destroy()
         # Update attributes
         plot = self.mk_plot()
@@ -151,9 +166,11 @@ class AnalyzerTab(tk.Frame):
         self.variants = self.data.variants
         self.metrics = metrics
         # Plot/Table setup
+        # Each tab has a paned window with the plot and per plot tabs
+        self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        self.window.pack(fill=tk.BOTH,expand=True)
+        # TODO: Move plot interaction logic out into specific tabs
         self.plotInteraction = PlotInteraction(self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True), self.fig, self.textData, self.level, self.data.gui, self.data.root)
-        self.tableFrame = tk.Frame(self.window)
-        self.window.add(self.tableFrame, stretch='always')
         # Format columns for pandastable compatibility
         self.df.columns = ["{}".format(i) for i in self.df.columns]
         self.df.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
@@ -162,27 +179,28 @@ class AnalyzerTab(tk.Frame):
 
     # Create meta tabs for each plot
     def buildTableTabs(self):
+        pass
         # Meta tabs
-        self.tableNote = ttk.Notebook(self.tableFrame)
-        self.dataTab = DataTab(self.tableNote, self.df, self.metrics, self.variants)
-        self.shortnameTab = ShortNameTab(self.tableNote, self, self.level)
-        self.labelTab = LabelTab(self.tableNote, self)
-        self.variantTab = VariantTab(self.tableNote, self, self.data.loadedData.all_variants, self.variants)
-        self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        self.tableNote.add(self.dataTab, text="Data")
-        self.tableNote.add(self.shortnameTab, text="Short Names")
-        self.tableNote.add(self.labelTab, text='Labels')
-        self.tableNote.add(self.variantTab, text="Variants")
-        self.tableNote.add(self.mappingsTab, text="Mappings")
-        self.tableNote.pack(fill=tk.BOTH, expand=True)
+        # self.tableNote = ttk.Notebook(self.tableFrame)
+        # self.dataTab = DataTab(self.tableNote, self.df, self.metrics, self.variants)
+        # self.shortnameTab = ShortNameTab(self.tableNote, self, self.level)
+        # self.labelTab = LabelTab(self.data.loadedData.c_data_note, self, self.level)
+        # self.variantTab = VariantTab(self.tableNote, self, self.data.loadedData.all_variants, self.variants)
+        # self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
+        # self.tableNote.add(self.dataTab, text="Data")
+        # self.tableNote.add(self.shortnameTab, text="Short Names")
+        # self.tableNote.add(self.labelTab, text='Labels')
+        # self.tableNote.add(self.variantTab, text="Variants")
+        # self.tableNote.add(self.mappingsTab, text="Mappings")
+        # self.tableNote.pack(fill=tk.BOTH, expand=True)
         # Summary Export Buttons
-        tk.Button(self.dataTab.table_button_frame, text="Export GUI Table", command=lambda: self.shortnameTab.exportCSV(self.dataTab.summaryTable)).grid(row=0, column=0)
-        tk.Button(self.dataTab.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df)).grid(row=0, column=1)
-        tk.Button(self.dataTab.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df)).grid(row=0, column=2)
+        # tk.Button(self.dataTab.table_button_frame, text="Export GUI Table", command=lambda: self.shortnameTab.exportCSV(self.dataTab.summaryTable)).grid(row=0, column=0)
+        # tk.Button(self.dataTab.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df)).grid(row=0, column=1)
+        # tk.Button(self.dataTab.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df)).grid(row=0, column=2)
         # Initialize meta tabs TODO: do this in the meta tab constructor
-        self.shortnameTab.buildLabelTable()
-        if self.level == 'Codelet':
-            self.mappingsTab.buildMappingsTab()
+        # self.shortnameTab.buildLabelTable()
+        # if self.level == 'Codelet':
+        #     self.mappingsTab.buildMappingsTab()
 
 
     def get_metrics(self):

@@ -39,5 +39,5 @@ class ScurveTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'Scurve')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'Scurve')
+        # self.tableNote.add(self.axesTab, text="Axes")

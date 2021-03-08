@@ -47,7 +47,8 @@ from custom import CustomData, CustomTab
 from plot_3d import Data3d, Tab3d
 from scurve import ScurveData, ScurveTab
 from scurve_all import ScurveAllData, ScurveAllTab
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab
+from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab, DataTab
+from meta_tabs import ShortNameData, DataTabData, MappingsData, FilteringData
 from plot_interaction import PlotInteraction
 from capeplot import CapeData
 from capeplot import CapacityData
@@ -115,6 +116,7 @@ class LoadedData(Observable):
             self._capacityDataItems.clear()
             self._satAnalysisDataItems.clear()
             self._siDataItems.clear()
+            self.guiState.reset_state()
         
         def resetStates(self):
             self.clear_df()
@@ -190,6 +192,10 @@ class LoadedData(Observable):
         self.levelData[level].guiState.add_mapping(toAdd)
 
     def update_mapping(self, level):
+        self.levelData[level].updated()
+
+    def setFilter(self, level, metric, minimum, maximum, names):
+        self.levelData[level].guiState.setFilter(metric, minimum, maximum, names)
         self.levelData[level].updated()
 
     def update_short_names(self, new_short_names):
@@ -283,6 +289,8 @@ class LoadedData(Observable):
         # NOTE: sources is a list of loaded file and the last one is to be loaded
         # data_dir is the data directory of the last one which is to be loaded
         self.sources = sources
+        # Get data file name and timestamp for plot title
+        self.source_title = sources[0].split('\\')[-1:][0] + ':' + sources[0].split('\\')[-2:-1][0]
         last_source = sources[-1]  # Get the last source to be loaded
         self.data_dir = data_dir
 
@@ -525,6 +533,10 @@ class SourceTab(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
+class ExplorerPanelTab(tk.Frame):
+    def __init__(self, parent):
+        tk.Frame.__init__(self, parent)
+
 class OneviewTab(tk.Frame):
 
     def __init__(self, parent):
@@ -597,15 +609,25 @@ class AnalyzerGui(tk.Frame):
         
         self.parent.config(menu=menubar)
 
-        self.pw=tk.PanedWindow(parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        self.pw=tk.PanedWindow(self.parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
 
-        right = self.buildTabs(self.pw)
-        right.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
-        self.pw.add(right, stretch='always')
+        fullPw = self.buildTabs(self.pw)
+        fullPw.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
+        self.pw.add(fullPw, stretch='always')
 
-        self.explorerPanel = ExplorerPanel(self.pw, self.loadFile, self.loadSavedState, self, root)
-        self.explorerPanel.pack(side = tk.BOTTOM)
-        self.pw.add(self.explorerPanel, stretch='never')
+        # Explorer Panel and Guide tab in global notebook
+        self.global_note = ttk.Notebook(self.pw)
+
+        self.explorerPanel = ExplorerPanel(self.global_note, self.loadFile, self.loadSavedState, self, root)
+        self.global_note.add(self.explorerPanel, text='Data Source')
+
+        # TODO: Refactor Guide Tab to not need a specific tab as a parameter
+        # self.guide_tab = GuideTab(self.global_note, self.c_summaryTab)
+        self.guide_tab = tk.Frame(self.global_note)
+        self.global_note.add(self.guide_tab, text='Guide')
+
+        self.global_note.pack(side = tk.BOTTOM, fill=tk.BOTH, expand=True)
+        self.pw.add(self.global_note, stretch='never')
 
         self.pw.pack(fill=tk.BOTH, expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
@@ -704,20 +726,22 @@ class AnalyzerGui(tk.Frame):
         self.oneview_note = ttk.Notebook(infoPw)
         self.oneviewTab = OneviewTab(self.oneview_note)
         self.oneview_note.add(self.oneviewTab, text="Oneview")
-        self.oneview_note.pack(side = tk.LEFT, expand=True)
-        infoPw.add(self.oneview_note, stretch='always')
         # Plots (Right Window)
-        self.main_note = ttk.Notebook(infoPw)
-        self.applicationTab = ApplicationTab(self.main_note)
-        self.sourceTab = SourceTab(self.main_note)
-        self.codeletTab = CodeletTab(self.main_note)
-        self.main_note.add(self.codeletTab, text='Codelet')
-        self.main_note.add(self.sourceTab, text='Source')
-        self.main_note.add(self.applicationTab, text='Application')
+        self.level_plot_note = ttk.Notebook(infoPw)
+        self.codeletTab = CodeletTab(self.level_plot_note)
+        self.sourceTab = SourceTab(self.level_plot_note)
+        self.applicationTab = ApplicationTab(self.level_plot_note)
+        self.level_plot_note.add(self.codeletTab, text='Codelet')
+        self.level_plot_note.add(self.sourceTab, text='Source')
+        self.level_plot_note.add(self.applicationTab, text='Application')
+        # Each level has its own paned window
+        c_plotPw = tk.PanedWindow(self.codeletTab, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        s_plotPw = tk.PanedWindow(self.sourceTab, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        a_plotPw = tk.PanedWindow(self.applicationTab, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         # Each level has its own plot tabs
-        application_note = ttk.Notebook(self.applicationTab)
-        source_note = ttk.Notebook(self.sourceTab)
-        codelet_note = ttk.Notebook(self.codeletTab)
+        c_plot_note = ttk.Notebook(c_plotPw)
+        s_plot_note = ttk.Notebook(s_plotPw)
+        a_plot_note = ttk.Notebook(a_plotPw)
         # Codelet Plot Data
         self.c_coverageData = CoverageData(self.loadedData, self, root, 'Codelet')
         self.c_siplotData = SIPlotData(self.loadedData, self, root, 'Codelet')
@@ -731,57 +755,114 @@ class AnalyzerGui(tk.Frame):
         # self.c_scurveData = ScurveData(self.loadedData, self, root, 'Codelet')
         self.c_scurveAllData = ScurveAllData(self.loadedData, self, root, 'Codelet')
         # Codelet Plot Tabs
-        self.c_summaryTab = SummaryTab(codelet_note, self.c_coverageData)
-        self.c_siPlotTab = SIPlotTab(codelet_note, self.c_siplotData)
-        self.c_qplotTab = QPlotTab(codelet_note, self.c_qplotData)
-        self.c_trawlTab = TrawlTab(codelet_note, self.c_trawlData)
-        self.c_customTab = CustomTab(codelet_note, self.c_customData)
-        self.c_3dTab = Tab3d(codelet_note, self.c_3dData)
-        # self.c_scurveTab = ScurveTab(codelet_note, self.c_scurveData)
-        self.c_scurveAllTab = ScurveAllTab(codelet_note, self.c_scurveAllData)
-        
-        codelet_note.add(self.c_summaryTab, text='Summary')
-        codelet_note.add(self.c_trawlTab, text='TRAWL')
-        codelet_note.add(self.c_qplotTab, text='QPlot')
-        codelet_note.add(self.c_siPlotTab, text='SI Plot')
-        codelet_note.add(self.c_customTab, text='Custom')
-        codelet_note.add(self.c_3dTab, text='3D')
-        # codelet_note.add(self.c_scurveTab, text='S-Curve (Bins)')
-        codelet_note.add(self.c_scurveAllTab, text='S-Curve')
-        codelet_note.pack(fill=tk.BOTH, expand=True)
+        self.c_summaryTab = SummaryTab(c_plot_note, self.c_coverageData)
+        self.c_siPlotTab = SIPlotTab(c_plot_note, self.c_siplotData)
+        self.c_qplotTab = QPlotTab(c_plot_note, self.c_qplotData)
+        self.c_trawlTab = TrawlTab(c_plot_note, self.c_trawlData)
+        self.c_customTab = CustomTab(c_plot_note, self.c_customData)
+        self.c_3dTab = Tab3d(c_plot_note, self.c_3dData)
+        # self.c_scurveTab = ScurveTab(c_plot_note, self.c_scurveData)
+        self.c_scurveAllTab = ScurveAllTab(c_plot_note, self.c_scurveAllData)
+        c_plot_note.add(self.c_summaryTab, text='Summary')
+        c_plot_note.add(self.c_trawlTab, text='TRAWL')
+        c_plot_note.add(self.c_qplotTab, text='QPlot')
+        c_plot_note.add(self.c_siPlotTab, text='SI Plot')
+        c_plot_note.add(self.c_customTab, text='Custom')
+        c_plot_note.add(self.c_3dTab, text='3D')
+        # c_plot_note.add(self.c_scurveTab, text='S-Curve (Bins)')
+        c_plot_note.add(self.c_scurveAllTab, text='S-Curve')
         # Source Plot Data
         self.s_coverageData = CoverageData(self.loadedData, self, root, 'Source')
         self.s_qplotData = QPlotData(self.loadedData, self, root, 'Source')
         self.s_trawlData = TRAWLData(self.loadedData, self, root, 'Source')
         self.s_customData = CustomData(self.loadedData, self, root, 'Source')
         # Source Plot Tabs
-        self.s_summaryTab = SummaryTab(source_note, self.s_coverageData)
-        self.s_trawlTab = TrawlTab(source_note, self.s_trawlData)
-        self.s_qplotTab = QPlotTab(source_note, self.s_qplotData)
-        self.s_customTab = CustomTab(source_note, self.s_customData)
-        source_note.add(self.s_summaryTab, text='Summary')
-        source_note.add(self.s_trawlTab, text='TRAWL')
-        source_note.add(self.s_qplotTab, text='QPlot')
-        source_note.add(self.s_customTab, text='Custom')
-        source_note.pack(fill=tk.BOTH, expand=True)
+        self.s_summaryTab = SummaryTab(s_plot_note, self.s_coverageData)
+        self.s_trawlTab = TrawlTab(s_plot_note, self.s_trawlData)
+        self.s_qplotTab = QPlotTab(s_plot_note, self.s_qplotData)
+        self.s_customTab = CustomTab(s_plot_note, self.s_customData)
+        s_plot_note.add(self.s_summaryTab, text='Summary')
+        s_plot_note.add(self.s_trawlTab, text='TRAWL')
+        s_plot_note.add(self.s_qplotTab, text='QPlot')
+        s_plot_note.add(self.s_customTab, text='Custom')
         # Application Plot Data
         self.a_coverageData = CoverageData(self.loadedData, self, root, 'Application')
         self.a_qplotData = QPlotData(self.loadedData, self, root, 'Application')
         self.a_trawlData = TRAWLData(self.loadedData, self, root, 'Application')
         self.a_customData = CustomData(self.loadedData, self, root, 'Application')
         # Application Plot Tabs
-        self.a_summaryTab = SummaryTab(application_note, self.a_coverageData)
-        self.a_trawlTab = TrawlTab(application_note, self.a_trawlData)
-        self.a_qplotTab = QPlotTab(application_note, self.a_qplotData)
-        self.a_customTab = CustomTab(application_note, self.a_customData)
-        application_note.add(self.a_summaryTab, text='Summary')
-        application_note.add(self.a_trawlTab, text='TRAWL')
-        application_note.add(self.a_qplotTab, text='QPlot')
-        application_note.add(self.a_customTab, text='Custom')
-        application_note.pack(fill=tk.BOTH, expand=True)
-        self.main_note.pack(side = tk.RIGHT, expand=True)
-        infoPw.add(self.main_note, stretch='always')
-
+        self.a_summaryTab = SummaryTab(a_plot_note, self.a_coverageData)
+        self.a_trawlTab = TrawlTab(a_plot_note, self.a_trawlData)
+        self.a_qplotTab = QPlotTab(a_plot_note, self.a_qplotData)
+        self.a_customTab = CustomTab(a_plot_note, self.a_customData)
+        a_plot_note.add(self.a_summaryTab, text='Summary')
+        a_plot_note.add(self.a_trawlTab, text='TRAWL')
+        a_plot_note.add(self.a_qplotTab, text='QPlot')
+        a_plot_note.add(self.a_customTab, text='Custom')
+        # Create Per Level Tabs Underneath Plot Notebook
+        c_data_note = ttk.Notebook(c_plotPw)
+        s_data_note = ttk.Notebook(s_plotPw)
+        a_data_note = ttk.Notebook(a_plotPw)
+        # Data tabs
+        self.c_dataTableData = DataTabData(self.loadedData, self, root, 'Codelet')
+        self.s_dataTableData = DataTabData(self.loadedData, self, root, 'Source')
+        self.a_dataTableData = DataTabData(self.loadedData, self, root, 'Application')
+        self.c_dataTable = DataTab(c_data_note, self.c_dataTableData)
+        self.s_dataTable = DataTab(s_data_note, self.s_dataTableData)
+        self.a_dataTable = DataTab(a_data_note, self.a_dataTableData)
+        c_data_note.add(self.c_dataTable, text='Data')
+        s_data_note.add(self.s_dataTable, text='Data')
+        a_data_note.add(self.a_dataTable, text='Data')
+        # Short name tabs
+        self.c_shortNameData = ShortNameData(self.loadedData, self, root, 'Codelet')
+        self.s_shortNameData = ShortNameData(self.loadedData, self, root, 'Source')
+        self.a_shortNameData = ShortNameData(self.loadedData, self, root, 'Application')
+        self.c_shortNameTable = ShortNameTab(c_data_note, self.c_shortNameData)
+        self.s_shortNameTable = ShortNameTab(s_data_note, self.s_shortNameData)
+        self.a_shortNameTable = ShortNameTab(a_data_note, self.a_shortNameData)
+        c_data_note.add(self.c_shortNameTable, text='Short Names')
+        s_data_note.add(self.s_shortNameTable, text='Short Names')
+        a_data_note.add(self.a_shortNameTable, text='Short Names')
+        # Mapping tabs
+        self.c_mappingsData = MappingsData(self.loadedData, self, root, 'Codelet')
+        self.s_mappingsData = MappingsData(self.loadedData, self, root, 'Source')
+        self.a_mappingsData = MappingsData(self.loadedData, self, root, 'Application')
+        self.c_mappingsTab = MappingsTab(c_data_note, self.c_mappingsData)
+        self.s_mappingsTab = MappingsTab(s_data_note, self.s_mappingsData)
+        self.a_mappingsTab = MappingsTab(a_data_note, self.a_mappingsData)
+        c_data_note.add(self.c_mappingsTab, text='Mappings')
+        s_data_note.add(self.s_mappingsTab, text='Mappings')
+        a_data_note.add(self.a_mappingsTab, text='Mappings')
+        # Filtering tabs
+        self.c_filteringData = FilteringData(self.loadedData, self, root, 'Codelet')
+        self.s_filteringData = FilteringData(self.loadedData, self, root, 'Source')
+        self.a_filteringData = FilteringData(self.loadedData, self, root, 'Application')
+        self.c_filteringTab = FilteringTab(c_data_note, self.c_filteringData)
+        self.s_filteringTab = FilteringTab(s_data_note, self.s_filteringData)
+        self.a_filteringTab = FilteringTab(a_data_note, self.a_filteringData)
+        c_data_note.add(self.c_filteringTab, text='Filtering')
+        s_data_note.add(self.s_filteringTab, text='Filtering')
+        a_data_note.add(self.a_filteringTab, text='Filtering')
+        # Packing
+        c_plot_note.pack(side = tk.TOP, expand=True)
+        s_plot_note.pack(side = tk.TOP, expand=True)
+        a_plot_note.pack(side = tk.TOP, expand=True)
+        c_data_note.pack(side = tk.BOTTOM, expand=True)
+        s_data_note.pack(side = tk.BOTTOM, expand=True)
+        a_data_note.pack(side = tk.BOTTOM, expand=True)
+        c_plotPw.add(c_plot_note, stretch='always')
+        c_plotPw.add(c_data_note, stretch='always')
+        s_plotPw.add(s_plot_note, stretch='always')
+        s_plotPw.add(s_data_note, stretch='always')
+        a_plotPw.add(a_plot_note, stretch='always')
+        a_plotPw.add(a_data_note, stretch='always')
+        c_plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        s_plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        a_plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.oneview_note.pack(side = tk.LEFT, expand=True)
+        self.level_plot_note.pack(side=tk.RIGHT, expand=True)
+        infoPw.add(self.oneview_note, stretch='always')
+        infoPw.add(self.level_plot_note, stretch='always')
         return infoPw
 
 

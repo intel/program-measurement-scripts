@@ -227,10 +227,12 @@ DEFAULT_CHOSEN_NODE_SET=BASIC_NODE_SET
 # capacity_formula= {
 #     }
 
-class SiPlot(CapacityPlot):
-    def __init__(self, data, variant, outputfile_prefix, norm, title, 
+# class SiPlot(CapacityPlot):
+#     def __init__(self, data, variant, outputfile_prefix, norm, title, 
+class SiPlot(CapePlot):
+    def __init__(self, data, loadedData, level, variant, outputfile_prefix, norm, title, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
-        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
+        super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
                          default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
                          short_names_path=short_names_path)
         # cur_run_df already set when self.data is created
@@ -293,7 +295,8 @@ class SiPlot(CapacityPlot):
         return l_df
 
     def mk_plot_title(self, title, variant, scale):
-        chosen_node_set = self.chosen_node_set
+        # chosen_node_set = self.chosen_node_set
+        chosen_node_set = 'Fix This'
         # If chosen_node_set is too long then we need to add more new lines as matplotlib doesn't handle this automatically
         # 80 chars is the max that will fit on a line
         title = "{} : n = {}\n".format(title, len(chosen_node_set))

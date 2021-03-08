@@ -340,10 +340,13 @@ class CapacityData(NodeCentricData):
 
 # Base class for all plots
 class CapePlot:
-    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         # Data is a list of data
         self.data = data
+        self.loadedData = loadedData
+        self.level = level
+        self.guiState = loadedData.levelData[level].guiState
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
         self.ctxs = []
@@ -356,15 +359,22 @@ class CapePlot:
         self.gui = gui
         self.x_axis = x_axis
         self.y_axis = y_axis
-        self.mappings = mappings
         self.short_names_path = short_names_path
         self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
 
     # Getter of df, delegate to self.data
     @property
     def df(self):
-        return pd.concat([data.df for data in self.data], ignore_index=True)
-        # return self.data.df
+        df = pd.concat([data.df for data in self.data], ignore_index=True)
+        # Apply filtering 
+        filter_data = [self.guiState.filterMetric, self.guiState.filterMinThreshold, self.guiState.filterMaxThreshold]
+        if filter_data[0]: df = df.loc[(df[filter_data[0]] >= filter_data[1]) & (df[filter_data[0]] <= filter_data[2])]
+        if self.guiState.hidden: df = df.loc[~(df[NAME]+df[TIMESTAMP].astype(str)).isin(self.guiState.hidden)]
+        return df
+
+    @property
+    def mapping(self):
+        return self.loadedData.levelData[self.level].mapping
     
     # # Setter of df (May remove), delegate to self.data
     # @df.setter
@@ -400,7 +410,6 @@ class CapePlot:
         gui = self.gui
         x_axis = self.x_axis
         y_axis = self.y_axis
-        mappings = self.mappings
         short_names_path = self.short_names_path
 
         
@@ -434,7 +443,7 @@ class CapePlot:
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
-                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, mappings=mappings)
+                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis)
         # self.df = df
 
     def draw_contours(self, xmax, ymax, color_labels):
@@ -496,6 +505,9 @@ class CapePlot:
         ax.set(xlabel=x_axis if x_axis else self.default_x_axis, \
             ylabel=y_axis if y_axis else self.default_y_axis)
         ax.set_title(title, pad=40)
+
+        # Add footnote with datafile and timestamp
+        plt.figtext(0, 0.01, self.loadedData.source_title, horizontalalignment='left')
 
         # Legend
         legend = self.mk_legend(color_labels)
@@ -575,16 +587,17 @@ class CapePlot:
         ax = self.ax
         name_mapping = dict()
         mymappings = []
-        mappings = pd.read_csv(os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv'))
+        # mappings = pd.read_csv(os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv'))
+        mappings = self.mapping
         if not mappings.empty:
             for i in mappings.index:
                 name_mapping[mappings['Before Name'][i]+str(mappings['Before Timestamp'][i])] = []
                 name_mapping[mappings['After Name'][i]+str(mappings['After Timestamp'][i])] = []
             for index in mappings.index:
-                before_row = df.loc[(df[NAME]==mappings['Before Name'][index]) & \
-                    (df[TIMESTAMP]==mappings['Before Timestamp'][index])].reset_index(drop=True)
-                after_row = df.loc[(df[NAME]==mappings['After Name'][index]) & \
-                    (df[TIMESTAMP]==mappings['After Timestamp'][index])].reset_index(drop=True)
+                before_row = self.df.loc[(self.df[NAME]==mappings['Before Name'][index]) & \
+                    (self.df[TIMESTAMP]==mappings['Before Timestamp'][index])].reset_index(drop=True)
+                after_row = self.df.loc[(self.df[NAME]==mappings['After Name'][index]) & \
+                    (self.df[TIMESTAMP]==mappings['After Timestamp'][index])].reset_index(drop=True)
                 if not before_row.empty and not after_row.empty:
                     x_axis = x_axis if x_axis else self.default_x_axis
                     y_axis = y_axis if y_axis else self.default_y_axis
@@ -630,10 +643,10 @@ class CapePlot:
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
-    def __init__(self, data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), \
             short_names_path=''):
-        super().__init__(data, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+        super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
         #self.default_x_axis = self.data.op_metric_name
 

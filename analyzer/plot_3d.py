@@ -48,10 +48,10 @@ class Tab3d(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'Custom')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'Custom')
+        # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return Plot3d(self.data.capacityDataItems, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
+        return Plot3d(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
                       x_axis=self.data.x_axis, y_axis=self.data.y_axis, z_axis=None, mappings=self.mappings, 
                       short_names_path=self.data.gui.loadedData.short_names_path)

@@ -50,12 +50,12 @@ class SummaryTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'Summary')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'Summary')
+        # self.tableNote.add(self.axesTab, text="Axes")
         #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
-        self.guideTab = GuideTab(self.tableNote, self)
-        self.tableNote.add(self.guideTab, text='Guide')
+        # self.guideTab = GuideTab(self.tableNote, self)
+        # self.tableNote.add(self.guideTab, text='Guide')
 
     def mk_plot(self):
-        return CoveragePlot(self.data.capacityDataItems, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
+        return CoveragePlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
                             x_axis=None, y_axis=None, mappings=self.mappings)

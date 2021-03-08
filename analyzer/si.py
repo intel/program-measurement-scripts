@@ -49,14 +49,14 @@ class SIPlotTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.clusterTab = ClusterTab(self.tableNote, self)
-        self.filteringTab = FilteringTab(self.tableNote, self)
-        self.tableNote.add(self.clusterTab, text='Clusters')
-        self.tableNote.add(self.filteringTab, text='Filtering')
+        # self.clusterTab = ClusterTab(self.tableNote, self)
+        # self.filteringTab = FilteringTab(self.tableNote, self)
+        # self.tableNote.add(self.clusterTab, text='Clusters')
+        # self.tableNote.add(self.filteringTab, text='Filtering')
 
     def mk_plot(self):
         # TODO: Work with Elias to use cherry pick rather than passing in filter data
-        return SiPlot (self.data.siDataItems, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
+        return SiPlot (self.data.siDataItems, self.data.loadedData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
                        filtering=False, filter_data=None, mappings=self.mappings, 
                        scale=self.data.scale, 
                        short_names_path=self.data.gui.loadedData.short_names_path) 

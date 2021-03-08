@@ -46,11 +46,11 @@ class TrawlTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'TRAWL')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'TRAWL')
+        # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return TrawlPlot(self.data.capacityDataItems, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
+        return TrawlPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
                          gui=True, x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
                          mappings=self.mappings, 
                          short_names_path=self.data.gui.loadedData.short_names_path)
