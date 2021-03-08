@@ -13,6 +13,7 @@ import pickle
 from metric_names import MetricName
 from abc import ABC, abstractmethod
 from collections import UserDict
+import networkx as nx
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -25,8 +26,13 @@ plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
 # Base class for plot data without GUI specific data
 # Subclass should override for plot specific data processing.
 class CapeData(ABC):
+    AllCapeDataItems = []
+    DepGraph = nx.DiGraph()
+
     def __init__(self, df):
         self._df = df
+        self.cache_file = None
+        CapeData.AllCapeDataItems.append(self)
 
     
     # Getter of df
@@ -46,7 +52,50 @@ class CapeData(ABC):
     def set_cache_dir(cls, data_dir):
         cls.cache_dir = data_dir
 
+    @classmethod
+    def clear_dependency_info(cls, self):
+        cls.AllCapeDataItems.clear()
+        cls.DepGraph = nx.DiGraph()
+
+    def record_dependency(self):
+        inSet = set(self.input_args())
+        outSet = set(self.output_args())
+        for node in self.AllCapeDataItems:
+            if node == self:
+                continue
+            if node.df is not self.df:
+                continue
+            nodeToItemMetrics = set(node.output_args()) & inSet
+            if nodeToItemMetrics:
+                self.DepGraph.add_edge(node, self, metrics=nodeToItemMetrics)
+            itemToNodeMetrics = set(node.input_args()) & outSet
+            if itemToNodeMetrics:
+                self.DepGraph.add_edge(self, node, metrics=itemToNodeMetrics)
+                
+            
+
+
+    @classmethod
+    def invalidate_metrics(cls, metrics):
+        metricSet = set(metrics)
+        invalidateItems = set().union(*[nx.ancestors(cls.DepGraph, item) for item in cls.AllCapeDataItems if set(item.input_args()) & metricSet])
+
+        # while updated:
+        #     invalidateItems = [item for item in cls.AllCapeDataItems if set(item.input_args()) & metricSet]
+        #     newMetricSet = set().union(*[item.output_args() for item in invalidateItems]) | metricSet
+        #     updated = not newMetricSet.equals(metricSet)
+        #     metricSet = newMetricSet
+        # Now we have collected all teams to be invalidated
+        for item in invalidateItems:
+            item.invalidate_cache()
         
+        
+    def invalidate_cache(self):
+        cache_file = self.cache_file 
+        if cache_file and os.path.isfile(cache_file):
+            os.remove(cache_file)
+            self.cache_file = None
+
     # Subclass could override to read more data
     def try_read_cache(self, filename_prefix):
         cache_file = os.path.join(self.cache_dir, f'{filename_prefix}_dfs.pkl') if self.cache_dir and filename_prefix else None
@@ -55,6 +104,7 @@ class CapeData(ABC):
                 data_read = pickle.load(cache_data)
                 df = data_read.pop()  # extra the last dataframe which is the df to return
                 self.extra_data_to_restore(data_read)
+                self.cache_file = cache_file
                 return df
         return None
 
@@ -66,6 +116,7 @@ class CapeData(ABC):
                 more_data_to_write = self.extra_data_to_save()
                 # df insert at the end so it can be popped by the read call
                 pickle.dump(more_data_to_write + [df], cache_data)
+                self.cache_file = cache_file
              
     # Subclass override to set the fields give more data
     def extra_data_to_restore(self, more_data):
@@ -113,6 +164,7 @@ class CapeData(ABC):
             merged = result_df
         for col in outputs:
             self.df[col] = merged[col]
+        self.record_dependency()
         return self
 
     @abstractmethod
@@ -128,6 +180,14 @@ class CapeData(ABC):
     # SEE ALSO: compute_impl()
     def input_output_args(self):
         return None, None
+
+    def output_args(self):
+        input_args, output_args = self.input_output_args()
+        return output_args
+
+    def input_args(self):
+        input_args, output_args = self.input_output_args()
+        return input_args
 
 class NodeCentricData(CapeData):
     def __init__(self, df):

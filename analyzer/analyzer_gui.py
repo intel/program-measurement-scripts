@@ -93,6 +93,7 @@ class LoadedData(Observable):
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
+            pass
         
         @property
         def df(self):

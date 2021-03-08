@@ -102,9 +102,6 @@ class MetaData(CapeData):
             df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
         return df 
 
-    def output_args(self):
-        input_args, output_args = self.input_output_args()
-        return output_args
 
 class AnalyticsData(MetaData): 
     def __init__(self, df):
