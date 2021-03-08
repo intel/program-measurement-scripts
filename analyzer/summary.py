@@ -9,7 +9,7 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab, GuideTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -50,12 +50,12 @@ class SummaryTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'Summary')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'Summary')
+        # self.tableNote.add(self.axesTab, text="Axes")
         #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
-        self.guideTab = GuideTab(self.tableNote, self)
-        self.tableNote.add(self.guideTab, text='Guide')
+        # self.guideTab = GuideTab(self.tableNote, self)
+        # self.tableNote.add(self.guideTab, text='Guide')
 
     def mk_plot(self):
-        return CoveragePlot(self.data.capacityDataItems, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
-                            x_axis=None, y_axis=None, mappings=self.mappings)
+        return CoveragePlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
+                            x_axis=self.data.x_axis, y_axis=self.data.y_axis, mappings=self.mappings)

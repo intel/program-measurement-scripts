@@ -9,7 +9,7 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -60,9 +60,9 @@ class QPlotTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'QPlot')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'QPlot')
+        # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return QPlot(self.data.capacityDataItems, 'ORIG', "test", self.data.scale, "QPlot", False, True, None, None, 
+        return QPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "QPlot", False, True, self.data.x_axis, self.data.y_axis, 
                      self.data.mappings, self.data.gui.loadedData.short_names_path)

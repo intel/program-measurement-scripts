@@ -11,10 +11,10 @@ import pickle
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName
 from metric_names import NonMetricName
-from sat_analysis import find_clusters as find_si_clusters
+from sat_analysis import do_sat_analysis as find_si_clusters
 globals().update(MetricName.__members__)
 
 class SIPlotData(AnalyzerData):
@@ -49,14 +49,14 @@ class SIPlotTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.clusterTab = ClusterTab(self.tableNote, self)
-        self.filteringTab = FilteringTab(self.tableNote, self)
-        self.tableNote.add(self.clusterTab, text='Clusters')
-        self.tableNote.add(self.filteringTab, text='Filtering')
+        # self.clusterTab = ClusterTab(self.tableNote, self)
+        # self.filteringTab = FilteringTab(self.tableNote, self)
+        # self.tableNote.add(self.clusterTab, text='Clusters')
+        # self.tableNote.add(self.filteringTab, text='Filtering')
 
     def mk_plot(self):
         # TODO: Work with Elias to use cherry pick rather than passing in filter data
-        return SiPlot (self.data.siDataItems, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
+        return SiPlot (self.data.siDataItems, self.data.loadedData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
                        filtering=False, filter_data=None, mappings=self.mappings, 
                        scale=self.data.scale, 
                        short_names_path=self.data.gui.loadedData.short_names_path) 

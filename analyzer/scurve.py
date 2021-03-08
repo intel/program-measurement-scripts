@@ -10,7 +10,7 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -39,5 +39,5 @@ class ScurveTab(AnalyzerTab):
     # Create meta tabs
     def buildTableTabs(self):
         super().buildTableTabs()
-        self.axesTab = AxesTab(self.tableNote, self, 'Scurve')
-        self.tableNote.add(self.axesTab, text="Axes")
+        # self.axesTab = AxesTab(self.tableNote, self, 'Scurve')
+        # self.tableNote.add(self.axesTab, text="Axes")
