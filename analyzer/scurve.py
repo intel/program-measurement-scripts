@@ -10,7 +10,7 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 

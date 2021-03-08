@@ -9,7 +9,7 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab, GuideTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
@@ -58,4 +58,4 @@ class SummaryTab(AnalyzerTab):
 
     def mk_plot(self):
         return CoveragePlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
-                            x_axis=None, y_axis=None, mappings=self.mappings)
+                            x_axis=self.data.x_axis, y_axis=self.data.y_axis, mappings=self.mappings)

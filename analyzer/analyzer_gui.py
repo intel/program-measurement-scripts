@@ -47,7 +47,7 @@ from custom import CustomData, CustomTab
 from plot_3d import Data3d, Tab3d
 from scurve import ScurveData, ScurveTab
 from scurve_all import ScurveAllData, ScurveAllTab
-from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab, DataTab
+from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab, DataTab
 from meta_tabs import ShortNameData, DataTabData, MappingsData, FilteringData
 from plot_interaction import PlotInteraction
 from capeplot import CapeData
@@ -194,8 +194,8 @@ class LoadedData(Observable):
     def update_mapping(self, level):
         self.levelData[level].updated()
 
-    def setFilter(self, level, metric, minimum, maximum, names):
-        self.levelData[level].guiState.setFilter(metric, minimum, maximum, names)
+    def setFilter(self, level, metric, minimum, maximum, names, variants):
+        self.levelData[level].guiState.setFilter(metric, minimum, maximum, names, variants)
         self.levelData[level].updated()
 
     def update_short_names(self, new_short_names):

@@ -59,11 +59,12 @@ class PerLevelGuiState:
     def reset_labels(self):
         self.labels = []
 
-    def setFilter(self, metric, minimum, maximum, names):
+    def setFilter(self, metric, minimum, maximum, names, variants):
         self.filterMetric = metric
         self.filterMinThreshold = minimum
         self.filterMaxThreshold = maximum
         self.hidden = names
+        self.selectedVariants = variants
 
     def reset_state(self):
         self.hidden = []
@@ -96,6 +97,10 @@ class AnalyzerData(Observable):
         return self.loadedData.get_mapping(self.level)
 
     @property
+    def variants(self):
+        return self.loadedData.levelData[self.level].guiState.selectedVariants
+
+    @property
     def capacityDataItems(self):
         return self.loadedData.levelData[self.level].capacityDataItems
 
@@ -108,10 +113,7 @@ class AnalyzerData(Observable):
         return self.loadedData.levelData[self.level].satAnalysisDataItems
 
     def notify(self, loadedData, update, variants, mappings):
-        # Only show selected variants, default is most frequent variant
-        if not variants: self.variants = [self.loadedData.default_variant]
-        else: self.variants = variants
-        # Get correct dataframe
+        pass
 
     def merge_metrics(self, df, metrics):
         self.loadedData.merge_metrics(df, metrics, self.level)

@@ -45,8 +45,7 @@ class PlotInteraction():
         self.adjusting = False
         self.cur_xlim = self.home_xlim = self.textData['ax'].get_xlim()
         self.cur_ylim = self.home_ylim = self.textData['ax'].get_ylim()
-        # Create lists of tabs that need to be synchronized according to the level and update the plot with the saved state
-        # self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.c_summaryTab, self.gui.c_scurveTab, self.gui.c_scurveAllTab]
+        # TODO: Get rid of all places where these tabs are looped through and have loadedData notify observers instead
         self.codelet_tabs = [self.gui.c_siPlotTab, self.gui.c_trawlTab, self.gui.c_qplotTab, self.gui.c_customTab, self.gui.c_summaryTab, self.gui.c_scurveAllTab]
         self.source_tabs = [self.gui.s_trawlTab, self.gui.s_qplotTab, self.gui.s_customTab, self.gui.s_summaryTab]
         self.application_tabs = [self.gui.a_trawlTab, self.gui.a_qplotTab, self.gui.a_customTab, self.gui.a_summaryTab]
@@ -81,13 +80,6 @@ class PlotInteraction():
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
-        # Point selection table
-        options=[]
-        for i in range(len(self.df[SHORT_NAME])):
-            options.append('[' + self.df[SHORT_NAME][i] + '] ' + self.df[NAME][i] + ' [' + str(self.df[TIMESTAMP][i]) + ']')
-        self.pointSelector = ChecklistBox(self.tab.window, options, options, self, short_names=self.df[SHORT_NAME].tolist(), names=self.df[NAME].tolist(), timestamps=self.df[TIMESTAMP].tolist(), bd=1, relief="sunken", background="white")
-        self.selector_update_button = tk.Button(self.plotFrame3, text='Update Points', command=self.pointSelector.updatePlot)
-        self.pointSelector.restoreState(self.stateDictionary)
         # Plot/toolbar
         self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
         self.canvas.mpl_connect('button_press_event', self.onClick)
@@ -97,7 +89,6 @@ class PlotInteraction():
         if self.gui.loadedData.restore: self.restoreAnalysisState()
         # Grid Layout
         self.toolbar.grid(column=7, row=0, sticky=tk.S)
-        self.selector_update_button.grid(column=6, row=0, sticky=tk.S, pady=2)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
@@ -111,15 +102,11 @@ class PlotInteraction():
         self.tab.window.add(self.tab_note, stretch='always')
         self.axesTab = AxesTab(self.tab_note, self.tab, self.tab.name)
         self.tab_note.add(self.axesTab, text='Axes')
-        # self.selector_update_button.pack(side=tk.BOTTOM, anchor=tk.SE)
-        # self.pointSelector.pack(side=tk.RIGHT, anchor=tk.N, fill=tk.Y)
-        # self.pointSelector.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        # self.tab.window.add(self.pointSelector, stretch='always')
+        self.labelTab = LabelTab(self.tab_note, self.tab, self.tab.level)
+        self.tab_note.add(self.labelTab, text='Labels')
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
         self.toolbar.update()
         self.canvas.draw()
-        # PlotInteraction observes changes in several meta tabs
-        # self.tab.labelTab.add_observers(self)
 
     def restoreAnalysisState(self):
         self.restoreState(self.gui.loadedData.levels[self.level]['data'])
@@ -590,6 +577,111 @@ class AxesTab(tk.Frame):
             self.tab.data.y_axis = "{}".format(self.tab.y_axis)
             self.tab.data.x_axis = "{}".format(self.tab.x_axis)
             self.tab.data.notify(self.tab.data.gui.loadedData)
+
+class LabelTab(tk.Frame):
+    def __init__(self, parent, tab, level):
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.tab = tab
+        self.loadedData = self.tab.data.gui.loadedData
+        self.metric1 = tk.StringVar(value='Metric 1')
+        self.metric2 = tk.StringVar(value='Metric 2')
+        self.metric3 = tk.StringVar(value='Metric 3')
+        self.menu1 = AxesTab.custom_axes(self, self.metric1, self.tab.data.gui)
+        self.menu2 = AxesTab.custom_axes(self, self.metric2, self.tab.data.gui)
+        self.menu3 = AxesTab.custom_axes(self, self.metric3, self.tab.data.gui)
+        self.updateButton = tk.Button(self, text='Update', command=self.updateLabels)
+        self.resetButton = tk.Button(self, text='Reset', command=self.reset)
+        # Grid layout 
+        self.menu1.grid(row=0, column=0, padx = 10, pady=10, sticky=tk.NW)
+        self.menu2.grid(row=0, column=1, pady=10, sticky=tk.NW)
+        self.menu3.grid(row=0, column=2, padx = 10, pady=10, sticky=tk.NW)
+        self.updateButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
+        self.resetButton.grid(row=1, column=1, sticky=tk.NW)
+
+    def resetMetrics(self):
+        self.metric1.set('Metric 1')
+        self.metric2.set('Metric 2')
+        self.metric3.set('Metric 3')
+        # self.loadedData.levelData[level].reset_labels()
+
+    def reset(self):
+        self.resetMetrics()
+        for tab in self.tab.plotInteraction.tabs:
+            if tab.name != 'Scurve':
+                textData = tab.plotInteraction.textData
+                tab.current_labels = []
+                for i, text in enumerate(textData['texts']):
+                    text.set_text(textData['orig_mytext'][i])
+                    textData['mytext'] = copy.deepcopy(textData['orig_mytext'])
+                    textData['legend'].get_title().set_text(textData['orig_legend'])
+                tab.plotInteraction.canvas.draw()
+                # Adjust labels if already adjusted
+                if tab.plotInteraction.adjusted:
+                    tab.plotInteraction.adjustText()
+
+    def updateLabels(self):
+        current_metrics = []
+        if self.metric1.get() != 'Metric 1': current_metrics.append(self.metric1.get())
+        if self.metric2.get() != 'Metric 2': current_metrics.append(self.metric2.get())
+        if self.metric3.get() != 'Metric 3': current_metrics.append(self.metric3.get())
+        current_metrics = [metric for metric in current_metrics if metric in self.tab.plotInteraction.df.columns.tolist()]
+        if not current_metrics: return # User hasn't selected any label metrics
+        for tab in self.tab.plotInteraction.tabs:
+            if tab.name != 'Scurve':
+                tab.current_labels = current_metrics
+                textData = tab.plotInteraction.textData
+
+                # TODO: Update the rest of the plots at the same level with the new checked variants
+                # for tab in self.parent.tab.plotInteraction.tabs:
+                #     for i, cb in enumerate(self.cbs):
+                #         tab.labelTab.checkListBox.vars[i].set(self.vars[i].get())
+                #     tab.current_labels = self.parent.tab.current_labels
+
+                # If nothing selected, revert labels and legend back to original
+                if not tab.current_labels:
+                    for i, text in enumerate(textData['texts']):
+                        text.set_text(textData['orig_mytext'][i])
+                        textData['mytext'] = copy.deepcopy(textData['orig_mytext'])
+                        textData['legend'].get_title().set_text(textData['orig_legend'])
+                else: 
+                    # Update existing plot texts by adding user specified metrics
+                    df = tab.plotInteraction.df
+                    for i, text in enumerate(textData['texts']):
+                        toAdd = textData['orig_mytext'][i][:-1]
+                        for choice in tab.current_labels:
+                            codeletName = textData['names'][i]
+                            # TODO: Clean this up so it's on the edges and not the data points
+                            if choice in [SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference']:
+                                tempDf = pd.DataFrame()
+                                if not tab.mappings.empty: # Mapping
+                                    tempDf = tab.mappings.loc[(tab.mappings['Before Name']+tab.mappings['Before Timestamp'].astype(str))==codeletName]
+                                if tempDf.empty: 
+                                    if choice == 'Difference': 
+                                        tempDf = tab.mappings.loc[(tab.mappings['After Name']+tab.mappings['After Timestamp'].astype(str))==codeletName]
+                                        if tempDf.empty:
+                                            value = 'Same'
+                                    else: value = 1
+                                else: value = tempDf[choice].iloc[0]
+                            else:
+                                value = df.loc[(df[NAME]+df[TIMESTAMP].astype(str))==codeletName][choice].iloc[0]
+                            if isinstance(value, int) or isinstance(value, float):
+                                toAdd += ', ' + str(round(value, 2))
+                            else:
+                                toAdd += ', ' + str(value)
+                        toAdd += ')'
+                        text.set_text(toAdd)
+                        textData['mytext'][i] = toAdd
+                    # Update legend for user to see order of metrics in the label
+                    newTitle = textData['orig_legend'][:-1]
+                    for choice in tab.current_labels:
+                        newTitle += ', ' + choice
+                    newTitle += ')'
+                    textData['legend'].get_title().set_text(newTitle)
+                tab.plotInteraction.canvas.draw()
+                # Adjust labels if already adjusted
+                if tab.plotInteraction.adjusted:
+                    tab.plotInteraction.adjustText()
 
 class ChecklistBox(tk.Frame):
     def __init__(self, parent, choices, hidden, tab, short_names=[], names=[], timestamps=[], **kwargs):
