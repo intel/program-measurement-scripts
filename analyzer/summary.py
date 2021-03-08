@@ -57,5 +57,5 @@ class SummaryTab(AnalyzerTab):
         self.tableNote.add(self.guideTab, text='Guide')
 
     def mk_plot(self):
-        return CoveragePlot(self.data.capacityData, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
+        return CoveragePlot(self.data.capacityDataItems, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
                             x_axis=None, y_axis=None, mappings=self.mappings)
