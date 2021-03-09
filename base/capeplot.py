@@ -445,6 +445,10 @@ class CapePlot:
     @property
     def mapping(self):
         return self.loadedData.levelData[self.level].mapping
+
+    def color_map(self, color_map):
+        return self.loadedData.levelData[self.level].color_map
+
     
     # # Setter of df (May remove), delegate to self.data
     # @df.setter

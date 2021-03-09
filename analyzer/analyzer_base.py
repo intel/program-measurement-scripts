@@ -29,15 +29,20 @@ class PerLevelGuiState:
         # The final mask used to select data points
         self.selectedDataPoints = []
 
-        self.map = pd.DataFrame(columns=KEY_METRICS + [MetricName.VARIANT, 'Color'])
         # A map from color to color name for plotting
-        self.colorDict = {}
+        self.color_map = pd.DataFrame(columns=KEY_METRICS + ['Color'])
 
         # Cape paths
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
 
+    def set_color_map(self, color_map_df):
+        self.color_map = color_map_df
+
+    def get_color_map(self):
+        return self.color_map
+    
     # Write methods to update the fields and then call 
     # self.loadedData.levelData[level].updated() to notify all observers
     def add_mapping(self, toAdd):

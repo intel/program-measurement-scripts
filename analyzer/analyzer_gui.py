@@ -97,6 +97,7 @@ class LoadedData(Observable):
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
+            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'))
             pass
         
         @property
@@ -132,9 +133,15 @@ class LoadedData(Observable):
             self.guiState.reset_labels()
             self.updated()
 
+        @property
+        def color_map(self):
+            return self.guiState.get_color_map()
+
         def update_short_names(self, new_short_names):
             for item in self._shortnameDataItems:
+                # Will reread short name files (should have been updated)
                 item.compute() 
+            self.guiState.set_color_map(new_short_names[KEY_METRICS+['Color']])
             self.updated()
             
 
