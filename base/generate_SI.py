@@ -203,7 +203,7 @@ class SiData(NodeWithUnitData):
         # For control unit node, use raw % stalls as rel_sat 
         for node in chosen_node_set & REAL_BUFFER_NODE_SET:
             #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-            df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / 100 
+            df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
         df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
         df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
         #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
@@ -223,13 +223,13 @@ class SiData(NodeWithUnitData):
         #df['Intensity']=node_cnt*df[MetricName.CAP_MEMMAX_GB_P_S] / csum
         df.drop('SatCaps', axis=1, inplace=True)
 
-MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-REG_NODE_SET={'VR [GB/s]'}
+MEM_NODE_SET={'L1 [GW/s]', 'L2 [GW/s]', 'L3 [GW/s]', 'RAM [GW/s]'}
+REG_NODE_SET={'VR [GW/s]'}
 OP_NODE_SET={'FLOP [GFlop/s]'}
 BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
-SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-REAL_BUFFER_NODE_SET={'FE [GB/s]', 'SB [GB/s]', 'LM [GB/s]', 'RS [GB/s]', 'LB [GB/s]'}
-BUFFER_NODE_SET=REAL_BUFFER_NODE_SET | {'CU [GB/s]'}
+SCALAR_NODE_SET={'L1 [GW/s]', 'L2 [GW/s]', 'L3 [GW/s]', 'RAM [GW/s]'}
+REAL_BUFFER_NODE_SET={'FE [GW/s]', 'SB [GW/s]', 'LM [GW/s]', 'RS [GW/s]', 'LB [GW/s]'}
+BUFFER_NODE_SET=REAL_BUFFER_NODE_SET | {'CU [GW/s]'}
 ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
 # Dictionary to lookup node name to its unit to use
 NODE_UNIT_DICT = dict(node_unit.split(" ") for node_unit in ALL_NODE_SET)
