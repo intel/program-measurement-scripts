@@ -275,10 +275,10 @@ KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
 # Provides all the enums useful for filtering irrelevant metrics
 ALL_METRICS = list(MetricName) + list(NonMetricName)
 
+SHORT_NAME_METRICS = [MetricName.SHORT_NAME, MetricName.VARIANT]
 
-RUN_INFO_METRICS = KEY_METRICS + [ MetricName.SHORT_NAME, MetricName.VARIANT, 
-                    MetricName.NUM_CORES, MetricName.DATA_SET, MetricName.PREFETCHERS, 
-                    MetricName.REPETITIONS, MetricName.SRC_NAME]
+RUN_INFO_METRICS = KEY_METRICS + SHORT_NAME_METRICS + \
+    [ MetricName.NUM_CORES, MetricName.DATA_SET, MetricName.PREFETCHERS, MetricName.REPETITIONS, MetricName.SRC_NAME]
 TIME_METRICS = [ MetricName.TIME_LOOP_S, MetricName.RECIP_TIME_LOOP_MHZ, 
                 MetricName.TIME_APP_S, MetricName.COVERAGE_PCT]
 

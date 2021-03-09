@@ -3,7 +3,7 @@ import pandas as pd
 from capeplot import CapeData
 from summarize import summary_report_df
 from aggregate_summary import aggregate_runs_df
-from metric_names import KEY_METRICS, SUMMARY_METRICS, ANALYTICS_METRICS, MetricName
+from metric_names import KEY_METRICS, SUMMARY_METRICS, ANALYTICS_METRICS, SHORT_NAME_METRICS, MetricName
 
 class SummaryGenerationData(CapeData):
     def __init__(self, df):
@@ -110,4 +110,13 @@ class AnalyticsData(MetaData):
     def input_output_args(self):
         input_args = []
         output_args = ANALYTICS_METRICS
+        return input_args, output_args
+
+class ShortNameData(MetaData): 
+    def __init__(self, df):
+        super().__init__(df) 
+
+    def input_output_args(self):
+        input_args = []
+        output_args = SHORT_NAME_METRICS
         return input_args, output_args
