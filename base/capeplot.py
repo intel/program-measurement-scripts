@@ -66,19 +66,21 @@ class CapeData(ABC):
             if node.df is not self.df:
                 continue
             nodeToItemMetrics = set(node.output_args()) & inSet
-            if nodeToItemMetrics:
+            if nodeToItemMetrics and not self.DepGraph.has_edge(node, self):
                 self.DepGraph.add_edge(node, self, metrics=nodeToItemMetrics)
             itemToNodeMetrics = set(node.input_args()) & outSet
-            if itemToNodeMetrics:
+            if itemToNodeMetrics and not self.DepGraph.has_edge(self, node):
                 self.DepGraph.add_edge(self, node, metrics=itemToNodeMetrics)
                 
             
 
 
     @classmethod
-    def invalidate_metrics(cls, metrics):
+    def invalidate_metrics(cls, metrics, itemPool=None):
+        itemPool = cls.AllCapeDataItems if itemPool is None else itemPool
         metricSet = set(metrics)
-        invalidateItems = set().union(*[nx.ancestors(cls.DepGraph, item) for item in cls.AllCapeDataItems if set(item.input_args()) & metricSet])
+        invalidateItems = set([item for item in itemPool if set(item.input_args()) & metricSet])
+        invalidateItems = invalidateItems | set().union(*[nx.descendants(cls.DepGraph, item) for item in invalidateItems])
 
         # while updated:
         #     invalidateItems = [item for item in cls.AllCapeDataItems if set(item.input_args()) & metricSet]
@@ -87,6 +89,8 @@ class CapeData(ABC):
         #     metricSet = newMetricSet
         # Now we have collected all teams to be invalidated
         for item in invalidateItems:
+            # only invalidate cache for now
+            # TODO: may want to recompute data in topoligical order
             item.invalidate_cache()
         
         
@@ -162,9 +166,15 @@ class CapeData(ABC):
             # Empty self.df case, result_df must have all the KEY_METRICS
             assert set(result_df.columns) & set(KEY_METRICS) == set(KEY_METRICS) 
             merged = result_df
+        updatedCols = set()
         for col in outputs:
+            if col in self.df.columns and self.df[col].equals(merged[col]):
+                continue # Update not needed
             self.df[col] = merged[col]
+            updatedCols.add(col)
         self.record_dependency()
+        # Invalidate item if they work on the same df using updatedCols metrics
+        self.invalidate_metrics(updatedCols, [item for item in self.AllCapeDataItems if item.df is self.df])
         return self
 
     @abstractmethod
