@@ -110,7 +110,7 @@ class SiData(NodeWithUnitData):
 
     # Return (expected inputs, expected outputs)
     def input_output_args(self):
-        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GB_P_S] + \
+        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GW_P_S] + \
             self.capacities(self.chosen_node_set)+self.stallPcts(self.chosen_node_set & REAL_BUFFER_NODE_SET)
         output_args = ['Saturation', 'Intensity', 'SI']
         return input_args, output_args
@@ -216,7 +216,7 @@ class SiData(NodeWithUnitData):
         df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(ns))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
         csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GB_P_S] / csum
+        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GW_P_S] / csum
 
         #node_cnt = len(chosen_node_set)
         #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
