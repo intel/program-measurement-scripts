@@ -366,10 +366,6 @@ class CapePlot:
     @property
     def df(self):
         df = pd.concat([data.df for data in self.data], ignore_index=True)
-        # Apply filtering 
-        filter_data = [self.guiState.filterMetric, self.guiState.filterMinThreshold, self.guiState.filterMaxThreshold]
-        if filter_data[0]: df = df.loc[(df[filter_data[0]] >= filter_data[1]) & (df[filter_data[0]] <= filter_data[2])]
-        if self.guiState.hidden: df = df.loc[~(df[NAME]+df[TIMESTAMP].astype(str)).isin(self.guiState.hidden)]
         return df
 
     @property
@@ -444,7 +440,16 @@ class CapePlot:
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis)
-        # self.df = df
+        # Plot all of the codelets then filter them
+        self.filter_points()
+
+    def filter_points(self):
+        # Hide the marker, label, and arrow if any
+        for name in self.guiState.hidden:
+            if name in self.plotData['name:marker']: self.plotData['name:marker'][name].set_alpha(0)
+            if name in self.plotData['name:text']: self.plotData['name:text'][name].set_alpha(0)
+            if name in self.plotData['name:mapping']: 
+                for mapping in self.plotData['name:mapping'][name]: mapping.set_alpha(0)
 
     def draw_contours(self, xmax, ymax, color_labels):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
@@ -587,9 +592,9 @@ class CapePlot:
         ax = self.ax
         name_mapping = dict()
         mymappings = []
-        # mappings = pd.read_csv(os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv'))
         mappings = self.mapping
         if not mappings.empty:
+            # Each codelet tracks their mapping arrow objects in 'name_mapping' for future showing/hiding
             for i in mappings.index:
                 name_mapping[mappings['Before Name'][i]+str(mappings['Before Timestamp'][i])] = []
                 name_mapping[mappings['After Name'][i]+str(mappings['After Timestamp'][i])] = []

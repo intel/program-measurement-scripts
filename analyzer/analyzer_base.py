@@ -63,8 +63,12 @@ class PerLevelGuiState:
         self.filterMetric = metric
         self.filterMinThreshold = minimum
         self.filterMaxThreshold = maximum
-        self.hidden = names
         self.selectedVariants = variants
+        self.hidden = names
+        # Add codelet names outside of filtered range to hidden names
+        if metric:
+            df = self.loadedData.df.loc[(self.loadedData.df[metric] < minimum) | (self.loadedData.df[metric] > maximum)]
+            self.hidden.extend((df[NAME]+df[TIMESTAMP].astype(str)).tolist())
 
     def reset_state(self):
         self.hidden = []

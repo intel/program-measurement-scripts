@@ -52,15 +52,16 @@ class PlotInteraction():
         if self.level == 'Codelet': 
             self.tabs = self.codelet_tabs
             self.stateDictionary = self.gui.loadedData.c_plot_state
-            self.restoreState(self.stateDictionary)
+            # self.restoreState(self.stateDictionary)
         elif self.level == 'Source': 
             self.tabs = self.source_tabs
             self.stateDictionary = self.gui.loadedData.s_plot_state
-            self.restoreState(self.stateDictionary)
+            # self.restoreState(self.stateDictionary)
         elif self.level == 'Application': 
             self.tabs = self.application_tabs
             self.stateDictionary = self.gui.loadedData.a_plot_state
-            self.restoreState(self.stateDictionary)
+            # self.restoreState(self.stateDictionary)
+        self.restoreState()
         # Setup Frames
         self.plotFrame = tk.Frame(self.tab.window)
         self.plotFrame2 = tk.Frame(self.plotFrame)
@@ -107,6 +108,10 @@ class PlotInteraction():
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, anchor=tk.N, padx=10)
         self.toolbar.update()
         self.canvas.draw()
+
+    @property
+    def guiState(self):
+        return self.gui.loadedData.levelData[self.level].guiState
 
     def restoreAnalysisState(self):
         self.restoreState(self.gui.loadedData.levels[self.level]['data'])
@@ -225,18 +230,33 @@ class PlotInteraction():
             if marker.get_marker() == '*':
                 dictionary['highlighted_names'].append(marker.get_label())
 
-    def restoreState(self, dictionary):
-        for name in dictionary['hidden_names']:
-            try:
-                self.textData['name:marker'][name].set_alpha(0)
-                self.textData['name:text'][name].set_alpha(0)
-            except:
-                pass
-        self.filterArrows(dictionary['hidden_names'])
-        for name in dictionary['highlighted_names']:
-            try: 
-                if self.textData['name:marker'][name].get_marker() != '*': self.highlight(self.textData['name:marker'][name], self.textData['name:text'][name])
-            except: pass
+    # def restoreState(self, dictionary):
+    #     for name in dictionary['hidden_names']:
+    #         try:
+    #             self.textData['name:marker'][name].set_alpha(0)
+    #             self.textData['name:text'][name].set_alpha(0)
+    #         except:
+    #             pass
+    #     self.filterArrows(dictionary['hidden_names'])
+    #     for name in dictionary['highlighted_names']:
+    #         try: 
+    #             if self.textData['name:marker'][name].get_marker() != '*': self.highlight(self.textData['name:marker'][name], self.textData['name:text'][name])
+    #         except: pass
+
+    def restoreState(self):
+        # TODO: Remove if statements checking textData and instead make sure all codelets are plotted, then filtered
+        # Hide marker and labels of hidden codelets
+        hidden_names = self.guiState.hidden
+        for name in hidden_names:
+            if name in self.textData['name:marker']: self.textData['name:marker'][name].set_alpha(0)
+            if name in self.textData['name:text']: self.textData['name:text'][name].set_alpha(0)
+        # Hide arrows if there is a hidden point on either end
+        self.filterArrows(hidden_names)
+        # Highlight markers
+        highlighted_names = self.guiState.highlighted
+        for name in highlighted_names:
+            if name in self.textData['name:marker'] and name in self.textData['name:text'] and self.textData['name:marker'][name].get_marker() != '*':
+                self.highlight(self.textData['name:marker'][name], self.textData['name:text'][name])
         
     def filterArrows(self, names):
         if self.tab.mappings.empty or not names: return
@@ -460,6 +480,8 @@ class AxesTab(tk.Frame):
                            borderwidth=2, relief="raised", highlightthickness=2)
         main_menu = tk.Menu(menubutton, tearoff=False)
         menubutton.configure(menu=main_menu)
+        main_menu.add_radiobutton(value='Choose Metric', label='Choose Metric', variable=var)
+        main_menu.insert_separator(1)
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
