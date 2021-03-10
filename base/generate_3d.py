@@ -44,8 +44,8 @@ class Plot3d(CapacityPlot):
         if self.df.empty:
             return # Nothing to do
 
-        if self.filtering:
-            self.df = self.filter_data_points(self.df)
+        # if self.filtering:
+        #     self.df = self.filter_data_points(self.df)
 
         df = self.df
 
@@ -209,7 +209,6 @@ def plot_3d(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=N
     chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
     df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
-    df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
     data = CapacityData(df)
     data.set_chosen_node_set(chosen_node_set)
     data.compute()

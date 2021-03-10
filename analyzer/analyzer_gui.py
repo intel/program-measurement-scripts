@@ -98,8 +98,7 @@ class LoadedData(Observable):
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
             self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'))
-            pass
-        
+            
         @property
         def df(self):
             return pd.concat(self._dfs, ignore_index=True)
@@ -137,11 +136,15 @@ class LoadedData(Observable):
         def color_map(self):
             return self.guiState.get_color_map()
 
+        def color_by_cluster(self, df):
+            self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
+            self.updated()
+
         def update_short_names(self, new_short_names):
             for item in self._shortnameDataItems:
                 # Will reread short name files (should have been updated)
                 item.compute() 
-            self.guiState.set_color_map(new_short_names[KEY_METRICS+['Color']])
+            self.guiState.set_color_map(new_short_names[KEY_METRICS+['Label', 'Color']])
             self.updated()
             
 
@@ -213,7 +216,12 @@ class LoadedData(Observable):
 
     def setFilter(self, level, metric, minimum, maximum, names, variants):
         self.levelData[level].guiState.setFilter(metric, minimum, maximum, names, variants)
-        self.levelData[level].updated()
+
+    def updateLabels(self, metrics, level):
+        self.levelData[level].guiState.setLabels(metrics)
+
+    def color_by_cluster(self, df, level):
+        self.levelData[level].color_by_cluster(df)
 
     def update_short_names(self, new_short_names, level):
         # Update local database
@@ -766,7 +774,8 @@ class AnalyzerGui(tk.Frame):
         self.c_qplotData = QPlotData(self.loadedData, self, root, 'Codelet')
         self.c_trawlData = TRAWLData(self.loadedData, self, root, 'Codelet')
         self.c_customData = CustomData(self.loadedData, self, root, 'Codelet')
-        self.c_3dData = Data3d(self.loadedData, self, root, 'Codelet')
+        # 3D breaks 'name:marker' because of different plotting
+        # self.c_3dData = Data3d(self.loadedData, self, root, 'Codelet')
         # binned scurve break datapoint selection because of different text:marker map
         # Disable for now as not used.  
         # To enable, need to compute text:marker to-and-from regular text:marker to binned text:marker
@@ -778,7 +787,7 @@ class AnalyzerGui(tk.Frame):
         self.c_qplotTab = QPlotTab(c_plot_note, self.c_qplotData)
         self.c_trawlTab = TrawlTab(c_plot_note, self.c_trawlData)
         self.c_customTab = CustomTab(c_plot_note, self.c_customData)
-        self.c_3dTab = Tab3d(c_plot_note, self.c_3dData)
+        # self.c_3dTab = Tab3d(c_plot_note, self.c_3dData)
         # self.c_scurveTab = ScurveTab(c_plot_note, self.c_scurveData)
         self.c_scurveAllTab = ScurveAllTab(c_plot_note, self.c_scurveAllData)
         c_plot_note.add(self.c_summaryTab, text='Summary')
@@ -786,7 +795,7 @@ class AnalyzerGui(tk.Frame):
         c_plot_note.add(self.c_qplotTab, text='QPlot')
         c_plot_note.add(self.c_siPlotTab, text='SI Plot')
         c_plot_note.add(self.c_customTab, text='Custom')
-        c_plot_note.add(self.c_3dTab, text='3D')
+        # c_plot_note.add(self.c_3dTab, text='3D')
         # c_plot_note.add(self.c_scurveTab, text='S-Curve (Bins)')
         c_plot_note.add(self.c_scurveAllTab, text='S-Curve')
         # Source Plot Data

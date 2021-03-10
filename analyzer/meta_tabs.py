@@ -31,16 +31,35 @@ class ShortNameTab(AnalyzerTab):
         table_button_frame = tk.Frame(self)
         table_button_frame.grid(row=4, column=1)
         self.update_button = tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table.model.df))
+        self.cluster_color_button = tk.Button(table_button_frame, text="Color by Cluster", command=lambda: self.colorClusters())
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
+        self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
 
     def notify(self, data):
         self.table.model.df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]]
         self.table.show()
         self.table.redraw()
         self.update_button.grid(row=0, column=0)
-        self.export_button.grid(row=0, column=1)
-        self.find_replace_button.grid(row=0, column=2)
+        self.cluster_color_button.grid(row=0, column=1)
+        self.export_button.grid(row=0, column=2)
+        self.find_replace_button.grid(row=0, column=3)
+
+    def colorClusters(self):
+        # Assign a color to each  
+        cluster_color_map = {}
+        for i, cluster in enumerate(self.data.df[NonMetricName.SI_CLUSTER_NAME].unique()):
+            cluster_color_map[cluster] = self.colors[i]
+        # Update the GUI state color map with colors for each codelet and the label for the legend
+        df = self.data.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]].copy(deep=True)
+        df.fillna({NonMetricName.SI_CLUSTER_NAME:'No Cluster'}, inplace=True)
+        df = df.reindex(columns = df.columns.tolist() + ['Label','Color'])
+        for i, cluster in enumerate(df[NonMetricName.SI_CLUSTER_NAME].unique()):
+            df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
+        # All points without a cluster will be blue
+        df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
+        self.data.loadedData.levelData[self.level].guiState.set_color_map(df)
+        self.data.loadedData.color_by_cluster(df, self.level)
 
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
@@ -50,16 +69,17 @@ class ShortNameTab(AnalyzerTab):
 
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table_df):
+        # Fill in the Label column for the legend
+        table_df['Label'] = ''
+        for i, color in enumerate(table_df['Color'].unique()):
+            if color not in self.colors:
+                table_df.loc[table_df['Color']==color, ['Label', 'Color']] = [color, self.colors[i+1]]
         # Update short names in each of the main dfs
         self.data.loadedData.update_short_names(table_df, self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
         table.model.df.to_csv(export_file_path, index=False, header=True)
-        
-    # @property
-    # def df(self):
-    #     return self.loadedData.get_df(self.level)[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]].loc[self.loadedData.get_df(self.level)[VARIANT].isin(self.tab.variants)].reset_index(drop=True)
 
 class MappingsData(AnalyzerData):
     def __init__(self, data, gui, root, level):
@@ -291,7 +311,7 @@ class FilteringTab(AnalyzerTab):
         self.min_entry.grid(row=1, column=2, sticky=tk.NW)
         self.max_label.grid(row=2, column=1, sticky=tk.NW)
         self.max_entry.grid(row=2, column=2, sticky=tk.NW)
-        self.update_threshold_button.grid(row=0, column=3, sticky=tk.N)
+        self.update_button.grid(row=0, column=3, sticky=tk.N)
 
     def buildVariantSelector(self):
         all_variants = self.data.df[VARIANT].unique()
@@ -329,14 +349,17 @@ class FilteringTab(AnalyzerTab):
         self.max_label = tk.Label(self.threshold_frame, text='Max Threshold: ')
         self.max_num = tk.DoubleVar()
         self.max_entry = tk.Entry(self.threshold_frame, textvariable=self.max_num)
-        self.update_threshold_button = tk.Button(self, text='Update', command=self.updateFilter)
+        # Update GUI State with selected filters
+        self.update_button = tk.Button(self, text='Update', command=self.updateFilter)
 
     def updateFilter(self):
-        names = self.pointSelector.updatePlot()
+        names = self.pointSelector.getHidden()
         variants = self.variantSelector.getCheckedItems()
         metric = self.metric_selected.get()
         if metric == 'Choose Metric': metric = ''
         self.data.loadedData.setFilter(self.level, metric, self.min_num.get(), self.max_num.get(), names, variants)
+        # Update the point selector to reflect the metric/variant filtering
+        self.pointSelector.update(self.data.loadedData.levelData[self.level].guiState.hidden)
 
 class GuideTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -543,12 +566,16 @@ class ChecklistBox(tk.Frame):
                 index = self.names.index(name)
                 self.vars[index].set(0)
             except: pass
-
-    def updatePlot(self):
+            
+    def getHidden(self):
         hidden_names = []
         for index, var in enumerate(self.vars):
             if not var.get(): hidden_names.append(self.names[index])
         return hidden_names
+
+    def update(self, hidden_names):
+        for index, var in enumerate(self.vars):
+            if self.names[index] in hidden_names: var.set(0)
 
     def getCheckedItems(self):
         values = []

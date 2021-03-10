@@ -11,8 +11,9 @@ import os
 from os.path import expanduser
 
 globals().update(MetricName.__members__)
-class PerLevelGuiState:
+class PerLevelGuiState(Observable):
     def __init__(self, loadedData, level):
+        super().__init__()
         self.level = level
         self.loadedData = loadedData
         # Should have size <= 3
@@ -30,7 +31,7 @@ class PerLevelGuiState:
         self.selectedDataPoints = []
 
         # A map from color to color name for plotting
-        self.color_map = pd.DataFrame(columns=KEY_METRICS + ['Color'])
+        self.color_map = pd.DataFrame(columns=KEY_METRICS + ['Label', 'Color'])
 
         # Cape paths
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
@@ -38,6 +39,8 @@ class PerLevelGuiState:
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
 
     def set_color_map(self, color_map_df):
+        if 'Label' not in color_map_df: color_map_df['Label'] = ''
+        color_map_df.fillna({'Color':'blue'}, inplace=True)
         self.color_map = color_map_df
 
     def get_color_map(self):
@@ -63,6 +66,7 @@ class PerLevelGuiState:
 
     def reset_labels(self):
         self.labels = []
+        self.updated()
 
     def setFilter(self, metric, minimum, maximum, names, variants):
         self.filterMetric = metric
@@ -74,10 +78,19 @@ class PerLevelGuiState:
         if metric:
             df = self.loadedData.df.loc[(self.loadedData.df[metric] < minimum) | (self.loadedData.df[metric] > maximum)]
             self.hidden.extend((df[NAME]+df[TIMESTAMP].astype(str)).tolist())
+        self.updated()
+
+    def setLabels(self, metrics):
+        self.labels = metrics
+        self.updated()
 
     def reset_state(self):
         self.hidden = []
         self.highlighted = []
+
+    # Plot interaction objects for each plot at this level will be notified to avoid a complete redraw
+    def updated(self):
+        self.notify_observers()
 
 class AnalyzerData(Observable):
     def __init__(self, loadedData, gui, root, level, name):
@@ -181,7 +194,7 @@ class AnalyzerTab(tk.Frame):
         self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH,expand=True)
         # TODO: Move plot interaction logic out into specific tabs
-        self.plotInteraction = PlotInteraction(self, self.df.loc[self.df[VARIANT].isin(self.variants)].reset_index(drop=True), self.fig, self.textData, self.level, self.data.gui, self.data.root)
+        self.plotInteraction = PlotInteraction(self, self.fig, self.textData, self.level, self.data.gui, self.data.root)
         # Format columns for pandastable compatibility
         self.df.columns = ["{}".format(i) for i in self.df.columns]
         self.df.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)

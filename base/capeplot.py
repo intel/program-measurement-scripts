@@ -442,7 +442,8 @@ class CapePlot:
     def mapping(self):
         return self.loadedData.levelData[self.level].mapping
 
-    def color_map(self, color_map):
+    @property
+    def color_map(self):
         return self.loadedData.levelData[self.level].color_map
 
     
@@ -514,16 +515,6 @@ class CapePlot:
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis)
-        # Plot all of the codelets then filter them
-        self.filter_points()
-
-    def filter_points(self):
-        # Hide the marker, label, and arrow if any
-        for name in self.guiState.hidden:
-            if name in self.plotData['name:marker']: self.plotData['name:marker'][name].set_alpha(0)
-            if name in self.plotData['name:text']: self.plotData['name:text'][name].set_alpha(0)
-            if name in self.plotData['name:mapping']: 
-                for mapping in self.plotData['name:mapping'][name]: mapping.set_alpha(0)
 
     def draw_contours(self, xmax, ymax, color_labels):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
@@ -636,23 +627,34 @@ class CapePlot:
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
         markers = []
-        df.reset_index(drop=True, inplace=True)
-        for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
-            if color in color_labels: # Check if the color is a user specified name, then get the actual color
-                color = color_labels[color]
+        for x, y, color, name, timestamp in zip(xs, ys, self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
             markers.extend(ax.plot(x, y, marker='o', color=color, 
                                    label=name+str(timestamp), linestyle='', alpha=1))
-
         #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
         texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
+
+    # def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
+    #     ax = self.ax
+    #     markers = []
+    #     df.reset_index(drop=True, inplace=True)
+    #     for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
+    #         if color in color_labels: # Check if the color is a user specified name, then get the actual color
+    #             color = color_labels[color]
+    #         markers.extend(ax.plot(x, y, marker='o', color=color, 
+    #                                label=name+str(timestamp), linestyle='', alpha=1))
+
+    #     #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
+    #     texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
+    #     return texts, markers
+
     def mk_legend(self, color_labels):
         ax = self.ax
         patches = []
-        if color_labels:
-            for color_label in color_labels:
-                patch = mpatches.Patch(label=color_label, color=color_labels[color_label])
+        for label in self.color_map['Label'].unique():
+            if label:
+                patch = mpatches.Patch(label=label, color=self.color_map.loc[self.color_map['Label']==label]['Color'].iloc[0])
                 patches.append(patch)
 
         if self.ctxs:  
