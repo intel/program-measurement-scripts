@@ -13,6 +13,7 @@ import pickle
 from metric_names import MetricName
 from abc import ABC, abstractmethod
 from collections import UserDict
+import networkx as nx
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -25,8 +26,13 @@ plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
 # Base class for plot data without GUI specific data
 # Subclass should override for plot specific data processing.
 class CapeData(ABC):
+    AllCapeDataItems = []
+    DepGraph = nx.DiGraph()
+
     def __init__(self, df):
         self._df = df
+        self.cache_file = None
+        CapeData.AllCapeDataItems.append(self)
 
     
     # Getter of df
@@ -46,7 +52,54 @@ class CapeData(ABC):
     def set_cache_dir(cls, data_dir):
         cls.cache_dir = data_dir
 
+    @classmethod
+    def clear_dependency_info(cls, self):
+        cls.AllCapeDataItems.clear()
+        cls.DepGraph = nx.DiGraph()
+
+    def record_dependency(self):
+        inSet = set(self.input_args())
+        outSet = set(self.output_args())
+        for node in self.AllCapeDataItems:
+            if node == self:
+                continue
+            if node.df is not self.df:
+                continue
+            nodeToItemMetrics = set(node.output_args()) & inSet
+            if nodeToItemMetrics and not self.DepGraph.has_edge(node, self):
+                self.DepGraph.add_edge(node, self, metrics=nodeToItemMetrics)
+            itemToNodeMetrics = set(node.input_args()) & outSet
+            if itemToNodeMetrics and not self.DepGraph.has_edge(self, node):
+                self.DepGraph.add_edge(self, node, metrics=itemToNodeMetrics)
+                
+            
+
+
+    @classmethod
+    def invalidate_metrics(cls, metrics, itemPool=None):
+        itemPool = cls.AllCapeDataItems if itemPool is None else itemPool
+        metricSet = set(metrics)
+        invalidateItems = set([item for item in itemPool if set(item.input_args()) & metricSet])
+        invalidateItems = invalidateItems | set().union(*[nx.descendants(cls.DepGraph, item) for item in invalidateItems])
+
+        # while updated:
+        #     invalidateItems = [item for item in cls.AllCapeDataItems if set(item.input_args()) & metricSet]
+        #     newMetricSet = set().union(*[item.output_args() for item in invalidateItems]) | metricSet
+        #     updated = not newMetricSet.equals(metricSet)
+        #     metricSet = newMetricSet
+        # Now we have collected all teams to be invalidated
+        for item in invalidateItems:
+            # only invalidate cache for now
+            # TODO: may want to recompute data in topoligical order
+            item.invalidate_cache()
         
+        
+    def invalidate_cache(self):
+        cache_file = self.cache_file 
+        if cache_file and os.path.isfile(cache_file):
+            os.remove(cache_file)
+            self.cache_file = None
+
     # Subclass could override to read more data
     def try_read_cache(self, filename_prefix):
         cache_file = os.path.join(self.cache_dir, f'{filename_prefix}_dfs.pkl') if self.cache_dir and filename_prefix else None
@@ -55,6 +108,7 @@ class CapeData(ABC):
                 data_read = pickle.load(cache_data)
                 df = data_read.pop()  # extra the last dataframe which is the df to return
                 self.extra_data_to_restore(data_read)
+                self.cache_file = cache_file
                 return df
         return None
 
@@ -66,6 +120,7 @@ class CapeData(ABC):
                 more_data_to_write = self.extra_data_to_save()
                 # df insert at the end so it can be popped by the read call
                 pickle.dump(more_data_to_write + [df], cache_data)
+                self.cache_file = cache_file
              
     # Subclass override to set the fields give more data
     def extra_data_to_restore(self, more_data):
@@ -111,8 +166,15 @@ class CapeData(ABC):
             # Empty self.df case, result_df must have all the KEY_METRICS
             assert set(result_df.columns) & set(KEY_METRICS) == set(KEY_METRICS) 
             merged = result_df
+        updatedCols = set()
         for col in outputs:
+            if col in self.df.columns and self.df[col].equals(merged[col]):
+                continue # Update not needed
             self.df[col] = merged[col]
+            updatedCols.add(col)
+        self.record_dependency()
+        # Invalidate item if they work on the same df using updatedCols metrics
+        self.invalidate_metrics(updatedCols, [item for item in self.AllCapeDataItems if item.df is self.df])
         return self
 
     @abstractmethod
@@ -128,6 +190,14 @@ class CapeData(ABC):
     # SEE ALSO: compute_impl()
     def input_output_args(self):
         return None, None
+
+    def output_args(self):
+        input_args, output_args = self.input_output_args()
+        return output_args
+
+    def input_args(self):
+        input_args, output_args = self.input_output_args()
+        return input_args
 
 class NodeCentricData(CapeData):
     def __init__(self, df):
@@ -158,9 +228,9 @@ class CapacityData(NodeCentricData):
     MEM_NODE_SET={'L1', 'L2', 'L3', 'RAM'}
     REG_NODE_SET={'VR'}
     OP_NODE_SET={'FLOP'}
-    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
+    BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET 
     BUFFER_NODE_SET={'FE', 'CU', 'SB', 'LM', 'RS', 'LB'}
-    ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
+    ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET | REG_NODE_SET
 
     BUFFER_NODE_SET={'FE'}
     DEFAULT_CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'RAM', 'FLOP'}
@@ -371,6 +441,10 @@ class CapePlot:
     @property
     def mapping(self):
         return self.loadedData.levelData[self.level].mapping
+
+    def color_map(self, color_map):
+        return self.loadedData.levelData[self.level].color_map
+
     
     # # Setter of df (May remove), delegate to self.data
     # @df.setter

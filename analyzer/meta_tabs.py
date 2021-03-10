@@ -51,7 +51,7 @@ class ShortNameTab(AnalyzerTab):
     # Merge user input labels with current mappings and replot
     def updateLabels(self, table_df):
         # Update short names in each of the main dfs
-        self.data.loadedData.update_short_names(table_df)
+        self.data.loadedData.update_short_names(table_df, self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')

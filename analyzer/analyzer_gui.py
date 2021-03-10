@@ -13,6 +13,7 @@ import capelib as cl
 from summarize import summary_report_df
 from summarize import compute_speedup
 from capedata import AnalyticsData
+from capedata import ShortNameData as CapeShortNameData
 from capedata import SummaryData
 from capedata import AggregateData
 from aggregate_summary import aggregate_runs_df
@@ -71,6 +72,7 @@ class LoadedData(Observable):
             self.level = level
             #self._df = pd.DataFrame(columns=KEY_METRICS)
             self._dfs = []
+            self._shortnameDataItems = []
             self._capacityDataItems = []
             self._satAnalysisDataItems = []
             self._siDataItems = [] 
@@ -86,14 +88,17 @@ class LoadedData(Observable):
             lst.append(data)
             return data
             
-        def setup_df(self, df, append):
+        def setup_df(self, df, append, short_names_path):
             df = self.update_list(self._dfs, df, append)
+            self.update_list(self._shortnameDataItems, CapeShortNameData(df).set_filename(short_names_path).compute(), append)
             self.update_list(self._capacityDataItems, CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{self.level}'), append)
             satAnalysisData = self.update_list(self._satAnalysisDataItems, SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{self.level}'), append)
 
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
+            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'))
+            pass
         
         @property
         def df(self):
@@ -127,6 +132,18 @@ class LoadedData(Observable):
         def reset_labels(self):
             self.guiState.reset_labels()
             self.updated()
+
+        @property
+        def color_map(self):
+            return self.guiState.get_color_map()
+
+        def update_short_names(self, new_short_names):
+            for item in self._shortnameDataItems:
+                # Will reread short name files (should have been updated)
+                item.compute() 
+            self.guiState.set_color_map(new_short_names[KEY_METRICS+['Color']])
+            self.updated()
+            
 
         # Invoke this method after updating this object (and underlying objects like 
         # GUI state)
@@ -198,15 +215,15 @@ class LoadedData(Observable):
         self.levelData[level].guiState.setFilter(metric, minimum, maximum, names, variants)
         self.levelData[level].updated()
 
-    def update_short_names(self, new_short_names):
+    def update_short_names(self, new_short_names, level):
         # Update local database
         all_short_names = pd.read_csv(self.short_names_path)
         merged = pd.concat([all_short_names, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
         merged.to_csv(self.short_names_path, index=False)
         # Next update summary sheets for each level and notify observers
-        for level in self.levelData:
-            self.merge_metrics(new_short_names, [SHORT_NAME, VARIANT, 'Color'], level)
-            self.levelData[level].updated()
+        #for level in self.levelData:
+        # self.merge_metrics(new_short_names, [SHORT_NAME, VARIANT, 'Color'], level)
+        self.levelData[level].update_short_names(new_short_names)
     
     def check_cape_paths(self):
         if not os.path.isfile(self.short_names_path):
@@ -316,7 +333,7 @@ class LoadedData(Observable):
             # TODO: avoid adding Color to df
             # NOTE: Will returns a new df after this call
             df = self.compute_colors(df)
-            self.levelData[level].setup_df(df, append)
+            self.levelData[level].setup_df(df, append, short_names_path)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
 
             # levelData.capacityData = CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{level}')
@@ -734,6 +751,7 @@ class AnalyzerGui(tk.Frame):
         self.level_plot_note.add(self.codeletTab, text='Codelet')
         self.level_plot_note.add(self.sourceTab, text='Source')
         self.level_plot_note.add(self.applicationTab, text='Application')
+        self.level_plot_note.bind('<<NotebookTabChanged>>', lambda evt: print(f'updated tab:{self.level_plot_note.index(self.level_plot_note.select())}'))
         # Each level has its own paned window
         c_plotPw = tk.PanedWindow(self.codeletTab, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         s_plotPw = tk.PanedWindow(self.sourceTab, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)

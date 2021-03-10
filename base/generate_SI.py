@@ -110,7 +110,8 @@ class SiData(NodeWithUnitData):
 
     # Return (expected inputs, expected outputs)
     def input_output_args(self):
-        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GB_P_S]+self.capacities(self.chosen_node_set)
+        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GW_P_S] + \
+            self.capacities(self.chosen_node_set)+self.stallPcts(self.chosen_node_set & REAL_BUFFER_NODE_SET)
         output_args = ['Saturation', 'Intensity', 'SI']
         return input_args, output_args
 
@@ -178,6 +179,15 @@ class SiData(NodeWithUnitData):
         # Remove brackets and then use the splitted node + unit to get the enum
         return MetricName.cap(*nodeWithUnit.replace("[", "").replace("]", "").split(" "))
 
+    @classmethod
+    def stallPcts(cls, nodesWithUnit):
+        return list(map(lambda n: cls.stallPct(n), nodesWithUnit))
+
+    @classmethod
+    def stallPct(cls, nodeWithUnit):
+        # Remove brackets and then use the splitted node + unit to get the enum
+        return MetricName.stallPct(INV_NODE_UNIT_DICT[nodeWithUnit])
+
     def compute_saturation(self, df, chosen_node_set):
         listOfCapacityColumns = self.capacities(chosen_node_set)
         #nodeMax=df[listOfCapacityColumns].max(axis=0)
@@ -187,9 +197,13 @@ class SiData(NodeWithUnitData):
         #nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
         newNodeMax = newNodeMax.applymap(lambda x: x if x > 1.00 else 100.00)
         print ("<=====compute_saturation======>")
-        for node in chosen_node_set:
+        for node in chosen_node_set - REAL_BUFFER_NODE_SET:
             #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
             df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
+        # For control unit node, use raw % stalls as rel_sat 
+        for node in chosen_node_set & REAL_BUFFER_NODE_SET:
+            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+            df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
         df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
         df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
         #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
@@ -202,22 +216,24 @@ class SiData(NodeWithUnitData):
         df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(ns))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
         csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GB_P_S] / csum
+        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GW_P_S] / csum
 
         #node_cnt = len(chosen_node_set)
         #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)
         #df['Intensity']=node_cnt*df[MetricName.CAP_MEMMAX_GB_P_S] / csum
         df.drop('SatCaps', axis=1, inplace=True)
 
-MEM_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-REG_NODE_SET={'VR [GB/s]'}
+MEM_NODE_SET={'L1 [GW/s]', 'L2 [GW/s]', 'L3 [GW/s]', 'RAM [GW/s]'}
+REG_NODE_SET={'VR [GW/s]'}
 OP_NODE_SET={'FLOP [GFlop/s]'}
 BASIC_NODE_SET=MEM_NODE_SET | OP_NODE_SET | REG_NODE_SET
-SCALAR_NODE_SET={'L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'RAM [GB/s]'}
-BUFFER_NODE_SET={'FE [GB/s]', 'CU [GB/s]', 'SB [GB/s]', 'LM [GB/s]', 'RS [GB/s]', 'LB [GB/s]'}
+SCALAR_NODE_SET={'L1 [GW/s]', 'L2 [GW/s]', 'L3 [GW/s]', 'RAM [GW/s]'}
+REAL_BUFFER_NODE_SET={'FE [GW/s]', 'SB [GW/s]', 'LM [GW/s]', 'RS [GW/s]', 'LB [GW/s]'}
+BUFFER_NODE_SET=REAL_BUFFER_NODE_SET | {'CU [GW/s]'}
 ALL_NODE_SET = BASIC_NODE_SET | BUFFER_NODE_SET
 # Dictionary to lookup node name to its unit to use
 NODE_UNIT_DICT = dict(node_unit.split(" ") for node_unit in ALL_NODE_SET)
+INV_NODE_UNIT_DICT = dict([node_unit, node_unit.split(" ")[0]] for node_unit in ALL_NODE_SET) 
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'FE'}
 # For L1, L2, L3, FLOP 4 node runs
 #CHOSEN_NODE_SET={'L1', 'L2', 'L3', 'FLOP', 'VR'}
