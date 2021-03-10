@@ -41,7 +41,7 @@ RUN_SI = True
 RUN_SW_BIAS = False
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
-CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GB/s]', MetricName.STALL_LB_PCT:'LB [GB/s]', MetricName.STALL_SB_PCT:'SB [GB/s]', MetricName.STALL_LM_PCT:'LM [GB/s]', MetricName.STALL_RS_PCT:'RS [GB/s]'}
+CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
 
 # No Frontend
 #CU_NODE_SET={MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
