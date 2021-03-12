@@ -50,13 +50,6 @@ class CustomTab(AnalyzerTab):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = self.data.df.columns.tolist()
         super().setup(metrics)
-        self.buildTableTabs()
-    
-    # Create meta tabs
-    def buildTableTabs(self):
-        super().buildTableTabs()
-        # self.axesTab = AxesTab(self.tableNote, self, 'Custom')
-        # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
         return CustomPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 

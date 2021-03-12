@@ -3,8 +3,9 @@ import pandas as pd
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 # from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
-from metric_names import MetricName, KEY_METRICS
+from metric_names import MetricName, KEY_METRICS, ALL_METRICS
 import numpy as np
 import copy
 import os
@@ -78,6 +79,24 @@ class PerLevelGuiState(Observable):
         if metric:
             df = self.loadedData.df.loc[(self.loadedData.df[metric] < minimum) | (self.loadedData.df[metric] > maximum)]
             self.hidden.extend((df[NAME]+df[TIMESTAMP].astype(str)).tolist())
+        self.updated()
+
+    def removePoints(self, names):
+        self.hidden.extend(names)
+        self.hidden = list(dict.fromkeys(self.hidden))
+        self.updated()
+
+    def showPoints(self, names):
+        self.hidden = [name for name in self.hidden if name not in names]
+        self.updated()
+
+    def highlightPoints(self, names):
+        self.highlighted.extend(names)
+        self.highlighted = list(dict.fromkeys(self.highlighted))
+        self.updated()
+
+    def unhighlightPoints(self, names):
+        self.highlighted = [name for name in self.highlighted if name not in names]
         self.updated()
 
     def setLabels(self, metrics):
@@ -159,73 +178,87 @@ class AnalyzerTab(tk.Frame):
         self.mappings_path = self.data.loadedData.mappings_path
         self.short_names_path = self.data.loadedData.short_names_path
         self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        self.window.pack(fill=tk.BOTH, expand=True)
+        self.plotInteraction = PlotInteraction(self)
+        # Setup Plot Frames
+        self.plotFrame = tk.Frame(self.window)
+        self.plotFrame2 = tk.Frame(self.plotFrame)
+        self.plotFrame3 = tk.Frame(self.plotFrame)
+        self.plotFrame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # Plot interacting buttons
+        # self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.plotInteraction.saveState)
+        self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.plotInteraction.adjustText)
+        self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.plotInteraction.toggleLabels)
+        self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points')
+        self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight')
+        self.action_selected = tk.StringVar(value='Choose Action')
+        action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
+        self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
+        self.action_menu['menu'].insert_separator(1)
+        # Notebook of plot specific tabs
+        self.tab_note = ttk.Notebook(self.window)
+        self.axesTab = AxesTab(self.tab_note, self, self.name)
+        self.tab_note.add(self.axesTab, text='Axes')
+        self.labelTab = LabelTab(self.tab_note, self, self.level)
+        self.tab_note.add(self.labelTab, text='Labels')
 
     @property
     def mappings(self):
         return self.data.mappings
-
-    # TODO: Bring this back
-    # TODO: request Elias to move non-tkinter data to Data object for cleaner
-    #       MVC design
-    #@property
-    #def variants(self):
-    #    return self.data.variants
 
     # Subclass needs to override this method
     def mk_plot(self):
         raise Exception("Method needs to be overriden to create plots")
     
     def setup(self, metrics):
-        # Clear previous plots and meta data tabs TODO: investigate if we can update rather than rebuilding
-        for w in self.winfo_children():
-            w.destroy()
         # Update attributes
         plot = self.mk_plot()
         plot.compute_and_plot()
         self.fig, self.textData = plot.fig, plot.plotData
-        #self.textData = self.data.textData
 
         self.df = self.data.df
-        # self.mappings = self.data.mappings
         self.variants = self.data.variants
         self.metrics = metrics
-        # Plot/Table setup
-        # Each tab has a paned window with the plot and per plot tabs
-        self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
-        self.window.pack(fill=tk.BOTH,expand=True)
-        # TODO: Move plot interaction logic out into specific tabs
-        self.plotInteraction = PlotInteraction(self, self.fig, self.textData, self.level, self.data.gui, self.data.root)
+        # Update names for plot buttons
+        self.show_markers_button['command'] = lambda names=self.textData['names'] : self.plotInteraction.showPoints(names)
+        self.unhighlight_button['command'] = lambda names=self.textData['names'] : self.plotInteraction.unhighlightPoints(names)
+        # NavigationToolbar2Tk can only be created if there isn't anything in the grid
+        for slave in self.plotFrame3.grid_slaves():
+            slave.grid_forget()
+        # Refresh the canvas
+        for slave in self.plotFrame2.pack_slaves():
+            slave.destroy()
+        # Store initial xlim and ylim for adjustText 
+        self.plotInteraction.setLims()
+        # Create canvas and toolbar for plot
+        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
+        self.canvas.mpl_connect('button_press_event', self.plotInteraction.onClick)
+        self.canvas.mpl_connect('draw_event', self.plotInteraction.onDraw)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame3)
+        # Grid Layout
+        self.axesTab.render()
+        self.labelTab.render()
+        self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.toolbar.grid(column=7, row=0, sticky=tk.S)
+        self.action_menu.grid(column=5, row=0, sticky=tk.S)
+        self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
+        self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
+        self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
+        self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
+        self.plotFrame3.grid_rowconfigure(0, weight=1)
+        self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
+        self.toolbar.update()
+        self.canvas.draw()
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tab_note, stretch='never')
+
         # Format columns for pandastable compatibility
         self.df.columns = ["{}".format(i) for i in self.df.columns]
         self.df.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
         for missing in set(metrics)-set(self.df.columns):
             self.df[missing] = np.nan
-
-    # Create meta tabs for each plot
-    def buildTableTabs(self):
-        pass
-        # Meta tabs
-        # self.tableNote = ttk.Notebook(self.tableFrame)
-        # self.dataTab = DataTab(self.tableNote, self.df, self.metrics, self.variants)
-        # self.shortnameTab = ShortNameTab(self.tableNote, self, self.level)
-        # self.labelTab = LabelTab(self.data.loadedData.c_data_note, self, self.level)
-        # self.variantTab = VariantTab(self.tableNote, self, self.data.loadedData.all_variants, self.variants)
-        # self.mappingsTab = MappingsTab(self.tableNote, self, self.level)
-        # self.tableNote.add(self.dataTab, text="Data")
-        # self.tableNote.add(self.shortnameTab, text="Short Names")
-        # self.tableNote.add(self.labelTab, text='Labels')
-        # self.tableNote.add(self.variantTab, text="Variants")
-        # self.tableNote.add(self.mappingsTab, text="Mappings")
-        # self.tableNote.pack(fill=tk.BOTH, expand=True)
-        # Summary Export Buttons
-        # tk.Button(self.dataTab.table_button_frame, text="Export GUI Table", command=lambda: self.shortnameTab.exportCSV(self.dataTab.summaryTable)).grid(row=0, column=0)
-        # tk.Button(self.dataTab.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df)).grid(row=0, column=1)
-        # tk.Button(self.dataTab.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df)).grid(row=0, column=2)
-        # Initialize meta tabs TODO: do this in the meta tab constructor
-        # self.shortnameTab.buildLabelTable()
-        # if self.level == 'Codelet':
-        #     self.mappingsTab.buildMappingsTab()
-
 
     def get_metrics(self):
         metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
@@ -237,4 +270,197 @@ class AnalyzerTab(tk.Frame):
         # Metrics to be displayed in the data table are unique for each plot
         metrics = self.get_metrics()
         self.setup(metrics)
-        self.buildTableTabs()
+
+class LevelTab(tk.Frame):
+    def __init__(self, parent, data):
+        super().__init__(parent)
+        if data is not None:
+            data.add_observers(self)
+            data.loadedData.levelData[data.level].guiState.add_observers(self)
+        self.data = data
+        self.level = data.level
+        self.name = data.name
+
+    @property
+    def mappings(self):
+        return self.data.mappings
+
+class AxesTab(tk.Frame):
+    @staticmethod
+    def all_metric_menu(parent, var):
+        menubutton = tk.Menubutton(parent, textvariable=var, indicatoron=True,
+                           borderwidth=2, relief="raised", highlightthickness=2)
+        main_menu = tk.Menu(menubutton, tearoff=False)
+        menubutton.configure(menu=main_menu)
+        main_menu.add_radiobutton(value=var.get(), label=var.get(), variable=var)
+        main_menu.insert_separator(1)
+        # TRAWL
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='TRAWL', menu=menu)
+        for metric in [SPEEDUP_VEC, SPEEDUP_DL1, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S, VARIANT]:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # QPlot
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='QPlot', menu=menu)
+        for metric in [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S]:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # SIPlot
+        menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='SIPlot', menu=menu)
+        for metric in ['Saturation', 'Intensity']:
+            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # Summary categories/metrics
+        summary_menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='Summary', menu=summary_menu)
+        metrics = [[COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S],
+                    [NUM_CORES, DATA_SET, PREFETCHERS, REPETITIONS],
+                    [E_PKG_J, E_DRAM_J, E_PKGDRAM_J], 
+                    [P_PKG_W, P_DRAM_W, P_PKGDRAM_W],
+                    [COUNT_INSTS_GI, RATE_INST_GI_P_S],
+                    [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, RATE_FP_GFLOP_P_S, RATE_INST_GI_P_S, RATE_REG_ADDR_GB_P_S, RATE_REG_DATA_GB_P_S, RATE_REG_SIMD_GB_P_S, RATE_REG_GB_P_S],
+                    [COUNT_OPS_VEC_PCT, COUNT_OPS_FMA_PCT, COUNT_OPS_DIV_PCT, COUNT_OPS_SQRT_PCT, COUNT_OPS_RSQRT_PCT, COUNT_OPS_RCP_PCT],
+                    [COUNT_INSTS_VEC_PCT, COUNT_INSTS_FMA_PCT, COUNT_INSTS_DIV_PCT, COUNT_INSTS_SQRT_PCT, COUNT_INSTS_RSQRT_PCT, COUNT_INSTS_RCP_PCT],
+                    ALL_METRICS]
+        categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
+        for index, category in enumerate(categories):
+            menu = tk.Menu(summary_menu, tearoff=False)
+            summary_menu.add_cascade(label=category, menu=menu)
+            for metric in metrics[index]:
+                menu.add_radiobutton(value=metric, label=metric, variable=var)
+        return menubutton
+
+    def __init__(self, parent, tab, plotType):
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.tab = tab
+        self.plotType = plotType
+        # Axes metric options TODO: Should we limit the metrics allowed depending on the current plot?
+        self.metric_label = tk.Label(self, text='Metrics:')
+        self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
+        self.x_selected = tk.StringVar(value='Choose X Axis Metric')
+        self.x_menu = AxesTab.all_metric_menu(self, self.x_selected)
+        self.y_menu = AxesTab.all_metric_menu(self, self.y_selected)
+        # Axes scale options
+        self.scale_label = tk.Label(self, text='Scales:')
+        self.yscale_selected = tk.StringVar(value='Choose Y Axis Scale')
+        self.xscale_selected = tk.StringVar(value='Choose X Axis Scale')
+        yscale_options = ['Choose Y Axis Scale', 'Linear', 'Log']
+        xscale_options = ['Choose X Axis Scale', 'Linear', 'Log']
+        self.yscale_menu = tk.OptionMenu(self, self.yscale_selected, *yscale_options)
+        self.xscale_menu = tk.OptionMenu(self, self.xscale_selected, *xscale_options)
+        self.yscale_menu['menu'].insert_separator(1)
+        self.xscale_menu['menu'].insert_separator(1)
+        # Update button to replot
+        self.update = tk.Button(self, text='Update', command=self.update_axes)
+
+        # x_options = ['Choose X Axis Metric', MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S, RECIP_TIME_LOOP_MHZ]
+        # if self.plotType == 'Custom' or self.plotType == 'Scurve':
+        #     x_menu = AxesTab.all_metric_menu(self, self.x_selected, self.tab.data.gui)
+        #     y_menu = AxesTab.all_metric_menu(self, self.y_selected, self.tab.data.gui)
+        # else:  
+        #     if self.plotType == 'QPlot':
+        #         y_options = ['Choose Y Axis Metric', MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S]
+        #     elif self.plotType == 'TRAWL':
+        #         y_options = ['Choose Y Axis Metric', SPEEDUP_VEC, SPEEDUP_DL1]
+        #     elif self.plotType == 'Summary':
+        #         x_options.append(RECIP_TIME_LOOP_MHZ)
+        #         y_options = ['Choose Y Axis Metric', COVERAGE_PCT, TIME_LOOP_S, TIME_APP_S, RECIP_TIME_LOOP_MHZ]
+        #     else:
+        #         x_options = ['Choose X Axis Metric']
+        #         y_options = ['Choose Y Axis Metric']
+        #     y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
+        #     x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
+        #     y_menu['menu'].insert_separator(1)
+        #     x_menu['menu'].insert_separator(1)
+
+    def render(self):
+        # Tab grid
+        self.metric_label.grid(row=0, column=0, padx=5, sticky=tk.W)
+        self.scale_label.grid(row=0, column=1, padx=5, sticky=tk.W)
+        self.x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
+        self.y_menu.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        self.xscale_menu.grid(row=1, column=1, padx=5, sticky=tk.W)
+        self.yscale_menu.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        self.update.grid(row=3, column=0, padx=5, sticky=tk.NW)
+
+    def hide(self):
+        self.metric_label.grid_remove()
+        self.scale_label.grid_remove()
+        self.x_menu.grid_remove()
+        self.y_menu.grid_remove()
+        self.xscale_menu.grid_remove()
+        self.yscale_menu.grid_remove()
+        self.update.grid_remove()
+    
+    def update_axes(self):
+        # Get user selected metrics
+        if self.x_selected.get() != 'Choose X Axis Metric':
+            self.tab.x_axis = self.x_selected.get()
+        if self.y_selected.get() != 'Choose Y Axis Metric':
+            self.tab.y_axis = self.y_selected.get()
+        # Get user selected scales
+        if self.xscale_selected.get() != 'Choose X Axis Scale':
+            self.tab.x_scale = self.xscale_selected.get().lower()
+        if self.yscale_selected.get() != 'Choose Y Axis Scale':
+            self.tab.y_scale = self.yscale_selected.get().lower()
+        # Set user selected metrics/scales if they have changed at least one
+        if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
+            self.tab.data.scale = self.tab.x_scale + self.tab.y_scale
+            self.tab.data.y_axis = "{}".format(self.tab.y_axis)
+            self.tab.data.x_axis = "{}".format(self.tab.x_axis)
+            self.tab.data.notify(self.tab.data.gui.loadedData)
+
+class LabelTab(tk.Frame):
+    def __init__(self, parent, tab, level):
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.tab = tab
+        self.level = level
+        self.loadedData = self.tab.data.loadedData
+        self.metric1 = tk.StringVar(value='Metric 1')
+        self.metric2 = tk.StringVar(value='Metric 2')
+        self.metric3 = tk.StringVar(value='Metric 3')
+        self.metrics = [self.metric1, self.metric2, self.metric3]
+        self.menu1 = AxesTab.all_metric_menu(self, self.metric1)
+        self.menu2 = AxesTab.all_metric_menu(self, self.metric2)
+        self.menu3 = AxesTab.all_metric_menu(self, self.metric3)
+        self.updateButton = tk.Button(self, text='Update', command=self.updateLabels)
+        self.resetButton = tk.Button(self, text='Reset', command=self.reset)
+
+    @property
+    def df(self):
+        return self.loadedData.levelData[self.level].df
+
+    @property
+    def mappings(self):
+        return self.loadedData.levelData[self.level].mapping
+
+    @property
+    def textData(self):
+        return self.tab.plotInteraction.textData
+
+    def render(self):
+        self.menu1.grid(row=0, column=0, padx = 10, pady=10, sticky=tk.NW)
+        self.menu2.grid(row=0, column=1, pady=10, sticky=tk.NW)
+        self.menu3.grid(row=0, column=2, padx = 10, pady=10, sticky=tk.NW)
+        self.updateButton.grid(row=1, column=0, padx=10, sticky=tk.NW)
+        self.resetButton.grid(row=1, column=1, sticky=tk.NW)
+
+    def resetMetrics(self):
+        self.metric1.set('Metric 1')
+        self.metric2.set('Metric 2')
+        self.metric3.set('Metric 3')
+
+    def reset(self):
+        self.resetMetrics()
+        self.loadedData.updateLabels([], self.level)
+
+    def updateLabels(self):
+        current_metrics = []
+        if self.metric1.get() != 'Metric 1': current_metrics.append(self.metric1.get())
+        if self.metric2.get() != 'Metric 2': current_metrics.append(self.metric2.get())
+        if self.metric3.get() != 'Metric 3': current_metrics.append(self.metric3.get())
+        # TODO: merge mapping speedups into master dataframe to avoid this check
+        current_metrics = [metric for metric in current_metrics if metric in self.df.columns.tolist()]
+        if not current_metrics: return # User hasn't selected any label metrics
+        self.loadedData.updateLabels(current_metrics, self.level)

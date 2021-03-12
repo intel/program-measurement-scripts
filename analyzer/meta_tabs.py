@@ -10,8 +10,8 @@ from pandastable import Table
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path, exportCSV, exportXlsx
-from analyzer_base import AnalyzerTab, AnalyzerData 
-from plot_interaction import AxesTab
+from analyzer_base import AnalyzerTab, AnalyzerData, LevelTab, AxesTab
+# from plot_interaction import AxesTab
 from metric_names import MetricName
 from metric_names import NonMetricName, KEY_METRICS
 globals().update(MetricName.__members__)
@@ -23,7 +23,7 @@ class ShortNameData(AnalyzerData):
     def notify(self, data):
         self.notify_observers()
 
-class ShortNameTab(AnalyzerTab):
+class ShortNameTab(LevelTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         # Build Short Name Table
@@ -46,7 +46,7 @@ class ShortNameTab(AnalyzerTab):
         self.find_replace_button.grid(row=0, column=3)
 
     def colorClusters(self):
-        # Assign a color to each  
+        # Assign a color to each cluster
         cluster_color_map = {}
         for i, cluster in enumerate(self.data.df[NonMetricName.SI_CLUSTER_NAME].unique()):
             cluster_color_map[cluster] = self.colors[i]
@@ -88,7 +88,7 @@ class MappingsData(AnalyzerData):
     def notify(self, data):
         self.notify_observers()
 
-class MappingsTab(AnalyzerTab):
+class MappingsTab(LevelTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
@@ -268,7 +268,7 @@ class DataTabData(AnalyzerData):
     def notify(self, data):
         self.notify_observers()
 
-class DataTab(AnalyzerTab):
+class DataTab(LevelTab):
     def __init__(self, parent, data, metrics=[], variants=[]):
         super().__init__(parent, data)
         # self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
@@ -293,7 +293,7 @@ class FilteringData(AnalyzerData):
     def notify(self, data):
         self.notify_observers()
 
-class FilteringTab(AnalyzerTab):
+class FilteringTab(LevelTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         self.setupThreshold()
@@ -331,7 +331,7 @@ class FilteringTab(AnalyzerTab):
         # self.pointSelector.restoreState(self.stateDictionary)
 
     def setOptions(self):
-        self.metric_menu = AxesTab.custom_axes(self.threshold_frame, self.metric_selected, self.data.gui)
+        self.metric_menu = AxesTab.all_metric_menu(self.threshold_frame, self.metric_selected)
         # metric_options = [metric for metric in self.data.df.columns.tolist()]
         # metric_options.insert(0, 'Choose Metric')
         # self.metric_menu = tk.OptionMenu(self, self.metric_selected, *metric_options)
@@ -351,7 +351,7 @@ class FilteringTab(AnalyzerTab):
         self.max_entry = tk.Entry(self.threshold_frame, textvariable=self.max_num)
         # Update GUI State with selected filters
         self.update_button = tk.Button(self, text='Update', command=self.updateFilter)
-
+    
     def updateFilter(self):
         names = self.pointSelector.getHidden()
         variants = self.variantSelector.getCheckedItems()
