@@ -275,7 +275,7 @@ class LoadedData(Observable):
             for n in NAME_FILE_METRICS:
                 short_names_db[n] = merged[n+'_x']
             short_names_db.to_csv(self.short_names_path, index=False)
-    
+
     # TODO: remove this property
     @property
     def summaryDf(self):

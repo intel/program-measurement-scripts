@@ -10,8 +10,8 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab
-from metric_names import MetricName
-globals().update(MetricName.__members__)
+from metric_names import MetricName as MN
+#globals().update(MetricName.__members__)
 
 class CustomData(AnalyzerData):
     def __init__(self, loadedData, gui, root, level):
@@ -44,7 +44,7 @@ class CustomData(AnalyzerData):
 
 class CustomTab(AnalyzerTab):
     def __init__(self, parent, data):
-        super().__init__(parent, data, 'Custom', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
+        super().__init__(parent, data, 'Custom', MN.RATE_FP_GFLOP_P_S, MN.COVERAGE_PCT, [])
 
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot

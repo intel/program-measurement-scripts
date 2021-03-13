@@ -50,36 +50,36 @@ class SiData(NodeWithUnitData):
         self.cluster_df = cluster_df
         return self
 
-    def compute_capacity(self, df):
-        chosen_node_set = self.chosen_node_set
-        norm = self.norm
-        print("The node list are as follows :")
-        print(chosen_node_set)
-        chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
-        chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
-        chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
-        # for node in chosen_basic_node_set:
-        #     print ("The current node : ", node)
-        #     formula=capacity_formula[node]
-        #     df['C_{}'.format(node)]=formula(df)
+    # def compute_capacity(self, df):
+    #     chosen_node_set = self.chosen_node_set
+    #     norm = self.norm
+    #     print("The node list are as follows :")
+    #     print(chosen_node_set)
+    #     chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
+    #     chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
+    #     chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
+    #     # for node in chosen_basic_node_set:
+    #     #     print ("The current node : ", node)
+    #     #     formula=capacity_formula[node]
+    #     #     df['C_{}'.format(node)]=formula(df)
 
-        # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
-        #self.compute_norm(norm, df, chosen_basic_node_set, MetricName.CAP_MEMMAX_GB_P_S)
-        #print ("<=====compute_capacity======>")
-        self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
-        print ("<=====compute_cu_scalar======>")
+    #     # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
+    #     #self.compute_norm(norm, df, chosen_basic_node_set, MetricName.CAP_MEMMAX_GB_P_S)
+    #     #print ("<=====compute_capacity======>")
+    #     self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
+    #     print ("<=====compute_cu_scalar======>")
 
-        for node in chosen_buffer_node_set:
-            formula=capacity_formula[node]
-            df['C_{}'.format(node)]=formula(df)
-        # # Compute memory level 
-        # chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
-        # # Below will get the C_* name with max value
-        # df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-        # # Remove the first two characters which is 'C_'
-        # df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
-        # # Drop the unit
-        # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+    #     for node in chosen_buffer_node_set:
+    #         formula=capacity_formula[node]
+    #         df['C_{}'.format(node)]=formula(df)
+    #     # # Compute memory level 
+    #     # chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
+    #     # # Below will get the C_* name with max value
+    #     # df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+    #     # # Remove the first two characters which is 'C_'
+    #     # df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
+    #     # # Drop the unit
+    #     # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
 
     def compute_norm(self, norm, df, node_set, lhs):

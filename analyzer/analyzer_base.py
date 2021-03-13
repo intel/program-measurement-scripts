@@ -4,13 +4,14 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 # from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
-from metric_names import MetricName, KEY_METRICS
+from metric_names import MetricName as MN
+from metric_names import KEY_METRICS
 import numpy as np
 import copy
 import os
 from os.path import expanduser
 
-globals().update(MetricName.__members__)
+# globals().update(MetricName.__members__)
 class PerLevelGuiState(Observable):
     def __init__(self, loadedData, level):
         super().__init__()
@@ -77,7 +78,7 @@ class PerLevelGuiState(Observable):
         # Add codelet names outside of filtered range to hidden names
         if metric:
             df = self.loadedData.df.loc[(self.loadedData.df[metric] < minimum) | (self.loadedData.df[metric] > maximum)]
-            self.hidden.extend((df[NAME]+df[TIMESTAMP].astype(str)).tolist())
+            self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
         self.updated()
 
     def setLabels(self, metrics):
@@ -197,7 +198,7 @@ class AnalyzerTab(tk.Frame):
         self.plotInteraction = PlotInteraction(self, self.fig, self.textData, self.level, self.data.gui, self.data.root)
         # Format columns for pandastable compatibility
         self.df.columns = ["{}".format(i) for i in self.df.columns]
-        self.df.sort_values(by=COVERAGE_PCT, ascending=False, inplace=True)
+        self.df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         for missing in set(metrics)-set(self.df.columns):
             self.df[missing] = np.nan
 
