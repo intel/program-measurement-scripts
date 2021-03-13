@@ -730,7 +730,7 @@ class AnalyzerGui(tk.Frame):
         # Clear summary dataframes
         for level in self.loadedData.levelData:
             self.loadedData.levelData[level].clear_df()
-        self.clearTabs()
+        # self.clearTabs()
 
     def clearTabs(self, levels=['All']):
         tabs = []
