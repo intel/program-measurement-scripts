@@ -298,12 +298,12 @@ class AxesTab(tk.Frame):
         # TRAWL
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in [SPEEDUP_VEC, SPEEDUP_DL1, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S, VARIANT]:
+        for metric in [MN.SPEEDUP_VEC, MN.SPEEDUP_DL1, MN.CAP_FP_GFLOP_P_S, MN.RATE_INST_GI_P_S, MN.VARIANT]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # QPlot
         menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='QPlot', menu=menu)
-        for metric in [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S]:
+        for metric in [MN.CAP_L1_GB_P_S, MN.CAP_L2_GB_P_S, MN.CAP_L3_GB_P_S, MN.CAP_RAM_GB_P_S, MN.CAP_MEMMAX_GB_P_S, MN.CAP_FP_GFLOP_P_S, MN.RATE_INST_GI_P_S]:
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # SIPlot
         menu = tk.Menu(main_menu, tearoff=False)
@@ -313,14 +313,15 @@ class AxesTab(tk.Frame):
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='Summary', menu=summary_menu)
-        metrics = [[COVERAGE_PCT, TIME_APP_S, TIME_LOOP_S],
-                    [NUM_CORES, DATA_SET, PREFETCHERS, REPETITIONS],
-                    [E_PKG_J, E_DRAM_J, E_PKGDRAM_J], 
-                    [P_PKG_W, P_DRAM_W, P_PKGDRAM_W],
-                    [COUNT_INSTS_GI, RATE_INST_GI_P_S],
-                    [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S, RATE_FP_GFLOP_P_S, RATE_INST_GI_P_S, RATE_REG_ADDR_GB_P_S, RATE_REG_DATA_GB_P_S, RATE_REG_SIMD_GB_P_S, RATE_REG_GB_P_S],
-                    [COUNT_OPS_VEC_PCT, COUNT_OPS_FMA_PCT, COUNT_OPS_DIV_PCT, COUNT_OPS_SQRT_PCT, COUNT_OPS_RSQRT_PCT, COUNT_OPS_RCP_PCT],
-                    [COUNT_INSTS_VEC_PCT, COUNT_INSTS_FMA_PCT, COUNT_INSTS_DIV_PCT, COUNT_INSTS_SQRT_PCT, COUNT_INSTS_RSQRT_PCT, COUNT_INSTS_RCP_PCT],
+        metrics = [[MN.COVERAGE_PCT, MN.TIME_APP_S, MN.TIME_LOOP_S],
+                    [MN.NUM_CORES, MN.DATA_SET, MN.PREFETCHERS, MN.REPETITIONS],
+                    [MN.E_PKG_J, MN.E_DRAM_J, MN.E_PKGDRAM_J], 
+                    [MN.P_PKG_W, MN.P_DRAM_W, MN.P_PKGDRAM_W],
+                    [MN.COUNT_INSTS_GI, MN.RATE_INST_GI_P_S],
+                    [MN.RATE_L1_GB_P_S, MN.RATE_L2_GB_P_S, MN.RATE_L3_GB_P_S, MN.RATE_RAM_GB_P_S, MN.RATE_FP_GFLOP_P_S, 
+                     MN.RATE_INST_GI_P_S, MN.RATE_REG_ADDR_GB_P_S, MN.RATE_REG_DATA_GB_P_S, MN.RATE_REG_SIMD_GB_P_S, MN.RATE_REG_GB_P_S],
+                    [MN.COUNT_OPS_VEC_PCT, MN.COUNT_OPS_FMA_PCT, MN.COUNT_OPS_DIV_PCT, MN.COUNT_OPS_SQRT_PCT, MN.COUNT_OPS_RSQRT_PCT, MN.COUNT_OPS_RCP_PCT],
+                    [MN.COUNT_INSTS_VEC_PCT, MN.COUNT_INSTS_FMA_PCT, MN.COUNT_INSTS_DIV_PCT, MN.COUNT_INSTS_SQRT_PCT, MN.COUNT_INSTS_RSQRT_PCT, MN.COUNT_INSTS_RCP_PCT],
                     ALL_METRICS]
         categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
         for index, category in enumerate(categories):

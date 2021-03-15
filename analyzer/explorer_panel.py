@@ -17,6 +17,7 @@ from shutil import copyfile
 from abc import ABC, abstractmethod
 
 class ScrolledTreePane(tk.Frame):
+    TIMESTAMP_STR = r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}'
     def __init__(self, parent, loadFn, rootName, guiRoot):
         tk.Frame.__init__(self, parent)
         self.treeview = ttk.Treeview(self)
@@ -33,7 +34,6 @@ class ScrolledTreePane(tk.Frame):
         self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
         self.loadFn = loadFn
         self.rootNode = ScrolledTreePane.MetaTreeNode(rootName, None, self)
-        self.insertNode(None, self.rootNode)
         self.setupLocalRoots()
         self.setupRemoteRoots()
         self.setupOneDriveRoots()
@@ -44,7 +44,19 @@ class ScrolledTreePane(tk.Frame):
         pass
     def setupRemoteRoots(self):
         pass
+
     def setupOneDriveRoots(self):
+        self.oneDriveNode = ScrolledTreePane.MetaTreeNode('OneDrive', self.rootNode, self)
+        home_dir=expanduser("~")
+
+        cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data')
+        self.setupOneDriveRoot('Intel (Internal)', cape_onedrive)
+
+        cape_onedrive_ext=os.path.join(home_dir, 'Intel Corporation', 'QProf - Shared Documents', 'Cape GUI Data')
+        self.setupOneDriveRoot('Intel (External)', cape_onedrive_ext)
+        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
+
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
         pass
 
     def handleOpenEvent(self, event):
@@ -177,6 +189,7 @@ class ScrolledTreePane(tk.Frame):
             ScrolledTreePane.DataTreeNode.nextId += 1
             ScrolledTreePane.DataTreeNode.nodeDict[self.id]=self
             self.container = container
+            self.container.insertNode(parent, self)
 
         @classmethod
         def lookupNode(cls, id):
@@ -192,6 +205,77 @@ class ScrolledTreePane(tk.Frame):
         def __init__(self, name, parent, container, real_path=None):
             super().__init__(name, parent, container)
             self.real_path=real_path
+
+            
+    class RealTreeNode(DataTreeNode):
+        def __init__(self, name, parent, virtual_path, real_path, container, data_source):
+            super().__init__(name, parent, container)
+            self.virtual_path = virtual_path
+            self.real_path = real_path
+            self.data_src = data_source
+
+        def get_root_virtual_path(self):
+            if (isinstance(self.parent, DataSourcePanel.RealTreeNode)):
+                # If parent is also real node, get root url there
+                return self.parent.get_root_virtual_path()
+            else:
+                # If parent is not real node, the url of this node is the root
+                return self.virtual_path
+
+    class InternalNode(RealTreeNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, 
+                     data_source, terminalNodeClass):
+            super().__init__(name, parent, virtual_path, real_path, container, data_source)
+            # These class objects are used to create object of internal and terminal nodes
+            self.terminalNodeClass = terminalNodeClass
+            self.internalNodeClass = type(self)
+
+        # Whether to skip next potential child with name
+        def skip(self, name):
+            return False
+
+        # Return names and time_stamps of potential children nodes to visit
+        def get_children_names_timestamps(self):
+            return self.data_src.directory_file_names_timestamps(self.virtual_path)
+            
+        # Create an internal node to be added if name tells us this is internal
+        def makeInternalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path,  name)
+            if self.data_src.isdir(full_virtual_path): 
+                full_real_path = re.sub('/$','', os.path.join(self.real_path, name))
+                # Use self.internalNodeClass rather than explict class name so this handles subclassing automatically
+                return self.internalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
+
+        # Create an terminal node to be added if name tells us this is terminal
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            # By default don't create terminal nodes.  Subclass override to create.
+            return None
+
+        def open(self):
+            print("internal node open:", self.name, self.id) 
+            # Directory node
+            names, time_stamps = self.get_children_names_timestamps()
+            # Show directories and data files (.xlsx or .raw.csv)
+            # Iterate internal nodes following revserse order of timestamps
+            for time_stamp, name in sorted(zip(time_stamps, names), reverse=True):
+                if name in [child.name for child in self.children]:
+                    continue  # Skip if already added
+
+                if self.skip(name):
+                    continue
+
+                node = self.makeInternalNodeOrNone(name, time_stamp)
+                if node is None:
+                    self.makeTerminalNodeOrNone(name, time_stamp)
+                #if node: self.container.insertNode(self, node)
+
+    class TerminalNode(RealTreeNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, data_source):
+            super().__init__(name, parent, virtual_path, real_path, container, data_source)
+
+        def open(self):
+            print("terminal node open:", self.name, self.id, self.real_path)
 
     # Simple dialog class
     class DialogWin:
@@ -216,30 +300,11 @@ class ScrolledTreePane(tk.Frame):
 
 
 class DataSourcePanel(ScrolledTreePane):
-            
-    
-    class RealTreeNode(ScrolledTreePane.DataTreeNode):
-        def __init__(self, name, parent, virtual_path, real_path, container, data_source):
-            super().__init__(name, parent, container)
-            self.virtual_path = virtual_path
-            self.real_path = real_path
-            self.data_src = data_source
-
-        def get_root_virtual_path(self):
-            if (isinstance(self.parent, DataSourcePanel.RealTreeNode)):
-                # If parent is also real node, get root url there
-                return self.parent.get_root_virtual_path()
-            else:
-                # If parent is not real node, the url of this node is the root
-                return self.virtual_path
         
-    class InternalNode(RealTreeNode):
+    class DataSourceInternalNode(ScrolledTreePane.InternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent, 
                      data_source, terminalNodeClass):
-            super().__init__(name, parent, virtual_path, real_path, container, data_source)
-            # These class objects are used to create object of internal and terminal nodes
-            self.terminalNodeClass = terminalNodeClass
-            self.internalNodeClass = type(self)
+            super().__init__(virtual_path, real_path, name, container, parent, data_source, terminalNodeClass)
 
         # Whether to skip next potential child with name
         def skip(self, name):
@@ -247,19 +312,6 @@ class DataSourcePanel(ScrolledTreePane):
             # Skip meta path
             return os.path.join(self.virtual_path, name) == os.path.join(self.get_root_virtual_path(), "meta")
 
-
-        # Return names and time_stamps of potential children nodes to visit
-        def get_children_names_timestamps(self):
-            return self.data_src.directory_file_names_timestamps(self.virtual_path)
-            
-        # Create an internal node to be added if name tells us this is internal
-        def makeInternalNodeOrNone(self, name, time_stamp):
-            full_virtual_path = os.path.join(self.virtual_path,  name)
-            if self.data_src.isdir(full_virtual_path): 
-                full_real_path = re.sub('/$','', os.path.join(self.real_path, name))
-                # Use self.internalNodeClass rather than explict class name so this handles subclassing automatically
-                return self.internalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
-            return None
 
         # Create an terminal node to be added if name tells us this is terminal
         def makeTerminalNodeOrNone(self, name, time_stamp):
@@ -270,32 +322,12 @@ class DataSourcePanel(ScrolledTreePane):
                 return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
             return None
 
-            
-
-        def open(self):
-            print("internal node open:", self.name, self.id) 
-            # Directory node
-            names, time_stamps = self.get_children_names_timestamps()
-            # Show directories and data files (.xlsx or .raw.csv)
-            # Iterate internal nodes following revserse order of timestamps
-            for time_stamp, name in sorted(zip(time_stamps, names), reverse=True):
-                if name in [child.name for child in self.children]:
-                    continue  # Skip if already added
-
-                if self.skip(name):
-                    continue
-
-                node = self.makeInternalNodeOrNone(name, time_stamp)
-                node = node if node else self.makeTerminalNodeOrNone(name, time_stamp)
-                if node: self.container.insertNode(self, node)
-
-            
-    class TerminalNode(RealTreeNode):
+    class DataSourceTerminalNode(ScrolledTreePane.TerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent, data_source):
-            super().__init__(name, parent, virtual_path, real_path, container, data_source)
+            super().__init__(virtual_path, real_path, name, container, parent, data_source)
 
         def open(self):
-            print("terminal node open:", self.name, self.id, self.real_path)
+            super().open()
             self.container.show_options_data(select_fn=self.user_selection, node=self)
 
         # Normally the real path points to the file to load
@@ -368,7 +400,7 @@ class DataSourcePanel(ScrolledTreePane):
             if updated: all_mappings.to_csv(mappings_path, index=False)
 
 
-    class RemoteNode(InternalNode):
+    class RemoteNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.WebServer(), DataSourcePanel.RemoteDataNode)
@@ -430,7 +462,7 @@ class DataSourcePanel(ScrolledTreePane):
     # Data will only be loaded under timestamp directories.
     # For cache local directory, virtual_path refers to original path and real_path refers to the cache path
     # - same as other nodes
-    class CacheLocalDirNode(InternalNode):
+    class CacheLocalDirNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.FileSystem(), DataSourcePanel.CacheTimestampDirNode) 
@@ -447,19 +479,19 @@ class DataSourcePanel(ScrolledTreePane):
         # Create an internal node to be added if name tells us this is internal
         def makeInternalNodeOrNone(self, name, time_stamp):
             full_real_path = os.path.join(self.real_path, name)
-            if self.data_src.isdir(full_real_path) and not re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name):
+            if self.data_src.isdir(full_real_path) and not re.match(ScrolledTreePane.TIMESTAMP_STR, name):
                 return self.internalNodeClass(self.virtual_path+'/'+name, full_real_path, name, self.container, self)
             return None
 
         # Create an terminal node to be added if name tells us this is terminal
         def makeTerminalNodeOrNone(self, name, time_stamp):
             full_real_path = os.path.join(self.real_path, name)
-            if self.data_src.isdir(full_real_path) and re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name): # timestamp directory holding several files to be loaded 
+            if self.data_src.isdir(full_real_path) and re.match(ScrolledTreePane.TIMESTAMP_STR, name): # timestamp directory holding several files to be loaded 
                 return self.terminalNodeClass(self.virtual_path, full_real_path, name, self.container, self)
             return None
 
     # This tree should not visit cache directory
-    class NonCacheLocalDirNode(InternalNode):
+    class NonCacheLocalDirNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.FileSystem(), DataSourcePanel.NonCacheLocalFileNode)
@@ -491,7 +523,7 @@ class DataSourcePanel(ScrolledTreePane):
 
     # Terminal node of the tree supposed to be for loading data and no more expansions
 
-    class CacheTimestampDirNode(TerminalNode):
+    class CacheTimestampDirNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
                              parent, ScrolledTreePane.FileSystem())
@@ -505,12 +537,12 @@ class DataSourcePanel(ScrolledTreePane):
         def get_files(self, file_to_load):
             pass  # Nothing to do when browsing cached directory
             
-    class NonCacheLocalFileNode(TerminalNode):
+    class NonCacheLocalFileNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
                              parent, ScrolledTreePane.FileSystem())
 
-    class RemoteDataNode(TerminalNode):
+    class RemoteDataNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
                              parent, ScrolledTreePane.WebServer())
@@ -555,25 +587,20 @@ class DataSourcePanel(ScrolledTreePane):
         if not os.path.isdir(nonCachePath):
             return
         cacheRootRealPath = self.cacheRoot.real_path
-        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(cacheRootRealPath, name), name, self, localMetaNode) )
+        nonCacheNode = DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(cacheRootRealPath, name), name, self, localMetaNode)
         cache_path = os.path.join(cacheRootRealPath, name)
         Path(cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot))
+        cacheNode = DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot)
+        return nonCacheNode, cacheNode
 
-    def setupOneDriveRoots(self):
-        self.oneDriveNode = ScrolledTreePane.MetaTreeNode('OneDrive', self.rootNode, self)
-        self.insertNode(self.rootNode, self.oneDriveNode)
-        home_dir=expanduser("~")
-        cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
-        cape_onedrive_ext=os.path.join(home_dir, 'Intel Corporation', 'QProf - Shared Documents', 'Cape GUI Data', 'data_source')
-        self.setupLocalRoot(cape_onedrive, 'Intel (Internal)', self.oneDriveNode)
-        self.setupLocalRoot(cape_onedrive_ext, 'Intel (External)', self.oneDriveNode)
-        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
+        cape_onedrive=os.path.join(oneDriveRoot, 'data_source')
+        self.setupLocalRoot(cape_onedrive, oneDriveName, self.oneDriveNode)
+
     
     # This includes OneDrive sync roots
     def setupLocalRoots(self):
         self.localNode = ScrolledTreePane.MetaTreeNode('Local', self.rootNode, self)
-        self.insertNode(self.rootNode, self.localNode)
 
         home_dir=expanduser("~")
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
@@ -581,89 +608,78 @@ class DataSourcePanel(ScrolledTreePane):
         if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
         #self.cacheRoot = DataSourcePanel.CacheLocalDirNode(None, cache_root_path , 'Previously Visited', self, self.localNode) 
         self.cacheRoot = ScrolledTreePane.MetaTreeNode('Previously Visited', self.localNode, self, cache_root_path)
-        self.insertNode(self.localNode, self.cacheRoot)
         
         self.setupLocalRoot(home_dir, 'Home', self.localNode)
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
 
 
-
     def setupRemoteRoot(self, url, name):
         cache_path = os.path.join(self.cacheRoot.real_path, name)
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, cache_path, name, self, self.remoteNode))
         Path(cache_path).mkdir(parents=True, exist_ok=True)
+
+        remoteNode = DataSourcePanel.RemoteNode(url, cache_path, name, self, self.remoteNode)
         cacheNode = DataSourcePanel.CacheLocalDirNode(url, cache_path, name, self, self.cacheRoot)
-        self.insertNode(self.cacheRoot, cacheNode)
+        return remoteNode, cacheNode
 
     def setupRemoteRoots(self):
         self.remoteNode = ScrolledTreePane.MetaTreeNode('Remote', self.rootNode, self)
-        self.insertNode(self.rootNode, self.remoteNode)
         self.setupRemoteRoot('https://vectorization.computer/data/', 'UIUC')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'UVSQ')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 'UVSQ_2020')
 
 
 class AnalysisResultsPanel(ScrolledTreePane):
-
-    class LocalTreeNode(ScrolledTreePane.DataTreeNode):
+    # Try to use a simple structure /root/user/result/<TIME STAMP>.  
+    # This is the root level and will see user as next level
+    class RootNode(ScrolledTreePane.InternalNode):
         def __init__(self, path, name, container, parent):
-            super().__init__(name, parent, container)
-            self.path = path
-            self.data_src = ScrolledTreePane.FileSystem()
+            super().__init__(path, path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), None)
+            # Override this to use ResultNode as internal node
+            self.internalNodeClass = AnalysisResultsPanel.UserNode
+    # This will be the root for local roots
+    # This is the user level and will see resul as next level
+    class UserNode(ScrolledTreePane.InternalNode):
+        def __init__(self, path, name, container, parent):
+            super().__init__(path, path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), None)
+            # Override this to use ResultNode as internal node
+            self.internalNodeClass = AnalysisResultsPanel.ResultNode
 
-    class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container, parent, df=pd.DataFrame(), srcDf=pd.DataFrame(), appDf=pd.DataFrame(), \
-            mapping=pd.DataFrame(), srcMapping=pd.DataFrame(), appMapping=pd.DataFrame(), \
-            analytics=pd.DataFrame(), data={}):
-            super().__init__(path, name, container, parent)
+    # This is the result level and will see timestamp node as next level
+    class ResultNode(ScrolledTreePane.InternalNode):
+        def __init__(self, path, name, container, parent):
+            super().__init__(path, path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), AnalysisResults.Panel.TimestampNode)
+
+        def makeInternalNodeOrNone(self, name, time_stamp):
+            return None  # Will not make internal node at this level
+        
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path, name)
+            full_real_path = os.path.join(self.real_path, name)
+            if self.data_src.isdir(full_real_path) and \
+                re.match(ScrolledTreePane.TIMESTAMP_STR, name): # timestamp directory holding several files to be loaded 
+                return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
+
+    # This is the timestamp level and will be the terminal node
+    class TimestampNode(ScrolledTreePane.TerminalNode):
+        def __init__(self, path, name, container, parent):
+            super().__init__(path, path, name, container, parent, 
+                             ScrolledTreePane.FileSystem())
 
         def open(self):
-            print("file node open:", self.name, self.id) 
+            super().open()
+            data_file = open(os.path.join(self.path, 'data.pkl'), 'rb')
+            data = pickle.load(data_file)
+            data_file.close()
 
-    class LocalDirNode(LocalTreeNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, name+'/', container, parent)
-            self.children = []
-            self.analysis_result = False
-            self.df = pd.DataFrame()
-            self.srcDf = pd.DataFrame()
-            self.appDf = pd.DataFrame()
-            self.mapping = pd.DataFrame()
-            self.srcMapping = pd.DataFrame()
-            self.appMapping = pd.DataFrame()
-            self.analytics = pd.DataFrame()
-            self.data = {}
-
-        def open(self):
-            print("dir node open:", self.name, self.id) 
-            for d in os.listdir(self.path):
-                if d not in self.children:
-                    self.children.append(d)
-                    fullpath = os.path.join(self.path, d)
-                    # Just display directory names 
-                    if os.path.isdir(fullpath):
-                        self.analysis_result = False
-                        self.container.insertNode(self, AnalysisResultsPanel.LocalDirNode(fullpath, d, self.container))
-                    # Load analysis results directory
-                    else:
-                        self.analysis_result = True
-                        if d == 'summary.xlsx': self.df = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'srcSummary.xlsx': self.srcDf = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'appSummary.xlsx': self.appDf = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'mapping.xlsx': self.mapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'srcMapping.xlsx': self.srcMapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'appMapping.xlsx': self.appMapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'data.pkl': 
-                            data_file = open(os.path.join(self.path, d), 'rb')
-                            self.data = pickle.load(data_file)
-                            data_file.close()
-
-            if self.analysis_result:
-                codelet = {'summary':self.df, 'mapping':self.mapping, 'data':self.data['Codelet']}
-                source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
-                app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
-                self.levels = [codelet, source, app]
-                self.container.openLocalFile(self.levels)
+            #codelet = {'summary':self.df, 'mapping':self.mapping, 'data':self.data['Codelet']}
+            #source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
+            #app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
+            # Assume data contains whatever format previously saved
+            self.container.openLocalFile(data)
 
     def __init__(self, parent, loadSavedStateFn, root):
         ScrolledTreePane.__init__(self, parent, loadSavedStateFn, 'Analysis Results', root)
@@ -671,15 +687,14 @@ class AnalysisResultsPanel(ScrolledTreePane):
     def openLocalFile(self, levels=[]):
         self.loadFn(levels)
 
-
-    def setupRemoteRoots(self):
-        pass
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
+        cape_onedrive=os.path.join(oneDriveRoot, 'analysis_results')
+        oneDriveNode = AnalysisResultsPanel.UserNode(cape_onedrive, oneDriveName, self, self.oneDriveNode)
     
     def setupLocalRoots(self):
         cape_cache_path= os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'Analysis Results')
         if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.rootNode, 
-                        AnalysisResultsPanel.LocalDirNode(cape_cache_path, 'Local', self, self.rootNode))
+        AnalysisResultsPanel.UserNode(cape_cache_path, 'Local', self, self.rootNode)
 
 class ExplorerPanel(tk.PanedWindow):
     def __init__(self, parent, loadDataSrcFn, loadSavedStateFn, gui, root):
