@@ -41,7 +41,7 @@ args = None
 variants = {}
 short_names = {}
 field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPETITIONS, COUNT_VEC_TYPE_OPS_PCT, TIME_LOOP_S, RECIP_TIME_LOOP_MHZ,
-                COUNT_INSTS_GI, RATE_INST_GI_P_S,
+                COUNT_INSTS_GI, COUNT_FP_GFLOP, RATE_INST_GI_P_S,
                 E_PKG_J, P_PKG_W,
                 EPO_PKG_INST_J_P_GI, RPE_INST_PKG_GI_P_JS, ROPE_INST_PKG_GI2_P_JS,
                 E_DRAM_J, P_DRAM_W,

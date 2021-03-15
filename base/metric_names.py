@@ -82,6 +82,7 @@ class MetricName(CapeEnum):
     RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
                 
     COUNT_INSTS_GI = 'Count[Insts]_GI'
+    COUNT_FP_GFLOP = 'Count[Fp]_GFLOP'
     COUNT_OPS_VEC_PCT = _opsPctStr('Vec')
     COUNT_INSTS_VEC_PCT = _instsPctStr('Vec')
     #COUNT_INSTS_VEC_PCT = '%Inst[Vec]'
