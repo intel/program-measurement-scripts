@@ -432,7 +432,7 @@ class FSM(Observable):
         self.save_graph()
         # Get points that we want to save for each state
         self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, getNames=True) # Highlight SIDO codelets
-        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, getNames=True) # Highlight RHS codelets
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, getNames=True) # Highlight RHS codelets
         self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, getNames=True) # Highlight FMA codelets
 
     def INIT(self):
@@ -478,15 +478,15 @@ class FSM(Observable):
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
         self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
-        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=True, show=True) # Highlight RHS codelets
-        self.updateLabels(COUNT_OPS_RHS_OP)
+        self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=True, show=True) # Highlight RHS codelets
+        self.updateLabels(SRC_RHS_OP_COUNT)
         self.notify_observers()
 
     def A3(self):
         print("In A3")
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
-        self.tab.plotInteraction.A_filter(relate=operator.eq, metric=COUNT_OPS_RHS_OP, threshold=1, highlight=False, remove=True) # Remove RHS codelets
+        self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=False, remove=True) # Remove RHS codelets
         self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True) # Highlight FMA codelets
         self.updateLabels(COUNT_OPS_FMA_PCT)
         self.notify_observers()

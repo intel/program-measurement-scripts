@@ -1,3 +1,4 @@
+"""This module contains definitions for Enum object for common names columns of dataframes"""
 from enum import Enum
 import re
 
@@ -40,6 +41,7 @@ def _capWUnitStr(node_w_unit):
 
 # See https://docs.python.org/3/library/enum.html#others for reason why MetricName mixes str.
 class CapeEnum(str, Enum):
+    """CapeEnum is a class for common Metric/Nonmetric names"""
     def __str__(self):
         return str(self.value)
 
@@ -47,6 +49,7 @@ class CapeEnum(str, Enum):
         return format(self.value, format_spec)
     
 class MetricName(CapeEnum):
+    """MetricName is a class for common Metric names"""
     NAME = "Name"
     SHORT_NAME = "ShortName"
     SRC_NAME = "SourceName"
@@ -80,7 +83,7 @@ class MetricName(CapeEnum):
     RATE_MEM_GMEMOP_P_S = 'Rate[Mem]_GMEMOP/s'
     RATE_INT_GIOP_P_S = 'Rate[Int]_GIOP/s'
     RATE_INST_GI_P_S = 'Rate[Inst]_GI/s'
-                
+
     COUNT_INSTS_GI = 'Count[Insts]_GI'
     COUNT_FP_GFLOP = 'Count[Fp]_GFLOP'
     COUNT_OPS_VEC_PCT = _opsPctStr('Vec')
@@ -148,12 +151,12 @@ class MetricName(CapeEnum):
     ROPE_INST_PKGDRAM_GI2_P_JS = _ropeStr('PKG+DRAM', 'Inst')
 
     BRANCHES_MISP_PCT = 'Branches[Misp]_%'
-    EXE_PER_RET_UOPS = 'ExeRetUopsRatio',
+    EXE_PER_RET_UOPS = 'ExeRetUopsRatio'
 
     ARRAY_EFFICIENCY_PCT = 'ArrayEfficiency_%'
-    COUNT_OPS_RHS_OP = 'rhs_op_count'
-    RECURRENCE_BOOL = 'recurrence'
-    SCORE_CLU_PCT = 'clu_scores'
+    # COUNT_OPS_RHS_OP = 'rhs_op_count'
+    #RECURRENCE_BOOL = 'recurrence'
+    #SCORE_CLU_PCT = 'clu_scores'
 
     # Capacities
     CAP_FP_GFLOP_P_S = _capStr('FLOP', 'GFlop/s')
@@ -266,6 +269,7 @@ class MetricName(CapeEnum):
 #  For column names that are not measurement data
 # TODO: move some of the MetricNames here.
 class NonMetricName(CapeEnum):
+    """NonMetricName is a class for common non-measurment data"""
     SI_CLUSTER_NAME = "SiClusterName"
     SI_SAT_NODES = "SiSatNodes"
     SI_SAT_TIER = "SiTier"
@@ -299,12 +303,15 @@ ENERGY_METRICS = [ MetricName.E_PKG_J, MetricName.P_PKG_W, MetricName.E_DRAM_J, 
 
 STALL_METRICS = [m for m in ALL_METRICS if m.startswith("Stall[") ] 
 
+LFB_METRICS = [m for m in ALL_METRICS if m.startswith("Busy[LFB") ] 
+
 MEM_ACCESS_METRICS = [ MetricName.MAX_MEM_LEVEL_100, MetricName.MAX_MEM_LEVEL_85, MetricName.ARRAY_EFFICIENCY_PCT]
 
 WHATIF_SPEEDUP_METRICS = [ MetricName.SPEEDUP_DL1, MetricName.SPEEDUP_VEC ]
+OTHER_SPEEDUP_METRICS = [ MetricName.SPEEDUP_TIME_LOOP_S, MetricName.SPEEDUP_TIME_APP_S, MetricName.SPEEDUP_RATE_FP_GFLOP_P_S ]
 
 SUMMARY_METRICS = RUN_INFO_METRICS + TIME_METRICS + COUNT_METRICS + RATE_METRICS \
-    + BRANCH_METRICS + STALL_METRICS + MEM_ACCESS_METRICS + WHATIF_SPEEDUP_METRICS + ENERGY_METRICS  
+    + BRANCH_METRICS + STALL_METRICS + MEM_ACCESS_METRICS + WHATIF_SPEEDUP_METRICS + ENERGY_METRICS
 
 NAME_FILE_METRICS = [ MetricName.SHORT_NAME, MetricName.VARIANT ]
 GENERAL_METRICS = [ MetricName.GENERAL_RATING, MetricName.GENERAL_ADVICE, MetricName.GENERAL_INFO_URL ]
@@ -313,3 +320,25 @@ SRC_METRICS = [ MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_INIT_ONLY_B, MetricN
     MetricName.SRC_ARRAY_ACCESS_OFFSETS, MetricName.SRC_LOOP_LIMITS ]  
 ANALYTICS_METRICS = SRC_METRICS + GENERAL_METRICS
 CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
+
+SIDO_CLUSTER_METRICS=[ NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER, NonMetricName.SI_SW_BIAS ]
+
+# Dictionary to parition metrics into different categories.
+CATEGORIZED_METRICS = {
+    'RunInfo' : sorted(RUN_INFO_METRICS),
+    'Time' : sorted(TIME_METRICS),
+    'Counts' : sorted(COUNT_METRICS),
+    'Rates': sorted(RATE_METRICS),
+    'Branches' : sorted(BRANCH_METRICS),
+    'Stalls' : sorted(STALL_METRICS),
+    'MemAccess' : sorted(MEM_ACCESS_METRICS),
+    'MemOccupancies' : sorted(LFB_METRICS),
+    'Whatif Speedup' : sorted(WHATIF_SPEEDUP_METRICS),
+    'Other Speedup' : sorted(OTHER_SPEEDUP_METRICS),
+    'Energy' : sorted(ENERGY_METRICS),
+    'General' : sorted(GENERAL_METRICS),
+    'SrcLevel' : sorted(SRC_METRICS),
+    'Capacities': sorted(CAPACITY_METRICS),
+    'Sido': sorted(SIDO_CLUSTER_METRICS)
+}
+CATEGORIZED_METRICS['Other']=sorted(set(ALL_METRICS)-set().union(*CATEGORIZED_METRICS.values()))

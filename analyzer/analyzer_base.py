@@ -6,7 +6,7 @@ from utils import Observable, exportCSV, exportXlsx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 # from meta_tabs import ShortNameTab, LabelTab, VariantTab, AxesTab, MappingsTab, ClusterTab, FilteringTab, DataTab
 from metric_names import MetricName as MN
-from metric_names import KEY_METRICS, ALL_METRICS
+from metric_names import KEY_METRICS, ALL_METRICS, CATEGORIZED_METRICS
 import numpy as np
 import copy
 import os
@@ -312,7 +312,7 @@ class AxesTab(tk.Frame):
             menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
-        main_menu.add_cascade(label='Summary', menu=summary_menu)
+        main_menu.add_cascade(label='All', menu=summary_menu)
         metrics = [[MN.COVERAGE_PCT, MN.TIME_APP_S, MN.TIME_LOOP_S],
                     [MN.NUM_CORES, MN.DATA_SET, MN.PREFETCHERS, MN.REPETITIONS],
                     [MN.E_PKG_J, MN.E_DRAM_J, MN.E_PKGDRAM_J], 
@@ -324,11 +324,17 @@ class AxesTab(tk.Frame):
                     [MN.COUNT_INSTS_VEC_PCT, MN.COUNT_INSTS_FMA_PCT, MN.COUNT_INSTS_DIV_PCT, MN.COUNT_INSTS_SQRT_PCT, MN.COUNT_INSTS_RSQRT_PCT, MN.COUNT_INSTS_RCP_PCT],
                     ALL_METRICS]
         categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
-        for index, category in enumerate(categories):
+        for category, metrics in CATEGORIZED_METRICS.items():
             menu = tk.Menu(summary_menu, tearoff=False)
             summary_menu.add_cascade(label=category, menu=menu)
-            for metric in metrics[index]:
+            for metric in metrics:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
+
+        # for index, category in enumerate(categories):
+        #     menu = tk.Menu(summary_menu, tearoff=False)
+        #     summary_menu.add_cascade(label=category, menu=menu)
+        #     for metric in metrics[index]:
+        #         menu.add_radiobutton(value=metric, label=metric, variable=var)
         return menubutton
 
     def __init__(self, parent, tab, plotType):
