@@ -42,13 +42,15 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def exportCSV(df):
-        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+    export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+    if export_file_path:
         df.drop(columns=['Color']).to_csv(export_file_path, index=False, header=True)
-    
+   
 def exportXlsx(df):
     export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.xlsx')
     # To be moved to constructor later (after refactoring?)
-    xlsxgen = XlsxGenerator()
-    xlsxgen.set_header("single")
-    xlsxgen.set_scheme("general")
-    xlsxgen.from_dataframe("data", df, export_file_path)
+    if export_file_path:
+        xlsxgen = XlsxGenerator()
+        xlsxgen.set_header("single")
+        xlsxgen.set_scheme("general")
+        xlsxgen.from_dataframe("data", df, export_file_path)
