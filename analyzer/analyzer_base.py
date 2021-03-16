@@ -39,6 +39,17 @@ class PerLevelGuiState(Observable):
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
         self.short_names_path = os.path.join(self.cape_path, 'short_names.csv')
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
+        # Column order for data table display.  All except KEY_METRICS.
+        self.nonKeyColumnOrder = [m for m in ALL_METRICS if m not in KEY_METRICS] 
+
+    def moveColumnFirst(self, column):
+        if column in self.columnOrder:
+            self.nonKeyColumnOrder = [column]+[m for m in self.nonKeyColumnOrder if m != column]
+            self.updated()
+        
+    @property
+    def columnOrder(self):
+        return KEY_METRICS + self.nonKeyColumnOrder
 
     def set_color_map(self, color_map_df):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
@@ -141,6 +152,14 @@ class AnalyzerData(Observable):
     @property
     def variants(self):
         return self.loadedData.levelData[self.level].guiState.selectedVariants
+
+    @property
+    def columnOrder(self):
+        return self.loadedData.levelData[self.level].guiState.columnOrder
+
+    # Move need to move this to controller class (Plot interaction?)
+    def moveColumnFirst(self, column):
+        self.loadedData.levelData[self.level].guiState.moveColumnFirst(column)
 
     @property
     def capacityDataItems(self):
@@ -313,17 +332,17 @@ class AxesTab(tk.Frame):
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='All', menu=summary_menu)
-        metrics = [[MN.COVERAGE_PCT, MN.TIME_APP_S, MN.TIME_LOOP_S],
-                    [MN.NUM_CORES, MN.DATA_SET, MN.PREFETCHERS, MN.REPETITIONS],
-                    [MN.E_PKG_J, MN.E_DRAM_J, MN.E_PKGDRAM_J], 
-                    [MN.P_PKG_W, MN.P_DRAM_W, MN.P_PKGDRAM_W],
-                    [MN.COUNT_INSTS_GI, MN.RATE_INST_GI_P_S],
-                    [MN.RATE_L1_GB_P_S, MN.RATE_L2_GB_P_S, MN.RATE_L3_GB_P_S, MN.RATE_RAM_GB_P_S, MN.RATE_FP_GFLOP_P_S, 
-                     MN.RATE_INST_GI_P_S, MN.RATE_REG_ADDR_GB_P_S, MN.RATE_REG_DATA_GB_P_S, MN.RATE_REG_SIMD_GB_P_S, MN.RATE_REG_GB_P_S],
-                    [MN.COUNT_OPS_VEC_PCT, MN.COUNT_OPS_FMA_PCT, MN.COUNT_OPS_DIV_PCT, MN.COUNT_OPS_SQRT_PCT, MN.COUNT_OPS_RSQRT_PCT, MN.COUNT_OPS_RCP_PCT],
-                    [MN.COUNT_INSTS_VEC_PCT, MN.COUNT_INSTS_FMA_PCT, MN.COUNT_INSTS_DIV_PCT, MN.COUNT_INSTS_SQRT_PCT, MN.COUNT_INSTS_RSQRT_PCT, MN.COUNT_INSTS_RCP_PCT],
-                    ALL_METRICS]
-        categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
+        # metrics = [[MN.COVERAGE_PCT, MN.TIME_APP_S, MN.TIME_LOOP_S],
+        #             [MN.NUM_CORES, MN.DATA_SET, MN.PREFETCHERS, MN.REPETITIONS],
+        #             [MN.E_PKG_J, MN.E_DRAM_J, MN.E_PKGDRAM_J], 
+        #             [MN.P_PKG_W, MN.P_DRAM_W, MN.P_PKGDRAM_W],
+        #             [MN.COUNT_INSTS_GI, MN.RATE_INST_GI_P_S],
+        #             [MN.RATE_L1_GB_P_S, MN.RATE_L2_GB_P_S, MN.RATE_L3_GB_P_S, MN.RATE_RAM_GB_P_S, MN.RATE_FP_GFLOP_P_S, 
+        #              MN.RATE_INST_GI_P_S, MN.RATE_REG_ADDR_GB_P_S, MN.RATE_REG_DATA_GB_P_S, MN.RATE_REG_SIMD_GB_P_S, MN.RATE_REG_GB_P_S],
+        #             [MN.COUNT_OPS_VEC_PCT, MN.COUNT_OPS_FMA_PCT, MN.COUNT_OPS_DIV_PCT, MN.COUNT_OPS_SQRT_PCT, MN.COUNT_OPS_RSQRT_PCT, MN.COUNT_OPS_RCP_PCT],
+        #             [MN.COUNT_INSTS_VEC_PCT, MN.COUNT_INSTS_FMA_PCT, MN.COUNT_INSTS_DIV_PCT, MN.COUNT_INSTS_SQRT_PCT, MN.COUNT_INSTS_RSQRT_PCT, MN.COUNT_INSTS_RCP_PCT],
+        #             ALL_METRICS]
+        # categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
         for category, metrics in CATEGORIZED_METRICS.items():
             menu = tk.Menu(summary_menu, tearoff=False)
             summary_menu.add_cascade(label=category, menu=menu)

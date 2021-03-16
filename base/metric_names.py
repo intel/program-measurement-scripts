@@ -207,6 +207,9 @@ class MetricName(CapeEnum):
     GENERAL_RATING = "General[Rating]"
     GENERAL_ADVICE = "General[Advice]"
     GENERAL_INFO_URL = "General[InfoUrl]"
+
+    INTENSITY = "Intensity"
+    SATURATION = "Saturation"
     
 
     @classmethod

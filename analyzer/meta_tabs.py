@@ -279,13 +279,32 @@ class DataTab(LevelTab):
         self.table_button_frame.grid(row=4, column=1)
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df))
         self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df))
+        self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column First", command=self.moveColumnFirst)
         self.summaryTable.show()
         self.export_summary_button.grid(row=0, column=0)
         self.export_colored_summary_button.grid(row=0, column=1)
+        self.move_column_first_button.grid(row=0, column=2)
 
+    class ChooseColumnDialog(tk.simpledialog.Dialog):
+        def body(self, master):
+            self.metric = tk.StringVar(value='Metric')
+            self.menu = AxesTab.all_metric_menu(master, self.metric)
+            self.menu.grid(row=0, column=0)
+            return self.menu
+
+        def apply(self):
+            self.result = self.metric.get()
+            if self.result == 'Metric':
+                self.result = None
+        
+    def moveColumnFirst(self):
+        column = DataTab.ChooseColumnDialog(self).result
+        if column:
+            self.data.moveColumnFirst(column)
+    
     def notify(self, data):
         # Update table with latest loadedData df
-        self.summaryTable.model.df = self.data.df
+        self.summaryTable.model.df = self.data.df[[m for m in self.data.columnOrder if m in self.data.df.columns]]
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
