@@ -35,15 +35,15 @@ class ShortNameTab(LevelTab):
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
         self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
-
-    def notify(self, data):
-        self.table.model.df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]]
         self.table.show()
-        self.table.redraw()
         self.update_button.grid(row=0, column=0)
         self.cluster_color_button.grid(row=0, column=1)
         self.export_button.grid(row=0, column=2)
         self.find_replace_button.grid(row=0, column=3)
+
+    def notify(self, data):
+        self.table.model.df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]]
+        self.table.redraw()
 
     def colorClusters(self):
         # Assign a color to each cluster
@@ -64,6 +64,8 @@ class ShortNameTab(LevelTab):
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
         replace=tk.simpledialog.askstring("Replace", "Replace with:")
+        if find is None or replace is None:
+            return
         self.table.model.df['ShortName']=self.table.model.df['ShortName'].str.replace(find, replace)
         self.table.redraw()
 
@@ -96,13 +98,13 @@ class MappingsTab(LevelTab):
         # TODO: Fix showing/hiding intermediate mappings
         #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
         #else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
+        self.table.show()
+        self.edit_button.grid(row=10, column=0)
+        self.update_button.grid(row=10, column=1, sticky=tk.W)
 
     def notify(self, data):
         self.placeholderCheck()
-        self.table.show()
         self.table.redraw()
-        self.edit_button.grid(row=10, column=0)
-        self.update_button.grid(row=10, column=1, sticky=tk.W)
     
     def updateTable(self):
         self.table.redraw()
@@ -277,14 +279,14 @@ class DataTab(LevelTab):
         self.table_button_frame.grid(row=4, column=1)
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df))
         self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df))
+        self.summaryTable.show()
+        self.export_summary_button.grid(row=0, column=0)
+        self.export_colored_summary_button.grid(row=0, column=1)
 
     def notify(self, data):
         # Update table with latest loadedData df
         self.summaryTable.model.df = self.data.df
-        self.summaryTable.show()
         self.summaryTable.redraw()
-        self.export_summary_button.grid(row=0, column=0)
-        self.export_colored_summary_button.grid(row=0, column=1)
 
 class FilteringData(AnalyzerData):
     def __init__(self, data, gui, root, level):
