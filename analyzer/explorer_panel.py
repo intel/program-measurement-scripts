@@ -64,8 +64,10 @@ class ScrolledTreePane(tk.Frame):
             self.opening = True
             nodeId = int(self.treeview.focus())
             node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
-            node.open()
-            self.opening = False
+            try:
+                node.open()
+            finally:
+                self.opening = False
         if self.firstOpen:
             self.firstOpen = False
             self.treeview.column('#0', minwidth=600, width=600)
