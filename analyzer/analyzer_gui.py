@@ -315,7 +315,7 @@ class LoadedData(Observable):
         # data_dir is the data directory of the last one which is to be loaded
         self.sources = sources
         # Get data file name and timestamp for plot title
-        self.source_title = sources[0].split('\\')[-1:][0] + ':' + sources[0].split('\\')[-2:-1][0]
+        self.source_title = sources[0].split('\\')[-4:-3][0] + ":" + sources[0].split('\\')[-3:-2][0] + ':' + sources[0].split('\\')[-2:-1][0]
         last_source = sources[-1]  # Get the last source to be loaded
         self.data_dir = data_dir
 

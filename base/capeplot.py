@@ -577,7 +577,7 @@ class CapePlot:
         ax.set_title(title, pad=40)
 
         # Add footnote with datafile and timestamp
-        plt.figtext(0, 0.01, self.loadedData.source_title, horizontalalignment='left')
+        plt.figtext(0, 0.005, self.loadedData.source_title, horizontalalignment='left')
 
         # Legend
         legend = self.mk_legend(color_labels)
