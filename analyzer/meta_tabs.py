@@ -46,16 +46,12 @@ class ShortNameTab(LevelTab):
         self.table.redraw()
 
     def colorClusters(self):
-        # Assign a color to each cluster
-        cluster_color_map = {}
-        for i, cluster in enumerate(self.data.df[NonMetricName.SI_CLUSTER_NAME].unique()):
-            cluster_color_map[cluster] = self.colors[i]
         # Update the GUI state color map with colors for each codelet and the label for the legend
         df = self.data.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]].copy(deep=True)
-        df.fillna({NonMetricName.SI_CLUSTER_NAME:'No Cluster'}, inplace=True)
+        df[NonMetricName.SI_CLUSTER_NAME].replace({'':'No Cluster'}, inplace=True)
         df = df.reindex(columns = df.columns.tolist() + ['Label','Color'])
         for i, cluster in enumerate(df[NonMetricName.SI_CLUSTER_NAME].unique()):
-            df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
+            if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
         # All points without a cluster will be blue
         df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
         self.data.loadedData.levelData[self.level].guiState.set_color_map(df)

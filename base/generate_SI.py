@@ -383,7 +383,7 @@ class SiPlot(CapePlot):
         # (but not saved in self.ctxs)
         for i, cluster in enumerate(self.df[NonMetricName.SI_CLUSTER_NAME].unique()):
             if cluster:
-                if cluster in color_labels: color = color_labels[cluster]
+                if cluster in self.color_map['Label'].tolist(): color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
                 else: 
                     try: color = self.colors[i]
                     except: color = self.colors[0]
