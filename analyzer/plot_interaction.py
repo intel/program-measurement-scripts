@@ -46,9 +46,9 @@ class PlotInteraction():
     def textData(self):
         return self.tab.textData
 
-    @property
-    def fig(self):
-        return self.tab.fig
+    # @property
+    # def fig(self):
+    #     return self.tab.fig
 
     @property
     def canvas(self):
