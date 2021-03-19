@@ -12,6 +12,7 @@ from analyzer_base import PerLevelGuiState
 import capelib as cl
 from summarize import summary_report_df
 from summarize import compute_speedup
+from summarize import read_raw_data, write_raw_data, write_short_names
 from capedata import AnalyticsData
 from capedata import ShortNameData as CapeShortNameData
 from capedata import SummaryData
@@ -171,6 +172,18 @@ class LoadedData(Observable):
             #     if metric + "_y" in merged.columns and metric + "_x" in merged.columns:
             #         merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
             #     if metric not in KEY_METRICS: target_df[metric] = merged[metric]
+        def exportShownDataRawCSV(self, outfilename, sources):
+            df = pd.DataFrame()  # empty df as start and keep appending in loop next
+            for src in sources:
+                df = df.append(read_raw_data(src), ignore_index=True)
+            # TODO: Need to filter out hidden rows.
+            write_raw_data(outfilename, df)
+            # write short name files if short name not the same as Name
+            if not self.df[NAME].equals(self.df[SHORT_NAME]):
+                # remove extension twice to remove ".raw.csv" extension
+                basic_path= os.path.splitext(os.path.splitext(outfilename)[0])[0]
+                out_shortname = basic_path + ".names.csv"
+                write_short_names(out_shortname, self.df)
 
 
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
@@ -308,6 +321,10 @@ class LoadedData(Observable):
         # Reset cluster var for SIPlotData so find_si_clusters() is called again 
         gui.c_siplotData.run_cluster = True
 
+    def exportShownDataRawCSV(self, outfilename):
+        # Will only export codelet level data
+        self.levelData['Codelet'].exportShownDataRawCSV(outfilename, self.sources)
+    
     def add_data(self, sources, data_dir='', append=False):
         self.restore = False
         if not append: self.resetStates() # Clear hidden/highlighted points from previous plots (Do we want to do this if appending data?)        
