@@ -40,6 +40,9 @@ class SIPlotData(AnalyzerData):
         # Add new metrics to shared dataframe
         self.notify_observers()
 
+    def resetRunCluster(self):
+        self.run_cluster = True
+
 class SIPlotTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'FE_tier1', 'Intensity', 'Saturation',
@@ -60,3 +63,6 @@ class SIPlotTab(AnalyzerTab):
                        filtering=False, filter_data=None, mappings=self.mappings, 
                        scale=self.data.scale, 
                        short_names_path=self.data.gui.loadedData.short_names_path) 
+
+    def resetTablValues(self):
+        self.data.resetRunCluster()

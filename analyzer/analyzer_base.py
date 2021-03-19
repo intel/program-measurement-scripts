@@ -291,6 +291,15 @@ class AnalyzerTab(tk.Frame):
         metrics = self.get_metrics()
         self.setup(metrics)
 
+    def resetTabValues(self):
+        self.x_scale = self.orig_x_scale
+        self.y_scale = self.orig_y_scale
+        self.x_axis = self.orig_x_axis
+        self.y_axis = self.orig_y_axis
+        #self.variants = [self.data.gui.loadedData.default_variant] #TODO: edit this out
+        self.variants = []
+        self.current_labels = []
+
 class LevelTab(tk.Frame):
     def __init__(self, parent, data):
         super().__init__(parent)
