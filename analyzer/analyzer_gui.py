@@ -302,7 +302,6 @@ class LoadedData(Observable):
         for level in self.allLevels:
             self.levelData[level].resetStates()
 
-
     def exportShownDataRawCSV(self, outfilename):
         # Will only export codelet level data
         self.levelData['Codelet'].exportShownDataRawCSV(outfilename, self.sources)
@@ -697,12 +696,13 @@ class AnalyzerGui(tk.Frame):
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="New")#, command=self.configTab.new)
-        filemenu.add_command(label="Open")#, command=self.configTab.open)
-        filemenu.add_command(label="Save")#, command=lambda: self.configTab.save(False))
-        filemenu.add_command(label="Save As...")#, command=lambda: self.configTab.save(True))
-        filemenu.add_separator()
-        filemenu.add_command(label="Exit")#, command=self.file_exit)
+        filemenu.add_command(label="Save State", command=self.saveState)
+        # filemenu.add_command(label="New")#, command=self.configTab.new)
+        # filemenu.add_command(label="Open")#, command=self.configTab.open)
+        # filemenu.add_command(label="Save")#, command=lambda: self.configTab.save(False))
+        # filemenu.add_command(label="Save As...")#, command=lambda: self.configTab.save(True))
+        # filemenu.add_separator()
+        # filemenu.add_command(label="Exit")#, command=self.file_exit)
         menubar.add_cascade(label="File", menu=filemenu)
         
         self.parent.config(menu=menubar)
@@ -734,6 +734,32 @@ class AnalyzerGui(tk.Frame):
         self.loaded_url = None
         self.loadType = ''
         self.choice = ''
+    
+    def saveState(self):
+        # Want to save the full loadedData object as a pkl
+        # Prompt user with option to save 
+        # self.win = tk.Toplevel()
+        # center(self.win)
+        # self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+        # self.win.title('Save State')
+        # message = 'Would you like to save data for all of the codelets\nor just for those selected?'
+        # tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        # for index, option in enumerate(['Save All', 'Save Selected']):
+        #     b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(metric))
+        #     b.grid(row=index+1, column=1, padx=20, pady=10)
+        # self.root.wait_window(self.win)
+        # if self.choice == 'cancel': return        
+        # Ask user to name the directory for this state to be saved
+        dest_name = tk.simpledialog.askstring('Analysis Result', 'Provide a name for this analysis result')
+        if not dest_name: return
+        dest = os.path.join(self.loadedData.analysis_results_path, dest_name)
+        # if not os.path.isdir(dest):
+        Path(dest).mkdir(parents=True, exist_ok=True)
+        data_dest = os.path.join(dest, 'loadedData.pkl')
+        data_file = open(data_dest, 'wb')
+        pickle.dump(self.loadedData, data_file)
+        data_file.close()
+
 
     def appendData(self):
         self.choice = 'Append'
