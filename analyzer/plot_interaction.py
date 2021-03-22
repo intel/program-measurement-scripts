@@ -72,23 +72,23 @@ class PlotInteraction():
         # User could've changed the color of the labels: need to update marker colors
 
     def setLims(self):
-        self.home_xlim = self.cur_xlim = self.plotData['ax'].get_xlim()
-        self.home_ylim = self.cur_ylim = self.plotData['ax'].get_ylim()
+        self.home_xlim = self.cur_xlim = self.plotData.ax.get_xlim()
+        self.home_ylim = self.cur_ylim = self.plotData.ax.get_ylim()
 
     def updateMarkers(self):
         # Hide/Show the markers, labels, and arrows
-        for name in self.plotData['names']:
+        for name in self.plotData.names:
             alpha = 1
             if name in self.guiState.hidden: alpha = 0
-            self.plotData['name:marker'][name].set_alpha(alpha)
-            self.plotData['name:text'][name].set_alpha(alpha)
+            self.plotData.name_marker[name].set_alpha(alpha)
+            self.plotData.name_text[name].set_alpha(alpha)
             # Unhighlight/highlight points
-            if name in self.guiState.highlighted: self.highlight(self.plotData['name:marker'][name])
-            else: self.unhighlight(self.plotData['name:marker'][name])
+            if name in self.guiState.highlighted: self.highlight(self.plotData.name_marker[name])
+            else: self.unhighlight(self.plotData.name_marker[name])
             # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
-            if name in self.plotData['name:mapping']: self.plotData['name:mapping'][name].set_alpha(1)
-        for name in self.plotData['name:mapping']:
-            if name in self.guiState.hidden: self.plotData['name:mapping'][name].set_alpha(0)
+            if name in self.plotData.name_mapping: self.plotData.name_mapping[name].set_alpha(1)
+        for name in self.plotData.name_mapping:
+            if name in self.guiState.hidden: self.plotData.name_mapping[name].set_alpha(0)
         self.canvas.draw()
 
     def updateLabels(self):
@@ -96,27 +96,28 @@ class PlotInteraction():
         current_metrics = self.guiState.labels
         if not current_metrics:
             self.tab.labelTab.resetMetrics()
-        for i, text in enumerate(self.plotData['texts']):
-            label = self.plotData['orig_mytext'][i][:-1]
-            codeletName = self.plotData['names'][i]
+        for i, text in enumerate(self.plotData.texts):
+            label = self.plotData.orig_mytext[i][:-1]
+            codeletName = self.plotData.names[i]
             for metric_index, metric in enumerate(current_metrics):
                 # Update label menu with currently selected metric
                 self.tab.labelTab.metrics[metric_index].set(metric)
                 # Append to end of label
-                value = self.df.loc[(self.df[NAME]+self.df[TIMESTAMP].astype(str))==codeletName][metric].iloc[0]
+                encoded_names = self.plotData.get_encoded_names(self.df)
+                value = self.df.loc[encoded_names==codeletName][metric].iloc[0]
                 if isinstance(value, int) or isinstance(value, float): 
                     label += ', ' + str(round(value, 2))
                 else:
                     label += ', ' + str(value)
             label += ')'
             text.set_text(label)
-            self.plotData['mytext'][i] = label
+            self.plotData.mytext[i] = label
         # Update legend for user to see order of metrics in the label
-        newTitle = self.plotData['orig_legend'][:-1]
+        newTitle = self.plotData.orig_legend[:-1]
         for metric in current_metrics:
             newTitle += ', ' + metric
         newTitle += ')'
-        self.plotData['legend'].get_title().set_text(newTitle)
+        self.plotData.legend.get_title().set_text(newTitle)
         # Adjust labels if already adjusted
         self.canvas.draw()
         if self.adjusted:
@@ -129,24 +130,24 @@ class PlotInteraction():
         else: 
             new_text = 'Hide Labels'
             alpha = 1
-        for marker in self.plotData['marker:text']:
+        for marker in self.plotData.marker_text:
             if marker.get_alpha(): 
-                self.plotData['marker:text'][marker].set_alpha(alpha) 
+                self.plotData.marker_text[marker].set_alpha(alpha) 
                 if self.adjusted: 
                     # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
                     # TODO: Create "marker:arrow" to simplify this statement
-                    if self.plotData['marker:text'][marker] in self.plotData['text:arrow']: self.plotData['text:arrow'][self.plotData['marker:text'][marker]].set_visible(alpha)
+                    if self.plotData.marker_text[marker] in self.plotData.text_arrow: self.plotData.text_arrow[self.plotData.marker_text[marker]].set_visible(alpha)
         self.canvas.draw()
         self.tab.toggle_labels_button['text'] = new_text
 
     def toggleLabel(self, marker):
-        label = self.plotData['marker:text'][marker]
+        label = self.plotData.marker_text[marker]
         label.set_alpha(not label.get_alpha())
-        if label in self.plotData['text:arrow']: self.plotData[label].set_visible(label.get_alpha())
+        if label in self.plotData.text_arrow: self.plotData.text_arrow[label].set_visible(label.get_alpha())
         self.canvas.draw()
 
     def highlight(self, marker):
-        text = self.plotData['marker:text'][marker]
+        text = self.plotData.marker_text[marker]
         marker.set_marker('*')
         marker.set_markeredgecolor('k')
         marker.set_markeredgewidth(0.5)
@@ -154,7 +155,7 @@ class PlotInteraction():
         text.set_color('r')
 
     def unhighlight(self, marker):
-        text = self.plotData['marker:text'][marker]
+        text = self.plotData.marker_text[marker]
         marker.set_marker('o')
         marker.set_markeredgecolor(marker.get_markerfacecolor())
         marker.set_markersize(6.0)
@@ -174,27 +175,27 @@ class PlotInteraction():
 
     def onClick(self, event):
         #print("(%f, %f)", event.xdata, event.ydata)
-        # for child in self.plotData['ax'].get_children():
+        # for child in self.plotData.ax.get_children():
         #     print(child)
         action = self.tab.action_selected.get()
         if action == 'Choose Action': return
-        for marker in self.plotData['markers']:
+        for marker in self.plotData.markers:
             contains, points = marker.contains(event)
             if contains and marker.get_alpha():
                 if action == 'Highlight Point': 
-                    if marker.get_marker() == 'o': self.highlightPoints([self.plotData['marker:name'][marker]])
-                    else: self.unhighlightPoints([self.plotData['marker:name'][marker]])
-                elif action == 'Remove Point': self.removePoints([self.plotData['marker:name'][marker]])
+                    if marker.get_marker() == 'o': self.highlightPoints([self.plotData.marker_name[marker]])
+                    else: self.unhighlightPoints([self.plotData.marker_name[marker]])
+                elif action == 'Remove Point': self.removePoints([self.plotData.marker_name[marker]])
                 elif action == 'Toggle Label': self.toggleLabel(marker)
                 self.canvas.draw()
 
     def onDraw(self, event):
-        if self.adjusted and (self.cur_xlim != self.plotData['ax'].get_xlim() or self.cur_ylim != self.plotData['ax'].get_ylim()) and \
-            (self.home_xlim != self.plotData['ax'].get_xlim() or self.home_ylim != self.plotData['ax'].get_ylim()) and \
+        if self.adjusted and (self.cur_xlim != self.plotData.ax.get_xlim() or self.cur_ylim != self.plotData.ax.get_ylim()) and \
+            (self.home_xlim != self.plotData.ax.get_xlim() or self.home_ylim != self.plotData.ax.get_ylim()) and \
             self.toolbar.mode != 'pan/zoom': 
             print("Ondraw adjusting")
-            self.cur_xlim = self.plotData['ax'].get_xlim()
-            self.cur_ylim = self.plotData['ax'].get_ylim()
+            self.cur_xlim = self.plotData.ax.get_xlim()
+            self.cur_ylim = self.plotData.ax.get_ylim()
             self.adjustText()
 
     def thread_adjustText(self):
@@ -203,31 +204,31 @@ class PlotInteraction():
             # Store index of hidden texts to update the new texts
             hiddenTexts = []
             highlightedTexts = []
-            for i in range(len(self.plotData['texts'])):
-                if not self.plotData['texts'][i].get_alpha(): hiddenTexts.append(i)
-                if self.plotData['texts'][i].get_color() == 'r': highlightedTexts.append(i)
+            for i in range(len(self.plotData.texts)):
+                if not self.plotData.texts[i].get_alpha(): hiddenTexts.append(i)
+                if self.plotData.texts[i].get_color() == 'r': highlightedTexts.append(i)
             # Remove all old texts and arrows
-            for child in self.plotData['ax'].get_children():
-                if isinstance(child, matplotlib.text.Annotation) or (isinstance(child, matplotlib.text.Text) and child.get_text() not in [self.plotData['title'], '', self.plotData['ax'].get_title()]):
+            for child in self.plotData.ax.get_children():
+                if isinstance(child, matplotlib.text.Annotation) or (isinstance(child, matplotlib.text.Text) and child.get_text() not in [self.plotData.title, '', self.plotData.ax.get_title()]):
                     child.remove()
             # Create new texts that maintain the current visibility
-            self.plotData['texts'] = [plt.text(self.plotData['xs'][i], self.plotData['ys'][i], self.plotData['mytext'][i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.plotData['mytext']))]
+            self.plotData.texts = [plt.text(self.plotData.xs[i], self.plotData.ys[i], self.plotData.mytext[i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.plotData.mytext))]
             # Update marker to text mappings with the new texts
-            self.plotData['marker:text'] = dict(zip(self.plotData['markers'],self.plotData['texts']))
-            self.plotData['name:text'] = dict(zip(self.plotData['names'],self.plotData['texts']))
+            self.plotData.marker_text = dict(zip(self.plotData.markers,self.plotData.texts))
+            self.plotData.name_text = dict(zip(self.plotData.names,self.plotData.texts))
         # Only adjust texts that are in the current axes (in case of a zoom)
         to_adjust = []
-        for i in range(len(self.plotData['texts'])):
-            if self.plotData['texts'][i].get_alpha() and \
-                self.plotData['xs'][i] >= self.plotData['ax'].get_xlim()[0] and self.plotData['xs'][i] <= self.plotData['ax'].get_xlim()[1] and \
-                self.plotData['ys'][i] >= self.plotData['ax'].get_ylim()[0] and self.plotData['ys'][i] <= self.plotData['ax'].get_ylim()[1]:
-                to_adjust.append(self.plotData['texts'][i])
-        adjust_text(to_adjust, ax=self.plotData['ax'], arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+        for i in range(len(self.plotData.texts)):
+            if self.plotData.texts[i].get_alpha() and \
+                self.plotData.xs[i] >= self.plotData.ax.get_xlim()[0] and self.plotData.xs[i] <= self.plotData.ax.get_xlim()[1] and \
+                self.plotData.ys[i] >= self.plotData.ax.get_ylim()[0] and self.plotData.ys[i] <= self.plotData.ax.get_ylim()[1]:
+                to_adjust.append(self.plotData.texts[i])
+        adjust_text(to_adjust, ax=self.plotData.ax, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
         # Map each text to the corresponding arrow
         index = 0
-        for child in self.plotData['ax'].get_children():
+        for child in self.plotData.ax.get_children():
             if isinstance(child, matplotlib.text.Annotation):
-                self.plotData['text:arrow'][to_adjust[index]] = child # Mapping
+                self.plotData.text_arrow[to_adjust[index]] = child # Mapping
                 if not to_adjust[index].get_alpha(): child.set_visible(False) # Hide arrows with hidden texts
                 index += 1
         self.root.after(0, self.canvas.draw)
@@ -242,7 +243,7 @@ class PlotInteraction():
                 self.thread_adjustText()
             else: 
                 # Do this in mainthread
-                plt_sca(self.plotData['ax'])
+                plt_sca(self.plotData.ax)
                 threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
     # Outdated methods to reference when refactoring GuideTab
@@ -265,8 +266,8 @@ class PlotInteraction():
     # def highlightPoint(self, marker):
     #     for tab in self.tabs:
     #         if tab.name != 'Scurve' and tab.name != 'Scurve_all':
-    #             otherMarker = tab.plotInteraction.plotData['name:marker'][self.plotData['marker:name'][marker]]
-    #             otherText = tab.plotInteraction.plotData['marker:text'][otherMarker]
+    #             otherMarker = tab.plotInteraction.plotData.name_marker[self.plotData.marker_name[marker]]
+    #             otherText = tab.plotInteraction.plotData.marker_text[otherMarker]
     #             self.toggleHighlight(otherMarker, otherText)
 
     # def drawPlots(self):
@@ -277,12 +278,12 @@ class PlotInteraction():
     # def A_filter(self, relate, metric, threshold, highlight=True, remove=False, show=False, points=[], getNames=False):
     #     df = self.gui.loadedData.summaryDf
     #     names = []
-    #     if metric and metric in df.columns.tolist(): names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name'], df.loc[relate(df[metric], threshold)]['Timestamp#'].astype(str))]
+    #     if metric and metric in df.columns.tolist(): names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)]['Name, df.loc[relate(df[metric], threshold)]['Timestamp#.astype(str))]
     #     names.extend(points)
     #     if getNames: return names
     #     for name in names:
     #         try: 
-    #             marker = self.plotData['name:marker'][name]
+    #             marker = self.plotData.name_marker[name]
     #             if highlight and marker.get_marker() == 'o': self.highlightPoint(marker)
     #             elif not highlight and marker.get_marker() == '*': self.highlightPoint(marker)
     #             if remove: self.togglePoint(marker, visible=False)
@@ -293,16 +294,16 @@ class PlotInteraction():
 
     # def togglePoint(self, marker, visible):
     #     for tab in self.tabs:
-    #         otherMarker = tab.plotInteraction.plotData['name:marker'][self.plotData['marker:name'][marker]]
+    #         otherMarker = tab.plotInteraction.plotData.name_marker[self.plotData.marker_name[marker]]
     #         otherMarker.set_alpha(visible)
-    #         tab.plotInteraction.plotData['marker:text'][otherMarker].set_alpha(visible)
+    #         tab.plotInteraction.plotData.marker_text[otherMarker].set_alpha(visible)
     #         try: 
-    #             for mapping in tab.plotInteraction.plotData['name:mapping'][marker.get_label()]:
+    #             for mapping in tab.plotInteraction.plotData.name_mapping[marker.get_label()]:
     #                 mapping.set_alpha(visible)
     #         except: pass
-    #         try: tab.plotInteraction.plotData['text:arrow'][tab.plotInteraction.plotData['marker:text'][otherMarker]].set_visible(visible)
+    #         try: tab.plotInteraction.plotData.text_arrow[tab.plotInteraction.plotData.marker_text[otherMarker]].set_visible(visible)
     #         except: pass
-    #         name = tab.plotInteraction.plotData['marker:name'][otherMarker]
+    #         name = tab.plotInteraction.plotData.marker_name[otherMarker]
     #         index = tab.plotInteraction.pointSelector.names.index(name)
     #         tab.plotInteraction.pointSelector.vars[index].set(visible)
 
@@ -320,18 +321,18 @@ class PlotInteraction():
     #     temp_mappings = mappings.copy(deep=True)
     #     all_names = copy.deepcopy(names)
     #     for name in names:
-    #         row = temp_mappings.loc[(temp_mappings['Before Name']+temp_mappings['Before Timestamp'].astype(str))==name]
+    #         row = temp_mappings.loc[(temp_mappings['Before Name+temp_mappings['Before Timestamp.astype(str))==name]
     #         while not row.empty:
     #             temp_mappings.drop(row.index, inplace=True)
     #             selected_mappings = selected_mappings.append(row, ignore_index=True)
-    #             name = str(row['After Name'].iloc[0]+row['After Timestamp'].iloc[0].astype(str))
+    #             name = str(row['After Name.iloc[0]+row['After Timestamp.iloc[0].astype(str))
     #             all_names.append(name)
-    #             row = temp_mappings.loc[(temp_mappings['Before Name']+temp_mappings['Before Timestamp'].astype(str))==name]
+    #             row = temp_mappings.loc[(temp_mappings['Before Name+temp_mappings['Before Timestamp.astype(str))==name]
     #     return selected_mappings, list(set(all_names))
 
     # def restoreAnalysisState(self):
-    #     self.restoreState(self.gui.loadedData.levels[self.level]['data'])
-    #     self.pointSelector.restoreState(self.gui.loadedData.levels[self.level]['data'])
+    #     self.restoreState(self.gui.loadedData.levels[self.level]['data)
+    #     self.pointSelector.restoreState(self.gui.loadedData.levels[self.level]['data)
 
     # def saveState(self):
     #     # Create popup dialog that asks user to select either save selected or save all
@@ -341,7 +342,7 @@ class PlotInteraction():
     #     self.win.title('Save State')
     #     message = 'Would you like to save data for all of the codelets\nor just for those selected?'
     #     tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-    #     for index, option in enumerate(['Save All', 'Save Selected']):
+    #     for index, option in enumerate(['Save All', 'Save Selected):
     #         b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(metric))
     #         b.grid(row=index+1, column=1, padx=20, pady=10)
     #     self.root.wait_window(self.win)
@@ -371,35 +372,35 @@ class PlotInteraction():
     #     levels = [codelet, source, app]
     #     for level in levels:
     #         # Store hidden/highlighted points for each level
-    #         for marker in level['plotData']['markers']:
-    #             name = level['plotData']['marker:name'][marker]
+    #         for marker in level['plotData['markers:
+    #             name = level['plotData['marker_name[marker]
     #             if marker.get_alpha():
-    #                 level['data']['visible_names'].append(name)
+    #                 level['data['visible_names.append(name)
     #                 if marker.get_marker() == '*': # Highlighted point
-    #                     level['data']['highlighted_names'].append(name)
+    #                     level['data['highlighted_names.append(name)
     #             elif self.choice == 'Save All':
-    #                 level['data']['hidden_names'].append(name)
+    #                 level['data['hidden_names.append(name)
     #         # Save either full or selected codelets in dataframes to notify observers upon restoring
     #         if self.choice == 'Save All':
-    #             level['df'].to_excel(level['summary_dest'], index=False)
-    #             if not level['mapping'].empty: 
-    #                 level['mapping'].to_excel(level['mapping_dest'], index=False)
+    #             level['df.to_excel(level['summary_dest, index=False)
+    #             if not level['mapping.empty: 
+    #                 level['mapping.to_excel(level['mapping_dest, index=False)
     #         elif self.choice == 'Save Selected':
-    #             if not level['mapping'].empty and level['data']['visible_names']:
-    #                 selected_mappings, level['data']['visible_names'] = self.getSelectedMappings(level['data']['visible_names'], level['mapping'])
-    #                 selected_mappings.to_excel(level['mapping_dest'], index=False)
-    #             selected_summary = level['df'].loc[(level['df']['Name']+level['df']['Timestamp#'].astype(str)).isin(level['data']['visible_names'])]
-    #             selected_summary.to_excel(level['summary_dest'], index=False)
+    #             if not level['mapping.empty and level['data['visible_names:
+    #                 selected_mappings, level['data['visible_names = self.getSelectedMappings(level['data['visible_names, level['mapping)
+    #                 selected_mappings.to_excel(level['mapping_dest, index=False)
+    #             selected_summary = level['df.loc[(level['df['Name+level['df['Timestamp#.astype(str)).isin(level['data['visible_names)]
+    #             selected_summary.to_excel(level['summary_dest, index=False)
     #         # variants apply to all levels
-    #         level['data']['variants'] = self.gui.c_summaryTab.variants
+    #         level['data['variants = self.gui.c_summaryTab.variants
     #         # Each tab has its own dictionary with it's current plot selections
-    #         for tab in level['tabs']:
-    #             level['data'][tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
+    #         for tab in level['tabs:
+    #             level['data[tab.name] = {'x_axis':"{}".format(tab.x_axis), 'y_axis':"{}".format(tab.y_axis), 'x_scale':tab.x_scale, 'y_scale':tab.y_scale}
     #     # Save the all the stored data into a nested dictionary
     #     data = {}
-    #     data['Codelet'] = codelet['data']
-    #     data['Source'] = source['data']
-    #     data['Application'] = app['data']
+    #     data['Codelet = codelet['data
+    #     data['Source = source['data
+    #     data['Application = app['data
     #     data_dest = os.path.join(dest, 'data.pkl')
     #     data_file = open(data_dest, 'wb')
     #     pickle.dump(data, data_file)

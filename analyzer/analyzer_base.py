@@ -242,8 +242,8 @@ class AnalyzerTab(tk.Frame):
         self.variants = self.data.variants
         self.metrics = metrics
         # Update names for plot buttons
-        self.show_markers_button['command'] = lambda names=self.plotData['names'] : self.plotInteraction.showPoints(names)
-        self.unhighlight_button['command'] = lambda names=self.plotData['names'] : self.plotInteraction.unhighlightPoints(names)
+        self.show_markers_button['command'] = lambda names=self.plotData.names : self.plotInteraction.showPoints(names)
+        self.unhighlight_button['command'] = lambda names=self.plotData.names : self.plotInteraction.unhighlightPoints(names)
         # NavigationToolbar2Tk can only be created if there isn't anything in the grid
         for slave in self.plotFrame3.grid_slaves():
             slave.grid_forget()

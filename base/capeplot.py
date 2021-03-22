@@ -446,7 +446,6 @@ class CapePlot:
     def color_map(self):
         return self.loadedData.levelData[self.level].color_map
 
-    
     # # Setter of df (May remove), delegate to self.data
     # @df.setter
     # def df(self, v):
@@ -467,7 +466,6 @@ class CapePlot:
     def mk_plot_title(self, title, variant, scale):
         return "{}\nvariant={}, scale={}".format(title, variant, scale)
         
-
     # Override to update the data frame containing plot data.
     def filter_data_points(self, in_df):
         return in_df
@@ -498,9 +496,9 @@ class CapePlot:
             return 
 
         mytext = self.mk_labels()
-        if x_axis: 
+        if x_axis:
             xs = df[x_axis]
-        else: 
+        else:
             xs = df[self.default_x_axis]
         if y_axis: 
             ys = df[y_axis]
@@ -587,42 +585,7 @@ class CapePlot:
         try: plt.tight_layout()
         except: print("plt.tight_layout() failed")
     
-        self.fill_plot_data(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings)
-
-    def fill_plot_data(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings):
-        names = [name + timestamp for name,timestamp in zip(df[NAME], df[TIMESTAMP].astype(str))]
-        self.plotData = {
-            'xs' : xs,
-            'ys' : ys,
-            'mytext' : mytexts,
-            'orig_mytext' : copy.deepcopy(mytexts),
-            'ax' : ax,
-            'legend' : legend,
-            'orig_legend' : legend.get_title().get_text(),
-            'title' : title,
-            'texts' : labels,
-            'markers' : markers,
-            'names' : names,
-            'timestamps' : df[TIMESTAMP].values.tolist(),
-            'marker:text' : dict(zip(markers,labels)),
-            'marker:name' : dict(zip(markers,names)),
-            'name:marker' : dict(zip(names, markers)),
-            'name:text' : dict(zip(names, labels)),
-            'text:arrow' : {},
-            'text:name' : dict(zip(labels, names)),
-            'name:mapping' : name_mapping,
-            'mappings' : mymappings
-        }
-
-        #if filename:
-        #plt.savefig(filename)
-
-        #if filename:
-        #    pass
-            #plt.savefig(filename)
-        #else:
-        #    plt.show()
-
+        self.plotData = plotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState)
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
@@ -633,21 +596,6 @@ class CapePlot:
         #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
         texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
-
-
-    # def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
-    #     ax = self.ax
-    #     markers = []
-    #     df.reset_index(drop=True, inplace=True)
-    #     for x, y, color, name, timestamp in zip(xs, ys, df['Color'], df[NAME], df[TIMESTAMP]):
-    #         if color in color_labels: # Check if the color is a user specified name, then get the actual color
-    #             color = color_labels[color]
-    #         markers.extend(ax.plot(x, y, marker='o', color=color, 
-    #                                label=name+str(timestamp), linestyle='', alpha=1))
-
-    #     #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
-    #     texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
-    #     return texts, markers
 
     def mk_legend(self, color_labels):
         ax = self.ax
@@ -721,6 +669,41 @@ class CapePlot:
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
 
+class plotData():
+    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState):
+        names = self.get_encoded_names(df).tolist()
+        self.xs = xs
+        self.ys = ys
+        self.mytext = mytexts
+        self.orig_mytext = copy.deepcopy(mytexts)
+        self.ax = ax
+        self.legend = legend
+        self.orig_legend = legend.get_title().get_text()
+        self.title = title
+        self.texts = labels
+        self.markers = markers
+        self.names = names
+        self.timestamps = df[TIMESTAMP].values.tolist()
+        self.marker_text = dict(zip(markers,labels))
+        self.marker_name = dict(zip(markers,names))
+        self.name_marker = dict(zip(names, markers))
+        self.name_text = dict(zip(names, labels))
+        self.text_arrow = {}
+        self.text_name = dict(zip(labels, names))
+        self.name_mapping = name_mapping
+        self.mappings = mymappings
+        self.hidden = []
+        self.highlighted = []
+        self.guiState = guiState
+
+    def get_hidden_mask(self, df):
+        return self.get_encoded_names(df).isin(self.guiState.hidden)
+
+    def get_highlighted_mask(self, df):
+        return self.get_encoded_names(df).isin(self.guiState.highlighted)
+
+    def get_encoded_names(self, df):
+        return df[NAME] + df[TIMESTAMP].astype(str)
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
