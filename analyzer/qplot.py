@@ -41,14 +41,14 @@ class QPlotData(AnalyzerData):
         #              loadedData.source_order, self.mappings, self.gui.loadedData.short_names_path)
         # plot.compute_and_plot()
         
-        # #df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG = parse_ip_qplot_df\
+        # #df_XFORM, fig_XFORM, plotData_XFORM, df_ORIG, fig_ORIG, plotData_ORIG = parse_ip_qplot_df\
         # #        (self.df.copy(deep=True), "test", scale, "Testing", chosen_node_set, False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         # #            source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
         #self.merge_metrics(df_ORIG if df_ORIG is not None else df_XFORM, [MetricName.CAP_L3_GB_P_S, MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S])
         #self.fig = fig_ORIG 
-        #self.textData = textData_ORIG 
+        #self.plotData = plotData_ORIG 
         self.notify_observers()
 
 class QPlotTab(AnalyzerTab):

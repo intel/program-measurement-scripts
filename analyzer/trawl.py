@@ -32,9 +32,9 @@ class TRAWLData(AnalyzerData):
         #                  short_names_path=self.gui.loadedData.short_names_path)
         # plot.compute_and_plot()
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
 
-        #trawl_df, self.fig, self.textData = trawl_plot(self.df.copy(deep=True), 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #trawl_df, self.fig, self.plotData = trawl_plot(self.df.copy(deep=True), 'test', scale, 'TRAWL', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 

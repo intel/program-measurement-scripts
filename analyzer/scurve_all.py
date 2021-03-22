@@ -29,7 +29,7 @@ class ScurveAllData(AnalyzerData):
         #                      mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         # plot.compute_and_plot()
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
         self.notify_observers()
 
 

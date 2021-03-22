@@ -35,10 +35,10 @@ class CustomData(AnalyzerData):
         #                   x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         # plot.compute_and_plot()
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
 
         # Generate Plot
-        #custom_df, self.fig, self.textData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #custom_df, self.fig, self.plotData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 

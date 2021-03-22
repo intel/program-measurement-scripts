@@ -71,12 +71,12 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	# Normalize the column names
 		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
-	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
+	df_XFORM, fig_XFORM, plotData_XFORM = None, None, None
+	#df_XFORM, fig_XFORM, plotData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
 
-	#df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
+	#df_ORIG, fig_ORIG, plotData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	## Return dataframe and figure for GUI
-	#return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
+	#return (df_XFORM, fig_XFORM, plotData_XFORM, df_ORIG, fig_ORIG, plotData_ORIG)
 
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
@@ -86,7 +86,7 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	data.compute()
 	plot = QPlot(data, 'ORIG', outputfile, scale, title, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	plot.compute_and_plot()
-	return (df_XFORM, fig_XFORM, textData_XFORM, plot.df, plot.fig, plot.plotData)
+	return (df_XFORM, fig_XFORM, plotData_XFORM, plot.df, plot.fig, plot.plotData)
 
 
 

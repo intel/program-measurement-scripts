@@ -236,14 +236,14 @@ class AnalyzerTab(tk.Frame):
         # Update attributes
         plot = self.mk_plot()
         plot.compute_and_plot()
-        self.fig, self.textData = plot.fig, plot.plotData
+        self.fig, self.plotData = plot.fig, plot.plotData
 
         self.df = self.data.df
         self.variants = self.data.variants
         self.metrics = metrics
         # Update names for plot buttons
-        self.show_markers_button['command'] = lambda names=self.textData['names'] : self.plotInteraction.showPoints(names)
-        self.unhighlight_button['command'] = lambda names=self.textData['names'] : self.plotInteraction.unhighlightPoints(names)
+        self.show_markers_button['command'] = lambda names=self.plotData['names'] : self.plotInteraction.showPoints(names)
+        self.unhighlight_button['command'] = lambda names=self.plotData['names'] : self.plotInteraction.unhighlightPoints(names)
         # NavigationToolbar2Tk can only be created if there isn't anything in the grid
         for slave in self.plotFrame3.grid_slaves():
             slave.grid_forget()
@@ -472,8 +472,8 @@ class LabelTab(tk.Frame):
         return self.loadedData.levelData[self.level].mapping
 
     @property
-    def textData(self):
-        return self.tab.plotInteraction.textData
+    def plotData(self):
+        return self.tab.plotInteraction.plotData
 
     def render(self):
         self.menu1.grid(row=0, column=0, padx = 10, pady=10, sticky=tk.NW)

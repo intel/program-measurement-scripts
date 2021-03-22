@@ -34,9 +34,9 @@ class CoverageData(AnalyzerData):
         #                     x_axis=None, y_axis=None, mappings=self.mappings)
         # plot.compute_and_plot()
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
         
-        #coverage_df, self.fig, self.textData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
+        #coverage_df, self.fig, self.plotData = coverage_plot(self.df.copy(deep=True), "test", scale, "Coverage", False, chosen_node_set, gui=True, x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, \
         #    variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
         self.notify_observers()
 

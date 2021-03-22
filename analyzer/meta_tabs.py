@@ -417,7 +417,7 @@ class FSM(Observable):
         super().__init__()
         self.parent = parent
         self.tab = self.parent.tab
-        self.title = self.tab.plotInteraction.textData['title']
+        self.title = self.tab.plotInteraction.plotData['title']
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
         # Temporary hardcoded points for each state
         # self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
@@ -460,7 +460,7 @@ class FSM(Observable):
 
     def INIT(self):
         print("In INIT")
-        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'INIT', pad=40)
+        self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'INIT', pad=40)
         self.notify_observers()
     
     def AStart(self):
@@ -468,7 +468,7 @@ class FSM(Observable):
         self.tab.plotInteraction.showMarkers()
         self.tab.plotInteraction.unhighlightPoints()
         self.tab.labelTab.reset()
-        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-Start', pad=40)
+        self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A-Start', pad=40)
         self.notify_observers()
 
     def A1(self):
@@ -482,7 +482,7 @@ class FSM(Observable):
             print("A1 state after orig variants")
             self.tab.plotInteraction.showMarkers()
             self.tab.plotInteraction.unhighlightPoints()
-            self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
+            self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
             self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, show=True, highlight=True) # Highlight SIDO codelets
             self.updateLabels(SPEEDUP_TIME_LOOP_S)
             self.notify_observers()
@@ -491,15 +491,15 @@ class FSM(Observable):
         print("In A11")
         if self.tab.data.gui.loadedData.transitions != 'showing':
             self.tab.data.gui.loadedData.transitions = 'showing'
-            for name in self.tab.plotInteraction.textData['names']:
+            for name in self.tab.plotInteraction.plotData['names']:
                 if name not in self.a1_highlighted:
-                    self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.textData['name:marker'][name], visible=False)
+                    self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.plotData['name:marker'][name], visible=False)
             self.tab.variantTab.checkListBox.showAllVariants()
 
     def A2(self):
         print("In A2")
         self.tab.plotInteraction.unhighlightPoints()
-        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
+        self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
         self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
         self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=True, show=True) # Highlight RHS codelets
         self.updateLabels(SRC_RHS_OP_COUNT)
@@ -508,7 +508,7 @@ class FSM(Observable):
     def A3(self):
         print("In A3")
         self.tab.plotInteraction.unhighlightPoints()
-        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
+        self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
         self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=False, remove=True) # Remove RHS codelets
         self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True) # Highlight FMA codelets
         self.updateLabels(COUNT_OPS_FMA_PCT)
@@ -516,7 +516,7 @@ class FSM(Observable):
 
     def AEnd(self):
         print("In AEnd")
-        self.tab.plotInteraction.textData['ax'].set_title(self.title + ', ' + 'A-End', pad=40)
+        self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A-End', pad=40)
         self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
         self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
         self.updateLabels('advice')
