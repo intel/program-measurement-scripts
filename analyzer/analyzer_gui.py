@@ -57,7 +57,7 @@ from capeplot import CapacityData
 from generate_SI import SiData
 from sat_analysis import do_sat_analysis as find_si_clusters
 from sat_analysis import SatAnalysisData
-from metric_names import NonMetricName, KEY_METRICS, NAME_FILE_METRICS
+from metric_names import NonMetricName, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -173,17 +173,20 @@ class LoadedData(Observable):
             #         merged[metric] = merged[metric + "_y"].fillna(merged[metric + "_x"])
             #     if metric not in KEY_METRICS: target_df[metric] = merged[metric]
         def exportShownDataRawCSV(self, outfilename, sources):
-            df = pd.DataFrame()  # empty df as start and keep appending in loop next
+            raw_df = pd.DataFrame()  # empty df as start and keep appending in loop next
             for src in sources:
-                df = df.append(read_raw_data(src), ignore_index=True)
+                raw_df = raw_df.append(read_raw_data(src), ignore_index=True)
             # TODO: Need to filter out hidden rows.
-            write_raw_data(outfilename, df)
+            hidden=self.guiState.get_hidden_mask(raw_df)
+            raw_df = raw_df[~hidden]
+            write_raw_data(outfilename, raw_df)
+            sname_df = pd.merge(left=self.df[KEY_METRICS+SHORT_NAME_METRICS], right=raw_df[KEY_METRICS], on=KEY_METRICS, how='right')
             # write short name files if short name not the same as Name
-            if not self.df[NAME].equals(self.df[SHORT_NAME]):
+            if not sname_df[NAME].equals(sname_df[SHORT_NAME]):
                 # remove extension twice to remove ".raw.csv" extension
                 basic_path= os.path.splitext(os.path.splitext(outfilename)[0])[0]
                 out_shortname = basic_path + ".names.csv"
-                write_short_names(out_shortname, self.df)
+                write_short_names(out_shortname, sname_df)
 
 
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])

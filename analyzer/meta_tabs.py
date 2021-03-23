@@ -382,7 +382,7 @@ class FilteringTab(LevelTab):
         if metric == 'Choose Metric': metric = ''
         self.data.loadedData.setFilter(self.level, metric, self.min_num.get(), self.max_num.get(), names, variants)
         # Update the point selector to reflect the metric/variant filtering
-        self.pointSelector.update(self.data.loadedData.levelData[self.level].guiState.hidden)
+        self.pointSelector.update(self.data.loadedData.levelData[self.level].guiState)
 
 class GuideTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -596,9 +596,9 @@ class ChecklistBox(tk.Frame):
             if not var.get(): hidden_names.append(self.names[index])
         return hidden_names
 
-    def update(self, hidden_names):
+    def update(self, guiState):
         for index, var in enumerate(self.vars):
-            if self.names[index] in hidden_names: var.set(0)
+            if guiState.isHidden(self.names[index]): var.set(0)
 
     def getCheckedItems(self):
         values = []

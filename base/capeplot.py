@@ -671,7 +671,7 @@ class CapePlot:
 
 class plotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState):
-        names = self.get_encoded_names(df).tolist()
+        names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
         self.ys = ys
         self.mytext = mytexts
@@ -692,18 +692,9 @@ class plotData():
         self.text_name = dict(zip(labels, names))
         self.name_mapping = name_mapping
         self.mappings = mymappings
-        self.hidden = []
-        self.highlighted = []
         self.guiState = guiState
 
-    def get_hidden_mask(self, df):
-        return self.get_encoded_names(df).isin(self.guiState.hidden)
 
-    def get_highlighted_mask(self, df):
-        return self.get_encoded_names(df).isin(self.guiState.highlighted)
-
-    def get_encoded_names(self, df):
-        return df[NAME] + df[TIMESTAMP].astype(str)
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):

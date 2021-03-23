@@ -79,7 +79,7 @@ class PlotInteraction():
         # Hide/Show the markers, labels, and arrows
         for name in self.plotData.names:
             alpha = 1
-            if name in self.guiState.hidden: alpha = 0
+            if self.guiState.isHidden(name): alpha = 0
             self.plotData.name_marker[name].set_alpha(alpha)
             self.plotData.name_text[name].set_alpha(alpha)
             # Unhighlight/highlight points
@@ -88,7 +88,7 @@ class PlotInteraction():
             # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
             if name in self.plotData.name_mapping: self.plotData.name_mapping[name].set_alpha(1)
         for name in self.plotData.name_mapping:
-            if name in self.guiState.hidden: self.plotData.name_mapping[name].set_alpha(0)
+            if self.guiState.isHidden(name): self.plotData.name_mapping[name].set_alpha(0)
         self.canvas.draw()
 
     def updateLabels(self):

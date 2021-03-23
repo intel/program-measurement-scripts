@@ -102,6 +102,10 @@ class PerLevelGuiState(Observable):
         self.hidden = [name for name in self.hidden if name not in names]
         self.updated()
 
+    def isHidden(self, name):
+        return name in self.hidden
+        
+
     def highlightPoints(self, names):
         self.highlighted.extend(names)
         self.highlighted = list(dict.fromkeys(self.highlighted))
@@ -118,6 +122,15 @@ class PerLevelGuiState(Observable):
     def reset_state(self):
         self.hidden = []
         self.highlighted = []
+
+    def get_encoded_names(self, df):
+        return df[MN.NAME] + df[MN.TIMESTAMP].astype(str)
+
+    def get_hidden_mask(self, df):
+        return self.get_encoded_names(df).isin(self.hidden)
+
+    def get_highlighted_mask(self, df):
+        return self.get_encoded_names(df).isin(self.highlighted)
 
     # Plot interaction objects for each plot at this level will be notified to avoid a complete redraw
     def updated(self):
