@@ -694,8 +694,6 @@ class plotData():
         self.mappings = mymappings
         self.guiState = guiState
 
-
-
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
