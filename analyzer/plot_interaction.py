@@ -33,16 +33,20 @@ def plt_sca(ax):
     raise ValueError("Axes instance argument was not found in a figure")
 
 class PlotInteraction():
-    def __init__(self, tab, data):
+    def __init__(self, tab):
         self.tab = tab
-        self.data = data
-        self.level = data.level
         #self.gui = self.tab.data.gui
         #self.root = self.tab.data.root
         self.adjusted = False
         self.adjusting = False
-        self.guiState.add_observers(self)
+        self.data = None
+        self.level = None
 
+    def setData(self, data):
+        self.data = data
+        self.level = data.level
+        self.guiState.add_observers(self)
+        
     @property
     def plotData(self):
         return self.tab.plotData

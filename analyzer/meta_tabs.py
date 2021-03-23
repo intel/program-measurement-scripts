@@ -17,11 +17,11 @@ from metric_names import NonMetricName, KEY_METRICS
 globals().update(MetricName.__members__)
 
 class ShortNameData(AnalyzerData):
-    def __init__(self, data, gui, root, level):
-        super().__init__(data, gui, root, level, "ShortNameTabData")
+    def __init__(self, data, level):
+        super().__init__(data, level, "ShortNameTabData")
 
-    def notify(self, data):
-        self.notify_observers()
+    # def notify(self, data):
+    #     self.notify_observers()
 
 class ShortNameTab(LevelTab):
     def __init__(self, parent, data):
@@ -80,11 +80,11 @@ class ShortNameTab(LevelTab):
         table.model.df.to_csv(export_file_path, index=False, header=True)
 
 class MappingsData(AnalyzerData):
-    def __init__(self, data, gui, root, level):
-        super().__init__(data, gui, root, level, "Mappings")
+    def __init__(self, data, level):
+        super().__init__(data, level, "Mappings")
 
-    def notify(self, data):
-        self.notify_observers()
+    # def notify(self, data):
+    #     self.notify_observers()
 
 class MappingsTab(LevelTab):
     def __init__(self, parent, data):
@@ -246,11 +246,11 @@ class MappingsTab(LevelTab):
 #             self.tab.siplotData.notify(self.tab.data.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class DataTabData(AnalyzerData):
-    def __init__(self, data, gui, root, level):
-        super().__init__(data, gui, root, level, "DataTabData")
+    def __init__(self, data, level):
+        super().__init__(data, level, "DataTabData")
 
-    def notify(self, data):
-        self.notify_observers()
+    # def notify(self, data):
+    #     self.notify_observers()
 
 class DataTab(LevelTab):
     def __init__(self, parent, data, metrics=[], variants=[]):
@@ -296,8 +296,8 @@ class DataTab(LevelTab):
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
-    def __init__(self, data, gui, root, level):
-        super().__init__(data, gui, root, level, "FilteringData")
+    def __init__(self, data, level):
+        super().__init__(data, level, "FilteringData")
 
     def notify(self, data):
         self.notify_observers()

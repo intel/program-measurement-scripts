@@ -136,7 +136,7 @@ class PerLevelGuiState(Observable):
         self.notify_observers()
 
 class AnalyzerData(Observable):
-    def __init__(self, loadedData, gui, root, level, name):
+    def __init__(self, loadedData, level, name):
         super().__init__()
         self.loadedData = loadedData
     #    self.mappings = pd.DataFrame()
@@ -185,8 +185,9 @@ class AnalyzerData(Observable):
     def satAnalysisDataItems(self):
         return self.loadedData.levelData[self.level].satAnalysisDataItems
 
-    def notify(self, loadedData, update, variants, mappings):
-        pass
+    def notify(self, loadedData):
+        print(f"{self.name} Notified from ", loadedData)
+        self.notify_observers()
 
     def merge_metrics(self, df, metrics):
         self.loadedData.merge_metrics(df, metrics, self.level)
@@ -194,11 +195,6 @@ class AnalyzerData(Observable):
 class AnalyzerTab(tk.Frame):
     def __init__(self, parent, data, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
         super().__init__(parent)
-        if data is not None:
-            data.add_observers(self)
-        self.data = data
-        self.level = data.level
-        self.name = data.name
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -207,11 +203,9 @@ class AnalyzerTab(tk.Frame):
         self.variants = []
         self.current_labels = []
         self.extra_metrics = extra_metrics
-        self.mappings_path = self.data.loadedData.mappings_path
-        self.short_names_path = self.data.loadedData.short_names_path
         self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH, expand=True)
-        self.plotInteraction = PlotInteraction(self, data)
+        self.plotInteraction = PlotInteraction(self)
         # Setup Plot Frames
         self.plotFrame = tk.Frame(self.window)
         self.plotFrame2 = tk.Frame(self.plotFrame)
@@ -231,13 +225,21 @@ class AnalyzerTab(tk.Frame):
         self.action_menu['menu'].insert_separator(1)
         # Notebook of plot specific tabs
         self.tab_note = ttk.Notebook(self.window)
-        self.axesTab = AxesTab(self.tab_note, self, self.name)
+        self.axesTab = AxesTab(self.tab_note, self)
         self.tab_note.add(self.axesTab, text='Axes')
-        self.labelTab = LabelTab(self.tab_note, self, self.level)
+        self.labelTab = LabelTab(self.tab_note, self)
         self.tab_note.add(self.labelTab, text='Labels')
+        self.setData(data)
 
-    def setLoadedData(loadedData):
-        pass
+    def setData(self, data):
+        if data is not None:
+            data.add_observers(self)
+        self.data = data
+        self.level = data.level
+        self.name = data.name
+        self.mappings_path = self.data.loadedData.mappings_path
+        self.short_names_path = self.data.loadedData.short_names_path
+        self.plotInteraction.setData(data)
     
     @property
     def mappings(self):
@@ -380,11 +382,11 @@ class AxesTab(tk.Frame):
         #         menu.add_radiobutton(value=metric, label=metric, variable=var)
         return menubutton
 
-    def __init__(self, parent, tab, plotType):
+    def __init__(self, parent, tab):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.plotType = plotType
+        #self.plotType = plotType
         # Axes metric options TODO: Should we limit the metrics allowed depending on the current plot?
         self.metric_label = tk.Label(self, text='Metrics:')
         self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
@@ -462,12 +464,12 @@ class AxesTab(tk.Frame):
             self.tab.data.notify(self.tab.data.loadedData)
 
 class LabelTab(tk.Frame):
-    def __init__(self, parent, tab, level):
+    def __init__(self, parent, tab):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        self.level = level
-        self.loadedData = self.tab.data.loadedData
+        #self.level = level
+        #self.loadedData = self.tab.data.loadedData
         self.metric1 = tk.StringVar(value='Metric 1')
         self.metric2 = tk.StringVar(value='Metric 2')
         self.metric3 = tk.StringVar(value='Metric 3')
@@ -477,6 +479,13 @@ class LabelTab(tk.Frame):
         self.menu3 = AxesTab.all_metric_menu(self, self.metric3)
         self.updateButton = tk.Button(self, text='Update', command=self.updateLabels)
         self.resetButton = tk.Button(self, text='Reset', command=self.reset)
+
+    @property
+    def level(self):
+        return self.tab.level
+    @property
+    def loadedData(self):
+        return self.tab.data.loadedData
 
     @property
     def df(self):

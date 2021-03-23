@@ -14,12 +14,12 @@ from metric_names import MetricName as MN
 #globals().update(MetricName.__members__)
 
 class CustomData(AnalyzerData):
-    def __init__(self, loadedData, gui, root, level):
-        super().__init__(loadedData, gui, root, level, 'Custom')
+    def __init__(self, loadedData, level):
+        super().__init__(loadedData, level, 'Custom')
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
-        print("CustomData Notified from ", loadedData)
-        super().notify(loadedData, update, variants, mappings) 
+    # def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    #     print("CustomData Notified from ", loadedData)
+    #     super().notify(loadedData, update, variants, mappings) 
         
         
         # df = self.df.copy(deep=True)
@@ -40,7 +40,7 @@ class CustomData(AnalyzerData):
         # Generate Plot
         #custom_df, self.fig, self.plotData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
-        self.notify_observers()
+        #self.notify_observers()
 
 class CustomTab(AnalyzerTab):
     def __init__(self, parent, data):

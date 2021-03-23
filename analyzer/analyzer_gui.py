@@ -556,18 +556,18 @@ class LevelContainerTab(tk.Frame):
         self.plot_note = ttk.Notebook(plotPw)
 
         # Codelet Plot Data
-        self.coverageData = CoverageData(loadedData, gui, root, level)
-        self.siplotData = SIPlotData(loadedData, gui, root, level)
-        self.qplotData = QPlotData(loadedData, gui, root, level)
-        self.trawlData = TRAWLData(loadedData, gui, root, level)
-        self.customData = CustomData(loadedData, gui, root, level)
+        self.coverageData = CoverageData(loadedData, level)
+        self.siplotData = SIPlotData(loadedData, level)
+        self.qplotData = QPlotData(loadedData, level)
+        self.trawlData = TRAWLData(loadedData, level)
+        self.customData = CustomData(loadedData, level)
         # 3D breaks 'name:marker' because of different plotting
         # self.3dData = Data3d(self.loadedData, self, root, level)
         # binned scurve break datapoint selection because of different text:marker map
         # Disable for now as not used.  
         # To enable, need to compute text:marker to-and-from regular text:marker to binned text:marker
         # self.scurveData = ScurveData(self.loadedData, self, root, level)
-        self.scurveAllData = ScurveAllData(loadedData, gui, root, level)
+        self.scurveAllData = ScurveAllData(loadedData, level)
         # Codelet Plot Tabs
         self.summaryTab = SummaryTab(self.plot_note, self.coverageData)
         self.siPlotTab = SIPlotTab(self.plot_note, self.siplotData)
@@ -589,19 +589,19 @@ class LevelContainerTab(tk.Frame):
         # Create Per Level Tabs Underneath Plot Notebook
         self.data_note = ttk.Notebook(plotPw)
         # Data tabs
-        self.dataTableData = DataTabData(loadedData, gui, root, level)
+        self.dataTableData = DataTabData(loadedData, level)
         self.dataTable = DataTab(self.data_note, self.dataTableData)
         self.addDataTab(self.dataTable, name='Data')
         # Short name tabs
-        self.shortNameData = ShortNameData(loadedData, gui, root, level)
+        self.shortNameData = ShortNameData(loadedData, level)
         self.shortNameTable = ShortNameTab(self.data_note, self.shortNameData)
         self.addDataTab(self.shortNameTable, name='Short Names')
         # Mapping tabs
-        self.mappingsData = MappingsData(loadedData, gui, root, level)
+        self.mappingsData = MappingsData(loadedData, level)
         self.mappingsTab = MappingsTab(self.data_note, self.mappingsData)
         self.addDataTab(self.mappingsTab, name='Mappings')
         # Filtering tabs
-        self.filteringData = FilteringData(loadedData, gui, root, level)
+        self.filteringData = FilteringData(loadedData, level)
         self.filteringTab = FilteringTab(self.data_note, self.filteringData)
         self.addDataTab(self.filteringTab, name='Filtering')
         # Packing
