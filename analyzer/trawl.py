@@ -53,4 +53,4 @@ class TrawlTab(AnalyzerTab):
         return TrawlPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
                          gui=True, x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
                          mappings=self.mappings, 
-                         short_names_path=self.data.gui.loadedData.short_names_path)
+                         short_names_path=self.data.loadedData.short_names_path)

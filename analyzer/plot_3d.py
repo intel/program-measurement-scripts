@@ -54,4 +54,4 @@ class Tab3d(AnalyzerTab):
     def mk_plot(self):
         return Plot3d(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
                       x_axis=self.data.x_axis, y_axis=self.data.y_axis, z_axis=None, mappings=self.mappings, 
-                      short_names_path=self.data.gui.loadedData.short_names_path)
+                      short_names_path=self.data.loadedData.short_names_path)

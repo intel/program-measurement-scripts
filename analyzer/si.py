@@ -62,7 +62,7 @@ class SIPlotTab(AnalyzerTab):
         return SiPlot (self.data.siDataItems, self.data.loadedData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
                        filtering=False, filter_data=None, mappings=self.mappings, 
                        scale=self.data.scale, 
-                       short_names_path=self.data.gui.loadedData.short_names_path) 
+                       short_names_path=self.data.loadedData.short_names_path) 
 
     def resetTablValues(self):
         self.data.resetRunCluster()

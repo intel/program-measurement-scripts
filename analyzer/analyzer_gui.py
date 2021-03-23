@@ -548,6 +548,7 @@ class LevelContainerTab(tk.Frame):
     def __init__(self, parent, level, loadedData, gui, root):
         super().__init__(parent)
         self.plotTabs = []
+        self.dataTabs = []
         parent.add(self, text=level)
         # Each level has its own paned window
         plotPw = tk.PanedWindow(self, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
@@ -586,37 +587,45 @@ class LevelContainerTab(tk.Frame):
         # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
         self.addPlotTab(self.scurveAllTab, name='S-Curve')
         # Create Per Level Tabs Underneath Plot Notebook
-        data_note = ttk.Notebook(plotPw)
+        self.data_note = ttk.Notebook(plotPw)
         # Data tabs
         self.dataTableData = DataTabData(loadedData, gui, root, level)
-        self.dataTable = DataTab(data_note, self.dataTableData)
-        data_note.add(self.dataTable, text='Data')
+        self.dataTable = DataTab(self.data_note, self.dataTableData)
+        self.addDataTab(self.dataTable, name='Data')
         # Short name tabs
         self.shortNameData = ShortNameData(loadedData, gui, root, level)
-        self.shortNameTable = ShortNameTab(data_note, self.shortNameData)
-        data_note.add(self.shortNameTable, text='Short Names')
+        self.shortNameTable = ShortNameTab(self.data_note, self.shortNameData)
+        self.addDataTab(self.shortNameTable, name='Short Names')
         # Mapping tabs
         self.mappingsData = MappingsData(loadedData, gui, root, level)
-        self.mappingsTab = MappingsTab(data_note, self.mappingsData)
-        data_note.add(self.mappingsTab, text='Mappings')
+        self.mappingsTab = MappingsTab(self.data_note, self.mappingsData)
+        self.addDataTab(self.mappingsTab, name='Mappings')
         # Filtering tabs
         self.filteringData = FilteringData(loadedData, gui, root, level)
-        self.filteringTab = FilteringTab(data_note, self.filteringData)
-        data_note.add(self.filteringTab, text='Filtering')
+        self.filteringTab = FilteringTab(self.data_note, self.filteringData)
+        self.addDataTab(self.filteringTab, name='Filtering')
         # Packing
         self.plot_note.pack(side = tk.TOP, expand=True)
-        data_note.pack(side = tk.BOTTOM, expand=True)
+        self.data_note.pack(side = tk.BOTTOM, expand=True)
         plotPw.add(self.plot_note, stretch='always')
-        plotPw.add(data_note, stretch='always')
+        plotPw.add(self.data_note, stretch='always')
         plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
     def addPlotTab(self, tab, name):
         self.plotTabs.append(tab)
         self.plot_note.add(tab, text=name)
 
+    def addDataTab(self, tab, name):
+        self.dataTabs.append(tab)
+        self.data_note.add(tab, text=name)
+
     def resetTabValues(self):
         for tab in self.plotTabs:
             tab.resetTabValues()
+
+    def setLoadedData(self, loadedData):
+        for tab in self.plotTabs + self.dataTabs:
+            tab.setLoadedData(loadedData)
         
 
 
@@ -693,8 +702,7 @@ class OneviewTab(tk.Frame):
 
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-        self.parent = parent
+        super().__init__(parent)
         self.loadedData = LoadedData()
 
         menubar = tk.Menu(self)
@@ -708,9 +716,9 @@ class AnalyzerGui(tk.Frame):
         # filemenu.add_command(label="Exit")#, command=self.file_exit)
         menubar.add_cascade(label="File", menu=filemenu)
         
-        self.parent.config(menu=menubar)
+        parent.config(menu=menubar)
 
-        self.pw=tk.PanedWindow(self.parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
+        self.pw=tk.PanedWindow(parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
 
         fullPw = self.buildTabs(self.pw)
         fullPw.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
@@ -737,7 +745,7 @@ class AnalyzerGui(tk.Frame):
         self.loaded_url = None
         self.loadType = ''
         self.choice = ''
-    
+
     def saveState(self):
         # Want to save the full loadedData object as a pkl
         # Prompt user with option to save 
@@ -878,9 +886,15 @@ class AnalyzerGui(tk.Frame):
         self.oneview_note.add(self.oneviewTab, text="Oneview")
         # Plots (Right Window)
         self.level_plot_note = ttk.Notebook(infoPw)
+        #self.codeletTab = CodeletTab(self.level_plot_note, self, root)
         self.codeletTab = CodeletTab(self.level_plot_note, self.loadedData, self, root)
+        #self.codeletTab.setLoadedData(self.loadedData)
+        #self.sourceTab = SourceTab(self.level_plot_note, self, root)
         self.sourceTab = SourceTab(self.level_plot_note, self.loadedData, self, root)
+        #self.codeletTab.setLoadedData(self.loadedData)
+        #self.applicationTab = ApplicationTab(self.level_plot_note, self, root)
         self.applicationTab = ApplicationTab(self.level_plot_note, self.loadedData, self, root)
+        #self.codeletTab.setLoadedData(self.loadedData)
 
         # self.level_plot_note.add(self.codeletTab, text='Codelet')
         # self.level_plot_note.add(self.sourceTab, text='Source')
@@ -1049,7 +1063,7 @@ if __name__ == '__main__':
     #root.geometry(f'{width}x{height}')
 
     # The AnalyzerGui is global so that the data source panel can access it
-    global gui
+    # global gui
     gui = AnalyzerGui(root)
 
     # Allow pyinstaller to find all CEFPython binaries

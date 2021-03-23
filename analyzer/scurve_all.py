@@ -50,4 +50,4 @@ class ScurveAllTab(AnalyzerTab):
     def mk_plot(self):
         return ScurveAllPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'S-Curve All', no_plot=False, gui=True, 
                              x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                             mappings=self.mappings, short_names_path=self.data.gui.loadedData.short_names_path)
+                             mappings=self.mappings, short_names_path=self.data.loadedData.short_names_path)

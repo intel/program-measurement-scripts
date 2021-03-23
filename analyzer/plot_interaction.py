@@ -33,11 +33,12 @@ def plt_sca(ax):
     raise ValueError("Axes instance argument was not found in a figure")
 
 class PlotInteraction():
-    def __init__(self, tab):
+    def __init__(self, tab, data):
         self.tab = tab
-        self.level = self.tab.level
-        self.gui = self.tab.data.gui
-        self.root = self.tab.data.root
+        self.data = data
+        self.level = data.level
+        #self.gui = self.tab.data.gui
+        #self.root = self.tab.data.root
         self.adjusted = False
         self.adjusting = False
         self.guiState.add_observers(self)
@@ -60,11 +61,11 @@ class PlotInteraction():
 
     @property
     def guiState(self):
-        return self.gui.loadedData.levelData[self.level].guiState
+        return self.data.loadedData.levelData[self.level].guiState
 
     @property
     def df(self):
-        return self.gui.loadedData.levelData[self.level].df
+        return self.data.loadedData.levelData[self.level].df
 
     def notify(self, data):
         self.updateMarkers()
@@ -231,7 +232,9 @@ class PlotInteraction():
                 self.plotData.text_arrow[to_adjust[index]] = child # Mapping
                 if not to_adjust[index].get_alpha(): child.set_visible(False) # Hide arrows with hidden texts
                 index += 1
-        self.root.after(0, self.canvas.draw)
+        #self.root.after(0, self.canvas.draw)
+        # TODO: WARNING global variable used here. May want to get it from GUI componenet.
+        root.after(0, self.canvas.draw)
         self.adjusted = True
         self.adjusting = False
         print('Done Adjust text')

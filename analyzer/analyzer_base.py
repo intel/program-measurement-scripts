@@ -142,8 +142,8 @@ class AnalyzerData(Observable):
     #    self.mappings = pd.DataFrame()
         self.level = level
         self.name = name
-        self.gui = gui
-        self.root = root
+        #self.gui = gui
+        #self.root = root
         self.scale = "linear"
         self.x_axis = None
         self.y_axis = None
@@ -211,7 +211,7 @@ class AnalyzerTab(tk.Frame):
         self.short_names_path = self.data.loadedData.short_names_path
         self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH, expand=True)
-        self.plotInteraction = PlotInteraction(self)
+        self.plotInteraction = PlotInteraction(self, data)
         # Setup Plot Frames
         self.plotFrame = tk.Frame(self.window)
         self.plotFrame2 = tk.Frame(self.plotFrame)
@@ -236,6 +236,9 @@ class AnalyzerTab(tk.Frame):
         self.labelTab = LabelTab(self.tab_note, self, self.level)
         self.tab_note.add(self.labelTab, text='Labels')
 
+    def setLoadedData(loadedData):
+        pass
+    
     @property
     def mappings(self):
         return self.data.mappings
@@ -293,9 +296,9 @@ class AnalyzerTab(tk.Frame):
             self.df[missing] = np.nan
 
     def get_metrics(self):
-        metrics = copy.deepcopy(self.data.gui.loadedData.common_columns_start)
+        metrics = copy.deepcopy(self.data.loadedData.common_columns_start)
         metrics.extend(self.extra_metrics)
-        metrics.extend(self.data.gui.loadedData.common_columns_end)
+        metrics.extend(self.data.loadedData.common_columns_end)
         return metrics
         
     def notify(self, data):
@@ -308,7 +311,7 @@ class AnalyzerTab(tk.Frame):
         self.y_scale = self.orig_y_scale
         self.x_axis = self.orig_x_axis
         self.y_axis = self.orig_y_axis
-        #self.variants = [self.data.gui.loadedData.default_variant] #TODO: edit this out
+        #self.variants = [self.data.loadedData.default_variant] #TODO: edit this out
         self.variants = []
         self.current_labels = []
 
@@ -456,7 +459,7 @@ class AxesTab(tk.Frame):
             self.tab.data.scale = self.tab.x_scale + self.tab.y_scale
             self.tab.data.y_axis = "{}".format(self.tab.y_axis)
             self.tab.data.x_axis = "{}".format(self.tab.x_axis)
-            self.tab.data.notify(self.tab.data.gui.loadedData)
+            self.tab.data.notify(self.tab.data.loadedData)
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, tab, level):

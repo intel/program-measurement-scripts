@@ -169,14 +169,14 @@ class MappingsTab(LevelTab):
         self.win.destroy()
 
     # def showIntermediates(self):
-    #     self.tab.data.gui.loadedData.mapping = self.tab.data.gui.loadedData.orig_mapping.copy(deep=True)
-    #     self.tab.data.gui.loadedData.add_speedup(self.tab.data.gui.loadedData.mapping, self.tab.data.gui.loadedData.summaryDf)
-    #     self.tab.data.gui.loadedData.removedIntermediates = False
+    #     self.tab.data.loadedData.mapping = self.tab.data.loadedData.orig_mapping.copy(deep=True)
+    #     self.tab.data.loadedData.add_speedup(self.tab.data.loadedData.mapping, self.tab.data.loadedData.summaryDf)
+    #     self.tab.data.loadedData.removedIntermediates = False
     #     data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), \
     #         (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), \
     #         (self.tab.data.gui.coverageData, self.tab.data.gui.c_summaryTab)]
     #     for data, tab in data_tab_pairs:
-    #         data.notify(self.tab.data.gui.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
+    #         data.notify(self.tab.data.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
     
     # def removeIntermediates(self):
     #     # Ask the user which speedup metric they'd like to use for end2end transitions
@@ -243,7 +243,7 @@ class MappingsTab(LevelTab):
 #             path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
 #             self.tab.cluster = path
 #             self.tab.title = self.cluster_selected.get()
-#             self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
+#             self.tab.siplotData.notify(self.tab.data.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class DataTabData(AnalyzerData):
     def __init__(self, data, gui, root, level):
@@ -429,10 +429,10 @@ class FSM(Observable):
                 {'trigger':'previous', 'source':'A11', 'dest':'A1', 'after':'A1'}]
         states = ['INIT', 'AStart', State('A1', ignore_invalid_triggers=True), State('A11', ignore_invalid_triggers=True), 'A2', 'A3', 'AEnd', 'B1', 'B2', 'BEnd', 'End']
 
-        if self.tab.data.gui.loadedData.transitions == 'showing':
+        if self.tab.data.loadedData.transitions == 'showing':
             self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
-        elif self.tab.data.gui.loadedData.transitions == 'hiding':
-            self.tab.data.gui.loadedData.transitions = 'disabled'
+        elif self.tab.data.loadedData.transitions == 'hiding':
+            self.tab.data.loadedData.transitions = 'disabled'
             self.machine = Machine(model=self, states=states, initial='A1', transitions=transitions)
         else:
             self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
@@ -457,9 +457,9 @@ class FSM(Observable):
 
     def A1(self):
         print("In A1")
-        if self.tab.data.gui.loadedData.transitions == 'showing':
+        if self.tab.data.loadedData.transitions == 'showing':
             print("going back to orig variants")
-            self.tab.data.gui.loadedData.transitions = 'hiding'
+            self.tab.data.loadedData.transitions = 'hiding'
             self.tab.plotInteraction.showMarkers()
             self.tab.variantTab.checkListBox.showOrig()
         else:
@@ -473,8 +473,8 @@ class FSM(Observable):
 
     def A11(self):
         print("In A11")
-        if self.tab.data.gui.loadedData.transitions != 'showing':
-            self.tab.data.gui.loadedData.transitions = 'showing'
+        if self.tab.data.loadedData.transitions != 'showing':
+            self.tab.data.loadedData.transitions = 'showing'
             for name in self.tab.plotInteraction.plotData['names']:
                 if name not in self.a1_highlighted:
                     self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.plotData['name:marker'][name], visible=False)

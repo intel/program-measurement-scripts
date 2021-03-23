@@ -65,4 +65,4 @@ class QPlotTab(AnalyzerTab):
 
     def mk_plot(self):
         return QPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "QPlot", False, True, self.data.x_axis, self.data.y_axis, 
-                     self.data.mappings, self.data.gui.loadedData.short_names_path)
+                     self.data.mappings, self.data.loadedData.short_names_path)
