@@ -213,51 +213,37 @@ class MappingsTab(LevelTab):
     #     mappings = pd.merge(left=df[[NAME, TIMESTAMP]], right=before, left_on=[NAME, TIMESTAMP], right_on=['After Name', 'After Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
     #     return mappings
 
-class ClusterTab(tk.Frame):
-    def __init__(self, parent, tab):
-        tk.Frame.__init__(self, parent)
-        self.parent = parent
-        self.tab = tab
-        self.cluster_path = resource_path('clusters')
-        self.cluster_selected = tk.StringVar(value='Choose Cluster')
-        cluster_options = ['Choose Cluster']
-        for cluster in os.listdir(self.cluster_path):
-            cluster_options.append(cluster[:-4])
-        self.cluster_menu = tk.OptionMenu(self, self.cluster_selected, *cluster_options)
-        self.cluster_menu['menu'].insert_separator(1)
-        update = tk.Button(self, text='Update', command=self.update)
-        colors = tk.Button(self, text='Color by Cluster', command=self.updateColors)
-        self.cluster_menu.pack(side=tk.LEFT, anchor=tk.NW)
-        update.pack(side=tk.LEFT, anchor=tk.NW)
-        colors.pack(side=tk.LEFT, anchor=tk.NW, padx=10)
+# class ClusterTab(tk.Frame):
+#     def __init__(self, parent, tab):
+#         tk.Frame.__init__(self, parent)
+#         self.parent = parent
+#         self.tab = tab
+#         self.cluster_path = resource_path('clusters')
+#         self.cluster_selected = tk.StringVar(value='Choose Cluster')
+#         cluster_options = ['Choose Cluster']
+#         for cluster in os.listdir(self.cluster_path):
+#             cluster_options.append(cluster[:-4])
+#         self.cluster_menu = tk.OptionMenu(self, self.cluster_selected, *cluster_options)
+#         self.cluster_menu['menu'].insert_separator(1)
+#         update = tk.Button(self, text='Update', command=self.update)
+#         colors = tk.Button(self, text='Color by Cluster', command=self.updateColors)
+#         self.cluster_menu.pack(side=tk.LEFT, anchor=tk.NW)
+#         update.pack(side=tk.LEFT, anchor=tk.NW)
+#         colors.pack(side=tk.LEFT, anchor=tk.NW, padx=10)
 
-    def updateColors(self):
-        table_df = self.tab.shortnameTab.table.model.df
-        table_df = pd.merge(left=table_df, right=self.tab.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]], how='left', on=KEY_METRICS)
-        table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
-        table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
-        self.tab.shortnameTab.updateLabels(table_df)
+#     def updateColors(self):
+#         table_df = self.tab.shortnameTab.table.model.df
+#         table_df = pd.merge(left=table_df, right=self.tab.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]], how='left', on=KEY_METRICS)
+#         table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
+#         table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
+#         self.tab.shortnameTab.updateLabels(table_df)
     
-    def update(self):
-        if self.cluster_selected.get() != 'Choose Cluster':
-            path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
-            self.tab.cluster = path
-            self.tab.title = self.cluster_selected.get()
-            self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
-
-class VariantTab(tk.Frame):
-    def __init__(self, parent, tab, all_variants, variants):
-        tk.Frame.__init__(self, parent)
-        self.parent = parent
-        self.tab = tab
-        self.checkListBox = ChecklistBox(self, all_variants, variants, self.tab, bd=1, relief="sunken", background="white")
-        update = tk.Button(self, text='Update', command=self.checkListBox.updateVariants)
-        select_all = tk.Button(self, text='Select All', command= lambda val=1 : self.checkListBox.set_all(val))
-        deselect_all = tk.Button(self, text='Deselect All', command= lambda val=0 : self.checkListBox.set_all(val))
-        self.checkListBox.pack(side=tk.LEFT)
-        update.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
-        select_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
-        deselect_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
+#     def update(self):
+#         if self.cluster_selected.get() != 'Choose Cluster':
+#             path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
+#             self.tab.cluster = path
+#             self.tab.title = self.cluster_selected.get()
+#             self.tab.siplotData.notify(self.tab.data.gui.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class DataTabData(AnalyzerData):
     def __init__(self, data, gui, root, level):
@@ -339,18 +325,16 @@ class FilteringTab(LevelTab):
     def buildVariantSelector(self):
         all_variants = self.data.df[VARIANT].unique()
         selected_variants = self.data.loadedData.levelData[self.level].guiState.selectedVariants
-        self.variantSelector = ChecklistBox(self, all_variants, selected_variants, self, bd=1, relief="sunken", background="white")
+        self.variantSelector = VariantSelector(self, all_variants, selected_variants)
         # select_all = tk.Button(self, text='Select All', command= lambda val=1 : self.variantSelector.set_all(val))
         # deselect_all = tk.Button(self, text='Deselect All', command= lambda val=0 : self.variantSelector.set_all(val))
         # select_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
         # deselect_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
 
     def buildPointSelector(self):
-        options=[]
-        # TODO do this without iterating over the indices
-        for i in range(len(self.data.df[SHORT_NAME])):
-            options.append('[' + self.data.df[SHORT_NAME][i] + '] ' + self.data.df[NAME][i] + ' [' + str(self.data.df[TIMESTAMP][i]) + ']')
-        self.pointSelector = ChecklistBox(self, options, self.data.loadedData.levelData[self.level].guiState.hidden, self, short_names=self.data.df[SHORT_NAME].tolist(), names=self.data.df[NAME].tolist(), timestamps=self.data.df[TIMESTAMP].tolist(), bd=1, relief="sunken", background="white")
+        options = ('[' + self.data.df[SHORT_NAME] + '] ' + self.data.df[NAME] + ' [' + self.data.df[TIMESTAMP].astype(str) + ']').tolist()
+        names = (self.data.df[NAME] + self.data.df[TIMESTAMP].astype(str)).tolist()
+        self.pointSelector = PointSelector(self, options, self.data.loadedData.levelData[self.level].guiState.hidden, names)
         # self.pointSelector.restoreState(self.stateDictionary)
 
     def setOptions(self):
@@ -376,13 +360,13 @@ class FilteringTab(LevelTab):
         self.update_button = tk.Button(self, text='Update', command=self.updateFilter)
     
     def updateFilter(self):
-        names = self.pointSelector.getHidden()
-        variants = self.variantSelector.getCheckedItems()
+        names = self.pointSelector.getUncheckedNames()
+        variants = self.variantSelector.getCheckedVariants()
         metric = self.metric_selected.get()
         if metric == 'Choose Metric': metric = ''
         self.data.loadedData.setFilter(self.level, metric, self.min_num.get(), self.max_num.get(), names, variants)
         # Update the point selector to reflect the metric/variant filtering
-        self.pointSelector.update(self.data.loadedData.levelData[self.level].guiState)
+        self.pointSelector.restoreState(self.data.loadedData.levelData[self.level].guiState.hidden)
 
 class GuideTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -546,93 +530,80 @@ class FSM(Observable):
         self.tab.labelTab.metric1.set(metric)
         self.tab.labelTab.updateLabels()
 
-class ChecklistBox(tk.Frame):
-    def __init__(self, parent, choices, hidden, tab, short_names=[], names=[], timestamps=[], **kwargs):
-        tk.Frame.__init__(self, parent, **kwargs)
+class Checklist(tk.Frame):
+    def __init__(self, parent, options):
+        tk.Frame.__init__(self, parent, bd=1, relief="sunken", background="white")
         self.parent=parent
-        self.tab=tab
-        scrollbar = tk.Scrollbar(self)
-        scrollbar_x = tk.Scrollbar(self, orient=tk.HORIZONTAL)
-        checklist = tk.Text(self, width=40)
-        scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-        scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
-        checklist.pack(fill=tk.Y, expand=True)
+        self.options = options
+        self.scrollbar = tk.Scrollbar(self)
+        self.scrollbar_x = tk.Scrollbar(self, orient=tk.HORIZONTAL)
+        self.checklist = tk.Text(self, width=40)
+        self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+        self.scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+        self.checklist.pack(fill=tk.Y, expand=True)
         self.vars = []
-        self.names = []
         self.cbs = []
+        self.buildChecklist()
+
+    def buildChecklist(self):
         bg = self.cget("background")
-        for index, choice in enumerate(choices):
+        for option in self.options:
             var = tk.IntVar(value=1)
             self.vars.append(var)
-            if short_names and names and timestamps:
-                name = names[index] + str(timestamps[index])
-                self.names.append(name)
-                if name in hidden:
-                    var.set(0)
-            cb = tk.Checkbutton(self, var=var, text=choice,
+            cb = tk.Checkbutton(self, var=var, text=option,
                                 onvalue=1, offvalue=0,
                                 anchor="w", width=100, background=bg,
                                 relief="flat", highlightthickness=0
             )
             self.cbs.append(cb)
-            checklist.window_create("end", window=cb)
-            checklist.insert("end", "\n")
-        checklist.config(yscrollcommand=scrollbar.set)
-        checklist.config(xscrollcommand=scrollbar_x.set)
-        scrollbar.config(command=checklist.yview)
-        scrollbar_x.config(command=checklist.xview)
-        checklist.configure(state="disabled")
+            self.checklist.window_create("end", window=cb)
+            self.checklist.insert("end", "\n")
+        self.configure()
 
-    def restoreState(self, dictionary):
-        for name in dictionary['hidden_names']:
-            try: 
-                index = self.names.index(name)
-                self.vars[index].set(0)
-            except: pass
-            
-    def getHidden(self):
-        hidden_names = []
-        for index, var in enumerate(self.vars):
-            if not var.get(): hidden_names.append(self.names[index])
-        return hidden_names
-
-    def update(self, guiState):
-        for index, var in enumerate(self.vars):
-            if guiState.isHidden(self.names[index]): var.set(0)
-
-    def getCheckedItems(self):
-        values = []
-        for i, cb in enumerate(self.cbs):
-            value =  self.vars[i].get()
-            if value:
-                values.append(cb['text'])
-        return values
-
-    def showAllVariants(self):
-        for i, cb in enumerate(self.cbs):
-            self.vars[i].set(1)
-        self.updateVariants()
-    
-    def showOrig(self):
-        for i, cb in enumerate(self.cbs):
-            if cb['text'] == self.tab.data.gui.loadedData.default_variant: self.vars[i].set(1)
-            else: self.vars[i].set(0)
-        self.updateVariants()
-
-    def updateVariants(self):
-        self.parent.tab.variants = self.getCheckedItems()
-        # Update the rest of the plots at the same level with the new checked variants
-        for tab in self.parent.tab.plotInteraction.tabs:
-            for i, cb in enumerate(self.cbs):
-                tab.variantTab.checkListBox.vars[i].set(self.vars[i].get())
-            tab.variants = self.parent.tab.variants
-        self.parent.tab.plotInteraction.save_plot_state()
-        # Get new mappings from database to update plots
-        self.all_mappings = pd.read_csv(self.tab.data.gui.loadedData.mappings_path)
-        # self.mapping = MappingsTab.restoreCustom(self.tab.data.gui.loadedData.summaryDf.loc[self.tab.data.gui.loadedData.summaryDf[VARIANT].isin(self.parent.tab.variants)], self.all_mappings)
-        for tab in self.parent.tab.plotInteraction.tabs:
-            if tab.name == 'SIPlot': tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, cluster=tab.cluster, title=tab.title, mappings=self.mapping)
-            else: tab.data.notify(self.tab.data.gui.loadedData, variants=tab.variants, x_axis="{}".format(tab.x_axis), y_axis="{}".format(tab.y_axis), scale=tab.x_scale+tab.y_scale, update=True, level=tab.level, mappings=self.mapping)
+    def configure(self):
+        self.checklist.config(yscrollcommand=self.scrollbar.set)
+        self.checklist.config(xscrollcommand=self.scrollbar_x.set)
+        self.scrollbar.config(command=self.checklist.yview)
+        self.scrollbar_x.config(command=self.checklist.xview)
+        self.checklist.configure(state="disabled")
 
     def set_all(self, val):
         for var in self.vars: var.set(val)
+
+class VariantSelector(Checklist):
+    def __init__(self, parent, options, selected):
+        super().__init__(parent, options)
+        self.selected = selected
+        self.restoreState()
+    
+    def restoreState(self):
+        for i, cb in enumerate(self.cbs):
+            variant = cb['text']
+            if variant not in self.selected: self.vars[i].set(0)
+            else: self.vars[i].set(1)
+
+    def getCheckedVariants(self):
+        variants = []
+        for i, cb in enumerate(self.cbs):
+            value =  self.vars[i].get()
+            if value:
+                variants.append(cb['text'])
+        return variants
+
+class PointSelector(Checklist):
+    def __init__(self, parent, options, hidden, names):
+        super().__init__(parent, options)
+        self.names = names
+        self.restoreState(hidden)
+
+    def restoreState(self, hidden):
+        for i, var in enumerate(self.vars):
+            name = self.names[i]
+            if name in hidden: var.set(0)
+            else: var.set(1)
+            
+    def getUncheckedNames(self):
+        unchecked = []
+        for index, var in enumerate(self.vars):
+            if not var.get(): unchecked.append(self.names[index])
+        return unchecked

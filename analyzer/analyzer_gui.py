@@ -49,7 +49,7 @@ from custom import CustomData, CustomTab
 from plot_3d import Data3d, Tab3d
 from scurve import ScurveData, ScurveTab
 from scurve_all import ScurveAllData, ScurveAllTab
-from meta_tabs import ShortNameTab, AxesTab, MappingsTab, GuideTab, ClusterTab, FilteringTab, DataTab
+from meta_tabs import ShortNameTab, AxesTab, MappingsTab, GuideTab, FilteringTab, DataTab
 from meta_tabs import ShortNameData, DataTabData, MappingsData, FilteringData
 from plot_interaction import PlotInteraction
 from capeplot import CapeData
