@@ -43,7 +43,7 @@ class ShortNameTab(AnalyzerTab):
 
     def notify(self, data):
         df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, VARIANT]]
-        color_map = self.data.loadedData.levelData[self.level].guiState.get_color_map()
+        color_map = self.data.levelData.guiState.get_color_map()
         self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
 
@@ -56,7 +56,7 @@ class ShortNameTab(AnalyzerTab):
             if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
         # All points without a cluster will be blue
         df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
-        self.data.loadedData.color_by_cluster(df, self.level)
+        self.data.levelData.color_by_cluster(df)
 
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
