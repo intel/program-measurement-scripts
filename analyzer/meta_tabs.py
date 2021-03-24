@@ -30,7 +30,7 @@ class ShortNameTab(AnalyzerTab):
         self.table = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         table_button_frame = tk.Frame(self)
         table_button_frame.grid(row=4, column=1)
-        self.update_button = tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels(self.table.model.df))
+        self.update_button = tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels())
         self.cluster_color_button = tk.Button(table_button_frame, text="Color by Cluster", command=lambda: self.colorClusters())
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
@@ -42,7 +42,9 @@ class ShortNameTab(AnalyzerTab):
         self.find_replace_button.grid(row=0, column=3)
 
     def notify(self, data):
-        self.table.model.df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]]
+        df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, VARIANT]]
+        color_map = self.data.loadedData.levelData[self.level].guiState.get_color_map()
+        self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
 
     def colorClusters(self):
@@ -54,7 +56,6 @@ class ShortNameTab(AnalyzerTab):
             if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
         # All points without a cluster will be blue
         df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
-        self.data.loadedData.levelData[self.level].guiState.set_color_map(df)
         self.data.loadedData.color_by_cluster(df, self.level)
 
     def findAndReplace(self):
@@ -66,14 +67,17 @@ class ShortNameTab(AnalyzerTab):
         self.table.redraw()
 
     # Merge user input labels with current mappings and replot
-    def updateLabels(self, table_df):
-        # Fill in the Label column for the legend
-        table_df['Label'] = ''
-        for i, color in enumerate(table_df['Color'].unique()):
-            if color not in self.colors:
-                table_df.loc[table_df['Color']==color, ['Label', 'Color']] = [color, self.colors[i+1]]
+    def updateLabels(self):
+        # Fill in the Color column based on unique user inputted labels
+        df = self.table.model.df.copy(deep=True)
+        df['Color'] = ''
+        for i, label in enumerate(df['Label'].unique()):
+            if i < len(self.colors):
+                df.loc[df['Label']==label, ['Color']] = [self.colors[i]]
+            else: # Make all blue when run out of colors
+                df.loc[df['Label']==label, ['Color']] = self.colors[0]
         # Update short names in each of the main dfs
-        self.data.loadedData.update_short_names(table_df, self.level)
+        self.data.loadedData.update_short_names(df, self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
