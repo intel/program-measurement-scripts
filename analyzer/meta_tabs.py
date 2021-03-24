@@ -42,7 +42,9 @@ class ShortNameTab(LevelTab):
         self.find_replace_button.grid(row=0, column=3)
 
     def notify(self, data):
-        self.table.model.df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, 'Color', VARIANT]]
+        df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, VARIANT]]
+        color_map = self.data.loadedData.levelData[self.level].guiState.get_color_map()
+        self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
 
     def colorClusters(self):
