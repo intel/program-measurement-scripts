@@ -3,7 +3,7 @@ import math
 import numpy as np
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_scurve_all import scurve_all_plot
 from generate_scurve_all import ScurveAllPlot
@@ -33,7 +33,7 @@ class ScurveAllData(AnalyzerData):
     #     self.notify_observers()
 
 
-class ScurveAllTab(AnalyzerTab):
+class ScurveAllTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Scurve_all', 
                          MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
@@ -48,6 +48,6 @@ class ScurveAllTab(AnalyzerTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return ScurveAllPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'S-Curve All', no_plot=False, gui=True, 
+        return ScurveAllPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'S-Curve All', no_plot=False, gui=True, 
                              x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                             mappings=self.mappings, short_names_path=self.data.loadedData.short_names_path)
+                             mappings=self.mappings, short_names_path=self.data.short_names_path)

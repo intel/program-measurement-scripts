@@ -410,13 +410,13 @@ class CapacityData(NodeCentricData):
 
 # Base class for all plots
 class CapePlot:
-    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+    def __init__(self, data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         # Data is a list of data
         self.data = data
-        self.loadedData = loadedData
+        self.levelData = levelData
         self.level = level
-        self.guiState = loadedData.levelData[level].guiState
+        self.guiState = levelData.guiState
         self.default_y_axis = default_y_axis
         self.default_x_axis = default_x_axis
         self.ctxs = []
@@ -440,11 +440,11 @@ class CapePlot:
 
     @property
     def mapping(self):
-        return self.loadedData.levelData[self.level].mapping
+        return self.levelData.mapping
 
     @property
     def color_map(self):
-        return self.loadedData.levelData[self.level].color_map
+        return self.levelData.color_map
 
     # # Setter of df (May remove), delegate to self.data
     # @df.setter
@@ -575,7 +575,7 @@ class CapePlot:
         ax.set_title(title, pad=40)
 
         # Add footnote with datafile and timestamp
-        plt.figtext(0, 0.005, self.loadedData.source_title, horizontalalignment='left')
+        plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
 
         # Legend
         legend = self.mk_legend(color_labels)

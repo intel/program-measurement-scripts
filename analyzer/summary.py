@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from capeplot import CapacityData
 from generate_coveragePlot import coverage_plot
@@ -40,7 +40,7 @@ class CoverageData(AnalyzerData):
     #     #    variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
     #     self.notify_observers()
 
-class SummaryTab(AnalyzerTab):
+class SummaryTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
@@ -57,5 +57,5 @@ class SummaryTab(AnalyzerTab):
         # self.tableNote.add(self.guideTab, text='Guide')
 
     def mk_plot(self):
-        return CoveragePlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
+        return CoveragePlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', "test", self.data.scale, "Coverage", no_plot=False, gui=True, 
                             x_axis=self.data.x_axis, y_axis=self.data.y_axis, mappings=self.mappings)

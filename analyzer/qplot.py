@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_QPlot import parse_ip_df as parse_ip_qplot_df
 from generate_QPlot import QPlot
@@ -51,7 +51,7 @@ class QPlotData(AnalyzerData):
     #     #self.plotData = plotData_ORIG 
     #     self.notify_observers()
 
-class QPlotTab(AnalyzerTab):
+class QPlotTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'QPlot', MetricName.CAP_FP_GFLOP_P_S, 
                          MetricName.CAP_MEMMAX_GB_P_S, [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, \
@@ -64,5 +64,5 @@ class QPlotTab(AnalyzerTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return QPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', "test", self.data.scale, "QPlot", False, True, self.data.x_axis, self.data.y_axis, 
-                     self.data.mappings, self.data.loadedData.short_names_path)
+        return QPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', "test", self.data.scale, "QPlot", False, True, self.data.x_axis, self.data.y_axis, 
+                     self.data.mappings, self.data.short_names_path)

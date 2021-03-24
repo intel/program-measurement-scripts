@@ -10,7 +10,7 @@ from pandastable import Table
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path, exportCSV, exportXlsx
-from analyzer_base import AnalyzerTab, AnalyzerData, LevelTab, AxesTab
+from analyzer_base import PlotTab, AnalyzerData, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
 from metric_names import MetricName
 from metric_names import NonMetricName, KEY_METRICS
@@ -23,7 +23,7 @@ class ShortNameData(AnalyzerData):
     # def notify(self, data):
     #     self.notify_observers()
 
-class ShortNameTab(LevelTab):
+class ShortNameTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         # Build Short Name Table
@@ -86,7 +86,7 @@ class MappingsData(AnalyzerData):
     # def notify(self, data):
     #     self.notify_observers()
 
-class MappingsTab(LevelTab):
+class MappingsTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
@@ -252,7 +252,7 @@ class DataTabData(AnalyzerData):
     # def notify(self, data):
     #     self.notify_observers()
 
-class DataTab(LevelTab):
+class DataTab(AnalyzerTab):
     def __init__(self, parent, data, metrics=[], variants=[]):
         super().__init__(parent, data)
         # self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
@@ -302,7 +302,7 @@ class FilteringData(AnalyzerData):
     def notify(self, data):
         self.notify_observers()
 
-class FilteringTab(LevelTab):
+class FilteringTab(AnalyzerTab):
     def __init__(self, parent, data):
         super().__init__(parent, data)
         self.setupThreshold()

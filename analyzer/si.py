@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable, resource_path
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_SI import parse_ip_df as parse_ip_siplot_df
 from generate_SI import SiData
@@ -43,7 +43,7 @@ class SIPlotData(AnalyzerData):
     def resetRunCluster(self):
         self.run_cluster = True
 
-class SIPlotTab(AnalyzerTab):
+class SIPlotTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'FE_tier1', 'Intensity', 'Saturation',
                          ['Saturation', 'Intensity', 'SI', NonMetricName.SI_CLUSTER_NAME])
@@ -59,10 +59,10 @@ class SIPlotTab(AnalyzerTab):
 
     def mk_plot(self):
         # TODO: Work with Elias to use cherry pick rather than passing in filter data
-        return SiPlot (self.data.siDataItems, self.data.loadedData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
+        return SiPlot (self.data.siDataItems, self.data.levelData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
                        filtering=False, filter_data=None, mappings=self.mappings, 
                        scale=self.data.scale, 
-                       short_names_path=self.data.loadedData.short_names_path) 
+                       short_names_path=self.data.short_names_path) 
 
     def resetTablValues(self):
         self.data.resetRunCluster()

@@ -13,10 +13,10 @@ from os.path import expanduser
 
 # globals().update(MetricName.__members__)
 class PerLevelGuiState(Observable):
-    def __init__(self, loadedData, level):
+    def __init__(self, levelData, level):
         super().__init__()
         self.level = level
-        self.loadedData = loadedData
+        self.levelData = levelData
         # Should have size <= 3
         self.labels = []
         self.hidden = []
@@ -40,11 +40,17 @@ class PerLevelGuiState(Observable):
         self.mappings_path = os.path.join(self.cape_path, 'mappings.csv')
         # Column order for data table display.  All except KEY_METRICS.
         self.nonKeyColumnOrder = [m for m in ALL_METRICS if m not in KEY_METRICS] 
+        self.guiDataDict = {}
 
+    def findOrCreateGuiData(self, guiDataClass):
+        if guiDataClass not in self.guiDataDict:
+            self.guiDataDict[guiDataClass] = guiDataClass(self.levelData, self.level)
+        return self.guiDataDict[guiDataClass]
+    
     def moveColumnFirst(self, column):
         if column in self.columnOrder:
             self.nonKeyColumnOrder = [column]+[m for m in self.nonKeyColumnOrder if m != column]
-            self.updated()
+            self.updated_notify_observers()
         
     @property
     def columnOrder(self):
@@ -54,6 +60,7 @@ class PerLevelGuiState(Observable):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
         color_map_df.fillna({'Color':'blue'}, inplace=True)
         self.color_map = color_map_df
+        self.updated_notify_observers()
 
     def get_color_map(self):
         return self.color_map
@@ -64,11 +71,11 @@ class PerLevelGuiState(Observable):
         all_mappings = pd.read_csv(self.mappings_path)
         all_mappings = all_mappings.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
         all_mappings.to_csv(self.mappings_path, index=False)
-        self.loadedData.mapping = self.loadedData.mapping.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
+        self.levelData.mapping = self.levelData.mapping.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
 
     def remove_mapping(self, toRemove):
         all_mappings = pd.read_csv(self.mappings_path)
-        to_update = [all_mappings, self.loadedData.mapping]
+        to_update = [all_mappings, self.levelData.mapping]
         for mapping in to_update:
             mapping.drop(mapping[(mapping['Before Name']==toRemove['Before Name'].iloc[0]) & \
                         (mapping['Before Timestamp']==toRemove['Before Timestamp'].iloc[0]) & \
@@ -78,7 +85,7 @@ class PerLevelGuiState(Observable):
 
     def reset_labels(self):
         self.labels = []
-        self.updated()
+        self.updated_notify_observers()
 
     def setFilter(self, metric, minimum, maximum, names, variants):
         self.filterMetric = metric
@@ -88,18 +95,18 @@ class PerLevelGuiState(Observable):
         self.hidden = names
         # Add codelet names outside of filtered range to hidden names
         if metric:
-            df = self.loadedData.df.loc[(self.loadedData.df[metric] < minimum) | (self.loadedData.df[metric] > maximum)]
+            df = self.levelData.df.loc[(self.levelData.df[metric] < minimum) | (self.levelData.df[metric] > maximum)]
             self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
-        self.updated()
+        self.updated_notify_observers()
 
     def removePoints(self, names):
         self.hidden.extend(names)
         self.hidden = list(dict.fromkeys(self.hidden))
-        self.updated()
+        self.updated_notify_observers()
 
     def showPoints(self, names):
         self.hidden = [name for name in self.hidden if name not in names]
-        self.updated()
+        self.updated_notify_observers()
 
     def isHidden(self, name):
         return name in self.hidden
@@ -108,15 +115,15 @@ class PerLevelGuiState(Observable):
     def highlightPoints(self, names):
         self.highlighted.extend(names)
         self.highlighted = list(dict.fromkeys(self.highlighted))
-        self.updated()
+        self.updated_notify_observers()
 
     def unhighlightPoints(self, names):
         self.highlighted = [name for name in self.highlighted if name not in names]
-        self.updated()
+        self.updated_notify_observers()
 
     def setLabels(self, metrics):
         self.labels = metrics
-        self.updated()
+        self.updated_notify_observers()
 
     def reset_state(self):
         self.hidden = []
@@ -132,13 +139,11 @@ class PerLevelGuiState(Observable):
         return self.get_encoded_names(df).isin(self.highlighted)
 
     # Plot interaction objects for each plot at this level will be notified to avoid a complete redraw
-    def updated(self):
-        self.notify_observers()
 
 class AnalyzerData(Observable):
-    def __init__(self, loadedData, level, name):
+    def __init__(self, levelData, level, name):
         super().__init__()
-        self.loadedData = loadedData
+        self.levelData = levelData
     #    self.mappings = pd.DataFrame()
         self.level = level
         self.name = name
@@ -148,53 +153,92 @@ class AnalyzerData(Observable):
         self.x_axis = None
         self.y_axis = None
         # Watch for updates in loaded data
-        loadedData.add_observers(self)
-        loadedData.levelData[level].add_observers(self)
+        #levelData.loadedData.add_observers(self)
+        levelData.add_observers(self)
 
     # Make df a property that refer to the right dataframe
     @property
     def df(self):
         # Get correct dataframe
-        return self.loadedData.get_df(self.level)
+        return self.levelData.df
 
     @property
     def mappings(self):
-        return self.loadedData.get_mapping(self.level)
+        return self.levelData.mapping
 
     @property
     def variants(self):
-        return self.loadedData.levelData[self.level].guiState.selectedVariants
+        return self.levelData.guiState.selectedVariants
+
+    @property
+    def common_columns_start(self):
+        return self.levelData.common_columns_start
+
+    @property
+    def common_columns_end(self):
+        return self.levelData.common_columns_end
+
+    @property
+    def short_names_path(self):
+        return self.levelData.short_names_path
+
 
     @property
     def columnOrder(self):
-        return self.loadedData.levelData[self.level].guiState.columnOrder
+        return self.levelData.guiState.columnOrder
 
     # Move need to move this to controller class (Plot interaction?)
     def moveColumnFirst(self, column):
-        self.loadedData.levelData[self.level].guiState.moveColumnFirst(column)
+        self.levelData.guiState.moveColumnFirst(column)
 
     @property
     def capacityDataItems(self):
-        return self.loadedData.levelData[self.level].capacityDataItems
+        return self.levelData.capacityDataItems
 
     @property
     def siDataItems(self):
-        return self.loadedData.levelData[self.level].siDataItems
+        return self.levelData.siDataItems
         
     @property
     def satAnalysisDataItems(self):
-        return self.loadedData.levelData[self.level].satAnalysisDataItems
+        return self.levelData.satAnalysisDataItems
 
     def notify(self, loadedData):
         print(f"{self.name} Notified from ", loadedData)
-        self.notify_observers()
+        self.updated_notify_observers()
 
+    def update_axes(self, scale, x_axis, y_axis):
+        self.scale = scale
+        self.y_axis = "{}".format(y_axis)
+        self.x_axis = "{}".format(x_axis)
+        self.updated_notify_observers()
+        
     def merge_metrics(self, df, metrics):
-        self.loadedData.merge_metrics(df, metrics, self.level)
-    
+        self.levelData.merge_metrics(df, metrics)
+
+
 class AnalyzerTab(tk.Frame):
-    def __init__(self, parent, data, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
+    def __init__(self, parent, data):
         super().__init__(parent)
+        self.setData(data)
+
+    def setData(self, data):
+        if data is not None:
+            data.add_observers(self)
+            #data.loadedData.levelData[data.level].guiState.add_observers(self)
+        self.data = data
+        self.level = data.level
+        self.name = data.name
+        #self.mappings_path = self.data.loadedData.mappings_path
+        #self.short_names_path = self.data.short_names_path
+
+    @property
+    def mappings(self):
+        return self.data.mappings
+    
+class PlotTab(AnalyzerTab):
+    def __init__(self, parent, data, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
+        super().__init__(parent, data)
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -205,7 +249,6 @@ class AnalyzerTab(tk.Frame):
         self.extra_metrics = extra_metrics
         self.window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         self.window.pack(fill=tk.BOTH, expand=True)
-        self.plotInteraction = PlotInteraction(self)
         # Setup Plot Frames
         self.plotFrame = tk.Frame(self.window)
         self.plotFrame2 = tk.Frame(self.plotFrame)
@@ -214,6 +257,7 @@ class AnalyzerTab(tk.Frame):
         self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         # Plot interacting buttons
+        self.plotInteraction = PlotInteraction(self)
         # self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.plotInteraction.saveState)
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.plotInteraction.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.plotInteraction.toggleLabels)
@@ -229,21 +273,8 @@ class AnalyzerTab(tk.Frame):
         self.tab_note.add(self.axesTab, text='Axes')
         self.labelTab = LabelTab(self.tab_note, self)
         self.tab_note.add(self.labelTab, text='Labels')
-        self.setData(data)
-
-    def setData(self, data):
-        if data is not None:
-            data.add_observers(self)
-        self.data = data
-        self.level = data.level
-        self.name = data.name
-        self.mappings_path = self.data.loadedData.mappings_path
-        self.short_names_path = self.data.loadedData.short_names_path
         self.plotInteraction.setData(data)
-    
-    @property
-    def mappings(self):
-        return self.data.mappings
+        self.plotData = None
 
     # Subclass needs to override this method
     def mk_plot(self):
@@ -298,9 +329,9 @@ class AnalyzerTab(tk.Frame):
             self.df[missing] = np.nan
 
     def get_metrics(self):
-        metrics = copy.deepcopy(self.data.loadedData.common_columns_start)
+        metrics = copy.deepcopy(self.data.common_columns_start)
         metrics.extend(self.extra_metrics)
-        metrics.extend(self.data.loadedData.common_columns_end)
+        metrics.extend(self.data.common_columns_end)
         return metrics
         
     def notify(self, data):
@@ -317,19 +348,6 @@ class AnalyzerTab(tk.Frame):
         self.variants = []
         self.current_labels = []
 
-class LevelTab(tk.Frame):
-    def __init__(self, parent, data):
-        super().__init__(parent)
-        if data is not None:
-            data.add_observers(self)
-            data.loadedData.levelData[data.level].guiState.add_observers(self)
-        self.data = data
-        self.level = data.level
-        self.name = data.name
-
-    @property
-    def mappings(self):
-        return self.data.mappings
 
 class AxesTab(tk.Frame):
     @staticmethod
@@ -458,10 +476,7 @@ class AxesTab(tk.Frame):
             self.tab.y_scale = self.yscale_selected.get().lower()
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
-            self.tab.data.scale = self.tab.x_scale + self.tab.y_scale
-            self.tab.data.y_axis = "{}".format(self.tab.y_axis)
-            self.tab.data.x_axis = "{}".format(self.tab.x_axis)
-            self.tab.data.notify(self.tab.data.loadedData)
+            self.tab.data.update_axes(self.tab.x_scale + self.tab.y_scale, self.tab.x_axis, self.tab.y_axis)
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, tab):
@@ -484,16 +499,16 @@ class LabelTab(tk.Frame):
     def level(self):
         return self.tab.level
     @property
-    def loadedData(self):
-        return self.tab.data.loadedData
+    def levelData(self):
+        return self.tab.data.levelData
 
     @property
     def df(self):
-        return self.loadedData.levelData[self.level].df
+        return self.levelData.df
 
     @property
     def mappings(self):
-        return self.loadedData.levelData[self.level].mapping
+        return self.levelData.mapping
 
     @property
     def plotData(self):
@@ -513,7 +528,7 @@ class LabelTab(tk.Frame):
 
     def reset(self):
         self.resetMetrics()
-        self.loadedData.updateLabels([], self.level)
+        self.levelData.updateLabels([], self.level)
 
     def updateLabels(self):
         current_metrics = []
@@ -523,4 +538,4 @@ class LabelTab(tk.Frame):
         # TODO: merge mapping speedups into master dataframe to avoid this check
         current_metrics = [metric for metric in current_metrics if metric in self.df.columns.tolist()]
         if not current_metrics: return # User hasn't selected any label metrics
-        self.loadedData.updateLabels(current_metrics, self.level)
+        self.levelData.updateLabels(current_metrics)

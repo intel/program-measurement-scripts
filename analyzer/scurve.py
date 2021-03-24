@@ -3,7 +3,7 @@ import math
 import numpy as np
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_scurve import scurve_plot
 import copy
@@ -26,7 +26,7 @@ class ScurveData(AnalyzerData):
     #             mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
     #     self.notify_observers()
 
-class ScurveTab(AnalyzerTab):
+class ScurveTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Scurve', MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 

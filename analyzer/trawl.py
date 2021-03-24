@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_TRAWL import trawl_plot
 from generate_TRAWL import TrawlPlot
@@ -38,7 +38,7 @@ class TRAWLData(AnalyzerData):
     #     #        source_order=loadedData.source_order, mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
     #     self.notify_observers()
 
-class TrawlTab(AnalyzerTab):
+class TrawlTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'TRAWL', MetricName.CAP_FP_GFLOP_P_S, SPEEDUP_VEC,
                          [SPEEDUP_VEC, SPEEDUP_DL1])
@@ -50,7 +50,7 @@ class TrawlTab(AnalyzerTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return TrawlPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
+        return TrawlPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
                          gui=True, x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
                          mappings=self.mappings, 
-                         short_names_path=self.data.loadedData.short_names_path)
+                         short_names_path=self.data.short_names_path)

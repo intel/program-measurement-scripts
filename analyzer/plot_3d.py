@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_3d import plot_3d
 from generate_3d import Plot3d
@@ -35,7 +35,7 @@ class Data3d(AnalyzerData):
 #         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
 #         self.notify_observers()
 
-class Tab3d(AnalyzerTab):
+class Tab3d(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, '3D', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
@@ -52,6 +52,6 @@ class Tab3d(AnalyzerTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return Plot3d(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
+        return Plot3d(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
                       x_axis=self.data.x_axis, y_axis=self.data.y_axis, z_axis=None, mappings=self.mappings, 
-                      short_names_path=self.data.loadedData.short_names_path)
+                      short_names_path=self.data.short_names_path)

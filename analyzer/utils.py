@@ -8,14 +8,32 @@ from xlsxgen import XlsxGenerator
 class Observable:
     def __init__(self):
         self.observers = []
+        self.updated = False
+        
+    def set_updated(self):
+        self.updated = True
+        
     def add_observers(self, observer):
+        assert observer not in self.observers
         self.observers.append(observer)
+
     def notify_observers(self):
+        if not self.updated:
+            return
+
         for observer in self.observers:
             observer.notify(self)
-    def notify_plot_observers(self):
-        for observer in self.observers:
-            observer.plot_notify(self)
+        # Reset updated
+        self.updated = False
+
+    # Updated and also notify observers
+    def updated_notify_observers(self):
+        self.set_updated()
+        self.notify_observers()
+
+    # def notify_plot_observers(self):
+    #     for observer in self.observers:
+    #         observer.plot_notify(self)
             
 class Observer:
     def __init__(self, observable):

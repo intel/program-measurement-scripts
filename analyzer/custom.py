@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, AnalyzerData
 import pandas as pd
 from generate_custom import custom_plot
 from generate_custom import CustomPlot
@@ -42,7 +42,7 @@ class CustomData(AnalyzerData):
         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         #self.notify_observers()
 
-class CustomTab(AnalyzerTab):
+class CustomTab(PlotTab):
     def __init__(self, parent, data):
         super().__init__(parent, data, 'Custom', MN.RATE_FP_GFLOP_P_S, MN.COVERAGE_PCT, [])
 
@@ -52,6 +52,6 @@ class CustomTab(AnalyzerTab):
         super().setup(metrics)
 
     def mk_plot(self):
-        return CustomPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 
+        return CustomPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 
                           x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                          mappings=self.mappings, short_names_path=self.data.loadedData.short_names_path)
+                          mappings=self.mappings, short_names_path=self.data.short_names_path)

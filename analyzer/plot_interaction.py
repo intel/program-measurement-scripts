@@ -42,9 +42,9 @@ class PlotInteraction():
         self.data = None
         self.level = None
 
-    def setData(self, data):
-        self.data = data
-        self.level = data.level
+    def setData(self, analyzerData):
+        self.analyzerData = analyzerData
+        self.level = analyzerData.level
         self.guiState.add_observers(self)
         
     @property
@@ -65,13 +65,15 @@ class PlotInteraction():
 
     @property
     def guiState(self):
-        return self.data.loadedData.levelData[self.level].guiState
+        return self.analyzerData.levelData.guiState
 
     @property
     def df(self):
-        return self.data.loadedData.levelData[self.level].df
+        return self.analyzerData.levelData.df
 
     def notify(self, data):
+        if not self.plotData:
+            return # Do nothing if no plot data
         self.updateMarkers()
         self.updateLabels()
         # User could've changed the color of the labels: need to update marker colors
@@ -108,7 +110,7 @@ class PlotInteraction():
                 # Update label menu with currently selected metric
                 self.tab.labelTab.metrics[metric_index].set(metric)
                 # Append to end of label
-                encoded_names = self.plotData.get_encoded_names(self.df)
+                encoded_names = self.guiState.get_encoded_names(self.df)
                 value = self.df.loc[encoded_names==codeletName][metric].iloc[0]
                 if isinstance(value, int) or isinstance(value, float): 
                     label += ', ' + str(round(value, 2))
