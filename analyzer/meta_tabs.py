@@ -42,7 +42,8 @@ class ShortNameTab(AnalyzerTab):
         self.find_replace_button.grid(row=0, column=3)
 
     def notify(self, data):
-        df = self.data.df[[NAME, SHORT_NAME, TIMESTAMP, VARIANT]]
+        columns = [NAME, SHORT_NAME, TIMESTAMP, VARIANT]
+        df = self.data.df[columns] if not self.data.df.empty else pd.DataFrame(columns=columns)
         color_map = self.data.levelData.guiState.get_color_map()
         self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
@@ -309,6 +310,8 @@ class FilteringTab(AnalyzerTab):
         self.setupThreshold()
 
     def notify(self, data):
+        if self.data.df.empty:
+            return
         self.setOptions()
         self.buildPointSelector()
         self.buildVariantSelector()

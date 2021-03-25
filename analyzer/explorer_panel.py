@@ -15,10 +15,11 @@ from utils import center
 import datetime
 from shutil import copyfile
 from abc import ABC, abstractmethod
+import getpass
 
 class ScrolledTreePane(tk.Frame):
     TIMESTAMP_STR = r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}'
-    def __init__(self, parent, loadFn, rootName, guiRoot):
+    def __init__(self, parent, loadFn, rootName, gui, guiRoot):
         tk.Frame.__init__(self, parent)
         self.treeview = ttk.Treeview(self)
         vsb = ttk.Scrollbar(self, orient=tk.VERTICAL)
@@ -32,12 +33,18 @@ class ScrolledTreePane(tk.Frame):
         self.opening = False
         self.firstOpen = True
         self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
+        self.treeview.bind("<Button-3>", self.handleRightClickEvent)
         self.loadFn = loadFn
         self.rootNode = ScrolledTreePane.MetaTreeNode(rootName, None, self)
         self.setupLocalRoots()
         self.setupRemoteRoots()
         self.setupOneDriveRoots()
         self.guiRoot = guiRoot
+        self.gui = gui
+
+    @property
+    def control(self):
+        return self.gui.control
 
     # Subclass override following root setting up methods to add more root nodes
     def setupLocalRoots(self):
@@ -59,6 +66,28 @@ class ScrolledTreePane(tk.Frame):
     def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
         pass
 
+    def setFocus(self, node):
+        self.treeview.focus(node.id)
+        self.treeview.selection_set(node.id)
+    
+    # Right click on panel.  Creating context menu for choices.
+    def handleRightClickEvent(self, event):
+        focus = self.treeview.focus()
+        node = None
+        if len(focus) == 0:
+            state = tk.DISABLED
+        else:
+            nodeId = int(focus)
+            node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
+            state = tk.NORMAL if node.isSavable() else tk.DISABLED
+
+        popup = tk.Menu(self, tearoff=0)
+        popup.add_command(label="Save", command=lambda: node.save(), state=state)
+        try:
+            popup.tk_popup(event.x_root, event.y_root,0)
+        finally:
+            popup.grab_release()
+        
     def handleOpenEvent(self, event):
         if not self.opening: # finish opening one file before another is started
             self.opening = True
@@ -75,6 +104,13 @@ class ScrolledTreePane(tk.Frame):
     def insertNode(self, parent, node):
         parent_str = parent.id if parent else ''
         self.treeview.insert(parent_str,'end',node.id,text=node.name)
+
+    def loadState(self, input_path):
+        self.control.loadState(input_path)
+
+    def saveState(self, out_path):
+        self.control.saveState(out_path)
+        
 
     class DataSource(ABC):
         # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
@@ -198,7 +234,14 @@ class ScrolledTreePane(tk.Frame):
             return cls.nodeDict[id]
 
         def open(self):
-            print("node open:", self.name, self.id) 
+            print(f"node open: {self.name}, {self.id}") 
+
+        def isSavable(self):
+            return False
+
+        # Subclass override to save the data
+        def save(self):
+            print(f"node save: {self.name}, {self.id}")
 
         
     # Meta tree node including "Previously Visited"
@@ -551,9 +594,8 @@ class DataSourcePanel(ScrolledTreePane):
 
 
     def __init__(self, parent, loadDataSrcFn, gui, root):
-        ScrolledTreePane.__init__(self, parent, loadDataSrcFn, 'Data Source', root)
+        ScrolledTreePane.__init__(self, parent, loadDataSrcFn, 'Data Source', gui, root)
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
-        self.gui = gui
 
     def show_options_data(self, select_fn, node=None):
         if len(self.gui.loadedData.sources) >= 2: # Currently can only append max 2 files
@@ -631,28 +673,65 @@ class DataSourcePanel(ScrolledTreePane):
 
 
 class AnalysisResultsPanel(ScrolledTreePane):
+    class ARInternalNode(ScrolledTreePane.InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent,
+                     data_source, terminalNodeClass):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             data_source, terminalNodeClass)
+            assert virtual_path == real_path
+
+
     # Try to use a simple structure /root/user/result/<TIME STAMP>.  
     # This is the root level and will see user as next level
-    class RootNode(ScrolledTreePane.InternalNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, path, name, container, parent, 
+    class RootNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.FileSystem(), None)
             # Override this to use ResultNode as internal node
             self.internalNodeClass = AnalysisResultsPanel.UserNode
+
+        def isSavable(self):
+            return True
+
+        def save(self):
+            uid = getpass.getuser()
+            out_path = os.path.join(self.virtual_path, uid)
+            if not os.path.isdir(out_path):
+                Path(out_path).mkdir(parents=True)
+            self.open()
+            resultNode = [n for n in self.children if n.name == uid][0]
+            resultNode.save()
+
     # This will be the root for local roots
     # This is the user level and will see resul as next level
-    class UserNode(ScrolledTreePane.InternalNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, path, name, container, parent, 
+    class UserNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.FileSystem(), None)
             # Override this to use ResultNode as internal node
             self.internalNodeClass = AnalysisResultsPanel.ResultNode
+        def isSavable(self):
+            # Only allow save if this is Local directory or this is current user's directory
+            return self.name == 'Local' or self.name == getpass.getuser()
+
+        def save(self):
+            super().save()
+            stateName = tk.simpledialog.askstring("Analysis Results", "Provide a short name for this analysis result.", parent=self.container)
+            if not stateName: return
+            out_path = os.path.join(self.virtual_path, stateName)
+            if not os.path.isdir(out_path):
+                Path(out_path).mkdir(parents=True)
+            self.open()
+            resultNode = [n for n in self.children if n.name == stateName][0]
+            resultNode.save()
+
+            
 
     # This is the result level and will see timestamp node as next level
-    class ResultNode(ScrolledTreePane.InternalNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, path, name, container, parent, 
-                             ScrolledTreePane.FileSystem(), AnalysisResults.Panel.TimestampNode)
+    class ResultNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), AnalysisResultsPanel.TimestampNode)
 
         def makeInternalNodeOrNone(self, name, time_stamp):
             return None  # Will not make internal node at this level
@@ -665,47 +744,58 @@ class AnalysisResultsPanel(ScrolledTreePane):
                 return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
             return None
 
+        def isSavable(self):
+            return True
+
+        def save(self):
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M') 
+            out_path = os.path.join(self.virtual_path, timestamp)
+            Path(out_path).mkdir(parents=True)
+            self.open()
+            resultNode = [n for n in self.children if n.name == timestamp][0]
+            resultNode.save()
+
     # This is the timestamp level and will be the terminal node
     class TimestampNode(ScrolledTreePane.TerminalNode):
-        def __init__(self, path, name, container, parent):
-            super().__init__(path, path, name, container, parent, 
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
                              ScrolledTreePane.FileSystem())
+            assert virtual_path == real_path
 
         def open(self):
-            super().open()
-            data_file = open(os.path.join(self.path, 'data.pkl'), 'rb')
-            data = pickle.load(data_file)
-            data_file.close()
+            self.container.loadState(self.virtual_path)
 
-            #codelet = {'summary':self.df, 'mapping':self.mapping, 'data':self.data['Codelet']}
-            #source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
-            #app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
-            # Assume data contains whatever format previously saved
-            self.container.openLocalFile(data)
+        def save(self):
+            self.container.saveState(self.virtual_path)
+            #self.container.after(1000, lambda: self.container.setFocus(self))
+            self.container.setFocus(self)
 
-    def __init__(self, parent, loadSavedStateFn, root):
-        ScrolledTreePane.__init__(self, parent, loadSavedStateFn, 'Analysis Results', root)
+    def __init__(self, parent, loadSavedStateFn, gui, root):
+        super().__init__(parent, loadSavedStateFn, 'Analysis Results', gui, root)
 
     def openLocalFile(self, levels=[]):
         self.loadFn(levels)
 
     def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
         cape_onedrive=os.path.join(oneDriveRoot, 'analysis_results')
-        oneDriveNode = AnalysisResultsPanel.UserNode(cape_onedrive, oneDriveName, self, self.oneDriveNode)
+        oneDriveNode = AnalysisResultsPanel.RootNode(cape_onedrive, cape_onedrive, oneDriveName, self, self.oneDriveNode)
     
     def setupLocalRoots(self):
         cape_cache_path= os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'Analysis Results')
         if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
-        AnalysisResultsPanel.UserNode(cape_cache_path, 'Local', self, self.rootNode)
+        AnalysisResultsPanel.UserNode(cape_cache_path, cape_cache_path, 'Local', self, self.rootNode)
 
 class ExplorerPanel(tk.PanedWindow):
     def __init__(self, parent, loadDataSrcFn, loadSavedStateFn, gui, root):
-        tk.PanedWindow.__init__(self, parent, orient="horizontal")
+        super().__init__(parent, orient="horizontal")
         top = DataSourcePanel(self, loadDataSrcFn, gui, root)
         top.pack(side = tk.LEFT, expand=True)
-        bot = AnalysisResultsPanel(self, loadSavedStateFn, root)
+        bot = AnalysisResultsPanel(self, loadSavedStateFn, gui, root)
         bot.pack(side = tk.LEFT, expand=True)
         self.add(top, stretch='always')
         self.add(bot, stretch='always')
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
+        self.gui = gui
+
+        

@@ -245,8 +245,15 @@ class AnalyzerData(Observable):
     def merge_metrics(self, df, metrics):
         self.levelData.merge_metrics(df, metrics)
 
+class GuiBaseTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
 
-class AnalyzerTab(tk.Frame):
+    def setData(self, data):
+        assert (data is not None)
+        data.add_observers(self)
+
+class AnalyzerTab(GuiBaseTab):
     def __init__(self, parent, analyzerDataClass):
         super().__init__(parent)
         self.analyzerDataClass = analyzerDataClass
@@ -256,9 +263,7 @@ class AnalyzerTab(tk.Frame):
         return self.setData(guiState.findOrCreateGuiData(self.analyzerDataClass))
         
     def setData(self, data):
-        assert (data is not None)
-        data.add_observers(self)
-            #data.loadedData.levelData[data.level].guiState.add_observers(self)
+        super().setData(data)
         self.data = data
         self.level = data.level
         self.name = data.name
@@ -319,11 +324,14 @@ class PlotTab(AnalyzerTab):
     
     def setup(self, metrics):
         # Update attributes
+        self.df = self.data.df
+        if self.df.empty:
+            return
+
         plot = self.mk_plot()
         plot.compute_and_plot()
         self.fig, self.plotData = plot.fig, plot.plotData
 
-        self.df = self.data.df
         self.variants = self.data.variants
         self.metrics = metrics
         # Update names for plot buttons

@@ -122,6 +122,8 @@ class LoadedData(Observable):
         
         @property
         def df(self):
+            if len(self._dfs) == 0:
+                return pd.DataFrame()
             return pd.concat(self._dfs, ignore_index=True)
 
         @property
@@ -713,6 +715,7 @@ class OneviewTab(tk.Frame):
             self.refreshButton.destroy()
         if self.browser2: self.window.remove(self.browser2)
 
+
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -720,8 +723,8 @@ class AnalyzerGui(tk.Frame):
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Save State", command=self.saveState)
-        filemenu.add_command(label="Save State(Testing)", command=self.saveStateTest)
+        # filemenu.add_command(label="Save State", command=self.saveState)
+        # filemenu.add_command(label="Save State(Testing)", command=self.saveStateTest)
         # filemenu.add_command(label="New")#, command=self.configTab.new)
         # filemenu.add_command(label="Open")#, command=self.configTab.open)
         # filemenu.add_command(label="Save")#, command=lambda: self.configTab.save(False))
@@ -758,40 +761,11 @@ class AnalyzerGui(tk.Frame):
         # self.loaded_url = None
         # self.loadType = ''
         # self.choice = ''
+        self.control = None
 
-    def saveStateTest(self):
-        # Save to temp directory for testing.
-        with open("c:/temp/test.pkl", 'wb') as data_file:
-            pickle.dump(self.loadedData, data_file)
+    def setControl(self, control):
+        self.control = control
         
-        
-        
-    def saveState(self):
-        # Want to save the full loadedData object as a pkl
-        # Prompt user with option to save 
-        # self.win = tk.Toplevel()
-        # center(self.win)
-        # self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
-        # self.win.title('Save State')
-        # message = 'Would you like to save data for all of the codelets\nor just for those selected?'
-        # tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-        # for index, option in enumerate(['Save All', 'Save Selected']):
-        #     b = tk.Button(self.win, text=option, command= lambda metric=option : self.selectAction(metric))
-        #     b.grid(row=index+1, column=1, padx=20, pady=10)
-        # self.root.wait_window(self.win)
-        # if self.choice == 'cancel': return        
-        # Ask user to name the directory for this state to be saved
-        dest_name = tk.simpledialog.askstring('Analysis Result', 'Provide a name for this analysis result')
-        if not dest_name: return
-        dest = os.path.join(self.loadedData.analysis_results_path, dest_name)
-        # if not os.path.isdir(dest):
-        Path(dest).mkdir(parents=True, exist_ok=True)
-        data_dest = os.path.join(dest, 'loadedData.pkl')
-        data_file = open(data_dest, 'wb')
-        pickle.dump(self.loadedData, data_file)
-        data_file.close()
-
-
     # def appendData(self):
     #     self.choice = 'Append'
     #     self.win.destroy()
@@ -1081,6 +1055,31 @@ def check_focus(event):
     if root.focus_get() is None:
         root.focus_force()
 
+# Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) but do not deal with their details.
+# It coordiantes between them.
+# E.g. it can say "Look at a certain tab and hightlight specifici data points".  It should set the Model and the notify methods will update GUI automatically.
+class AnalyzerControl:
+    def __init__(self, gui, loadedData):
+        self.gui = gui
+        self.setLoadedData(loadedData)
+        self.gui.setControl(self)
+
+    def setLoadedData(self, loadedData):
+        self.loadedData = loadedData
+        self.gui.setLoadedData(self.loadedData)
+        
+    def loadState(self, input_path):
+        with open(os.path.join(input_path, 'loadedData.pkl'), 'rb') as input_file:
+            self.setLoadedData(pickle.load(input_file))
+            self.loadedData.updated_notify_observers()
+            self.loadedData.updated_all_levels_notify_observers()
+
+    def saveState(self, output_path):
+        with open(os.path.join(output_path, 'loadedData.pkl'), 'wb') as data_file:
+            pickle.dump(self.loadedData, data_file)
+        
+
+
 if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
     global root
@@ -1096,15 +1095,9 @@ if __name__ == '__main__':
     # The AnalyzerGui is global so that the data source panel can access it
     # global gui
     gui = AnalyzerGui(root)
-    if os.path.isfile('c:/temp/test.pkl'):
-        with open('c:/temp/test.pkl', 'rb') as input_file:
-            loadedData = pickle.load(input_file)
-        gui.setLoadedData(loadedData)
-        loadedData.updated_notify_observers()
-        loadedData.updated_all_levels_notify_observers()
-    else:
-        loadedData = LoadedData()
-        gui.setLoadedData(loadedData)
+    loadedData = LoadedData()
+    # Will also link loadedData to gui
+    control = AnalyzerControl(gui, loadedData)
 
     # Allow pyinstaller to find all CEFPython binaries
     # TODO: Add handling of framework nad resource paths for Mac

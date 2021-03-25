@@ -431,10 +431,14 @@ class CapePlot:
         self.y_axis = y_axis
         self.short_names_path = short_names_path
         self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+        self.fig = None
+        self.plotData = None
 
     # Getter of df, delegate to self.data
     @property
     def df(self):
+        if len(self.data) == 0:
+            return pd.DataFrame()
         df = pd.concat([data.df for data in self.data], ignore_index=True)
         return df
 
