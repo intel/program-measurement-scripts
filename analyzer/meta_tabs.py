@@ -24,8 +24,8 @@ class ShortNameData(AnalyzerData):
     #     self.notify_observers()
 
 class ShortNameTab(AnalyzerTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data)
+    def __init__(self, parent):
+        super().__init__(parent, ShortNameData)
         # Build Short Name Table
         self.table = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         table_button_frame = tk.Frame(self)
@@ -91,9 +91,9 @@ class MappingsData(AnalyzerData):
     #     self.notify_observers()
 
 class MappingsTab(AnalyzerTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data)
-        self.table = Table(self, dataframe=self.mappings, showtoolbar=False, showstatusbar=True)
+    def __init__(self, parent):
+        super().__init__(parent, MappingsData)
+        self.table = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         self.setupCustomOptions()
         # TODO: Fix showing/hiding intermediate mappings
         #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
@@ -257,8 +257,8 @@ class DataTabData(AnalyzerData):
     #     self.notify_observers()
 
 class DataTab(AnalyzerTab):
-    def __init__(self, parent, data, metrics=[], variants=[]):
-        super().__init__(parent, data)
+    def __init__(self, parent, metrics=[], variants=[]):
+        super().__init__(parent, DataTabData)
         # self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
         self.summaryTable = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         self.table_button_frame = tk.Frame(self)
@@ -303,12 +303,9 @@ class FilteringData(AnalyzerData):
     def __init__(self, data, level):
         super().__init__(data, level, "FilteringData")
 
-    def notify(self, data):
-        self.notify_observers()
-
 class FilteringTab(AnalyzerTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data)
+    def __init__(self, parent):
+        super().__init__(parent, FilteringData)
         self.setupThreshold()
 
     def notify(self, data):
@@ -328,7 +325,7 @@ class FilteringTab(AnalyzerTab):
 
     def buildVariantSelector(self):
         all_variants = self.data.df[VARIANT].unique()
-        selected_variants = self.data.loadedData.levelData[self.level].guiState.selectedVariants
+        selected_variants = self.data.variants
         self.variantSelector = VariantSelector(self, all_variants, selected_variants)
         # select_all = tk.Button(self, text='Select All', command= lambda val=1 : self.variantSelector.set_all(val))
         # deselect_all = tk.Button(self, text='Deselect All', command= lambda val=0 : self.variantSelector.set_all(val))
@@ -338,7 +335,7 @@ class FilteringTab(AnalyzerTab):
     def buildPointSelector(self):
         options = ('[' + self.data.df[SHORT_NAME] + '] ' + self.data.df[NAME] + ' [' + self.data.df[TIMESTAMP].astype(str) + ']').tolist()
         names = (self.data.df[NAME] + self.data.df[TIMESTAMP].astype(str)).tolist()
-        self.pointSelector = PointSelector(self, options, self.data.loadedData.levelData[self.level].guiState.hidden, names)
+        self.pointSelector = PointSelector(self, options, self.data.guiState.hidden, names)
         # self.pointSelector.restoreState(self.stateDictionary)
 
     def setOptions(self):
@@ -368,9 +365,9 @@ class FilteringTab(AnalyzerTab):
         variants = self.variantSelector.getCheckedVariants()
         metric = self.metric_selected.get()
         if metric == 'Choose Metric': metric = ''
-        self.data.loadedData.setFilter(self.level, metric, self.min_num.get(), self.max_num.get(), names, variants)
+        self.data.setFilter(metric, self.min_num.get(), self.max_num.get(), names, variants)
         # Update the point selector to reflect the metric/variant filtering
-        self.pointSelector.restoreState(self.data.loadedData.levelData[self.level].guiState.hidden)
+        self.pointSelector.restoreState(self.data.guiState.hidden)
 
 class GuideTab(tk.Frame):
     def __init__(self, parent, tab):

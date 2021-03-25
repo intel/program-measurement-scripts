@@ -27,8 +27,8 @@ class ScurveData(AnalyzerData):
     #     self.notify_observers()
 
 class ScurveTab(PlotTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, 'Scurve', MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
+    def __init__(self, parent):
+        super().__init__(parent, ScurveData, 'Scurve', MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 
     #def notify(self, data):
     #    # Metrics to be displayed in the data table are unique for each plot

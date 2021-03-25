@@ -52,8 +52,8 @@ class QPlotData(AnalyzerData):
     #     self.notify_observers()
 
 class QPlotTab(PlotTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, 'QPlot', MetricName.CAP_FP_GFLOP_P_S, 
+    def __init__(self, parent):
+        super().__init__(parent, QPlotData, 'QPlot', MetricName.CAP_FP_GFLOP_P_S, 
                          MetricName.CAP_MEMMAX_GB_P_S, [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, \
                 MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S])
 

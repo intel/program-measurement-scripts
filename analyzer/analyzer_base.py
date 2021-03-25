@@ -42,6 +42,17 @@ class PerLevelGuiState(Observable):
         self.nonKeyColumnOrder = [m for m in ALL_METRICS if m not in KEY_METRICS] 
         self.guiDataDict = {}
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't save observers as they are GUI components
+        del state['observers']
+        return state
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Restore observers to []
+        self.observers = []
+
     def findOrCreateGuiData(self, guiDataClass):
         if guiDataClass not in self.guiDataDict:
             self.guiDataDict[guiDataClass] = guiDataClass(self.levelData, self.level)
@@ -162,6 +173,17 @@ class AnalyzerData(Observable):
         # Get correct dataframe
         return self.levelData.df
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't save observers as they are GUI components
+        del state['observers']
+        return state
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Restore observers to []
+        self.observers = []
+
     @property
     def mappings(self):
         return self.levelData.mapping
@@ -182,6 +204,10 @@ class AnalyzerData(Observable):
     def short_names_path(self):
         return self.levelData.short_names_path
 
+    @property
+    def guiState(self):
+        return self.levelData.guiState
+
 
     @property
     def columnOrder(self):
@@ -190,6 +216,9 @@ class AnalyzerData(Observable):
     # Move need to move this to controller class (Plot interaction?)
     def moveColumnFirst(self, column):
         self.levelData.guiState.moveColumnFirst(column)
+
+    def setFilter(self, metric, minimum, maximum, names, variants):
+        self.levelData.guiState.setFilter(metric, minimum, maximum, names, variants)
 
     @property
     def capacityDataItems(self):
@@ -218,27 +247,32 @@ class AnalyzerData(Observable):
 
 
 class AnalyzerTab(tk.Frame):
-    def __init__(self, parent, data):
+    def __init__(self, parent, analyzerDataClass):
         super().__init__(parent)
-        self.setData(data)
+        self.analyzerDataClass = analyzerDataClass
 
+    def setLevelData(self, levelData):
+        guiState = levelData.guiState
+        return self.setData(guiState.findOrCreateGuiData(self.analyzerDataClass))
+        
     def setData(self, data):
-        if data is not None:
-            data.add_observers(self)
+        assert (data is not None)
+        data.add_observers(self)
             #data.loadedData.levelData[data.level].guiState.add_observers(self)
         self.data = data
         self.level = data.level
         self.name = data.name
         #self.mappings_path = self.data.loadedData.mappings_path
         #self.short_names_path = self.data.short_names_path
+        return self
 
     @property
     def mappings(self):
         return self.data.mappings
     
 class PlotTab(AnalyzerTab):
-    def __init__(self, parent, data, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
-        super().__init__(parent, data)
+    def __init__(self, parent, analyzerDataClass, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
+        super().__init__(parent, analyzerDataClass)
         self.title = 'FE_tier1'
         self.x_scale = self.orig_x_scale = 'linear'
         self.y_scale = self.orig_y_scale = 'linear'
@@ -273,8 +307,11 @@ class PlotTab(AnalyzerTab):
         self.tab_note.add(self.axesTab, text='Axes')
         self.labelTab = LabelTab(self.tab_note, self)
         self.tab_note.add(self.labelTab, text='Labels')
-        self.plotInteraction.setData(data)
         self.plotData = None
+
+    def setData(self, data):
+        self.plotInteraction.setData(data)
+        return super().setData(data)
 
     # Subclass needs to override this method
     def mk_plot(self):

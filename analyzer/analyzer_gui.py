@@ -206,6 +206,10 @@ class LoadedData(Observable):
                 write_short_names(out_shortname, sname_df)
 
 
+    def updated_all_levels_notify_observers(self):
+        for level in self.allLevels:
+            self.levelData[level].updated_notify_observers()
+        
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
     CHOSEN_NODE_SET = CapacityData.ALL_NODE_SET
@@ -231,6 +235,7 @@ class LoadedData(Observable):
         self.restore = False
         self.removedIntermediates = False
         self.transitions = 'disabled'
+        self.urls = []
 
     def get_df(self, level):
         return self.levelData[level].df
@@ -562,8 +567,9 @@ class LoadedData(Observable):
         self.levelData[level].merge_metrics(df, metrics)
 
 class LevelContainerTab(tk.Frame):
-    def __init__(self, parent, level, loadedData, gui, root):
+    def __init__(self, parent, level):
         super().__init__(parent)
+        self.level = level
         self.plotTabs = []
         self.dataTabs = []
         parent.add(self, text=level)
@@ -573,56 +579,33 @@ class LevelContainerTab(tk.Frame):
         self.plot_note = ttk.Notebook(plotPw)
 
         # Codelet Plot Data
-        levelData = loadedData.levelData[level]
-        guiState = levelData.guiState
-        self.coverageData = guiState.findOrCreateGuiData(CoverageData)
-        self.siplotData = guiState.findOrCreateGuiData(SIPlotData)
-        self.qplotData = guiState.findOrCreateGuiData(QPlotData)
-        self.trawlData = guiState.findOrCreateGuiData(TRAWLData)
-        self.customData = guiState.findOrCreateGuiData(CustomData)
         # 3D breaks 'name:marker' because of different plotting
         # self.3dData = Data3d(self.loadedData, self, root, level)
         # binned scurve break datapoint selection because of different text:marker map
         # Disable for now as not used.  
         # To enable, need to compute text:marker to-and-from regular text:marker to binned text:marker
         # self.scurveData = ScurveData(self.loadedData, self, root, level)
-        self.scurveAllData = guiState.findOrCreateGuiData(ScurveAllData)
         # Codelet Plot Tabs
-        self.summaryTab = SummaryTab(self.plot_note, self.coverageData)
-        self.siPlotTab = SIPlotTab(self.plot_note, self.siplotData)
-        self.qplotTab = QPlotTab(self.plot_note, self.qplotData)
-        self.trawlTab = TrawlTab(self.plot_note, self.trawlData)
-        self.customTab = CustomTab(self.plot_note, self.customData)
         # self.3dTab = Tab3d(self.plot_note, self.3dData)
         # self.scurveTab = ScurveTab(self.plot_note, self.scurveData)
-        self.scurveAllTab = ScurveAllTab(self.plot_note, self.scurveAllData)
-
-        self.addPlotTab(self.summaryTab, name='Summary')
-        self.addPlotTab(self.trawlTab, name='TRAWL')
-        self.addPlotTab(self.qplotTab, name='QPlot')
-        self.addPlotTab(self.siPlotTab, name='SI Plot')
-        self.addPlotTab(self.customTab, name='Custom')
+        self.addPlotTab(SummaryTab(self.plot_note), name='Summary')
+        self.addPlotTab(TrawlTab(self.plot_note), name='TRAWL')
+        self.addPlotTab(QPlotTab(self.plot_note), name='QPlot')
+        self.addPlotTab(SIPlotTab(self.plot_note), name='SI Plot')
+        self.addPlotTab(CustomTab(self.plot_note), name='Custom')
         # self.addPlotTab(self.3dTab, name='3D')
         # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
-        self.addPlotTab(self.scurveAllTab, name='S-Curve')
+        self.addPlotTab(ScurveAllTab(self.plot_note), name='S-Curve')
         # Create Per Level Tabs Underneath Plot Notebook
         self.data_note = ttk.Notebook(plotPw)
         # Data tabs
-        self.dataTableData = guiState.findOrCreateGuiData(DataTabData)
-        self.dataTable = DataTab(self.data_note, self.dataTableData)
-        self.addDataTab(self.dataTable, name='Data')
+        self.addDataTab(DataTab(self.data_note), name='Data')
         # Short name tabs
-        self.shortNameData = guiState.findOrCreateGuiData(ShortNameData)
-        self.shortNameTable = ShortNameTab(self.data_note, self.shortNameData)
-        self.addDataTab(self.shortNameTable, name='Short Names')
+        self.addDataTab(ShortNameTab(self.data_note), name='Short Names')
         # Mapping tabs
-        self.mappingsData = guiState.findOrCreateGuiData(MappingsData)
-        self.mappingsTab = MappingsTab(self.data_note, self.mappingsData)
-        self.addDataTab(self.mappingsTab, name='Mappings')
+        self.addDataTab(MappingsTab(self.data_note), name='Mappings')
         # Filtering tabs
-        self.filteringData = guiState.findOrCreateGuiData(FilteringData)
-        self.filteringTab = FilteringTab(self.data_note, self.filteringData)
-        self.addDataTab(self.filteringTab, name='Filtering')
+        self.addDataTab(FilteringTab(self.data_note), name='Filtering')
         # Packing
         self.plot_note.pack(side = tk.TOP, expand=True)
         self.data_note.pack(side = tk.BOTTOM, expand=True)
@@ -642,24 +625,27 @@ class LevelContainerTab(tk.Frame):
         for tab in self.plotTabs:
             tab.resetTabValues()
 
-    def setLoadedData(self, loadedData):
+    def setLevelData(self, levelData):
         for tab in self.plotTabs + self.dataTabs:
-            tab.setLoadedData(loadedData)
+            tab.setLevelData(levelData)
+
+    def setLoadedData(self, loadedData):
+        self.setLevelData(loadedData.levelData[self.level])
         
 
 
     
 class CodeletTab(LevelContainerTab):
-    def __init__(self, parent, loadedData, gui, root):
-        super().__init__(parent, 'Codelet', loadedData, gui, root)
+    def __init__(self, parent):
+        super().__init__(parent, 'Codelet')
 
 class ApplicationTab(LevelContainerTab):
-    def __init__(self, parent, loadedData, gui, root):
-        super().__init__(parent, 'Application', loadedData, gui, root)
+    def __init__(self, parent):
+        super().__init__(parent, 'Application')
 
 class SourceTab(LevelContainerTab):
-    def __init__(self, parent, loadedData, gui, root):
-        super().__init__(parent, 'Source', loadedData, gui, root)
+    def __init__(self, parent):
+        super().__init__(parent, 'Source')
 
 class ExplorerPanelTab(tk.Frame):
     def __init__(self, parent):
@@ -675,6 +661,14 @@ class OneviewTab(tk.Frame):
         self.browser1 = None
         self.browser2 = None
         self.refreshButton = None
+        self.loadedData = None
+
+    @property
+    def urls(self):
+        return self.loadedData.urls
+
+    def setLoadedData(self, loadedData):
+        self.loadedData = loadedData
 
     def refresh(self):
         if self.browser1: self.browser1.refresh()
@@ -685,8 +679,8 @@ class OneviewTab(tk.Frame):
         self.refreshButton.pack(side=tk.TOP, anchor=tk.NW)
 
     def loadPage(self):
-        if len(gui.urls) == 1: self.loadFirstPage()
-        elif len(gui.urls) > 1: self.loadSecondPage()
+        if len(self.urls) == 1: self.loadFirstPage()
+        elif len(self.urls) > 1: self.loadSecondPage()
     
     def loadFirstPage(self):
         self.removePages()
@@ -697,7 +691,7 @@ class OneviewTab(tk.Frame):
         gui.main_note.select(0)
         self.update()
         gui.main_note.select(current_tab)
-        self.browser1.change_browser(url=gui.urls[0])
+        self.browser1.change_browser(url=self.urls[0])
 
     def loadSecondPage(self):
         self.removePages()
@@ -710,8 +704,8 @@ class OneviewTab(tk.Frame):
         gui.main_note.select(0)
         self.update()
         gui.main_note.select(current_tab)
-        self.browser1.change_browser(url=gui.urls[0])
-        self.browser2.change_browser(url=gui.urls[1])
+        self.browser1.change_browser(url=self.urls[0])
+        self.browser2.change_browser(url=self.urls[1])
 
     def removePages(self):
         if self.browser1: 
@@ -722,11 +716,12 @@ class OneviewTab(tk.Frame):
 class AnalyzerGui(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
-        self.loadedData = LoadedData()
+        #self.loadedData = LoadedData()
 
         menubar = tk.Menu(self)
         filemenu = tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Save State", command=self.saveState)
+        filemenu.add_command(label="Save State(Testing)", command=self.saveStateTest)
         # filemenu.add_command(label="New")#, command=self.configTab.new)
         # filemenu.add_command(label="Open")#, command=self.configTab.open)
         # filemenu.add_command(label="Save")#, command=lambda: self.configTab.save(False))
@@ -759,12 +754,18 @@ class AnalyzerGui(tk.Frame):
 
         self.pw.pack(fill=tk.BOTH, expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
-        self.sources = []
-        self.urls = []
-        self.loaded_url = None
-        self.loadType = ''
-        self.choice = ''
+        # self.sources = []
+        # self.loaded_url = None
+        # self.loadType = ''
+        # self.choice = ''
 
+    def saveStateTest(self):
+        # Save to temp directory for testing.
+        with open("c:/temp/test.pkl", 'wb') as data_file:
+            pickle.dump(self.loadedData, data_file)
+        
+        
+        
     def saveState(self):
         # Want to save the full loadedData object as a pkl
         # Prompt user with option to save 
@@ -791,17 +792,17 @@ class AnalyzerGui(tk.Frame):
         data_file.close()
 
 
-    def appendData(self):
-        self.choice = 'Append'
-        self.win.destroy()
+    # def appendData(self):
+    #     self.choice = 'Append'
+    #     self.win.destroy()
 
-    def overwriteData(self):
-        self.choice = 'Overwrite'
-        self.win.destroy()
+    # def overwriteData(self):
+    #     self.choice = 'Overwrite'
+    #     self.win.destroy()
 
-    def cancelAction(self):
-        self.choice = 'Cancel'
-        self.win.destroy()
+    # def cancelAction(self):
+    #     self.choice = 'Cancel'
+    #     self.win.destroy()
 
     def appendAnalysisData(self, df, mappings, analytics, data):
         # need to combine df with current summaryDf
@@ -809,32 +810,39 @@ class AnalyzerGui(tk.Frame):
         # need to combine mappings with current mappings and add speedups
         
     def loadSavedState(self, levels=[]):
-        print("restore: ", self.loadedData.restore)
-        if len(self.sources) >= 1:
-            self.win = tk.Toplevel()
-            center(self.win)
-            self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
-            self.win.title('Existing Data')
-            message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
-            #if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
-            #else: 
-                #message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
-                #tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
-            tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
-            tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
-            tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
-            root.wait_window(self.win)
-        if self.choice == 'Cancel': return
-        self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
-        self.resetTabValues()
-        self.loadedData.add_saved_data(levels)
+        pass
+        # print("restore: ", self.loadedData.restore)
+        # if len(self.sources) >= 1:
+        #     self.win = tk.Toplevel()
+        #     center(self.win)
+        #     self.win.protocol("WM_DELETE_WINDOW", self.cancelAction)
+        #     self.win.title('Existing Data')
+        #     message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+        #     #if not self.loadedData.restore: message = 'This tool currently doesn\'t support appending server data with\nAnalysis Results data. Would you like to overwrite\nany existing plots with this new data?'
+        #     #else: 
+        #         #message = 'Would you like to append to the existing\ndata or overwrite with the new data?'
+        #         #tk.Button(self.win, text='Append', command= lambda df=df, mappings=mappings, analytics=analytics, data=data : self.appendAnalysisData(df, mappings, analytics, data)).grid(row=1, column=0, sticky=tk.E)
+        #     tk.Label(self.win, text=message).grid(row=0, columnspan=3, padx=15, pady=10)
+        #     tk.Button(self.win, text='Overwrite', command=self.overwriteData).grid(row=1, column=1)
+        #     tk.Button(self.win, text='Cancel', command=self.cancelAction).grid(row=1, column=2, pady=10, sticky=tk.W)
+        #     root.wait_window(self.win)
+        # if self.choice == 'Cancel': return
+        # #self.sources = ['Analysis Result'] # Don't need the actual source path for Analysis Results
+        # self.resetTabValues()
+        # self.loadedData.add_saved_data(levels)
 
+    def setLoadedData(self, loadedData):
+        self.loadedData = loadedData
+        self.oneviewTab.setLoadedData(loadedData) 
+        for tab in self.allTabs:
+            tab.setLoadedData(loadedData)
+        
     def resetTabValues(self):
         #self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.c_summaryTab, \
         #             gui.c_scurveTab, gui.c_scurveAllTab, \
         #        gui.s_qplotTab,  gui.s_trawlTab, gui.s_customTab, \
         #        gui.a_qplotTab, gui.a_trawlTab, gui.a_customTab]
-        for tab in [self.codeletTab, self.sourceTab, self.applicationTab]:
+        for tab in self.allTabs:
             tab.resetTabValues()
         # self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.c_summaryTab, \
         #              gui.c_scurveAllTab, \
@@ -853,32 +861,32 @@ class AnalyzerGui(tk.Frame):
     def loadFile(self, choice, data_dir, source, url):
         if choice == 'Open Webpage':
             self.overwrite()
-            self.urls = [url]
+            self.loadedData.urls = [url]
             if sys.platform != 'darwin':
                 self.oneviewTab.loadPage()
             return
         elif choice == 'Overwrite':
             self.overwrite()
             if url: 
-                self.urls = [url]
+                self.loadedData.urls = [url]
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
-            self.sources = [source]
+            self.loadedData.sources = [source]
             self.resetTabValues() 
-            self.loadedData.add_data(self.sources, data_dir, append=False)
+            self.loadedData.add_data(self.loadedData.sources, data_dir, append=False)
         elif choice == 'Append':
             if url: 
-                self.urls.append(url)
+                self.loadedData.urls.append(url)
                 if sys.platform != 'darwin':
                     self.oneviewTab.loadPage()
-            self.sources.append(source)
-            self.loadedData.add_data(self.sources, data_dir, append=True)
+            self.loadedData.sources.append(source)
+            self.loadedData.add_data(self.loadedData.sources, data_dir, append=True)
 
     def overwrite(self): # Clear out any previous saved dataframes/plots
-        self.sources = []
-        gui.loadedData.analytics = pd.DataFrame()
-        gui.loadedData.names = pd.DataFrame()
-        gui.oneviewTab.removePages() # Remove any previous OV HTML
+        self.loadedData.sources = []
+        self.loadedData.analytics = pd.DataFrame()
+        self.loadedData.names = pd.DataFrame()
+        self.oneviewTab.removePages() # Remove any previous OV HTML
         # Clear summary dataframes
         for level in self.loadedData.levelData:
             self.loadedData.levelData[level].clear_df()
@@ -897,6 +905,10 @@ class AnalyzerGui(tk.Frame):
             for widget in tab.window.winfo_children():
                 widget.destroy()
 
+    @property
+    def allTabs(self):
+        return [self.codeletTab, self.sourceTab, self.applicationTab]
+
     def buildTabs(self, parent):
         infoPw=tk.PanedWindow(parent, orient="horizontal", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         # Oneview (Left Window)
@@ -906,13 +918,13 @@ class AnalyzerGui(tk.Frame):
         # Plots (Right Window)
         self.level_plot_note = ttk.Notebook(infoPw)
         #self.codeletTab = CodeletTab(self.level_plot_note, self, root)
-        self.codeletTab = CodeletTab(self.level_plot_note, self.loadedData, self, root)
+        self.codeletTab = CodeletTab(self.level_plot_note)
         #self.codeletTab.setLoadedData(self.loadedData)
         #self.sourceTab = SourceTab(self.level_plot_note, self, root)
-        self.sourceTab = SourceTab(self.level_plot_note, self.loadedData, self, root)
+        self.sourceTab = SourceTab(self.level_plot_note)
         #self.codeletTab.setLoadedData(self.loadedData)
         #self.applicationTab = ApplicationTab(self.level_plot_note, self, root)
-        self.applicationTab = ApplicationTab(self.level_plot_note, self.loadedData, self, root)
+        self.applicationTab = ApplicationTab(self.level_plot_note)
         #self.codeletTab.setLoadedData(self.loadedData)
 
         # self.level_plot_note.add(self.codeletTab, text='Codelet')
@@ -1084,6 +1096,15 @@ if __name__ == '__main__':
     # The AnalyzerGui is global so that the data source panel can access it
     # global gui
     gui = AnalyzerGui(root)
+    if os.path.isfile('c:/temp/test.pkl'):
+        with open('c:/temp/test.pkl', 'rb') as input_file:
+            loadedData = pickle.load(input_file)
+        gui.setLoadedData(loadedData)
+        loadedData.updated_notify_observers()
+        loadedData.updated_all_levels_notify_observers()
+    else:
+        loadedData = LoadedData()
+        gui.setLoadedData(loadedData)
 
     # Allow pyinstaller to find all CEFPython binaries
     # TODO: Add handling of framework nad resource paths for Mac

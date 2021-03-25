@@ -34,8 +34,8 @@ class ScurveAllData(AnalyzerData):
 
 
 class ScurveAllTab(PlotTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, 'Scurve_all', 
+    def __init__(self, parent):
+        super().__init__(parent, ScurveAllData, 'Scurve_all', 
                          MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 
     def get_metrics(self):

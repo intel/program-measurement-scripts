@@ -41,8 +41,8 @@ class CoverageData(AnalyzerData):
     #     self.notify_observers()
 
 class SummaryTab(PlotTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
+    def __init__(self, parent):
+        super().__init__(parent, CoverageData, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
     def notify(self, data):
         super().notify(data)
