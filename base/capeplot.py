@@ -589,7 +589,7 @@ class CapePlot:
         try: plt.tight_layout()
         except: print("plt.tight_layout() failed")
     
-        self.plotData = plotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState)
+        self.plotData = PlotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState)
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
@@ -673,7 +673,7 @@ class CapePlot:
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
 
-class plotData():
+class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState):
         names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
@@ -696,7 +696,87 @@ class plotData():
         self.text_name = dict(zip(labels, names))
         self.name_mapping = name_mapping
         self.mappings = mymappings
+        self.canvas = None
         self.guiState = guiState
+        self.guiState.add_observers(self)
+
+    def notify(self, data):
+        self.updateMarkers()
+        self.updateLabels()
+
+    def updateMarkers(self):
+        # Hide/Show the markers, labels, and arrows
+        for name in self.names:
+            alpha = 1
+            if self.guiState.isHidden(name): alpha = 0
+            self.name_marker[name].set_alpha(alpha)
+            self.name_text[name].set_alpha(alpha)
+            # Unhighlight/highlight points
+            if name in self.guiState.highlighted: self.highlight(self.name_marker[name])
+            else: self.unhighlight(self.name_marker[name])
+            # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
+            if name in self.name_mapping: self.name_mapping[name].set_alpha(1)
+        for name in self.name_mapping:
+            if self.guiState.isHidden(name): self.name_mapping[name].set_alpha(0)
+        self.canvas.draw()
+
+    def updateLabels(self):
+        # Update labels on plot
+        current_metrics = self.guiState.labels
+        for i, text in enumerate(self.texts):
+            label = self.orig_mytext[i][:-1]
+            codeletName = self.names[i]
+            for metric in current_metrics:
+                # Update label menu with currently selected metric
+                # self.tab.labelTab.metrics[metric_index].set(metric)
+                # Append to end of label
+                encoded_names = self.guiState.get_encoded_names(self.guiState.levelData.df)
+                value = self.guiState.levelData.df.loc[encoded_names==codeletName][metric].iloc[0]
+                if isinstance(value, int) or isinstance(value, float):
+                    label += ', ' + str(round(value, 2))
+                else:
+                    label += ', ' + str(value)
+            label += ')'
+            text.set_text(label)
+            self.mytext[i] = label
+        # Update legend for user to see order of metrics in the label
+        newTitle = self.orig_legend[:-1]
+        for metric in current_metrics:
+            newTitle += ', ' + metric
+        newTitle += ')'
+        self.legend.get_title().set_text(newTitle)
+        self.canvas.draw()
+
+    def toggleLabel(self, marker):
+        label = self.marker_text[marker]
+        label.set_alpha(not label.get_alpha())
+        if label in self.text_arrow: self.text_arrow[label].set_visible(label.get_alpha())
+        self.canvas.draw()
+    
+    def toggleLabels(self, alpha, adjusted):
+        for marker in self.marker_text:
+            if marker.get_alpha(): 
+                self.marker_text[marker].set_alpha(alpha) 
+                if adjusted: 
+                    # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
+                    # TODO: Create "marker:arrow" to simplify this statement
+                    if self.marker_text[marker] in self.text_arrow: self.text_arrow[self.marker_text[marker]].set_visible(alpha)
+        self.canvas.draw()
+
+    def highlight(self, marker):
+        text = self.marker_text[marker]
+        marker.set_marker('*')
+        marker.set_markeredgecolor('k')
+        marker.set_markeredgewidth(0.5)
+        marker.set_markersize(11)
+        text.set_color('r')
+
+    def unhighlight(self, marker):
+        text = self.marker_text[marker]
+        marker.set_marker('o')
+        marker.set_markeredgecolor(marker.get_markerfacecolor())
+        marker.set_markersize(6.0)
+        text.set_color('k')
 
 # Plot with capacity computation
 class CapacityPlot(CapePlot):

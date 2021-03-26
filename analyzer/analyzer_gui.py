@@ -153,9 +153,6 @@ class LoadedData(Observable):
             #    self.df[col] = None
             self.mapping = pd.DataFrame()
 
-        def reset_labels(self):
-            self.guiState.reset_labels()
-
         @property
         def color_map(self):
             return self.guiState.get_color_map()
@@ -163,18 +160,12 @@ class LoadedData(Observable):
         def color_by_cluster(self, df):
             self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
 
-        def updateLabels(self, metrics):
-            self.guiState.setLabels(metrics)
-
         def update_short_names(self, new_short_names):
             for item in self._shortnameDataItems:
                 # Will reread short name files (should have been updated)
                 item.compute() 
             self.guiState.set_color_map(new_short_names[KEY_METRICS+['Label', 'Color']])
             self.updated_notify_observers()
-            
-
-
             
         def merge_metrics(self, df, metrics):
             #metrics.extend(KEY_METRICS)
