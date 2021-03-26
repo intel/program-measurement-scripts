@@ -58,6 +58,8 @@ from generate_SI import SiData
 from sat_analysis import do_sat_analysis as find_si_clusters
 from sat_analysis import SatAnalysisData
 from metric_names import NonMetricName, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
+from analyzer_controller import AnalyzerController
+
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -1055,28 +1057,6 @@ def check_focus(event):
     if root.focus_get() is None:
         root.focus_force()
 
-# Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) but do not deal with their details.
-# It coordiantes between them.
-# E.g. it can say "Look at a certain tab and hightlight specifici data points".  It should set the Model and the notify methods will update GUI automatically.
-class AnalyzerControl:
-    def __init__(self, gui, loadedData):
-        self.gui = gui
-        self.setLoadedData(loadedData)
-        self.gui.setControl(self)
-
-    def setLoadedData(self, loadedData):
-        self.loadedData = loadedData
-        self.gui.setLoadedData(self.loadedData)
-        
-    def loadState(self, input_path):
-        with open(os.path.join(input_path, 'loadedData.pkl'), 'rb') as input_file:
-            self.setLoadedData(pickle.load(input_file))
-            self.loadedData.updated_notify_observers()
-            self.loadedData.updated_all_levels_notify_observers()
-
-    def saveState(self, output_path):
-        with open(os.path.join(output_path, 'loadedData.pkl'), 'wb') as data_file:
-            pickle.dump(self.loadedData, data_file)
         
 
 
@@ -1097,7 +1077,7 @@ if __name__ == '__main__':
     gui = AnalyzerGui(root)
     loadedData = LoadedData()
     # Will also link loadedData to gui
-    control = AnalyzerControl(gui, loadedData)
+    control = AnalyzerController(gui, loadedData)
 
     # Allow pyinstaller to find all CEFPython binaries
     # TODO: Add handling of framework nad resource paths for Mac

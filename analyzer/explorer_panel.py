@@ -551,7 +551,8 @@ class DataSourcePanel(ScrolledTreePane):
 
         def save(self):
             print("now save")
-            stateName = tk.simpledialog.askstring("Analysis Results", "Provide a short name for this analysis result.", parent=self.container)
+            dest = tk.simpledialog.askstring("Saving Raw Data", "Provide a short name for this raw data.", parent=self.container)
+            out_path = os.path.join(self.virtual_path, dest)
 
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
@@ -709,12 +710,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
 
         def save(self):
             uid = getpass.getuser()
-            out_path = os.path.join(self.virtual_path, uid)
-            if not os.path.isdir(out_path):
-                Path(out_path).mkdir(parents=True)
-            self.open()
-            resultNode = [n for n in self.children if n.name == uid][0]
-            resultNode.save()
+            self.saveTo(uid)
 
     # This will be the root for local roots
     # This is the user level and will see resul as next level
@@ -751,7 +747,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
             return None
 
         def isSavable(self):
-            return True
+            return self.parent.isSavable()
 
         def save(self):
             self.saveTo(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
