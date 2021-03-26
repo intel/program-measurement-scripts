@@ -82,12 +82,16 @@ class ScrolledTreePane(tk.Frame):
             node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
             state = tk.NORMAL if node.isSavable() else tk.DISABLED
 
-        popup = tk.Menu(self, tearoff=0)
-        popup.add_command(label="Save", command=lambda: node.save(), state=state)
+        popup = self.makeRightClickPopup(node, state)
         try:
             popup.tk_popup(event.x_root, event.y_root,0)
         finally:
             popup.grab_release()
+
+    def makeRightClickPopup(self, node, state):
+        popup = tk.Menu(self, tearoff=0)
+        popup.add_command(label="Save", command=lambda: node.save(), state=state)
+        return popup
         
     def handleOpenEvent(self, event):
         if not self.opening: # finish opening one file before another is started
@@ -371,12 +375,19 @@ class ScrolledTreePane(tk.Frame):
 
 
 class DataSourcePanel(ScrolledTreePane):
+    def makeRightClickPopup(self, node, state):
+        popup = super().makeRightClickPopup(node, state)
+        popup.add_command(label="Make Folder", command=lambda: node.makeFolder(), state=state)
+        return popup
         
     class DataSourceInternalNode(ScrolledTreePane.InternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent, 
                      data_source, terminalNodeClass):
             super().__init__(virtual_path, real_path, name, container, parent, data_source, terminalNodeClass)
 
+        def makeFolder(self):
+            pass
+        
         # Whether to skip next potential child with name
         def skip(self, name):
             #return False
@@ -575,19 +586,29 @@ class DataSourcePanel(ScrolledTreePane):
         def isSavable(self):
             return True
 
+        def refreshFocusNode(self, nodeName):
+            self.open()
+            resultNode = [n for n in self.children if n.name == nodeName][0]
+            self.container.setFocus(resultNode)
+            
+        def makeFolder(self):
+            dest = tk.simpledialog.askstring("Folder Creation", "Provide a short name for new folder.", parent=self.container)
+            folder_path = os.path.join(self.virtual_path, dest)
+            if self.data_src.isdir(folder_path): 
+                if not tk.messagebox.askyesnocancel("Folder Creation Error", "Folder already exists."):
+                    return
+            self.data_src.mkdir(folder_path)
+            self.refreshFocusNode(dest)
+
         def save(self):
-            print("now save")
             dest = tk.simpledialog.askstring("Saving Raw Data", "Provide a short name for this raw data.", parent=self.container)
             new_file = dest+'.raw.csv'
             out_path = os.path.join(self.virtual_path, new_file)
-            if os.path.isfile(out_path): 
+            if self.data_src.isfile(out_path): 
                 if not tk.messagebox.askyesnocancel("Data File Exist", "Overwrite existing data file?"):
                     return
             self.container.saveRawData(out_path)
-            #self.data_src.mkdir(out_path)
-            self.open()
-            resultNode = [n for n in self.children if n.name == new_file][0]
-            self.container.setFocus(resultNode)
+            self.refreshFocusNode(new_file)
 
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
