@@ -106,6 +106,10 @@ class ScrolledTreePane(tk.Frame):
         parent_str = parent.id if parent else ''
         self.treeview.insert(parent_str,'end',node.id,text=node.name)
 
+    def moveChildToLast(self, parent, node):
+        parent_str = parent.id if parent else ''
+        self.treeview.move(node.id, parent_str,'end')
+    
     def loadState(self, input_path):
         self.control.loadState(input_path)
 
@@ -311,6 +315,11 @@ class ScrolledTreePane(tk.Frame):
             # By default don't create terminal nodes.  Subclass override to create.
             return None
 
+        def moveChildToLast(self, node):
+            self.container.moveChildToLast(self, node)
+            self.children.remove(node)
+            self.children.append(node)
+
         def open(self):
             print("internal node open:", self.name, self.id) 
             # Directory node
@@ -318,7 +327,10 @@ class ScrolledTreePane(tk.Frame):
             # Show directories and data files (.xlsx or .raw.csv)
             # Iterate internal nodes following revserse order of timestamps
             for time_stamp, name in sorted(zip(time_stamps, names), reverse=True):
-                if name in [child.name for child in self.children]:
+                children_names = [child.name for child in self.children]
+                if name in children_names:
+                    node = self.children[children_names.index(name)]
+                    self.moveChildToLast(node)
                     continue  # Skip if already added
 
                 if self.skip(name):
@@ -326,7 +338,7 @@ class ScrolledTreePane(tk.Frame):
 
                 node = self.makeInternalNodeOrNone(name, time_stamp)
                 if node is None:
-                    self.makeTerminalNodeOrNone(name, time_stamp)
+                    node = self.makeTerminalNodeOrNone(name, time_stamp)
                 #if node: self.container.insertNode(self, node)
 
     class TerminalNode(RealTreeNode):
