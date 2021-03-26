@@ -546,6 +546,13 @@ class DataSourcePanel(ScrolledTreePane):
             full_virtual_path = os.path.join(self.virtual_path,  name)
             return super().skip(name) or os.path.samefile (full_virtual_path, self.container.cape_path)
 
+        def isSavable(self):
+            return True
+
+        def save(self):
+            print("now save")
+            stateName = tk.simpledialog.askstring("Analysis Results", "Provide a short name for this analysis result.", parent=self.container)
+
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
         #     names, time_stamps = self.data_src.directory_file_names_timestamps(self.virtual_path)
@@ -680,6 +687,13 @@ class AnalysisResultsPanel(ScrolledTreePane):
                              data_source, terminalNodeClass)
             assert virtual_path == real_path
 
+        def saveTo(self, dest):
+            out_path = os.path.join(self.virtual_path, dest)
+            Path(out_path).mkdir(parents=True, exist_ok=True)
+            self.open()
+            resultNode = [n for n in self.children if n.name == dest][0]
+            resultNode.save()
+
 
     # Try to use a simple structure /root/user/result/<TIME STAMP>.  
     # This is the root level and will see user as next level
@@ -715,17 +729,9 @@ class AnalysisResultsPanel(ScrolledTreePane):
             return self.name == 'Local' or self.name == getpass.getuser()
 
         def save(self):
-            super().save()
             stateName = tk.simpledialog.askstring("Analysis Results", "Provide a short name for this analysis result.", parent=self.container)
             if not stateName: return
-            out_path = os.path.join(self.virtual_path, stateName)
-            if not os.path.isdir(out_path):
-                Path(out_path).mkdir(parents=True)
-            self.open()
-            resultNode = [n for n in self.children if n.name == stateName][0]
-            resultNode.save()
-
-            
+            self.saveTo(stateName)
 
     # This is the result level and will see timestamp node as next level
     class ResultNode(ARInternalNode):
@@ -748,12 +754,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
             return True
 
         def save(self):
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M') 
-            out_path = os.path.join(self.virtual_path, timestamp)
-            Path(out_path).mkdir(parents=True)
-            self.open()
-            resultNode = [n for n in self.children if n.name == timestamp][0]
-            resultNode.save()
+            self.saveTo(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
 
     # This is the timestamp level and will be the terminal node
     class TimestampNode(ScrolledTreePane.TerminalNode):
