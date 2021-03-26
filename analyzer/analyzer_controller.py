@@ -1,10 +1,12 @@
 import os
 import pickle
 
-# Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) but do not deal with their details.
-# It coordiantes between them.
-# E.g. it can say "Look at a certain tab and hightlight specifici data points".  It should set the Model and the notify methods will update GUI automatically.
 class AnalyzerController:
+    '''Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) 
+        but do not deal with their details.
+        It coordiantes between them.
+        E.g. it can say "Look at a certain tab and hightlight specifici data points".
+        It should set the Model and the notify methods will update GUI automatically.'''
     def __init__(self, gui, loadedData):
         self.gui = gui
         self.setLoadedData(loadedData)
@@ -23,3 +25,6 @@ class AnalyzerController:
     def saveState(self, output_path):
         with open(os.path.join(output_path, 'loadedData.pkl'), 'wb') as data_file:
             pickle.dump(self.loadedData, data_file)
+
+    def exportShownDataRawCSV(self, out_path):
+        self.loadedData.exportShownDataRawCSV(out_path)

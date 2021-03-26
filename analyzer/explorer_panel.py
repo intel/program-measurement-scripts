@@ -67,6 +67,7 @@ class ScrolledTreePane(tk.Frame):
         pass
 
     def setFocus(self, node):
+        self.treeview.see(node.id)        
         self.treeview.focus(node.id)
         self.treeview.selection_set(node.id)
     
@@ -111,6 +112,8 @@ class ScrolledTreePane(tk.Frame):
     def saveState(self, out_path):
         self.control.saveState(out_path)
         
+    def saveRawData(self, out_path):
+        self.control.exportShownDataRawCSV(out_path)
 
     class DataSource(ABC):
         # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
@@ -148,6 +151,10 @@ class ScrolledTreePane(tk.Frame):
         @abstractmethod
         def isValidURL(self, fullurl): 
             return False
+
+        @abstractmethod
+        def mkdir(self, fullurl): 
+            pass
         
 
     class WebServer(DataSource):
@@ -192,6 +199,9 @@ class ScrolledTreePane(tk.Frame):
         def isdir(self, fullurl): 
             return fullurl.endswith('/')
 
+        def mkdir(self, fullurl): 
+            raise Exception("Cannot make directory for Web data source")
+
             
     class FileSystem(DataSource):
         def getContentType (self, path):
@@ -215,6 +225,10 @@ class ScrolledTreePane(tk.Frame):
 
         def get_file(self, src, dst): 
             copyfile(src, dst)
+
+        def mkdir(self, fullurl): 
+            Path(fullurl).mkdir(parents=True, exist_ok=True)
+
     class DataTreeNode:
         nextId = 0
         nodeDict = {}
@@ -552,7 +566,16 @@ class DataSourcePanel(ScrolledTreePane):
         def save(self):
             print("now save")
             dest = tk.simpledialog.askstring("Saving Raw Data", "Provide a short name for this raw data.", parent=self.container)
-            out_path = os.path.join(self.virtual_path, dest)
+            new_file = dest+'.raw.csv'
+            out_path = os.path.join(self.virtual_path, new_file)
+            if os.path.isfile(out_path): 
+                if not tk.messagebox.askyesnocancel("Data File Exist", "Overwrite existing data file?"):
+                    return
+            self.container.saveRawData(out_path)
+            #self.data_src.mkdir(out_path)
+            self.open()
+            resultNode = [n for n in self.children if n.name == new_file][0]
+            self.container.setFocus(resultNode)
 
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
@@ -690,7 +713,7 @@ class AnalysisResultsPanel(ScrolledTreePane):
 
         def saveTo(self, dest):
             out_path = os.path.join(self.virtual_path, dest)
-            Path(out_path).mkdir(parents=True, exist_ok=True)
+            self.data_src.mkdir(out_path)
             self.open()
             resultNode = [n for n in self.children if n.name == dest][0]
             resultNode.save()
