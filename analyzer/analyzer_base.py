@@ -28,6 +28,9 @@ class PerLevelGuiState(Observable):
         self.filterMinThreshold = 0
         self.filterMaxThreshold = 0
 
+        # Currently selected plot interaction action
+        self.action_selected = 'Choose Action'
+
         # The final mask used to select data points
         self.selectedDataPoints = []
 
@@ -184,6 +187,10 @@ class AnalyzerData(Observable):
         # Restore observers to []
         self.observers = []
 
+    # @property
+    # def guiState(self):
+    #     return self.loadedData.levelData[self.level].guiState
+
     @property
     def mappings(self):
         return self.levelData.mapping
@@ -207,7 +214,6 @@ class AnalyzerData(Observable):
     @property
     def guiState(self):
         return self.levelData.guiState
-
 
     @property
     def columnOrder(self):
@@ -296,13 +302,14 @@ class PlotTab(AnalyzerTab):
         self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         # Plot interacting buttons
-        self.plotInteraction = PlotInteraction(self)
+        self.plotInteraction = PlotInteraction()
         # self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.plotInteraction.saveState)
         self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.plotInteraction.adjustText)
-        self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.plotInteraction.toggleLabels)
+        self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points')
         self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight')
         self.action_selected = tk.StringVar(value='Choose Action')
+        self.action_selected.trace('w', self.action_selected_callback)
         action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
@@ -314,7 +321,14 @@ class PlotTab(AnalyzerTab):
         self.tab_note.add(self.labelTab, text='Labels')
         self.plotData = None
 
+    def action_selected_callback(self, *args):
+        self.data.guiState.action_selected = self.action_selected.get()
+    
+    def toggleLabels(self):
+        self.plotInteraction.toggleLabels(self.toggle_labels_button)
+
     def setData(self, data):
+        self.labelTab.setData(data)
         self.plotInteraction.setData(data)
         return super().setData(data)
 
@@ -331,6 +345,7 @@ class PlotTab(AnalyzerTab):
         plot = self.mk_plot()
         plot.compute_and_plot()
         self.fig, self.plotData = plot.fig, plot.plotData
+        self.plotInteraction.setPlotData(self.plotData)
 
         self.variants = self.data.variants
         self.metrics = metrics
@@ -346,24 +361,24 @@ class PlotTab(AnalyzerTab):
         # Store initial xlim and ylim for adjustText 
         self.plotInteraction.setLims()
         # Create canvas and toolbar for plot
-        self.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
-        self.canvas.mpl_connect('button_press_event', self.plotInteraction.onClick)
-        self.canvas.mpl_connect('draw_event', self.plotInteraction.onDraw)
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotFrame3)
+        self.plotData.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
+        self.plotData.canvas.mpl_connect('button_press_event', self.plotInteraction.onClick)
+        self.plotData.canvas.mpl_connect('draw_event', self.plotInteraction.onDraw)
+        self.plotData.toolbar = NavigationToolbar2Tk(self.plotData.canvas, self.plotFrame3)
         # Grid Layout
         self.axesTab.render()
         self.labelTab.render()
         self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.toolbar.grid(column=7, row=0, sticky=tk.S)
+        self.plotData.toolbar.grid(column=7, row=0, sticky=tk.S)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
         self.plotFrame3.grid_rowconfigure(0, weight=1)
-        self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
-        self.toolbar.update()
-        self.canvas.draw()
+        self.plotData.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
+        self.plotData.toolbar.update()
+        self.plotData.canvas.draw()
         self.window.add(self.plotFrame, stretch='always')
         self.window.add(self.tab_note, stretch='never')
 
@@ -528,8 +543,6 @@ class LabelTab(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.tab = tab
-        #self.level = level
-        #self.loadedData = self.tab.data.loadedData
         self.metric1 = tk.StringVar(value='Metric 1')
         self.metric2 = tk.StringVar(value='Metric 2')
         self.metric3 = tk.StringVar(value='Metric 3')
@@ -540,24 +553,42 @@ class LabelTab(tk.Frame):
         self.updateButton = tk.Button(self, text='Update', command=self.updateLabels)
         self.resetButton = tk.Button(self, text='Reset', command=self.reset)
 
-    @property
-    def level(self):
-        return self.tab.level
+    # @property
+    # def level(self):
+    #     return self.data.level
+
     @property
     def levelData(self):
-        return self.tab.data.levelData
+        return self.data.levelData
 
     @property
     def df(self):
         return self.levelData.df
 
-    @property
-    def mappings(self):
-        return self.levelData.mapping
+    # @property
+    # def mappings(self):
+    #     return self.levelData.mapping
+
+    # @property
+    # def plotData(self):
+    #     return self.tab.plotInteraction.plotData
 
     @property
-    def plotData(self):
-        return self.tab.plotInteraction.plotData
+    def guiState(self):
+        return self.data.guiState
+
+    def setData(self, data):
+        self.data = data
+        self.guiState.add_observers(self)
+
+    def notify(self, data):
+        current_metrics = self.guiState.labels
+        self.resetMetrics()
+        if current_metrics: self.setMetrics(current_metrics)
+
+    def setMetrics(self, metrics):
+        for i, metric in enumerate(metrics):
+            self.metrics[i].set(metric)
 
     def render(self):
         self.menu1.grid(row=0, column=0, padx = 10, pady=10, sticky=tk.NW)
@@ -572,15 +603,11 @@ class LabelTab(tk.Frame):
         self.metric3.set('Metric 3')
 
     def reset(self):
-        self.resetMetrics()
-        self.levelData.updateLabels([], self.level)
+        self.guiState.reset_labels()
 
     def updateLabels(self):
-        current_metrics = []
-        if self.metric1.get() != 'Metric 1': current_metrics.append(self.metric1.get())
-        if self.metric2.get() != 'Metric 2': current_metrics.append(self.metric2.get())
-        if self.metric3.get() != 'Metric 3': current_metrics.append(self.metric3.get())
+        current_metrics = [metric.get() for metric in self.metrics if metric.get() not in ['Metric 1', 'Metric 2', 'Metric 3']]
         # TODO: merge mapping speedups into master dataframe to avoid this check
         current_metrics = [metric for metric in current_metrics if metric in self.df.columns.tolist()]
         if not current_metrics: return # User hasn't selected any label metrics
-        self.levelData.updateLabels(current_metrics)
+        self.guiState.setLabels(current_metrics)

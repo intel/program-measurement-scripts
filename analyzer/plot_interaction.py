@@ -33,35 +33,28 @@ def plt_sca(ax):
     raise ValueError("Axes instance argument was not found in a figure")
 
 class PlotInteraction():
-    def __init__(self, tab):
-        self.tab = tab
-        #self.gui = self.tab.data.gui
-        #self.root = self.tab.data.root
+    def __init__(self):
         self.adjusted = False
         self.adjusting = False
         self.data = None
         self.level = None
+        self.plotData = None
 
     def setData(self, analyzerData):
         self.analyzerData = analyzerData
         self.level = analyzerData.level
         self.guiState.add_observers(self)
-        
-    @property
-    def plotData(self):
-        return self.tab.plotData
 
-    # @property
-    # def fig(self):
-    #     return self.tab.fig
+    def setPlotData(self, plotData):
+        self.plotData = plotData
 
     @property
     def canvas(self):
-        return self.tab.canvas
+        return self.plotData.canvas
 
     @property
     def toolbar(self):
-        return self.tab.toolbar
+        return self.plotData.toolbar
 
     @property
     def guiState(self):
@@ -74,100 +67,9 @@ class PlotInteraction():
     def notify(self, data):
         if not self.plotData:
             return # Do nothing if no plot data
-        self.updateMarkers()
         self.updateLabels()
         # User could've changed the color of the labels: need to update marker colors
 
-    def setLims(self):
-        self.home_xlim = self.cur_xlim = self.plotData.ax.get_xlim()
-        self.home_ylim = self.cur_ylim = self.plotData.ax.get_ylim()
-
-    def updateMarkers(self):
-        # Hide/Show the markers, labels, and arrows
-        for name in self.plotData.names:
-            alpha = 1
-            if self.guiState.isHidden(name): alpha = 0
-            self.plotData.name_marker[name].set_alpha(alpha)
-            self.plotData.name_text[name].set_alpha(alpha)
-            # Unhighlight/highlight points
-            if name in self.guiState.highlighted: self.highlight(self.plotData.name_marker[name])
-            else: self.unhighlight(self.plotData.name_marker[name])
-            # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
-            if name in self.plotData.name_mapping: self.plotData.name_mapping[name].set_alpha(1)
-        for name in self.plotData.name_mapping:
-            if self.guiState.isHidden(name): self.plotData.name_mapping[name].set_alpha(0)
-        self.canvas.draw()
-
-    def updateLabels(self):
-        # Update labels on plot
-        current_metrics = self.guiState.labels
-        if not current_metrics:
-            self.tab.labelTab.resetMetrics()
-        for i, text in enumerate(self.plotData.texts):
-            label = self.plotData.orig_mytext[i][:-1]
-            codeletName = self.plotData.names[i]
-            for metric_index, metric in enumerate(current_metrics):
-                # Update label menu with currently selected metric
-                self.tab.labelTab.metrics[metric_index].set(metric)
-                # Append to end of label
-                encoded_names = self.guiState.get_encoded_names(self.df)
-                value = self.df.loc[encoded_names==codeletName][metric].iloc[0]
-                if isinstance(value, int) or isinstance(value, float): 
-                    label += ', ' + str(round(value, 2))
-                else:
-                    label += ', ' + str(value)
-            label += ')'
-            text.set_text(label)
-            self.plotData.mytext[i] = label
-        # Update legend for user to see order of metrics in the label
-        newTitle = self.plotData.orig_legend[:-1]
-        for metric in current_metrics:
-            newTitle += ', ' + metric
-        newTitle += ')'
-        self.plotData.legend.get_title().set_text(newTitle)
-        # Adjust labels if already adjusted
-        self.canvas.draw()
-        if self.adjusted:
-            self.adjustText()
-
-    def toggleLabels(self):
-        if self.tab.toggle_labels_button['text'] == 'Hide Labels': 
-            new_text = 'Show Labels'
-            alpha = 0
-        else: 
-            new_text = 'Hide Labels'
-            alpha = 1
-        for marker in self.plotData.marker_text:
-            if marker.get_alpha(): 
-                self.plotData.marker_text[marker].set_alpha(alpha) 
-                if self.adjusted: 
-                    # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
-                    # TODO: Create "marker:arrow" to simplify this statement
-                    if self.plotData.marker_text[marker] in self.plotData.text_arrow: self.plotData.text_arrow[self.plotData.marker_text[marker]].set_visible(alpha)
-        self.canvas.draw()
-        self.tab.toggle_labels_button['text'] = new_text
-
-    def toggleLabel(self, marker):
-        label = self.plotData.marker_text[marker]
-        label.set_alpha(not label.get_alpha())
-        if label in self.plotData.text_arrow: self.plotData.text_arrow[label].set_visible(label.get_alpha())
-        self.canvas.draw()
-
-    def highlight(self, marker):
-        text = self.plotData.marker_text[marker]
-        marker.set_marker('*')
-        marker.set_markeredgecolor('k')
-        marker.set_markeredgewidth(0.5)
-        marker.set_markersize(11)
-        text.set_color('r')
-
-    def unhighlight(self, marker):
-        text = self.plotData.marker_text[marker]
-        marker.set_marker('o')
-        marker.set_markeredgecolor(marker.get_markerfacecolor())
-        marker.set_markersize(6.0)
-        text.set_color('k')
-    
     def removePoints(self, names):
         self.guiState.removePoints(names)
 
@@ -180,11 +82,29 @@ class PlotInteraction():
     def highlightPoints(self, names):
         self.guiState.highlightPoints(names)
 
+    def updateLabels(self):
+        # Adjust labels if already adjusted
+        if self.adjusted:
+            self.adjustText()
+
+    def toggleLabels(self, button):
+        if button['text'] == 'Hide Labels':
+            button['text'] = 'Show Labels'
+            alpha = 0
+        else:
+            button['text'] = 'Hide Labels'
+            alpha = 1
+        self.plotData.toggleLabels(alpha, self.adjusted)
+
+    def setLims(self):
+        self.home_xlim = self.cur_xlim = self.plotData.ax.get_xlim()
+        self.home_ylim = self.cur_ylim = self.plotData.ax.get_ylim()
+
     def onClick(self, event):
         #print("(%f, %f)", event.xdata, event.ydata)
         # for child in self.plotData.ax.get_children():
         #     print(child)
-        action = self.tab.action_selected.get()
+        action = self.guiState.action_selected
         if action == 'Choose Action': return
         for marker in self.plotData.markers:
             contains, points = marker.contains(event)
@@ -193,7 +113,7 @@ class PlotInteraction():
                     if marker.get_marker() == 'o': self.highlightPoints([self.plotData.marker_name[marker]])
                     else: self.unhighlightPoints([self.plotData.marker_name[marker]])
                 elif action == 'Remove Point': self.removePoints([self.plotData.marker_name[marker]])
-                elif action == 'Toggle Label': self.toggleLabel(marker)
+                elif action == 'Toggle Label': self.plotData.toggleLabel(marker)
                 self.canvas.draw()
 
     def onDraw(self, event):
