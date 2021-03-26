@@ -159,6 +159,7 @@ class LoadedData(Observable):
 
         def color_by_cluster(self, df):
             self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
+            self.updated_notify_observers()
 
         def update_short_names(self, new_short_names):
             for item in self._shortnameDataItems:
