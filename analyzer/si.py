@@ -59,10 +59,10 @@ class SIPlotTab(PlotTab):
 
     def mk_plot(self):
         # TODO: Work with Elias to use cherry pick rather than passing in filter data
-        return SiPlot (self.data.siDataItems, self.data.levelData, self.data.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
+        return SiPlot (self.analyzerData.siDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'SIPLOT', "row", 'SIPlot', 
                        filtering=False, filter_data=None, mappings=self.mappings, 
-                       scale=self.data.scale, 
-                       short_names_path=self.data.short_names_path) 
+                       scale=self.analyzerData.scale, 
+                       short_names_path=self.analyzerData.short_names_path) 
 
     def resetTablValues(self):
-        self.data.resetRunCluster()
+        self.analyzerData.resetRunCluster()

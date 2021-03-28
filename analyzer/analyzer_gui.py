@@ -205,6 +205,43 @@ class LoadedData(Observable):
     def updated_all_levels_notify_observers(self):
         for level in self.allLevels:
             self.levelData[level].updated_notify_observers()
+
+    def clear(self):
+        self.sources = []
+        self.analytics = pd.DataFrame()
+        self.names = pd.DataFrame()
+        for level in self.levelData:
+            self.levelData[level].clear_df()
+
+    def setUrl(self, url):
+        if url: 
+            self.urls = [url]
+
+    def appendUrl(self, url):
+        if url: 
+            self.urls.append(url)
+    
+    def setSource(self, source):
+        self.sources = [source]
+    
+    def appendSource(self, source):
+        self.sources.append(source)
+
+    def loadFile(self, choice, data_dir, source, url):
+        if choice == 'Open Webpage':
+            self.clear()
+            self.setUrl(url)
+        elif choice == 'Overwrite':
+            self.clear()
+            self.setUrl(url)
+            self.setSource(source)
+            self.add_data(self.sources, data_dir, append=False)
+        elif choice == 'Append':
+            self.appendUrl(url)
+            self.appendSource(source)
+            self.add_data(self.sources, data_dir, append=True)
+
+        
         
     #CHOSEN_NODE_SET = set(['L1','L2','L3','RAM','FLOP','VR','FE'])
     # Need to get all nodes as SatAnalysis will try to add any nodes in ALL_NODE_SET
@@ -738,7 +775,7 @@ class AnalyzerGui(tk.Frame):
         # Explorer Panel and Guide tab in global notebook
         self.global_note = ttk.Notebook(self.pw)
 
-        self.explorerPanel = ExplorerPanel(self.global_note, self.loadFile, self.loadSavedState, self, root)
+        self.explorerPanel = ExplorerPanel(self.global_note, self, root)
         self.global_note.add(self.explorerPanel, text='Data Source')
 
         # TODO: Refactor Guide Tab to not need a specific tab as a parameter
@@ -826,52 +863,26 @@ class AnalyzerGui(tk.Frame):
         # # Reset cluster var for SIPlotData so find_si_clusters() is called again 
         # gui.c_siplotData.run_cluster = True
 
-    def loadFile(self, choice, data_dir, source, url):
-        if choice == 'Open Webpage':
-            self.overwrite()
-            self.loadedData.urls = [url]
+    def loadUrl(self, choice, url):
+        if choice != 'Append':
+            self.oneviewTab.removePages() # Remove any previous OV HTML
+
+        if url:
             if sys.platform != 'darwin':
                 self.oneviewTab.loadPage()
-            return
-        elif choice == 'Overwrite':
-            self.overwrite()
-            if url: 
-                self.loadedData.urls = [url]
-                if sys.platform != 'darwin':
-                    self.oneviewTab.loadPage()
-            self.loadedData.sources = [source]
-            self.resetTabValues() 
-            self.loadedData.add_data(self.loadedData.sources, data_dir, append=False)
-        elif choice == 'Append':
-            if url: 
-                self.loadedData.urls.append(url)
-                if sys.platform != 'darwin':
-                    self.oneviewTab.loadPage()
-            self.loadedData.sources.append(source)
-            self.loadedData.add_data(self.loadedData.sources, data_dir, append=True)
 
-    def overwrite(self): # Clear out any previous saved dataframes/plots
-        self.loadedData.sources = []
-        self.loadedData.analytics = pd.DataFrame()
-        self.loadedData.names = pd.DataFrame()
-        self.oneviewTab.removePages() # Remove any previous OV HTML
-        # Clear summary dataframes
-        for level in self.loadedData.levelData:
-            self.loadedData.levelData[level].clear_df()
-        # self.clearTabs()
-
-    def clearTabs(self, levels=['All']):
-        tabs = []
-        if 'Codelet' in levels or 'All' in levels:
-            tabs.extend([gui.c_summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveAllTab])
-            # tabs.extend([gui.c_summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveTab, gui.c_scurveAllTab])
-        if 'Source' in levels or 'All' in levels:
-            tabs.extend([gui.s_summaryTab, gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab])
-        if 'Application' in levels or 'All' in levels:
-            tabs.extend([gui.a_summaryTab, gui.a_trawlTab, gui.a_qplotTab, gui.a_customTab])
-        for tab in tabs:
-            for widget in tab.window.winfo_children():
-                widget.destroy()
+    # def clearTabs(self, levels=['All']):
+    #     tabs = []
+    #     if 'Codelet' in levels or 'All' in levels:
+    #         tabs.extend([gui.c_summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveAllTab])
+    #         # tabs.extend([gui.c_summaryTab, gui.c_trawlTab, gui.c_qplotTab, gui.c_siPlotTab, gui.c_customTab, gui.c_scurveTab, gui.c_scurveAllTab])
+    #     if 'Source' in levels or 'All' in levels:
+    #         tabs.extend([gui.s_summaryTab, gui.s_trawlTab, gui.s_qplotTab, gui.s_customTab])
+    #     if 'Application' in levels or 'All' in levels:
+    #         tabs.extend([gui.a_summaryTab, gui.a_trawlTab, gui.a_qplotTab, gui.a_customTab])
+    #     for tab in tabs:
+    #         for widget in tab.window.winfo_children():
+    #             widget.destroy()
 
     @property
     def allTabs(self):

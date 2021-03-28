@@ -254,10 +254,12 @@ class AnalyzerData(Observable):
 class GuiBaseTab(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.analyzerData = None
 
-    def setData(self, data):
-        assert (data is not None)
-        data.add_observers(self)
+    def setAnalyzerData(self, analyzerData):
+        assert (analyzerData is not None)
+        self.analyzerData = analyzerData
+        analyzerData.add_observers(self)
 
 class AnalyzerTab(GuiBaseTab):
     def __init__(self, parent, analyzerDataClass):
@@ -266,20 +268,19 @@ class AnalyzerTab(GuiBaseTab):
 
     def setLevelData(self, levelData):
         guiState = levelData.guiState
-        return self.setData(guiState.findOrCreateGuiData(self.analyzerDataClass))
+        return self.setAnalyzerData(guiState.findOrCreateGuiData(self.analyzerDataClass))
         
-    def setData(self, data):
-        super().setData(data)
-        self.data = data
-        self.level = data.level
-        self.name = data.name
+    def setAnalyzerData(self, analyzerData):
+        super().setAnalyzerData(analyzerData)
+        self.level = analyzerData.level
+        #self.name = analyzerData.name
         #self.mappings_path = self.data.loadedData.mappings_path
         #self.short_names_path = self.data.short_names_path
         return self
 
     @property
     def mappings(self):
-        return self.data.mappings
+        return self.analyzerData.mappings
     
 class PlotTab(AnalyzerTab):
     def __init__(self, parent, analyzerDataClass, title='', x_axis='', y_axis='', extra_metrics=[], name='', ):
@@ -322,7 +323,7 @@ class PlotTab(AnalyzerTab):
         self.plotData = None
 
     def action_selected_callback(self, *args):
-        self.data.guiState.action_selected = self.action_selected.get()
+        self.analyzerData.guiState.action_selected = self.action_selected.get()
     
     def toggleLabels(self):
         self.plotInteraction.toggleLabels(self.toggle_labels_button)
@@ -330,7 +331,7 @@ class PlotTab(AnalyzerTab):
     def setData(self, data):
         self.labelTab.setData(data)
         self.plotInteraction.setData(data)
-        return super().setData(data)
+        return super().setAnalyzerData(data)
 
     # Subclass needs to override this method
     def mk_plot(self):
@@ -338,7 +339,7 @@ class PlotTab(AnalyzerTab):
     
     def setup(self, metrics):
         # Update attributes
-        self.df = self.data.df
+        self.df = self.analyzerData.df
         if self.df.empty:
             return
 
@@ -347,7 +348,7 @@ class PlotTab(AnalyzerTab):
         self.fig, self.plotData = plot.fig, plot.plotData
         self.plotInteraction.setPlotData(self.plotData)
 
-        self.variants = self.data.variants
+        self.variants = self.analyzerData.variants
         self.metrics = metrics
         # Update names for plot buttons
         self.show_markers_button['command'] = lambda names=self.plotData.names : self.plotInteraction.showPoints(names)
@@ -389,9 +390,9 @@ class PlotTab(AnalyzerTab):
             self.df[missing] = np.nan
 
     def get_metrics(self):
-        metrics = copy.deepcopy(self.data.common_columns_start)
+        metrics = copy.deepcopy(self.analyzerData.common_columns_start)
         metrics.extend(self.extra_metrics)
-        metrics.extend(self.data.common_columns_end)
+        metrics.extend(self.analyzerData.common_columns_end)
         return metrics
         
     def notify(self, data):
@@ -536,7 +537,7 @@ class AxesTab(tk.Frame):
             self.tab.y_scale = self.yscale_selected.get().lower()
         # Set user selected metrics/scales if they have changed at least one
         if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
-            self.tab.data.update_axes(self.tab.x_scale + self.tab.y_scale, self.tab.x_axis, self.tab.y_axis)
+            self.tab.analyzerData.update_axes(self.tab.x_scale + self.tab.y_scale, self.tab.x_axis, self.tab.y_axis)
 
 class LabelTab(tk.Frame):
     def __init__(self, parent, tab):

@@ -41,7 +41,7 @@ class Tab3d(PlotTab):
 
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.data.df.columns.tolist()
+        metrics = self.analyzerData.df.columns.tolist()
         super().setup(metrics)
         self.buildTableTabs()
     
@@ -52,6 +52,6 @@ class Tab3d(PlotTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return Plot3d(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, '3D', no_plot=False, gui=True, 
-                      x_axis=self.data.x_axis, y_axis=self.data.y_axis, z_axis=None, mappings=self.mappings, 
-                      short_names_path=self.data.short_names_path)
+        return Plot3d(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, '3D', no_plot=False, gui=True, 
+                      x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, z_axis=None, mappings=self.mappings, 
+                      short_names_path=self.analyzerData.short_names_path)

@@ -28,3 +28,9 @@ class AnalyzerController:
 
     def exportShownDataRawCSV(self, out_path):
         self.loadedData.exportShownDataRawCSV(out_path)
+
+    def loadFile(self, choice, data_dir, source, url):
+        if choice == 'Overwrite':
+            self.gui.resetTabValues() 
+        self.gui.loadUrl(choice, url)
+        self.loadedData.loadFile(choice, data_dir, source, url)

@@ -19,7 +19,7 @@ import getpass
 
 class ScrolledTreePane(tk.Frame):
     TIMESTAMP_STR = r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}'
-    def __init__(self, parent, loadFn, rootName, gui, guiRoot):
+    def __init__(self, parent, rootName, gui, guiRoot):
         tk.Frame.__init__(self, parent)
         self.treeview = ttk.Treeview(self)
         vsb = ttk.Scrollbar(self, orient=tk.VERTICAL)
@@ -34,7 +34,6 @@ class ScrolledTreePane(tk.Frame):
         self.firstOpen = True
         self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
         self.treeview.bind("<Button-3>", self.handleRightClickEvent)
-        self.loadFn = loadFn
         self.rootNode = ScrolledTreePane.MetaTreeNode(rootName, None, self)
         self.setupLocalRoots()
         self.setupRemoteRoots()
@@ -657,8 +656,8 @@ class DataSourcePanel(ScrolledTreePane):
                              parent, ScrolledTreePane.WebServer())
 
 
-    def __init__(self, parent, loadDataSrcFn, gui, root):
-        ScrolledTreePane.__init__(self, parent, loadDataSrcFn, 'Data Source', gui, root)
+    def __init__(self, parent, gui, root):
+        super().__init__(parent, 'Data Source', gui, root)
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
 
     def show_options_data(self, select_fn, node=None):
@@ -678,7 +677,7 @@ class DataSourcePanel(ScrolledTreePane):
 
         
     def openLocalFile(self, choice, data_dir, source, url):
-        self.loadFn(choice, data_dir, source, url)
+        self.control.loadFile(choice, data_dir, source, url)
 
     # def handleOpenEvent(self, event):
     #     if not self.opening: # finish opening one file before another is started
@@ -823,11 +822,11 @@ class AnalysisResultsPanel(ScrolledTreePane):
             #self.container.after(1000, lambda: self.container.setFocus(self))
             self.container.setFocus(self)
 
-    def __init__(self, parent, loadSavedStateFn, gui, root):
-        super().__init__(parent, loadSavedStateFn, 'Analysis Results', gui, root)
+    def __init__(self, parent, gui, root):
+        super().__init__(parent, 'Analysis Results', gui, root)
 
-    def openLocalFile(self, levels=[]):
-        self.loadFn(levels)
+    # def openLocalFile(self, levels=[]):
+    #     self.loadFn(levels)
 
     def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
         cape_onedrive=os.path.join(oneDriveRoot, 'analysis_results')
@@ -839,11 +838,11 @@ class AnalysisResultsPanel(ScrolledTreePane):
         AnalysisResultsPanel.UserNode(cape_cache_path, cape_cache_path, 'Local', self, self.rootNode)
 
 class ExplorerPanel(tk.PanedWindow):
-    def __init__(self, parent, loadDataSrcFn, loadSavedStateFn, gui, root):
+    def __init__(self, parent, gui, root):
         super().__init__(parent, orient="horizontal")
-        top = DataSourcePanel(self, loadDataSrcFn, gui, root)
+        top = DataSourcePanel(self, gui, root)
         top.pack(side = tk.LEFT, expand=True)
-        bot = AnalysisResultsPanel(self, loadSavedStateFn, gui, root)
+        bot = AnalysisResultsPanel(self, gui, root)
         bot.pack(side = tk.LEFT, expand=True)
         self.add(top, stretch='always')
         self.add(bot, stretch='always')

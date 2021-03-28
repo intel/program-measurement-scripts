@@ -39,7 +39,7 @@ class ScurveAllTab(PlotTab):
                          MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
 
     def get_metrics(self):
-        return self.data.df.columns.tolist()
+        return self.analyzerData.df.columns.tolist()
 
     # Create meta tabs
     # def buildTableTabs(self):
@@ -48,6 +48,6 @@ class ScurveAllTab(PlotTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return ScurveAllPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'S-Curve All', no_plot=False, gui=True, 
-                             x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                             mappings=self.mappings, short_names_path=self.data.short_names_path)
+        return ScurveAllPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'S-Curve All', no_plot=False, gui=True, 
+                             x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 
+                             mappings=self.mappings, short_names_path=self.analyzerData.short_names_path)

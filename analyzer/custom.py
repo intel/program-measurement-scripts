@@ -48,10 +48,10 @@ class CustomTab(PlotTab):
 
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.data.df.columns.tolist()
+        metrics = self.analyzerData.df.columns.tolist()
         super().setup(metrics)
 
     def mk_plot(self):
-        return CustomPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 
-                          x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                          mappings=self.mappings, short_names_path=self.data.short_names_path)
+        return CustomPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'Custom', no_plot=False, gui=True, 
+                          x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 
+                          mappings=self.mappings, short_names_path=self.analyzerData.short_names_path)

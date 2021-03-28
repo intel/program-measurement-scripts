@@ -50,7 +50,7 @@ class TrawlTab(PlotTab):
         # self.tableNote.add(self.axesTab, text="Axes")
 
     def mk_plot(self):
-        return TrawlPlot(self.data.capacityDataItems, self.data.levelData, self.data.level, 'ORIG', 'test', self.data.scale, 'TRAWL', no_plot=False, 
-                         gui=True, x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
+        return TrawlPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'TRAWL', no_plot=False, 
+                         gui=True, x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 
                          mappings=self.mappings, 
-                         short_names_path=self.data.short_names_path)
+                         short_names_path=self.analyzerData.short_names_path)

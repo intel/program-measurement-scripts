@@ -43,21 +43,21 @@ class ShortNameTab(AnalyzerTab):
 
     def notify(self, data):
         columns = [NAME, SHORT_NAME, TIMESTAMP, VARIANT]
-        df = self.data.df[columns] if not self.data.df.empty else pd.DataFrame(columns=columns)
-        color_map = self.data.levelData.guiState.get_color_map()
+        df = self.analyzerData.df[columns] if not self.analyzerData.df.empty else pd.DataFrame(columns=columns)
+        color_map = self.analyzerData.levelData.guiState.get_color_map()
         self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
 
     def colorClusters(self):
         # Update the GUI state color map with colors for each codelet and the label for the legend
-        df = self.data.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]].copy(deep=True)
+        df = self.analyzerData.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]].copy(deep=True)
         df[NonMetricName.SI_CLUSTER_NAME].replace({'':'No Cluster'}, inplace=True)
         df = df.reindex(columns = df.columns.tolist() + ['Label','Color'])
         for i, cluster in enumerate(df[NonMetricName.SI_CLUSTER_NAME].unique()):
             if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
         # All points without a cluster will be blue
         df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
-        self.data.levelData.color_by_cluster(df)
+        self.analyzerData.levelData.color_by_cluster(df)
 
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
@@ -78,7 +78,7 @@ class ShortNameTab(AnalyzerTab):
             else: # Make all blue when run out of colors
                 df.loc[df['Label']==label, ['Color']] = self.colors[0]
         # Update short names in each of the main dfs
-        self.data.loadedData.update_short_names(df, self.level)
+        self.analyzerData.loadedData.update_short_names(df, self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
@@ -118,8 +118,8 @@ class MappingsTab(AnalyzerTab):
         toAdd['Before Name'] = [self.before_selected.get().split(']')[1].split('[')[0][1:-1]]
         toAdd['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
         toAdd['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
-        toAdd['Difference'] = self.data.df.loc[(self.data.df[NAME] == toAdd['After Name'][0]) & (self.data.df[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
-        self.data.loadedData.add_mapping(self.data.level, toAdd)
+        toAdd['Difference'] = self.analyzerData.df.loc[(self.analyzerData.df[NAME] == toAdd['After Name'][0]) & (self.analyzerData.df[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
+        self.analyzerData.loadedData.add_mapping(self.analyzerData.level, toAdd)
         self.table.model.df = self.mappings
         self.updateTable()
     
@@ -130,7 +130,7 @@ class MappingsTab(AnalyzerTab):
         toRemove['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
         toRemove['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
         # Update loadedData and database mappings
-        self.data.loadedData.remove_mapping(self.data.level, toRemove)
+        self.analyzerData.loadedData.remove_mapping(self.analyzerData.level, toRemove)
         self.placeholderCheck()
         self.updateTable()
 
@@ -143,14 +143,14 @@ class MappingsTab(AnalyzerTab):
 
     def updateMapping(self):
         # Update observers with the new mappings
-        self.data.loadedData.update_mapping(self.data.level)
+        self.analyzerData.loadedData.update_mapping(self.analyzerData.level)
 
     def setupCustomOptions(self):
         self.edit_button = tk.Button(self, text="Edit", command=self.editMappings)
         self.update_button = tk.Button(self, text="Update", command=self.updateMapping)
 
     def editMappings(self):
-        options = "[" + self.data.df[SHORT_NAME] + "] " + self.data.df[NAME] + " [" + self.data.df[TIMESTAMP].map(str) + "]"
+        options = "[" + self.analyzerData.df[SHORT_NAME] + "] " + self.analyzerData.df[NAME] + " [" + self.analyzerData.df[TIMESTAMP].map(str) + "]"
         self.win = tk.Toplevel()
         center(self.win)
         self.win.title('Edit Mappings')
@@ -264,18 +264,23 @@ class DataTab(AnalyzerTab):
         self.summaryTable = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         self.table_button_frame = tk.Frame(self)
         self.table_button_frame.grid(row=4, column=1)
-        self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.data.df))
-        self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.data.df))
-        self.export_rawcsv_button = tk.Button(self.table_button_frame, text="Export Shown Points as Raw CSV", command=self.exportShownDataRawCSV)
+        self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.analyzerData.df))
+        self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.analyzerData.df))
+        #self.export_rawcsv_button = tk.Button(self.table_button_frame, text="Export Shown Points as Raw CSV", command=self.exportShownDataRawCSV)
         self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column First", command=self.moveColumnFirst)
         self.summaryTable.show()
         self.export_summary_button.grid(row=0, column=0)
         self.export_colored_summary_button.grid(row=0, column=1)
-        self.export_rawcsv_button.grid(row=0, column=2)
-        self.move_column_first_button.grid(row=0, column=3)
+        #self.export_rawcsv_button.grid(row=0, column=2)
+        self.move_column_first_button.grid(row=0, column=2)
     
-    def exportShownDataRawCSV(self):
-        self.data.loadedData.exportShownDataRawCSV(tk.filedialog.asksaveasfilename(defaultextension=".raw.csv", filetypes=[("Cape Raw Data", "*.raw.csv")]))
+    # def exportShownDataRawCSV(self):
+    #     self.analyzerData.loadedData.exportShownDataRawCSV(tk.filedialog.asksaveasfilename(defaultextension=".raw.csv", filetypes=[("Cape Raw Data", "*.raw.csv")]))
+
+    def setLevelData(self, levelData):
+        guiState = levelData.guiState
+        guiState.add_observers(self)
+        return super().setLevelData(levelData)
     
 
     class ChooseColumnDialog(tk.simpledialog.Dialog):
@@ -293,11 +298,11 @@ class DataTab(AnalyzerTab):
     def moveColumnFirst(self):
         column = DataTab.ChooseColumnDialog(self).result
         if column:
-            self.data.moveColumnFirst(column)
+            self.analyzerData.moveColumnFirst(column)
     
     def notify(self, data):
         # Update table with latest loadedData df
-        self.summaryTable.model.df = self.data.df[[m for m in self.data.columnOrder if m in self.data.df.columns]]
+        self.summaryTable.model.df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
@@ -310,7 +315,7 @@ class FilteringTab(AnalyzerTab):
         self.setupThreshold()
 
     def notify(self, data):
-        if self.data.df.empty:
+        if self.analyzerData.df.empty:
             return
         self.setOptions()
         self.buildPointSelector()
@@ -327,8 +332,8 @@ class FilteringTab(AnalyzerTab):
         self.update_button.grid(row=0, column=3, sticky=tk.N)
 
     def buildVariantSelector(self):
-        all_variants = self.data.df[VARIANT].unique()
-        selected_variants = self.data.variants
+        all_variants = self.analyzerData.df[VARIANT].unique()
+        selected_variants = self.analyzerData.variants
         self.variantSelector = VariantSelector(self, all_variants, selected_variants)
         # select_all = tk.Button(self, text='Select All', command= lambda val=1 : self.variantSelector.set_all(val))
         # deselect_all = tk.Button(self, text='Deselect All', command= lambda val=0 : self.variantSelector.set_all(val))
@@ -336,9 +341,9 @@ class FilteringTab(AnalyzerTab):
         # deselect_all.pack(side=tk.LEFT, anchor=tk.NW, padx=10, pady=10)
 
     def buildPointSelector(self):
-        options = ('[' + self.data.df[SHORT_NAME] + '] ' + self.data.df[NAME] + ' [' + self.data.df[TIMESTAMP].astype(str) + ']').tolist()
-        names = (self.data.df[NAME] + self.data.df[TIMESTAMP].astype(str)).tolist()
-        self.pointSelector = PointSelector(self, options, self.data.guiState.hidden, names)
+        options = ('[' + self.analyzerData.df[SHORT_NAME] + '] ' + self.analyzerData.df[NAME] + ' [' + self.analyzerData.df[TIMESTAMP].astype(str) + ']').tolist()
+        names = (self.analyzerData.df[NAME] + self.analyzerData.df[TIMESTAMP].astype(str)).tolist()
+        self.pointSelector = PointSelector(self, options, self.analyzerData.guiState.hidden, names)
         # self.pointSelector.restoreState(self.stateDictionary)
 
     def setOptions(self):
@@ -368,9 +373,9 @@ class FilteringTab(AnalyzerTab):
         variants = self.variantSelector.getCheckedVariants()
         metric = self.metric_selected.get()
         if metric == 'Choose Metric': metric = ''
-        self.data.setFilter(metric, self.min_num.get(), self.max_num.get(), names, variants)
+        self.analyzerData.setFilter(metric, self.min_num.get(), self.max_num.get(), names, variants)
         # Update the point selector to reflect the metric/variant filtering
-        self.pointSelector.restoreState(self.data.guiState.hidden)
+        self.pointSelector.restoreState(self.analyzerData.guiState.hidden)
 
 class GuideTab(tk.Frame):
     def __init__(self, parent, tab):
