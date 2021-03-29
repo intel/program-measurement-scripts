@@ -778,6 +778,10 @@ class PlotData():
         marker.set_markersize(6.0)
         text.set_color('k')
 
+    # Return encoded names of data points selected by the event
+    def getSelected(self, event):
+        return [self.marker_name[m] for m in self.markers if m.contains(event)[0]]
+
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \

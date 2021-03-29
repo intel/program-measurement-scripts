@@ -21,6 +21,7 @@ class PerLevelGuiState(Observable):
         self.labels = []
         self.hidden = []
         self.highlighted = []
+        self.selected = []
         # For data filtering
         # The following variants and filter metric set up a mask to select data point
         self.selectedVariants = []
@@ -118,6 +119,10 @@ class PerLevelGuiState(Observable):
         self.hidden = list(dict.fromkeys(self.hidden))
         self.updated_notify_observers()
 
+    def selectPoints(self, names):
+        self.selected = names
+        self.updated_notify_observers()
+
     def showPoints(self, names):
         self.hidden = [name for name in self.hidden if name not in names]
         self.updated_notify_observers()
@@ -151,6 +156,10 @@ class PerLevelGuiState(Observable):
 
     def get_highlighted_mask(self, df):
         return self.get_encoded_names(df).isin(self.highlighted)
+
+    def get_selected_mask(self, df):
+        return self.get_encoded_names(df).isin(self.selected)
+        
 
     # Plot interaction objects for each plot at this level will be notified to avoid a complete redraw
 

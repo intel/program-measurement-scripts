@@ -105,6 +105,9 @@ class PlotInteraction():
         # for child in self.plotData.ax.get_children():
         #     print(child)
         action = self.guiState.action_selected
+        selected = self.plotData.getSelected(event)
+        self.guiState.selectPoints(selected)
+
         if action == 'Choose Action': return
         for marker in self.plotData.markers:
             contains, points = marker.contains(event)

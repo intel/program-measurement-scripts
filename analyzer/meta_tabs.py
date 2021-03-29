@@ -306,7 +306,6 @@ class DataTab(AnalyzerTab):
         guiState = levelData.guiState
         guiState.add_observers(self)
         return super().setLevelData(levelData)
-    
 
     class ChooseColumnDialog(tk.simpledialog.Dialog):
         def body(self, master):
@@ -327,7 +326,10 @@ class DataTab(AnalyzerTab):
     
     def notify(self, data):
         # Update table with latest loadedData df
-        self.summaryTable.model.df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
+        df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
+        selectedMask = self.analyzerData.guiState.get_selected_mask(self.analyzerData.df)
+        if selectedMask.any(): df = df[selectedMask]
+        self.summaryTable.model.df = df
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
