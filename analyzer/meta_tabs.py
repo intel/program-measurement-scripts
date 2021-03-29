@@ -74,11 +74,11 @@ class ShortNameTab(AnalyzerTab):
         df['Color'] = ''
         for i, label in enumerate(df['Label'].unique()):
             if i < len(self.colors):
-                df.loc[df['Label']==label, ['Color']] = [self.colors[i]]
+                df.loc[df['Label']==label, ['Color']] = self.colors[i]
             else: # Make all blue when run out of colors
                 df.loc[df['Label']==label, ['Color']] = self.colors[0]
         # Update short names in each of the main dfs
-        self.analyzerData.loadedData.update_short_names(df, self.level)
+        self.analyzerData.levelData.loadedData.update_short_names(df, self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
