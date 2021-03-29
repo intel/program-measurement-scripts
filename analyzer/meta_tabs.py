@@ -258,10 +258,35 @@ class DataTabData(AnalyzerData):
     #     self.notify_observers()
 
 class DataTab(AnalyzerTab):
+
+    #Override table class for customized behavior.  SEE: https://readthedocs.org/projects/pandastable/downloads/pdf/latest/ 
+    class DataTable(Table):
+        def handle_left_click(self, event):
+            rowclicked = self.get_row_clicked(event)
+            colclicked = self.get_col_clicked(event)
+            print(f'leftclicked: ({rowclicked}, {colclicked})')
+            super().handle_left_click(event)
+
+        # Note this will replace the original menu.  
+        # In progress checking with developers to add the items instead of replacement..
+        def popupMenu(self, event, rows=None, cols=None, outside=None):
+            #popupmenu1 = super().popupMenu(event, rows, cols, outside)
+            popupmenu = tk.Menu(self, tearoff = 0)
+            def popupFocusOut(event):
+                popupmenu.unpost() 
+                #mymenu = tk.Menu(popupmenu, tearoff = 0)
+                #popupmenu.add_cascade(label='Cape', menu=mymenu)
+            popupmenu.add_command(label='Highlight')
+
+            popupmenu.bind("<FocusOut>", popupFocusOut)
+            popupmenu.focus_set()
+            popupmenu.post(event.x_root, event.y_root)
+            return popupmenu
+    
     def __init__(self, parent, metrics=[], variants=[]):
         super().__init__(parent, DataTabData)
         # self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
-        self.summaryTable = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
+        self.summaryTable = DataTab.DataTable(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
         self.table_button_frame = tk.Frame(self)
         self.table_button_frame.grid(row=4, column=1)
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.analyzerData.df))

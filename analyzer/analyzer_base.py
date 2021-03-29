@@ -328,9 +328,9 @@ class PlotTab(AnalyzerTab):
     def toggleLabels(self):
         self.plotInteraction.toggleLabels(self.toggle_labels_button)
 
-    def setData(self, data):
-        self.labelTab.setData(data)
-        self.plotInteraction.setData(data)
+    def setAnalyzerData(self, data):
+        self.labelTab.setAnalyzerData(data)
+        self.plotInteraction.setAnalyzerData(data)
         return super().setAnalyzerData(data)
 
     # Subclass needs to override this method
@@ -578,7 +578,7 @@ class LabelTab(tk.Frame):
     def guiState(self):
         return self.data.guiState
 
-    def setData(self, data):
+    def setAnalyzerData(self, data):
         self.data = data
         self.guiState.add_observers(self)
 

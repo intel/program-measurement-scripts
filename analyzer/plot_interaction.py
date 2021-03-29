@@ -40,7 +40,7 @@ class PlotInteraction():
         self.level = None
         self.plotData = None
 
-    def setData(self, analyzerData):
+    def setAnalyzerData(self, analyzerData):
         self.analyzerData = analyzerData
         self.level = analyzerData.level
         self.guiState.add_observers(self)
@@ -114,7 +114,7 @@ class PlotInteraction():
                     else: self.unhighlightPoints([self.plotData.marker_name[marker]])
                 elif action == 'Remove Point': self.removePoints([self.plotData.marker_name[marker]])
                 elif action == 'Toggle Label': self.plotData.toggleLabel(marker)
-                self.canvas.draw()
+        self.canvas.draw()
 
     def onDraw(self, event):
         if self.adjusted and (self.cur_xlim != self.plotData.ax.get_xlim() or self.cur_ylim != self.plotData.ax.get_ylim()) and \
