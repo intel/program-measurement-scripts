@@ -1,4 +1,5 @@
 import re
+import tkinter as tk
 import threading
 import os
 import sys
@@ -677,6 +678,10 @@ class CapePlot:
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
 
+    def setupFrames(self, canvasFrame, chartButtonFrame):
+        # NavigationToolbar2Tk can only be created if there isn't anything in the grid
+        self.plotData.setupFrames(self.fig, canvasFrame, chartButtonFrame)
+
 class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
         names = guiState.get_encoded_names(df).tolist()
@@ -879,6 +884,25 @@ class PlotData():
                 elif action == 'Toggle Label': 
                     alpha = not self.name_text[name].get_alpha()
                     self.guiState.toggleLabel(name, alpha)
+
+    def setupFrames(self, fig, canvasFrame, chartButtonFrame):
+        # NavigationToolbar2Tk can only be created if there isn't anything in the grid
+        for slave in chartButtonFrame.grid_slaves():
+            slave.grid_forget()
+        # Refresh the canvas
+        for slave in canvasFrame.pack_slaves():
+            slave.destroy()
+        # Store initial xlim and ylim for adjustText 
+        self.setLims()
+        # Create canvas and toolbar for plot
+        self.canvas = FigureCanvasTkAgg(fig, canvasFrame)
+        self.canvas.mpl_connect('button_press_event', self.onClick)
+        self.canvas.mpl_connect('draw_event', self.onDraw)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, chartButtonFrame)
+        self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
+        self.canvas.draw()
+        self.toolbar.grid(column=7, row=0, sticky=tk.S)
+        self.toolbar.update()
     
 
 # Plot with capacity computation

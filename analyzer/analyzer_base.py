@@ -325,22 +325,22 @@ class PlotTab(AnalyzerTab):
         self.window.pack(fill=tk.BOTH, expand=True)
         # Setup Plot Frames
         self.plotFrame = tk.Frame(self.window)
-        self.plotFrame2 = tk.Frame(self.plotFrame)
-        self.plotFrame3 = tk.Frame(self.plotFrame)
+        self.canvasFrame = tk.Frame(self.plotFrame)
+        self.chartButtonFrame = tk.Frame(self.plotFrame)
         self.plotFrame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.plotFrame3.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-        self.plotFrame2.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.chartButtonFrame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        self.canvasFrame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         # Plot interacting buttons
         self.plotInteraction = PlotInteraction()
         # self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.plotInteraction.saveState)
-        self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
-        self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
-        self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points')
-        self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight')
+        self.adjust_button = tk.Button(self.chartButtonFrame, text='Adjust Text', command=self.adjustText)
+        self.toggle_labels_button = tk.Button(self.chartButtonFrame, text='Hide Labels', command=self.toggleLabels)
+        self.show_markers_button = tk.Button(self.chartButtonFrame, text='Show Points')
+        self.unhighlight_button = tk.Button(self.chartButtonFrame, text='Unhighlight')
         self.action_selected = tk.StringVar(value='Choose Action')
         self.action_selected.trace('w', self.action_selected_callback)
         action_options = ['Choose Action', 'Select Point', 'Highlight Point', 'Remove Point', 'Toggle Label']
-        self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
+        self.action_menu = tk.OptionMenu(self.chartButtonFrame, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
         # Notebook of plot specific tabs
         self.tab_note = ttk.Notebook(self.window)
@@ -349,6 +349,12 @@ class PlotTab(AnalyzerTab):
         self.labelTab = LabelTab(self.tab_note, self)
         self.tab_note.add(self.labelTab, text='Labels')
         self.plotData = None
+        # Update names for plot buttons
+        self.show_markers_button['command'] = self.showPoints
+        self.unhighlight_button['command'] = self.unhighlightPoints
+        # Grid Layout
+        self.axesTab.render()
+        self.labelTab.render()
 
     def adjustText(self):
         self.plotData.adjustText()
@@ -395,36 +401,17 @@ class PlotTab(AnalyzerTab):
 
         self.variants = self.analyzerData.variants
         self.metrics = metrics
-        # Update names for plot buttons
-        self.show_markers_button['command'] = self.showPoints
-        self.unhighlight_button['command'] = self.unhighlightPoints
-        # NavigationToolbar2Tk can only be created if there isn't anything in the grid
-        for slave in self.plotFrame3.grid_slaves():
-            slave.grid_forget()
-        # Refresh the canvas
-        for slave in self.plotFrame2.pack_slaves():
-            slave.destroy()
-        # Store initial xlim and ylim for adjustText 
-        self.plotData.setLims()
-        # Create canvas and toolbar for plot
-        self.plotData.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
-        self.plotData.canvas.mpl_connect('button_press_event', self.plotData.onClick)
-        self.plotData.canvas.mpl_connect('draw_event', self.plotData.onDraw)
-        self.plotData.toolbar = NavigationToolbar2Tk(self.plotData.canvas, self.plotFrame3)
+
+        plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
+
         # Grid Layout
-        self.axesTab.render()
-        self.labelTab.render()
         self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.plotData.toolbar.grid(column=7, row=0, sticky=tk.S)
         self.action_menu.grid(column=5, row=0, sticky=tk.S)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
         self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
-        self.plotFrame3.grid_rowconfigure(0, weight=1)
-        self.plotData.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
-        self.plotData.toolbar.update()
-        self.plotData.canvas.draw()
+        self.chartButtonFrame.grid_rowconfigure(0, weight=1)
         self.window.add(self.plotFrame, stretch='always')
         self.window.add(self.tab_note, stretch='never')
 
