@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
-from adjustText import adjust_text
 #from generate_QPlot import compute_capacity
 import copy
 from capeplot import CapacityPlot

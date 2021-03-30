@@ -14,7 +14,6 @@ from capeplot import NodeWithUnitData
 
 import matplotlib.pyplot as plt
 from matplotlib import style
-from adjustText import adjust_text
 from matplotlib.patches import Rectangle
 import statistics
 from matplotlib.legend import Legend

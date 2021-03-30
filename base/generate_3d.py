@@ -8,7 +8,6 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from mpl_toolkits.mplot3d import Axes3D
-from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
 from capeplot import CapacityData

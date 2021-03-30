@@ -333,7 +333,7 @@ class PlotTab(AnalyzerTab):
         # Plot interacting buttons
         self.plotInteraction = PlotInteraction()
         # self.save_state_button = tk.Button(self.plotFrame3, text='Save State', command=self.plotInteraction.saveState)
-        self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.plotInteraction.adjustText)
+        self.adjust_button = tk.Button(self.plotFrame3, text='Adjust Text', command=self.adjustText)
         self.toggle_labels_button = tk.Button(self.plotFrame3, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.plotFrame3, text='Show Points')
         self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight')
@@ -350,6 +350,10 @@ class PlotTab(AnalyzerTab):
         self.tab_note.add(self.labelTab, text='Labels')
         self.plotData = None
 
+    def adjustText(self):
+        self.plotData.adjustText()
+        
+        
     def action_selected_callback(self, *args):
         self.analyzerData.guiState.action_selected = self.action_selected.get()
     
@@ -361,7 +365,7 @@ class PlotTab(AnalyzerTab):
         else:
             self.toggle_labels_button['text'] = 'Hide Labels'
         self.analyzerData.guiState.toggleLabels(self.plotData.names, alpha)
-        self.plotInteraction.checkAdjusted()
+        self.plotData.checkAdjusted()
 
     def showPoints(self):
         self.analyzerData.guiState.showPoints(self.plotData.names)
@@ -401,11 +405,11 @@ class PlotTab(AnalyzerTab):
         for slave in self.plotFrame2.pack_slaves():
             slave.destroy()
         # Store initial xlim and ylim for adjustText 
-        self.plotInteraction.setLims()
+        self.plotData.setLims()
         # Create canvas and toolbar for plot
         self.plotData.canvas = FigureCanvasTkAgg(self.fig, self.plotFrame2)
-        self.plotData.canvas.mpl_connect('button_press_event', self.plotInteraction.onClick)
-        self.plotData.canvas.mpl_connect('draw_event', self.plotInteraction.onDraw)
+        self.plotData.canvas.mpl_connect('button_press_event', self.plotData.onClick)
+        self.plotData.canvas.mpl_connect('draw_event', self.plotData.onDraw)
         self.plotData.toolbar = NavigationToolbar2Tk(self.plotData.canvas, self.plotFrame3)
         # Grid Layout
         self.axesTab.render()

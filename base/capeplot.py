@@ -1,19 +1,23 @@
 import re
+import threading
 import os
 import sys
 import numpy as np
 import pandas as pd
 import warnings
 import datetime
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.patches import ConnectionPatch
 import copy
 import pickle
 from metric_names import MetricName
 from abc import ABC, abstractmethod
 from collections import UserDict
 import networkx as nx
+from adjustText import adjust_text
+import matplotlib
+import matplotlib.patches as mpatches
+from matplotlib.patches import ConnectionPatch
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -700,6 +704,8 @@ class PlotData():
         self.guiState = guiState
         self.plot = plot
         self.guiState.add_observers(self)
+        self.adjusted = False
+        self.adjusting = False
 
     def notify(self, data):
         self.updateMarkers()
@@ -783,6 +789,98 @@ class PlotData():
     def getSelected(self, event):
         return [self.marker_name[m] for m in self.markers if m.contains(event)[0]]
 
+        
+    def thread_adjustText(self):
+        print('Adjusting text...')
+        if self.adjusted: # Remove old adjusted texts/arrows and create new texts before calling adjust_text again
+            # Store index of hidden texts to update the new texts
+            hiddenTexts = []
+            highlightedTexts = []
+            for i in range(len(self.texts)):
+                if not self.texts[i].get_alpha(): hiddenTexts.append(i)
+                if self.texts[i].get_color() == 'r': highlightedTexts.append(i)
+            # Remove all old texts and arrows
+            for child in self.ax.get_children():
+                if isinstance(child, matplotlib.text.Annotation) or (isinstance(child, matplotlib.text.Text) and child.get_text() not in [self.title, '', self.ax.get_title()]):
+                    child.remove()
+            # Create new texts that maintain the current visibility
+            self.texts = [plt.text(self.xs[i], self.ys[i], self.mytext[i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.mytext))]
+            # Update marker to text mappings with the new texts
+            self.marker_text = dict(zip(self.markers,self.texts))
+            self.name_text = dict(zip(self.names,self.texts))
+        # Only adjust texts that are in the current axes (in case of a zoom)
+        to_adjust = []
+        for i in range(len(self.texts)):
+            if self.texts[i].get_alpha() and \
+                self.xs[i] >= self.ax.get_xlim()[0] and self.xs[i] <= self.ax.get_xlim()[1] and \
+                self.ys[i] >= self.ax.get_ylim()[0] and self.ys[i] <= self.ax.get_ylim()[1]:
+                to_adjust.append(self.texts[i])
+        adjust_text(to_adjust, ax=self.ax, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+        # Map each text to the corresponding arrow
+        index = 0
+        for child in self.ax.get_children():
+            if isinstance(child, matplotlib.text.Annotation):
+                self.text_arrow[to_adjust[index]] = child # Mapping
+                if not to_adjust[index].get_alpha(): child.set_visible(False) # Hide arrows with hidden texts
+                index += 1
+        #self.root.after(0, self.canvas.draw)
+        # TODO: WARNING global variable used here. May want to get it from GUI componenet.
+        self.canvas.get_tk_widget().after(0, self.canvas.draw)
+        self.adjusted = True
+        self.adjusting = False
+        print('Done Adjust text')
+
+    def adjustText(self):
+        if not self.adjusting: 
+            self.adjusting = True
+            if sys.platform == 'darwin':
+                self.thread_adjustText()
+            else: 
+                # Do this in mainthread
+                plt_sca(self.ax)
+                threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
+
+    def onDraw(self, event):
+        if self.adjusted and (self.cur_xlim != self.ax.get_xlim() or self.cur_ylim != self.ax.get_ylim()) and \
+            (self.home_xlim != self.ax.get_xlim() or self.home_ylim != self.ax.get_ylim()) and \
+            self.toolbar.mode != 'pan/zoom': 
+            print("Ondraw adjusting")
+            self.cur_xlim = self.ax.get_xlim()
+            self.cur_ylim = self.ax.get_ylim()
+            self.adjustText()
+
+    def setLims(self):
+        self.home_xlim = self.cur_xlim = self.ax.get_xlim()
+        self.home_ylim = self.cur_ylim = self.ax.get_ylim()
+
+    def checkAdjusted(self):
+        if self.adjusted:
+            self.adjustText()
+
+    def onClick(self, event):
+        #print("(%f, %f)", event.xdata, event.ydata)
+        # for child in self.plotData.ax.get_children():
+        #     print(child)
+        action = self.guiState.action_selected
+        if action == 'Select Point':
+            selected = self.getSelected(event)
+            self.guiState.selectPoints(selected)
+            return
+        if action == 'Choose Action': return
+        for marker in self.markers:
+            contains, points = marker.contains(event)
+            if contains and marker.get_alpha():
+                name = self.marker_name[marker]
+                if action == 'Highlight Point': 
+                    if marker.get_marker() == 'o': self.guiState.highlightPoints([name])
+                    else: self.guiState.unhighlightPoints([name])
+                elif action == 'Remove Point':
+                    self.guiState.removePoints([name]) 
+                elif action == 'Toggle Label': 
+                    alpha = not self.name_text[name].get_alpha()
+                    self.guiState.toggleLabel(name, alpha)
+    
+
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
@@ -800,3 +898,19 @@ class CapacityPlot(CapePlot):
     @property
     def chosen_node_set(self):
         return set().union(*[data.chosen_node_set for data in self.data])    
+
+
+# Extracted from sca(ax) from 3.2.2
+def plt_sca(ax):
+    """ 
+    Set the current Axes instance to *ax*.
+
+    The current Figure is updated to the parent of *ax*.
+    """
+    managers = plt._pylab_helpers.Gcf.get_all_fig_managers()
+    for m in managers:
+        if ax in m.canvas.figure.axes:
+            plt._pylab_helpers.Gcf.set_active(m)
+            m.canvas.figure.sca(ax)
+            return
+    raise ValueError("Axes instance argument was not found in a figure")
