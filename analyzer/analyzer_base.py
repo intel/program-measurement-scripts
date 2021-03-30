@@ -22,6 +22,7 @@ class PerLevelGuiState(Observable):
         self.hidden = []
         self.highlighted = []
         self.selected = []
+        self.label_visibility = {}
         # For data filtering
         # The following variants and filter metric set up a mask to select data point
         self.selectedVariants = []
@@ -71,6 +72,15 @@ class PerLevelGuiState(Observable):
     def columnOrder(self):
         return KEY_METRICS + self.nonKeyColumnOrder
 
+    def toggleLabels(self, names, alpha):
+        for name in names:
+            self.label_visibility[name] = alpha
+        self.updated_notify_observers()
+
+    def toggleLabel(self, name, alpha):
+        self.label_visibility[name] = alpha
+        self.updated_notify_observers()
+
     def set_color_map(self, color_map_df):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
         color_map_df.fillna({'Color':'blue'}, inplace=True)
@@ -117,6 +127,8 @@ class PerLevelGuiState(Observable):
     def removePoints(self, names):
         self.hidden.extend(names)
         self.hidden = list(dict.fromkeys(self.hidden))
+        for name in names:
+            self.label_visibility[name] = 0
         self.updated_notify_observers()
 
     def selectPoints(self, names):
@@ -125,11 +137,18 @@ class PerLevelGuiState(Observable):
 
     def showPoints(self, names):
         self.hidden = [name for name in self.hidden if name not in names]
+        for name in names:
+            self.label_visibility[name] = 1
         self.updated_notify_observers()
 
     def isHidden(self, name):
         return name in self.hidden
-        
+    
+    def labelVisbility(self, name):
+        alpha = 1
+        if name in self.label_visibility:
+            alpha = self.label_visibility[name]
+        return alpha
 
     def highlightPoints(self, names):
         self.highlighted.extend(names)
@@ -320,7 +339,7 @@ class PlotTab(AnalyzerTab):
         self.unhighlight_button = tk.Button(self.plotFrame3, text='Unhighlight')
         self.action_selected = tk.StringVar(value='Choose Action')
         self.action_selected.trace('w', self.action_selected_callback)
-        action_options = ['Choose Action', 'Highlight Point', 'Remove Point', 'Toggle Label']
+        action_options = ['Choose Action', 'Select Point', 'Highlight Point', 'Remove Point', 'Toggle Label']
         self.action_menu = tk.OptionMenu(self.plotFrame3, self.action_selected, *action_options)
         self.action_menu['menu'].insert_separator(1)
         # Notebook of plot specific tabs
@@ -335,7 +354,20 @@ class PlotTab(AnalyzerTab):
         self.analyzerData.guiState.action_selected = self.action_selected.get()
     
     def toggleLabels(self):
-        self.plotInteraction.toggleLabels(self.toggle_labels_button)
+        alpha = 1
+        if self.toggle_labels_button['text'] == 'Hide Labels':
+            self.toggle_labels_button['text'] = 'Show Labels'
+            alpha = 0
+        else:
+            self.toggle_labels_button['text'] = 'Hide Labels'
+        self.analyzerData.guiState.toggleLabels(self.plotData.names, alpha)
+        self.plotInteraction.checkAdjusted()
+
+    def showPoints(self):
+        self.analyzerData.guiState.showPoints(self.plotData.names)
+    
+    def unhighlightPoints(self):
+        self.analyzerData.guiState.unhighlightPoints(self.plotData.names)
 
     def setAnalyzerData(self, data):
         self.labelTab.setAnalyzerData(data)
@@ -360,8 +392,8 @@ class PlotTab(AnalyzerTab):
         self.variants = self.analyzerData.variants
         self.metrics = metrics
         # Update names for plot buttons
-        self.show_markers_button['command'] = lambda names=self.plotData.names : self.plotInteraction.showPoints(names)
-        self.unhighlight_button['command'] = lambda names=self.plotData.names : self.plotInteraction.unhighlightPoints(names)
+        self.show_markers_button['command'] = self.showPoints
+        self.unhighlight_button['command'] = self.unhighlightPoints
         # NavigationToolbar2Tk can only be created if there isn't anything in the grid
         for slave in self.plotFrame3.grid_slaves():
             slave.grid_forget()
@@ -575,6 +607,10 @@ class LabelTab(tk.Frame):
     def df(self):
         return self.levelData.df
 
+    @property
+    def current_metrics(self):
+        return [metric.get() for metric in self.metrics if metric.get() not in ['Metric 1', 'Metric 2', 'Metric 3']]
+
     # @property
     # def mappings(self):
     #     return self.levelData.mapping
@@ -592,9 +628,9 @@ class LabelTab(tk.Frame):
         self.guiState.add_observers(self)
 
     def notify(self, data):
-        current_metrics = self.guiState.labels
-        self.resetMetrics()
-        if current_metrics: self.setMetrics(current_metrics)
+        if self.current_metrics != self.guiState.labels:
+            self.resetMetrics()
+            if self.guiState.labels: self.setMetrics(self.guiState.labels)
 
     def setMetrics(self, metrics):
         for i, metric in enumerate(metrics):
@@ -616,8 +652,7 @@ class LabelTab(tk.Frame):
         self.guiState.reset_labels()
 
     def updateLabels(self):
-        current_metrics = [metric.get() for metric in self.metrics if metric.get() not in ['Metric 1', 'Metric 2', 'Metric 3']]
         # TODO: merge mapping speedups into master dataframe to avoid this check
-        current_metrics = [metric for metric in current_metrics if metric in self.df.columns.tolist()]
-        if not current_metrics: return # User hasn't selected any label metrics
-        self.guiState.setLabels(current_metrics)
+        new_metrics = [metric for metric in self.current_metrics if metric in self.df.columns.tolist()]
+        if not new_metrics: return # User hasn't selected any label metrics
+        self.guiState.setLabels(new_metrics)
