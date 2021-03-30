@@ -163,7 +163,7 @@ class PlotInteraction():
                 index += 1
         #self.root.after(0, self.canvas.draw)
         # TODO: WARNING global variable used here. May want to get it from GUI componenet.
-        root.after(0, self.canvas.draw)
+        self.canvas.get_tk_widget().after(0, self.canvas.draw)
         self.adjusted = True
         self.adjusting = False
         print('Done Adjust text')
