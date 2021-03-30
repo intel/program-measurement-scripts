@@ -711,7 +711,7 @@ class PlotData():
             alpha = 1
             if self.guiState.isHidden(name): alpha = 0
             self.name_marker[name].set_alpha(alpha)
-            self.name_text[name].set_alpha(alpha)
+            self.name_text[name].set_alpha(self.guiState.labelVisbility(name))
             # Unhighlight/highlight points
             if name in self.guiState.highlighted: self.highlight(self.name_marker[name])
             else: self.unhighlight(self.name_marker[name])

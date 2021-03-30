@@ -43,7 +43,6 @@ class PlotInteraction():
     def setAnalyzerData(self, analyzerData):
         self.analyzerData = analyzerData
         self.level = analyzerData.level
-        self.guiState.add_observers(self)
 
     def setPlotData(self, plotData):
         self.plotData = plotData
@@ -64,60 +63,28 @@ class PlotInteraction():
     def df(self):
         return self.analyzerData.levelData.df
 
-    def notify(self, data):
-        if not self.plotData:
-            return # Do nothing if no plot data
-        self.updateLabels()
-        # User could've changed the color of the labels: need to update marker colors
-
-    def removePoints(self, names):
-        self.guiState.removePoints(names)
-
-    def showPoints(self, names):
-        self.guiState.showPoints(names)
-
-    def unhighlightPoints(self, names):
-        self.guiState.unhighlightPoints(names)
-
-    def highlightPoints(self, names):
-        self.guiState.highlightPoints(names)
-
-    def updateLabels(self):
-        # Adjust labels if already adjusted
-        if self.adjusted:
-            self.adjustText()
-
-    def toggleLabels(self, button):
-        if button['text'] == 'Hide Labels':
-            button['text'] = 'Show Labels'
-            alpha = 0
-        else:
-            button['text'] = 'Hide Labels'
-            alpha = 1
-        self.plotData.toggleLabels(alpha, self.adjusted)
-
-    def setLims(self):
-        self.home_xlim = self.cur_xlim = self.plotData.ax.get_xlim()
-        self.home_ylim = self.cur_ylim = self.plotData.ax.get_ylim()
-
     def onClick(self, event):
         #print("(%f, %f)", event.xdata, event.ydata)
         # for child in self.plotData.ax.get_children():
         #     print(child)
         action = self.guiState.action_selected
-        selected = self.plotData.getSelected(event)
-        self.guiState.selectPoints(selected)
-
+        if action == 'Select Point':
+            selected = self.plotData.getSelected(event)
+            self.guiState.selectPoints(selected)
+            return
         if action == 'Choose Action': return
         for marker in self.plotData.markers:
             contains, points = marker.contains(event)
             if contains and marker.get_alpha():
+                name = self.plotData.marker_name[marker]
                 if action == 'Highlight Point': 
-                    if marker.get_marker() == 'o': self.highlightPoints([self.plotData.marker_name[marker]])
-                    else: self.unhighlightPoints([self.plotData.marker_name[marker]])
-                elif action == 'Remove Point': self.removePoints([self.plotData.marker_name[marker]])
-                elif action == 'Toggle Label': self.plotData.toggleLabel(marker)
-        self.canvas.draw()
+                    if marker.get_marker() == 'o': self.guiState.highlightPoints([name])
+                    else: self.guiState.unhighlightPoints([name])
+                elif action == 'Remove Point':
+                    self.guiState.removePoints([name]) 
+                elif action == 'Toggle Label': 
+                    alpha = not self.plotData.name_text[name].get_alpha()
+                    self.guiState.toggleLabel(name, alpha)
 
     def onDraw(self, event):
         if self.adjusted and (self.cur_xlim != self.plotData.ax.get_xlim() or self.cur_ylim != self.plotData.ax.get_ylim()) and \
@@ -126,6 +93,14 @@ class PlotInteraction():
             print("Ondraw adjusting")
             self.cur_xlim = self.plotData.ax.get_xlim()
             self.cur_ylim = self.plotData.ax.get_ylim()
+            self.adjustText()
+
+    def setLims(self):
+        self.home_xlim = self.cur_xlim = self.plotData.ax.get_xlim()
+        self.home_ylim = self.cur_ylim = self.plotData.ax.get_ylim()
+    
+    def checkAdjusted(self):
+        if self.adjusted:
             self.adjustText()
 
     def thread_adjustText(self):
