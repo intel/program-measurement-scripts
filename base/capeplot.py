@@ -589,7 +589,7 @@ class CapePlot:
         try: plt.tight_layout()
         except: print("plt.tight_layout() failed")
     
-        self.plotData = PlotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState)
+        self.plotData = PlotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState, self)
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
@@ -674,7 +674,7 @@ class CapePlot:
             ax.set_ylim((ymin, ymax))
 
 class PlotData():
-    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState):
+    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
         names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
         self.ys = ys
@@ -698,6 +698,7 @@ class PlotData():
         self.mappings = mymappings
         self.canvas = None
         self.guiState = guiState
+        self.plot = plot
         self.guiState.add_observers(self)
 
     def notify(self, data):
