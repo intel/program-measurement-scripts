@@ -38,6 +38,18 @@ class Observable:
     # def notify_plot_observers(self):
     #     for observer in self.observers:
     #         observer.plot_notify(self)
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't save observers as they are GUI components
+        #del state['observers']
+        if 'observers' in state:
+            state['observers'] = [o for o in state['observers'] if not isinstance(o, tk.Widget)]
+        return state
+    
+    # def __setstate__(self, state):
+    #     self.__dict__.update(state)
+    #     # Restore observers to []
+    #     self.observers = []
             
 class Observer:
     def __init__(self, observable):

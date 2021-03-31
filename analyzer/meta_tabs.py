@@ -302,10 +302,11 @@ class DataTab(AnalyzerTab):
     # def exportShownDataRawCSV(self):
     #     self.analyzerData.loadedData.exportShownDataRawCSV(tk.filedialog.asksaveasfilename(defaultextension=".raw.csv", filetypes=[("Cape Raw Data", "*.raw.csv")]))
 
-    def setLevelData(self, levelData):
-        guiState = levelData.guiState
+    def setupGuiState(self, guiState):
         guiState.add_observer(self)
-        return super().setLevelData(levelData)
+
+    def setupAnalyzerData(self, analyzerData):
+        analyzerData.add_observer(self)
 
     class ChooseColumnDialog(tk.simpledialog.Dialog):
         def body(self, master):

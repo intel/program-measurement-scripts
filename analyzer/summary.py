@@ -44,8 +44,8 @@ class SummaryTab(PlotTab):
     def __init__(self, parent):
         super().__init__(parent, CoverageData, 'Summary', MetricName.CAP_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
-    def notify(self, data):
-        super().notify(data)
+    # def notify(self, data):
+    #     super().notify(data)
 
     # # Create meta tabs
     # def buildTableTabs(self):

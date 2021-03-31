@@ -12,6 +12,7 @@ class AnalyzerController:
         self.setLoadedData(loadedData)
         self.gui.setControl(self)
 
+    # NOTE: This will also be the starting point of setting up the notification mechanism
     def setLoadedData(self, loadedData):
         self.loadedData = loadedData
         self.gui.setLoadedData(self.loadedData)

@@ -39,11 +39,11 @@ class Tab3d(PlotTab):
     def __init__(self, parent):
         super().__init__(parent, Data3d, '3D', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
 
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.analyzerData.df.columns.tolist()
-        super().setup(metrics)
-        self.buildTableTabs()
+    # def notify(self, data):
+    #     # Metrics to be displayed in the data table are unique for each plot
+    #     metrics = self.analyzerData.df.columns.tolist()
+    #     super().setup(metrics)
+    #     self.buildTableTabs()
     
     # Create meta tabs
     # def buildTableTabs(self):

@@ -46,10 +46,10 @@ class CustomTab(PlotTab):
     def __init__(self, parent):
         super().__init__(parent, CustomData, 'Custom', MN.RATE_FP_GFLOP_P_S, MN.COVERAGE_PCT, [])
 
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.analyzerData.df.columns.tolist()
-        super().setup(metrics)
+    # def notify(self, data):
+    #     # Metrics to be displayed in the data table are unique for each plot
+    #     metrics = self.analyzerData.df.columns.tolist()
+    #     super().setup(metrics)
 
     def update_plot(self):
         return super().update_plot().setData(self.analyzerData.capacityDataItems)
