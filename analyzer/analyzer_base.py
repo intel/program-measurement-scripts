@@ -195,8 +195,8 @@ class AnalyzerData(Observable):
         self.x_axis = None
         self.y_axis = None
         # Watch for updates in loaded data
-        #levelData.loadedData.add_observers(self)
-        levelData.add_observers(self)
+        #levelData.loadedData.add_observer(self)
+        levelData.add_observer(self)
 
     # Make df a property that refer to the right dataframe
     @property
@@ -287,7 +287,7 @@ class GuiBaseTab(tk.Frame):
     def setAnalyzerData(self, analyzerData):
         assert (analyzerData is not None)
         self.analyzerData = analyzerData
-        analyzerData.add_observers(self)
+        analyzerData.add_observer(self)
 
 class AnalyzerTab(GuiBaseTab):
     def __init__(self, parent, analyzerDataClass):
@@ -355,6 +355,17 @@ class PlotTab(AnalyzerTab):
         # Grid Layout
         self.axesTab.render()
         self.labelTab.render()
+        # Grid Layout
+        self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.action_menu.grid(column=5, row=0, sticky=tk.S)
+        self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
+        self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
+        self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
+        self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
+        self.chartButtonFrame.grid_rowconfigure(0, weight=1)
+        self.window.add(self.plotFrame, stretch='always')
+        self.window.add(self.tab_note, stretch='never')
+        self.plot = None
 
     def adjustText(self):
         self.plotData.adjustText()
@@ -387,6 +398,12 @@ class PlotTab(AnalyzerTab):
     # Subclass needs to override this method
     def mk_plot(self):
         raise Exception("Method needs to be overriden to create plots")
+    # Subclass needs to override this method. Return self.plot to ease chaining
+    def update_plot(self):
+        assert self.plot is not None
+        return self.plot.setLevelData(self.analyzerData.levelData).setLevel(self.analyzerData.level) \
+            .setScale(self.analyzerData.scale).setXaxis(self.analyzerData.x_axis).setYaxis(self.analyzerData.y_axis)\
+                .setMapping(self.analyzerData.mappings).setShortNamesPath(self.analyzerData.short_names_path)
     
     def setup(self, metrics):
         # Update attributes
@@ -394,26 +411,21 @@ class PlotTab(AnalyzerTab):
         if self.df.empty:
             return
 
-        plot = self.mk_plot()
-        plot.compute_and_plot()
-        self.fig, self.plotData = plot.fig, plot.plotData
+
+        if not self.plot:
+            self.plot = self.mk_plot()
+            self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
+        else:
+            self.update_plot()
+
+        self.plot.compute_and_plot()
+        self.fig, self.plotData = self.plot.fig, self.plot.plotData
         self.plotInteraction.setPlotData(self.plotData)
 
         self.variants = self.analyzerData.variants
         self.metrics = metrics
 
-        plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
 
-        # Grid Layout
-        self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.action_menu.grid(column=5, row=0, sticky=tk.S)
-        self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
-        self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
-        self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
-        self.adjust_button.grid(column=1, row=0, sticky=tk.S, pady=2)
-        self.chartButtonFrame.grid_rowconfigure(0, weight=1)
-        self.window.add(self.plotFrame, stretch='always')
-        self.window.add(self.tab_note, stretch='never')
 
         # Format columns for pandastable compatibility
         self.df.columns = ["{}".format(i) for i in self.df.columns]
@@ -616,7 +628,7 @@ class LabelTab(tk.Frame):
 
     def setAnalyzerData(self, data):
         self.data = data
-        self.guiState.add_observers(self)
+        self.guiState.add_observer(self)
 
     def notify(self, data):
         if self.current_metrics != self.guiState.labels:

@@ -51,6 +51,9 @@ class CustomTab(PlotTab):
         metrics = self.analyzerData.df.columns.tolist()
         super().setup(metrics)
 
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems)
+
     def mk_plot(self):
         return CustomPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'Custom', no_plot=False, gui=True, 
                           x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 

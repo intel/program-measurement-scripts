@@ -48,6 +48,8 @@ class TrawlTab(PlotTab):
     #     super().buildTableTabs()
         # self.axesTab = AxesTab(self.tableNote, self, 'TRAWL')
         # self.tableNote.add(self.axesTab, text="Axes")
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
         return TrawlPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'TRAWL', no_plot=False, 

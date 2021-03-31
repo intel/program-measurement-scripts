@@ -55,6 +55,8 @@ class SummaryTab(PlotTab):
         #TODO: find better way to display guideTab only when we have the required analytic metrics as now UVSQ has different analytics
         # self.guideTab = GuideTab(self.tableNote, self)
         # self.tableNote.add(self.guideTab, text='Guide')
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
         return CoveragePlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', "test", self.analyzerData.scale, "Coverage", no_plot=False, gui=True, 

@@ -56,6 +56,8 @@ class SIPlotTab(PlotTab):
         # self.filteringTab = FilteringTab(self.tableNote, self)
         # self.tableNote.add(self.clusterTab, text='Clusters')
         # self.tableNote.add(self.filteringTab, text='Filtering')
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.siDataItems)
 
     def mk_plot(self):
         # TODO: Work with Elias to use cherry pick rather than passing in filter data

@@ -437,15 +437,53 @@ class CapePlot:
         self.short_names_path = short_names_path
         self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         self.fig = None
-        self.plotData = None
+        self.fig, self.ax = plt.subplots()
+        self.ax.clear()
+        self.footnoteText = None
+        self.plotData = PlotData(df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, legend=None, title=title, 
+                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self)
 
+    def setData(self, data):
+        self.data = data
+        return self
+        
+        
+    def setLevelData(self, levelData):
+        self.levelData = levelData
+        return self
+
+    def setLevel(self, level):
+        self.level = level
+        return self
+
+    def setScale(self, scale):
+        self.scale = scale
+        return self
+
+    def setXaxis(self, x_axis):
+        self.x_axis = x_axis
+        return self
+
+    def setYaxis(self, y_axis):
+        self.y_axis = y_axis
+        return self
+
+    def setMapping(self, mapping):
+        # Unused
+        return self
+
+    def setShortNamesPath(self, path):
+        self.short_names_path = path
+        return self
+        
     # Getter of df, delegate to self.data
     @property
     def df(self):
-        if len(self.data) == 0:
-            return pd.DataFrame()
-        df = pd.concat([data.df for data in self.data], ignore_index=True)
-        return df
+        # if len(self.data) == 0:
+        #     return pd.DataFrame()
+        # df = pd.concat([data.df for data in self.data], ignore_index=True)
+        # return df
+        return self.levelData.df
 
     @property
     def mapping(self):
@@ -562,8 +600,12 @@ class CapePlot:
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
-        self.fig, ax = plt.subplots()
-        self.ax = ax
+        # if not self.fig:
+        #     self.fig, ax = plt.subplots()
+        #     self.ax = ax
+        # else:
+        self.ax.clear()
+        ax = self.ax
 
         xmin, xmax, ymin, ymax = self.get_min_max(xs, ys)
 
@@ -584,17 +626,19 @@ class CapePlot:
         ax.set_title(title, pad=40)
 
         # Add footnote with datafile and timestamp
-        plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
+        #plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
+        if self.footnoteText: self.footnoteText.remove()
+        self.footnoteText = self.fig.text(0, 0.005, self.levelData.source_title, horizontalalignment='left')
 
         # Legend
         legend = self.mk_legend(color_labels)
 
         # Arrows between multiple runs
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
-        try: plt.tight_layout()
-        except: print("plt.tight_layout() failed")
+        try: self.fig.tight_layout()
+        except: print("self.fig.tight_layout() failed")
     
-        self.plotData = PlotData(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState, self)
+        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState, self)
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
@@ -603,7 +647,7 @@ class CapePlot:
             markers.extend(ax.plot(x, y, marker='o', color=color, 
                                    label=name+str(timestamp), linestyle='', alpha=1))
         #texts = [plt.text(xs[i], ys[i], mytexts[i], alpha=1) for i in range(len(xs))]
-        texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
+        texts = [self.ax.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
     def mk_legend(self, color_labels):
@@ -665,16 +709,16 @@ class CapePlot:
             ax.set_xlim((0, xmax))
             ax.set_ylim((0, ymax))
         elif scale == 'log' or scale == 'loglog':
-            plt.xscale("log")
-            plt.yscale("log")
+            ax.set_xscale("log")
+            ax.set_yscale("log")
             ax.set_xlim((xmin, xmax))
             ax.set_ylim((ymin, ymax))
         elif scale == 'loglinear':
-            plt.xscale("log")
+            ax.set_xscale("log")
             ax.set_xlim((xmin, xmax))
             ax.set_ylim((0, ymax))
         elif scale == 'linearlog':
-            plt.yscale("log")
+            ax.set_yscale("log")
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
 
@@ -684,6 +728,12 @@ class CapePlot:
 
 class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
+        self.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot)
+        self.canvas = None
+        self.adjusted = False
+        self.adjusting = False
+
+    def setAttrs(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
         names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
         self.ys = ys
@@ -691,26 +741,27 @@ class PlotData():
         self.orig_mytext = copy.deepcopy(mytexts)
         self.ax = ax
         self.legend = legend
-        self.orig_legend = legend.get_title().get_text()
+        self.orig_legend = legend.get_title().get_text() if legend else None
         self.title = title
         self.texts = labels
         self.markers = markers
         self.names = names
         self.timestamps = df[TIMESTAMP].values.tolist()
-        self.marker_text = dict(zip(markers,labels))
-        self.marker_name = dict(zip(markers,names))
-        self.name_marker = dict(zip(names, markers))
-        self.name_text = dict(zip(names, labels))
+        self.marker_text = dict(zip(markers,labels)) if markers else None
+        self.marker_name = dict(zip(markers,names)) if markers else None
+        self.name_marker = dict(zip(names, markers)) if markers else None
+        self.name_text = dict(zip(names, labels)) if labels else None
         self.text_arrow = {}
-        self.text_name = dict(zip(labels, names))
+        self.text_name = dict(zip(labels, names)) if labels else None
         self.name_mapping = name_mapping
         self.mappings = mymappings
-        self.canvas = None
+        if hasattr(self, 'guiState') and self.guiState is not None:
+            self.guiState.rm_observer(self)
         self.guiState = guiState
+        self.guiState.add_observer(self)
         self.plot = plot
-        self.guiState.add_observers(self)
-        self.adjusted = False
-        self.adjusting = False
+        if hasattr(self, 'canvas') and self.canvas is not None:
+            self.canvas.draw()
 
     def notify(self, data):
         self.updateMarkers()
@@ -809,7 +860,7 @@ class PlotData():
                 if isinstance(child, matplotlib.text.Annotation) or (isinstance(child, matplotlib.text.Text) and child.get_text() not in [self.title, '', self.ax.get_title()]):
                     child.remove()
             # Create new texts that maintain the current visibility
-            self.texts = [plt.text(self.xs[i], self.ys[i], self.mytext[i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.mytext))]
+            self.texts = [self.ax.text(self.xs[i], self.ys[i], self.mytext[i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.mytext))]
             # Update marker to text mappings with the new texts
             self.marker_text = dict(zip(self.markers,self.texts))
             self.name_text = dict(zip(self.names,self.texts))
@@ -886,22 +937,25 @@ class PlotData():
                     self.guiState.toggleLabel(name, alpha)
 
     def setupFrames(self, fig, canvasFrame, chartButtonFrame):
-        # NavigationToolbar2Tk can only be created if there isn't anything in the grid
-        for slave in chartButtonFrame.grid_slaves():
-            slave.grid_forget()
-        # Refresh the canvas
-        for slave in canvasFrame.pack_slaves():
-            slave.destroy()
+        # # NavigationToolbar2Tk can only be created if there isn't anything in the grid
+        # for slave in chartButtonFrame.grid_slaves():
+        #     slave.grid_forget()
+        # # Refresh the canvas
+        # for slave in canvasFrame.pack_slaves():
+        #     slave.destroy()
         # Store initial xlim and ylim for adjustText 
         self.setLims()
         # Create canvas and toolbar for plot
         self.canvas = FigureCanvasTkAgg(fig, canvasFrame)
         self.canvas.mpl_connect('button_press_event', self.onClick)
         self.canvas.mpl_connect('draw_event', self.onDraw)
-        self.toolbar = NavigationToolbar2Tk(self.canvas, chartButtonFrame)
+        # Create a frame just for the NavigationToolbar2Tk as it requires pack layout,
+        # which may not be the case for chartButtonFrame
+        toolbarFrame = tk.Frame(chartButtonFrame)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, toolbarFrame)
         self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
         self.canvas.draw()
-        self.toolbar.grid(column=7, row=0, sticky=tk.S)
+        toolbarFrame.grid(column=7, row=0, sticky=tk.S)
         self.toolbar.update()
     
 

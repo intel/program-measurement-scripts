@@ -50,6 +50,8 @@ class Tab3d(PlotTab):
     #     super().buildTableTabs()
         # self.axesTab = AxesTab(self.tableNote, self, 'Custom')
         # self.tableNote.add(self.axesTab, text="Axes")
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems).setZaxis(self.analyzerData.z_axis)
 
     def mk_plot(self):
         return Plot3d(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, '3D', no_plot=False, gui=True, 

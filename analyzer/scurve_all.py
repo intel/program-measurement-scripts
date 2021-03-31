@@ -46,6 +46,8 @@ class ScurveAllTab(PlotTab):
     #     super().buildTableTabs()
         # self.axesTab = AxesTab(self.tableNote, self, 'Scurve')
         # self.tableNote.add(self.axesTab, text="Axes")
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
         return ScurveAllPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'S-Curve All', no_plot=False, gui=True, 

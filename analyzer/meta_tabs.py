@@ -304,7 +304,7 @@ class DataTab(AnalyzerTab):
 
     def setLevelData(self, levelData):
         guiState = levelData.guiState
-        guiState.add_observers(self)
+        guiState.add_observer(self)
         return super().setLevelData(levelData)
 
     class ChooseColumnDialog(tk.simpledialog.Dialog):
@@ -413,7 +413,7 @@ class GuideTab(tk.Frame):
         self.canvas = tk.Canvas(self, width=500, height=250)
         self.canvas.pack(side=tk.LEFT)
         self.fsm = FSM(self)
-        self.fsm.add_observers(self)
+        self.fsm.add_observer(self)
         self.img = tk.PhotoImage(file=self.fsm.file)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 

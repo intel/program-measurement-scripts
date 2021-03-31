@@ -13,9 +13,13 @@ class Observable:
     def set_updated(self):
         self.updated = True
         
-    def add_observers(self, observer):
-        assert observer not in self.observers
-        self.observers.append(observer)
+    def add_observer(self, observer):
+        if observer not in self.observers:
+            self.observers.append(observer)
+
+    def rm_observer(self, observer):
+        if observer in self.observers:
+            self.observers.remove(observer)
 
     def notify_observers(self):
         if not self.updated:
@@ -37,7 +41,7 @@ class Observable:
             
 class Observer:
     def __init__(self, observable):
-        observable.add_observers(self)
+        observable.add_observer(self)
         
     def notify(self, observable):
         print("Notified from ", observable)
