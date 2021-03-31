@@ -369,8 +369,8 @@ class FilteringTab(AnalyzerTab):
 
     def buildPointSelector(self):
         options = ('[' + self.analyzerData.df[SHORT_NAME] + '] ' + self.analyzerData.df[NAME] + ' [' + self.analyzerData.df[TIMESTAMP].astype(str) + ']').tolist()
-        names = (self.analyzerData.df[NAME] + self.analyzerData.df[TIMESTAMP].astype(str)).tolist()
-        self.pointSelector = PointSelector(self, options, self.analyzerData.guiState.hidden, names)
+        self.names = (self.analyzerData.df[NAME] + self.analyzerData.df[TIMESTAMP].astype(str)).tolist()
+        self.pointSelector = PointSelector(self, options, self.analyzerData.guiState.hidden, self.names)
         # self.pointSelector.restoreState(self.stateDictionary)
 
     def setOptions(self):

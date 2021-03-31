@@ -122,6 +122,9 @@ class PerLevelGuiState(Observable):
         if metric:
             df = self.levelData.df.loc[(self.levelData.df[metric] < minimum) | (self.levelData.df[metric] > maximum)]
             self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
+        self.hidden = list(dict.fromkeys(self.hidden))
+        self.showLabels()
+        self.hideLabels(self.hidden)
         self.updated_notify_observers()
 
     def removePoints(self, names):
@@ -143,6 +146,14 @@ class PerLevelGuiState(Observable):
 
     def isHidden(self, name):
         return name in self.hidden
+
+    def hideLabels(self, names):
+        for name in names:
+            self.label_visibility[name] = 0
+
+    def showLabels(self):
+        for name in self.label_visibility:
+            self.label_visibility[name] = 1
     
     def labelVisbility(self, name):
         alpha = 1
