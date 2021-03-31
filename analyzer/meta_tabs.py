@@ -347,6 +347,7 @@ class FilteringTab(AnalyzerTab):
         self.setOptions()
         self.buildPointSelector()
         self.buildVariantSelector()
+        self.buildActionSelector()
         # Grid setup
         self.pointSelector.grid(row=0, column=0)
         self.variantSelector.grid(row=0, column=1)
@@ -356,7 +357,18 @@ class FilteringTab(AnalyzerTab):
         self.min_entry.grid(row=1, column=2, sticky=tk.NW)
         self.max_label.grid(row=2, column=1, sticky=tk.NW)
         self.max_entry.grid(row=2, column=2, sticky=tk.NW)
+        self.action_menu.grid(row=3, column=1, pady=10, sticky=tk.NW)
         self.update_button.grid(row=0, column=3, sticky=tk.N)
+
+    def buildActionSelector(self):
+        self.action_selected = tk.StringVar(value='Choose Action')
+        self.action_selected.trace('w', self.action_selected_callback)
+        action_options = ['Choose Action', 'Select Point', 'Highlight Point', 'Remove Point', 'Toggle Label']
+        self.action_menu = tk.OptionMenu(self.threshold_frame, self.action_selected, *action_options)
+        self.action_menu['menu'].insert_separator(1)
+
+    def action_selected_callback(self, *args):
+        self.analyzerData.guiState.action_selected = self.action_selected.get()
 
     def buildVariantSelector(self):
         all_variants = self.analyzerData.df[VARIANT].unique()

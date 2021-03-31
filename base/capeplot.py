@@ -955,7 +955,7 @@ class PlotData():
         self.toolbar = NavigationToolbar2Tk(self.canvas, toolbarFrame)
         self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
         self.canvas.draw()
-        toolbarFrame.grid(column=7, row=0, sticky=tk.S)
+        toolbarFrame.grid(column=5, row=0, sticky=tk.S)
         self.toolbar.update()
     
 

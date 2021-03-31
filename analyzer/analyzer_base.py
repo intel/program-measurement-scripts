@@ -348,11 +348,6 @@ class PlotTab(AnalyzerTab):
         self.toggle_labels_button = tk.Button(self.chartButtonFrame, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.chartButtonFrame, text='Show Points')
         self.unhighlight_button = tk.Button(self.chartButtonFrame, text='Unhighlight')
-        self.action_selected = tk.StringVar(value='Choose Action')
-        self.action_selected.trace('w', self.action_selected_callback)
-        action_options = ['Choose Action', 'Select Point', 'Highlight Point', 'Remove Point', 'Toggle Label']
-        self.action_menu = tk.OptionMenu(self.chartButtonFrame, self.action_selected, *action_options)
-        self.action_menu['menu'].insert_separator(1)
         # Notebook of plot specific tabs
         self.tab_note = ttk.Notebook(self.window)
         self.axesTab = AxesTab(self.tab_note, self)
@@ -368,7 +363,6 @@ class PlotTab(AnalyzerTab):
         self.labelTab.render()
         # Grid Layout
         self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.action_menu.grid(column=5, row=0, sticky=tk.S)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
@@ -380,10 +374,6 @@ class PlotTab(AnalyzerTab):
 
     def adjustText(self):
         self.plotData.adjustText()
-        
-        
-    def action_selected_callback(self, *args):
-        self.analyzerData.guiState.action_selected = self.action_selected.get()
     
     def toggleLabels(self):
         alpha = 1
