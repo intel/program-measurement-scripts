@@ -730,6 +730,20 @@ class CapePlot:
         # NavigationToolbar2Tk can only be created if there isn't anything in the grid
         self.plotData.setupFrames(self.fig, canvasFrame, chartButtonFrame)
 
+    def adjustText(self):
+        self.plotData.adjustText()
+
+    def toggleLabels(self, alpha):
+        self.plotData.toggleLabels(alpha)
+
+    def showPoints(self):
+        self.plotData.showPoints()
+
+    def unhighlightPoints(self):
+        self.plotData.unhighlightPoints()
+        
+
+
 class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
@@ -827,7 +841,7 @@ class PlotData():
 
     def toggleLabels(self, alpha):
         self.guiState.toggleLabels(self.names, alpha)
-        self.plotData.checkAdjusted()
+        self.checkAdjusted()
 
     def showPoints(self):
         self.guiState.showPoints(self.names)

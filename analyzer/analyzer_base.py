@@ -388,7 +388,7 @@ class PlotTab(AnalyzerTab):
         self.tab_note.add(self.axesTab, text='Axes')
         self.labelTab = LabelTab(self.tab_note)
         self.tab_note.add(self.labelTab, text='Labels')
-        self.plotData = None
+        #self.plotData = None
         # Update names for plot buttons
         self.show_markers_button['command'] = self.showPoints
         self.unhighlight_button['command'] = self.unhighlightPoints
@@ -408,7 +408,7 @@ class PlotTab(AnalyzerTab):
         self.plotUpdater = PlotTab.PlotUpdater(self)
 
     def adjustText(self):
-        self.plotData.adjustText()
+        self.plot.adjustText()
     
     def toggleLabels(self):
         alpha = 1
@@ -417,13 +417,13 @@ class PlotTab(AnalyzerTab):
             alpha = 0
         else:
             self.toggle_labels_button['text'] = 'Hide Labels'
-        self.plotData.toggleLabels(alpha)
+        self.plot.toggleLabels(alpha)
 
     def showPoints(self):
-        self.plotData.showPoints()
+        self.plot.showPoints()
     
     def unhighlightPoints(self):
-        self.plotData.unhighlightPoints()
+        self.plot.unhighlightPoints()
 
     def setupGuiState(self, guiState):
         super().setupGuiState(guiState)
