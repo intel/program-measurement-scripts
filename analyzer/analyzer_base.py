@@ -134,6 +134,10 @@ class PerLevelGuiState(Observable):
             self.label_visibility[name] = 0
         self.updated_notify_observers()
 
+    # remove data with provided name and timestamp info
+    def removeData(self, nameTimestampDf):
+        self.removePoints(self.get_encoded_names(nameTimestampDf).tolist())
+
     def selectPoints(self, names):
         self.selected = names
         self.updated_notify_observers()

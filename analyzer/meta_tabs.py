@@ -277,11 +277,20 @@ class DataTab(AnalyzerTab):
                 #mymenu = tk.Menu(popupmenu, tearoff = 0)
                 #popupmenu.add_cascade(label='Cape', menu=mymenu)
             popupmenu.add_command(label='Highlight')
+            popupmenu.add_command(label='Remove', command=lambda: self.remove(event, rows, cols, outside))
 
             popupmenu.bind("<FocusOut>", popupFocusOut)
             popupmenu.focus_set()
             popupmenu.post(event.x_root, event.y_root)
             return popupmenu
+
+        def remove(self, event, rows, cols, outside):
+            rowclicked = self.get_row_clicked(event)
+            colclicked = self.get_col_clicked(event)
+            print(f'remove: ({rowclicked}, {colclicked})')
+            self.model.df.iloc[rows][KEY_METRICS]
+
+            
     
     def __init__(self, parent, metrics=[], variants=[]):
         super().__init__(parent, DataTabData)
