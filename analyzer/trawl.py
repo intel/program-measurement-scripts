@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_TRAWL import trawl_plot
 from generate_TRAWL import TrawlPlot
@@ -13,9 +13,9 @@ from meta_tabs import ShortNameTab, AxesTab, MappingsTab
 from metric_names import MetricName
 globals().update(MetricName.__members__)
 
-class TRAWLData(AnalyzerData):
+class TRAWLData(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, 'TRAWL')
+        super().__init__(loadedData, level, 'TRAWL', x_axis=MetricName.CAP_FP_GFLOP_P_S, y_axis=SPEEDUP_VEC)
     
     # def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
     #     print("TRAWLData Notified from ", loadedData)
@@ -40,8 +40,7 @@ class TRAWLData(AnalyzerData):
 
 class TrawlTab(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, TRAWLData, 'TRAWL', MetricName.CAP_FP_GFLOP_P_S, SPEEDUP_VEC,
-                         [SPEEDUP_VEC, SPEEDUP_DL1])
+        super().__init__(parent, TRAWLData, 'TRAWL', [SPEEDUP_VEC, SPEEDUP_DL1])
 
     # # Create meta tabs
     # def buildTableTabs(self):

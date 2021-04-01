@@ -202,9 +202,6 @@ class AnalyzerData(Observable):
         self.name = name
         #self.gui = gui
         #self.root = root
-        self.scale = "linear"
-        self.x_axis = None
-        self.y_axis = None
         # Watch for updates in loaded data
         #levelData.loadedData.add_observer(self)
         #levelData.add_observer(self)
@@ -346,6 +343,14 @@ class AnalyzerTab(GuiBaseTab):
     #     #self.short_names_path = self.data.short_names_path
     #     return self
 
+class PlotAnalyzerData(AnalyzerData):
+    def __init__(self, loadedData, level, name, x_axis, y_axis):
+        super().__init__(loadedData, level, name)
+        self.scale = "linear"
+        self.x_axis = x_axis
+        self.y_axis = y_axis
+        self.x_scale = 'linear'
+        self.y_scale = 'linear'
     
 class PlotTab(AnalyzerTab):
     class PlotUpdater:
@@ -355,13 +360,9 @@ class PlotTab(AnalyzerTab):
         def notify(self, data):
             self.plotTab.try_adjust_plot()
     
-    def __init__(self, parent, analyzerDataClass, title='', x_axis='', y_axis='', extra_metrics=[], name=''):
+    def __init__(self, parent, analyzerDataClass, title='', extra_metrics=[], name=''):
         super().__init__(parent, analyzerDataClass)
         self.title = 'FE_tier1'
-        self.x_scale = self.orig_x_scale = 'linear'
-        self.y_scale = self.orig_y_scale = 'linear'
-        self.x_axis = self.orig_x_axis = x_axis
-        self.y_axis = self.orig_y_axis = y_axis
         self.variants = []
         self.current_labels = []
         self.extra_metrics = extra_metrics
@@ -416,14 +417,13 @@ class PlotTab(AnalyzerTab):
             alpha = 0
         else:
             self.toggle_labels_button['text'] = 'Hide Labels'
-        self.analyzerData.guiState.toggleLabels(self.plotData.names, alpha)
-        self.plotData.checkAdjusted()
+        self.plotData.toggleLabels(alpha)
 
     def showPoints(self):
-        self.analyzerData.guiState.showPoints(self.plotData.names)
+        self.plotData.showPoints()
     
     def unhighlightPoints(self):
-        self.analyzerData.guiState.unhighlightPoints(self.plotData.names)
+        self.plotData.unhighlightPoints()
 
     def setupGuiState(self, guiState):
         super().setupGuiState(guiState)
@@ -502,10 +502,10 @@ class PlotTab(AnalyzerTab):
         self.full_plot()
 
     def resetTabValues(self):
-        self.x_scale = self.orig_x_scale
-        self.y_scale = self.orig_y_scale
-        self.x_axis = self.orig_x_axis
-        self.y_axis = self.orig_y_axis
+        # self.x_scale = self.orig_x_scale
+        # self.y_scale = self.orig_y_scale
+        # self.x_axis = self.orig_x_axis
+        # self.y_axis = self.orig_y_axis
         #self.variants = [self.data.loadedData.default_variant] #TODO: edit this out
         self.variants = []
         self.current_labels = []

@@ -825,21 +825,31 @@ class PlotData():
         self.legend.get_title().set_text(newTitle)
         self.canvas.draw()
 
-    def toggleLabel(self, marker):
-        label = self.marker_text[marker]
-        label.set_alpha(not label.get_alpha())
-        if label in self.text_arrow: self.text_arrow[label].set_visible(label.get_alpha())
-        self.canvas.draw()
+    def toggleLabels(self, alpha):
+        self.guiState.toggleLabels(self.names, alpha)
+        self.plotData.checkAdjusted()
+
+    def showPoints(self):
+        self.guiState.showPoints(self.names)
+
+    def unhighlightPoints(self):
+        self.guiState.unhighlightPoints(self.names)
+
+    # def toggleLabel(self, marker):
+    #     label = self.marker_text[marker]
+    #     label.set_alpha(not label.get_alpha())
+    #     if label in self.text_arrow: self.text_arrow[label].set_visible(label.get_alpha())
+    #     self.canvas.draw()
     
-    def toggleLabels(self, alpha, adjusted):
-        for marker in self.marker_text:
-            if marker.get_alpha(): 
-                self.marker_text[marker].set_alpha(alpha) 
-                if adjusted: 
-                    # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
-                    # TODO: Create "marker:arrow" to simplify this statement
-                    if self.marker_text[marker] in self.text_arrow: self.text_arrow[self.marker_text[marker]].set_visible(alpha)
-        self.canvas.draw()
+    # def toggleLabels(self, alpha, adjusted):
+    #     for marker in self.marker_text:
+    #         if marker.get_alpha(): 
+    #             self.marker_text[marker].set_alpha(alpha) 
+    #             if adjusted: 
+    #                 # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
+    #                 # TODO: Create "marker:arrow" to simplify this statement
+    #                 if self.marker_text[marker] in self.text_arrow: self.text_arrow[self.marker_text[marker]].set_visible(alpha)
+    #     self.canvas.draw()
 
     def highlight(self, marker):
         text = self.marker_text[marker]

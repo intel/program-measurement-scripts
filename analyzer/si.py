@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable, resource_path
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_SI import parse_ip_df as parse_ip_siplot_df
 from generate_SI import SiData
@@ -12,14 +12,14 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab, FilteringTab, DataTab
-from metric_names import MetricName
-from metric_names import NonMetricName
+from metric_names import MetricName as MN
+from metric_names import NonMetricName as NMN
 from sat_analysis import do_sat_analysis as find_si_clusters
-globals().update(MetricName.__members__)
+#globals().update(MetricName.__members__)
 
-class SIPlotData(AnalyzerData):
+class SIPlotData(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, 'SIPlot')
+        super().__init__(loadedData, level, 'SIPlot', x_axis=MN.INTENSITY, y_axis=MN.SATURATION)
         self.run_cluster = True
 
     # def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, cluster=resource_path(os.path.join('clusters', 'FE_tier1.csv')), title="FE_tier1", \
@@ -45,8 +45,8 @@ class SIPlotData(AnalyzerData):
 
 class SIPlotTab(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, SIPlotData, 'FE_tier1', 'Intensity', 'Saturation',
-                         ['Saturation', 'Intensity', 'SI', NonMetricName.SI_CLUSTER_NAME])
+        super().__init__(parent, SIPlotData, 'FE_tier1',
+                         ['Saturation', 'Intensity', 'SI', NMN.SI_CLUSTER_NAME])
         self.cluster = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
     
     # Create meta tabs

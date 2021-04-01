@@ -3,7 +3,7 @@ import math
 import numpy as np
 import tkinter as tk
 from utils import Observable
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_scurve_all import scurve_all_plot
 from generate_scurve_all import ScurveAllPlot
@@ -13,12 +13,12 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab
-from metric_names import MetricName
-globals().update(MetricName.__members__)
+from metric_names import MetricName as MN
+#globals().update(MetricName.__members__)
 
-class ScurveAllData(AnalyzerData):
+class ScurveAllData(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, 'Scurve_all')
+        super().__init__(loadedData, level, 'Scurve_all', x_axis=MN.CAP_FP_GFLOP_P_S, y_axis=MN.CAP_FP_GFLOP_P_S)
     
     # def notify(self, loadedData, x_axis=None, y_axis=MetricName.CAP_FP_GFLOP_P_S, variants=[], update=False, scale='linear', level='Codelet', mappings=pd.DataFrame()):
     #     print("Scurve_allData Notified from ", loadedData)
@@ -35,8 +35,7 @@ class ScurveAllData(AnalyzerData):
 
 class ScurveAllTab(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, ScurveAllData, 'Scurve_all', 
-                         MetricName.CAP_FP_GFLOP_P_S, MetricName.CAP_FP_GFLOP_P_S, [])
+        super().__init__(parent, ScurveAllData, 'Scurve_all', [])
 
     def get_metrics(self):
         return self.analyzerData.df.columns.tolist()

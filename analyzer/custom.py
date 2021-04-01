@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_custom import custom_plot
 from generate_custom import CustomPlot
@@ -13,9 +13,9 @@ from meta_tabs import ShortNameTab, AxesTab, MappingsTab
 from metric_names import MetricName as MN
 #globals().update(MetricName.__members__)
 
-class CustomData(AnalyzerData):
+class CustomData(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, 'Custom')
+        super().__init__(loadedData, level, 'Custom', x_axis=MN.RATE_FP_GFLOP_P_S, y_axis=MN.COVERAGE_PCT)
 
     # def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
     #     print("CustomData Notified from ", loadedData)
@@ -44,7 +44,7 @@ class CustomData(AnalyzerData):
 
 class CustomTab(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, CustomData, 'Custom', MN.RATE_FP_GFLOP_P_S, MN.COVERAGE_PCT, [])
+        super().__init__(parent, CustomData, 'Custom', [])
 
     # def notify(self, data):
     #     # Metrics to be displayed in the data table are unique for each plot

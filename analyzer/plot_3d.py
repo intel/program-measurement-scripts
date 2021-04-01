@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_3d import plot_3d
 from generate_3d import Plot3d
@@ -10,12 +10,12 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab
-from metric_names import MetricName
-globals().update(MetricName.__members__)
+from metric_names import MetricName as MN
+#globals().update(MetricName.__members__)
 
-class Data3d(AnalyzerData):
+class Data3d(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, '3D')
+        super().__init__(loadedData, level, '3D', x_axis=MN.RATE_FP_GFLOP_P_S, y_axis=MN.COVERAGE_PCT)
 
 #     def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
 #         print("Data3d Notified from ", loadedData)
@@ -37,7 +37,7 @@ class Data3d(AnalyzerData):
 
 class Tab3d(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, Data3d, '3D', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
+        super().__init__(parent, Data3d, '3D', [])
 
     # def notify(self, data):
     #     # Metrics to be displayed in the data table are unique for each plot

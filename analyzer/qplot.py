@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import PlotTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_QPlot import parse_ip_df as parse_ip_qplot_df
 from generate_QPlot import QPlot
@@ -10,12 +10,12 @@ from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab
-from metric_names import MetricName
-globals().update(MetricName.__members__)
+from metric_names import MetricName as MN
+#globals().update(MetricName.__members__)
 
-class QPlotData(AnalyzerData):
+class QPlotData(PlotAnalyzerData):
     def __init__(self, loadedData, level):
-        super().__init__(loadedData, level, 'QPlot')
+        super().__init__(loadedData, level, 'QPlot', x_axis=MN.CAP_FP_GFLOP_P_S, y_axis=MN.CAP_MEMMAX_GB_P_S)
         # TODO: Try removing all of these attributes
         # self.df = None
         self.fig = None
@@ -53,9 +53,8 @@ class QPlotData(AnalyzerData):
 
 class QPlotTab(PlotTab):
     def __init__(self, parent):
-        super().__init__(parent, QPlotData, 'QPlot', MetricName.CAP_FP_GFLOP_P_S, 
-                         MetricName.CAP_MEMMAX_GB_P_S, [MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, \
-                MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S])
+        super().__init__(parent, QPlotData, 'QPlot', [MN.CAP_L1_GB_P_S, MN.CAP_L2_GB_P_S, MN.CAP_L3_GB_P_S, \
+                MN.CAP_RAM_GB_P_S, MN.CAP_MEMMAX_GB_P_S])
 
     # Create meta tabs
     # def buildTableTabs(self):
