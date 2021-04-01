@@ -640,6 +640,8 @@ class CapePlot:
             name = name+str(timestamp)
             name_marker[name].set_color(color) 
 
+        self.draw_contours(xmax, ymax)
+
         # labels, markers = self.plot_markers_and_labels(self.df, xs, ys, mytexts)
         # (x, y) = zip(*DATA)
 
