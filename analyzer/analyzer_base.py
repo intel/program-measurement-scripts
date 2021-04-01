@@ -354,7 +354,7 @@ class PlotTab(AnalyzerTab):
             self.plotTab = plotTab
 
         def notify(self, data):
-            pass
+            self.plotTab.try_adjust_plot()
     
     def __init__(self, parent, analyzerDataClass, title='', x_axis='', y_axis='', extra_metrics=[], name=''):
         super().__init__(parent, analyzerDataClass)
@@ -405,6 +405,7 @@ class PlotTab(AnalyzerTab):
         self.window.add(self.plotFrame, stretch='always')
         self.window.add(self.tab_note, stretch='never')
         self.plot = None
+        self.plotUpdater = PlotTab.PlotUpdater(self)
 
     def adjustText(self):
         self.plotData.adjustText()
@@ -425,8 +426,14 @@ class PlotTab(AnalyzerTab):
     def unhighlightPoints(self):
         self.analyzerData.guiState.unhighlightPoints(self.plotData.names)
 
-    def setupAnalyzerData(self, data):
-        super().setupAnalyzerData(data)
+
+    def setupGuiState(self, guiState):
+        super().setupGuiState(guiState)
+        guiState.add_observer(self.plotUpdater)
+    
+    def setupAnalyzerData(self, analyzerData):
+        super().setupAnalyzerData(analyzerData)
+        analyzerData.add_observer(self.plotUpdater)
         #self.labelTab.setAnalyzerData(data)
         #self.plotInteraction.setAnalyzerData(data)
 
@@ -445,7 +452,17 @@ class PlotTab(AnalyzerTab):
             .setScale(self.analyzerData.scale).setXaxis(self.analyzerData.x_axis).setYaxis(self.analyzerData.y_axis)\
                 .setMapping(self.analyzerData.mappings).setShortNamesPath(self.analyzerData.short_names_path)
     
-    def setup(self):
+    # Try to adjust current plot without replotting
+    def try_adjust_plot(self):
+        if not self.plot: return
+        if self.analyzerData.x_axis == self.plot.x_axis and self.analyzerData.y_axis == self.plot.y_axis:
+            # Can reuse plot if x- and y- axes are not changed
+            self.plot.adjust_plot(self.analyzerData.scale)
+        else:
+            self.full_plot()
+    
+    # full fledge plotting of data
+    def full_plot(self):
         # Update attributes
         self.df = self.analyzerData.df
         if self.df.empty:
@@ -458,8 +475,8 @@ class PlotTab(AnalyzerTab):
             self.update_plot()
 
         self.plot.compute_and_plot()
-        self.fig, self.plotData = self.plot.fig, self.plot.plotData
-        self.plotInteraction.setPlotData(self.plotData)
+        #self.fig, self.plotData = self.plot.fig, self.plot.plotData
+        #self.plotInteraction.setPlotData(self.plotData)
 
         #self.variants = self.analyzerData.variants
         #self.metrics = metrics
@@ -479,7 +496,7 @@ class PlotTab(AnalyzerTab):
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
         #metrics = self.get_metrics()
-        self.setup()
+        self.full_plot()
 
     def resetTabValues(self):
         self.x_scale = self.orig_x_scale
@@ -659,7 +676,6 @@ class LabelTab(AnalyzerTab):
         return metric
 
     def varChanged(self, idx):
-        print(f'changed:{idx}')
         self.analyzerData.setMetric(idx, self.metrics[idx].get())
         
 

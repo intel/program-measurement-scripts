@@ -432,8 +432,8 @@ class CapePlot:
         self.title = title
         self.no_plot = no_plot
         self.gui = gui
-        self.x_axis = x_axis
-        self.y_axis = y_axis
+        self._x_axis = x_axis
+        self._y_axis = y_axis
         self.short_names_path = short_names_path
         self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         self.fig = None
@@ -441,7 +441,8 @@ class CapePlot:
         self.ax.clear()
         self.footnoteText = None
         self.plotData = PlotData(df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, legend=None, title=title, 
-                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self)
+                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self, 
+                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=variant)
 
     def setData(self, data):
         self.data = data
@@ -461,11 +462,11 @@ class CapePlot:
         return self
 
     def setXaxis(self, x_axis):
-        self.x_axis = x_axis
+        self._x_axis = x_axis
         return self
 
     def setYaxis(self, y_axis):
-        self.y_axis = y_axis
+        self._y_axis = y_axis
         return self
 
     def setMapping(self, mapping):
@@ -517,11 +518,19 @@ class CapePlot:
     def filter_data_points(self, in_df):
         return in_df
         
+    @property
+    def x_axis(self):
+        return self._x_axis if self._x_axis else self.default_x_axis
+
+    @property
+    def y_axis(self):
+        return self._y_axis if self._y_axis else self.default_y_axis
+
     def compute_and_plot(self):
         variant = self.variant
         outputfile_prefix = self.outputfile_prefix
         scale = self.scale
-        title = self.title
+        #title = self.title
         no_plot = self.no_plot
         gui = self.gui
         x_axis = self.x_axis
@@ -543,14 +552,8 @@ class CapePlot:
             return 
 
         mytext = self.mk_labels()
-        if x_axis:
-            xs = df[x_axis]
-        else:
-            xs = df[self.default_x_axis]
-        if y_axis: 
-            ys = df[y_axis]
-        else: 
-            ys = df[self.default_y_axis]
+        xs = df[x_axis]
+        ys = df[y_axis]
     
         today = datetime.date.today()
         if gui:
@@ -558,8 +561,11 @@ class CapePlot:
         else:
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
-        self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, mytext, 
+        self.plot_data(self.extend_plot_title(variant, scale), outputfile, xs, ys, mytext, 
                        scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis)
+
+    def extend_plot_title(self, variant, scale):
+        return self.mk_plot_title(self.title, variant, scale)
 
     def draw_contours(self, xmax, ymax, color_labels):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
@@ -595,9 +601,16 @@ class CapePlot:
         ymin=min(finiteYs, default=0)
         return xmin, xmax, ymin, ymax
         
+    # Try to adjust the plot without replotting it.
+    def adjust_plot(self, scale):
+        print("Updater plot")
+        # Will call back to self.plot_rest() with some info saved in plotData
+        # TODO: Need to update to handle color legend update
+        self.plotData.plot_adjustable(scale)
+        
+        
     # Set filename to [] for GUI output
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
-        x_axis=None, y_axis=None, mappings=pd.DataFrame()):
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, x_axis, y_axis, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
         # if not self.fig:
@@ -609,36 +622,46 @@ class CapePlot:
 
         xmin, xmax, ymin, ymax = self.get_min_max(xs, ys)
 
-        # Set specified axis scales
-        self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
-
-        # (x, y) = zip(*DATA)
-
         # Draw contours
         self.draw_contours(xmax, ymax, color_labels)
 
         # Plot data points
         labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts, color_labels)
 
-        #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-        ax.set(xlabel=x_axis if x_axis else self.default_x_axis, \
-            ylabel=y_axis if y_axis else self.default_y_axis)
-        ax.set_title(title, pad=40)
+        # Arrows between multiple runs
+        name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
 
         # Add footnote with datafile and timestamp
         #plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
         if self.footnoteText: self.footnoteText.remove()
         self.footnoteText = self.fig.text(0, 0.005, self.levelData.source_title, horizontalalignment='left')
 
+        ax.set(xlabel=x_axis, ylabel=y_axis)
+        
         # Legend
         legend = self.mk_legend(color_labels)
 
-        # Arrows between multiple runs
-        name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
+        # Plot rest of the plot (which can be adjusted later)
+        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title)
+
         try: self.fig.tight_layout()
         except: print("self.fig.tight_layout() failed")
     
-        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, self.guiState, self)
+        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+                               name_mapping, mymappings, self.guiState, self, xmax, ymax, xmin, ymin, 
+                               self.variant)
+
+    # TODO: Need to be able to update color labels
+    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title):
+        # Set specified axis scales
+        ax = self.ax
+        self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
+
+        # (x, y) = zip(*DATA)
+
+        #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
+        ax.set_title(title, pad=40)
+
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
         ax = self.ax
@@ -706,6 +729,8 @@ class CapePlot:
     def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
         ax = self.ax
         if scale == 'linear' or scale == 'linearlinear':
+            ax.set_xscale("linear")
+            ax.set_yscale("linear")
             ax.set_xlim((0, xmax))
             ax.set_ylim((0, ymax))
         elif scale == 'log' or scale == 'loglog':
@@ -715,9 +740,11 @@ class CapePlot:
             ax.set_ylim((ymin, ymax))
         elif scale == 'loglinear':
             ax.set_xscale("log")
+            ax.set_yscale("linear")
             ax.set_xlim((xmin, xmax))
             ax.set_ylim((0, ymax))
         elif scale == 'linearlog':
+            ax.set_xscale("linear")
             ax.set_yscale("log")
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
@@ -727,13 +754,16 @@ class CapePlot:
         self.plotData.setupFrames(self.fig, canvasFrame, chartButtonFrame)
 
 class PlotData():
-    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
-        self.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot)
+    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
+        self.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+                      name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant)
         self.canvas = None
         self.adjusted = False
         self.adjusting = False
 
-    def setAttrs(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, name_mapping, mymappings, guiState, plot):
+    def setAttrs(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
         names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
         self.ys = ys
@@ -758,14 +788,22 @@ class PlotData():
         if hasattr(self, 'guiState') and self.guiState is not None:
             self.guiState.rm_observer(self)
         self.guiState = guiState
-        self.guiState.add_observer(self)
+        #self.guiState.add_observer(self)
         self.plot = plot
         if hasattr(self, 'canvas') and self.canvas is not None:
             self.canvas.draw()
+        self.xmax = xmax
+        self.ymax = ymax
+        self.xmin = xmin
+        self.ymin = ymin
+        self.variant = variant
 
-    def notify(self, data):
+    def plot_adjustable(self, scale):
         self.updateMarkers()
         self.updateLabels()
+        self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
+                                  title=self.plot.extend_plot_title(self.variant, scale))
+        self.canvas.draw()
 
     def updateMarkers(self):
         # Hide/Show the markers, labels, and arrows

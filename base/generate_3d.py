@@ -33,8 +33,8 @@ class Plot3d(CapacityPlot):
         title = self.title
         no_plot = self.no_plot
         gui = self.gui
-        x_axis = self.x_axis
-        y_axis = self.y_axis
+        x_axis = self._x_axis
+        y_axis = self._y_axis
         z_axis = self.z_axis
         mappings = self.mappings
         short_names_path = self.short_names_path

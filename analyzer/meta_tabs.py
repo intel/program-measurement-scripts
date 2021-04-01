@@ -12,9 +12,9 @@ from transitions import State
 from utils import center, Observable, resource_path, exportCSV, exportXlsx
 from analyzer_base import PlotTab, AnalyzerData, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
-from metric_names import MetricName
+from metric_names import MetricName as MN
 from metric_names import NonMetricName, KEY_METRICS
-globals().update(MetricName.__members__)
+globals().update(MN.__members__)
 
 class ShortNameData(AnalyzerData):
     def __init__(self, data, level):
@@ -330,6 +330,7 @@ class DataTab(AnalyzerTab):
         df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.analyzerData.guiState.get_selected_mask(self.analyzerData.df)
         if selectedMask.any(): df = df[selectedMask]
+        df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         self.summaryTable.model.df = df
         self.summaryTable.redraw()
 
