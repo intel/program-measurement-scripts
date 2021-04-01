@@ -326,6 +326,11 @@ CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
 
 SIDO_CLUSTER_METRICS=[ NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER, NonMetricName.SI_SW_BIAS ]
 
+TRAWL_METRICS=[ MetricName.SPEEDUP_VEC, MetricName.SPEEDUP_DL1, MetricName.CAP_FP_GFLOP_P_S, MetricName.RATE_INST_GI_P_S, MetricName.VARIANT ]
+QPLOT_METRICS=[ MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S, MetricName.CAP_FP_GFLOP_P_S, MetricName.RATE_INST_GI_P_S ]
+SIPLOT_METRICS=[ MetricName.SATURATION, MetricName.INTENSITY ]
+
+
 # Dictionary to parition metrics into different categories.
 CATEGORIZED_METRICS = {
     'RunInfo' : sorted(RUN_INFO_METRICS),
@@ -345,3 +350,9 @@ CATEGORIZED_METRICS = {
     'Sido': sorted(SIDO_CLUSTER_METRICS)
 }
 CATEGORIZED_METRICS['Other']=sorted(set(ALL_METRICS)-set().union(*CATEGORIZED_METRICS.values()))
+
+PLOT_METRICS = {
+    'TRAWL' : sorted(TRAWL_METRICS),
+    'QPlot' : sorted(QPLOT_METRICS),
+    'SIPlot' : sorted(SIPLOT_METRICS)
+}

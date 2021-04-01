@@ -5,7 +5,7 @@ from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from metric_names import MetricName as MN
-from metric_names import KEY_METRICS, ALL_METRICS, CATEGORIZED_METRICS
+from metric_names import KEY_METRICS, ALL_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
 import numpy as np
 import copy
 import os
@@ -517,46 +517,20 @@ class AxesTab(tk.Frame):
         menubutton.configure(menu=main_menu)
         main_menu.add_radiobutton(value=var.get(), label=var.get(), variable=var)
         main_menu.insert_separator(1)
-        # TRAWL
-        menu = tk.Menu(main_menu, tearoff=False)
-        main_menu.add_cascade(label='TRAWL', menu=menu)
-        for metric in [MN.SPEEDUP_VEC, MN.SPEEDUP_DL1, MN.CAP_FP_GFLOP_P_S, MN.RATE_INST_GI_P_S, MN.VARIANT]:
-            menu.add_radiobutton(value=metric, label=metric, variable=var)
-        # QPlot
-        menu = tk.Menu(main_menu, tearoff=False)
-        main_menu.add_cascade(label='QPlot', menu=menu)
-        for metric in [MN.CAP_L1_GB_P_S, MN.CAP_L2_GB_P_S, MN.CAP_L3_GB_P_S, MN.CAP_RAM_GB_P_S, MN.CAP_MEMMAX_GB_P_S, MN.CAP_FP_GFLOP_P_S, MN.RATE_INST_GI_P_S]:
-            menu.add_radiobutton(value=metric, label=metric, variable=var)
-        # SIPlot
-        menu = tk.Menu(main_menu, tearoff=False)
-        main_menu.add_cascade(label='SIPlot', menu=menu)
-        for metric in ['Saturation', 'Intensity']:
-            menu.add_radiobutton(value=metric, label=metric, variable=var)
+        # TRAWL/QPlot/SIPlot metrics
+        for category, metrics in PLOT_METRICS.items():
+            menu = tk.Menu(main_menu, tearoff=False)
+            main_menu.add_cascade(label=category, menu=menu)
+            for metric in metrics:
+                menu.add_radiobutton(value=metric, label=metric, variable=var)
         # Summary categories/metrics
         summary_menu = tk.Menu(main_menu, tearoff=False)
         main_menu.add_cascade(label='All', menu=summary_menu)
-        # metrics = [[MN.COVERAGE_PCT, MN.TIME_APP_S, MN.TIME_LOOP_S],
-        #             [MN.NUM_CORES, MN.DATA_SET, MN.PREFETCHERS, MN.REPETITIONS],
-        #             [MN.E_PKG_J, MN.E_DRAM_J, MN.E_PKGDRAM_J], 
-        #             [MN.P_PKG_W, MN.P_DRAM_W, MN.P_PKGDRAM_W],
-        #             [MN.COUNT_INSTS_GI, MN.RATE_INST_GI_P_S],
-        #             [MN.RATE_L1_GB_P_S, MN.RATE_L2_GB_P_S, MN.RATE_L3_GB_P_S, MN.RATE_RAM_GB_P_S, MN.RATE_FP_GFLOP_P_S, 
-        #              MN.RATE_INST_GI_P_S, MN.RATE_REG_ADDR_GB_P_S, MN.RATE_REG_DATA_GB_P_S, MN.RATE_REG_SIMD_GB_P_S, MN.RATE_REG_GB_P_S],
-        #             [MN.COUNT_OPS_VEC_PCT, MN.COUNT_OPS_FMA_PCT, MN.COUNT_OPS_DIV_PCT, MN.COUNT_OPS_SQRT_PCT, MN.COUNT_OPS_RSQRT_PCT, MN.COUNT_OPS_RCP_PCT],
-        #             [MN.COUNT_INSTS_VEC_PCT, MN.COUNT_INSTS_FMA_PCT, MN.COUNT_INSTS_DIV_PCT, MN.COUNT_INSTS_SQRT_PCT, MN.COUNT_INSTS_RSQRT_PCT, MN.COUNT_INSTS_RCP_PCT],
-        #             ALL_METRICS]
-        # categories = ['Time/Coverage', 'Experiment Settings', 'Energy', 'Power', 'Instructions', 'Rates', r'%ops', r'%inst', 'All']
         for category, metrics in CATEGORIZED_METRICS.items():
             menu = tk.Menu(summary_menu, tearoff=False)
             summary_menu.add_cascade(label=category, menu=menu)
             for metric in metrics:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
-
-        # for index, category in enumerate(categories):
-        #     menu = tk.Menu(summary_menu, tearoff=False)
-        #     summary_menu.add_cascade(label=category, menu=menu)
-        #     for metric in metrics[index]:
-        #         menu.add_radiobutton(value=metric, label=metric, variable=var)
         return menubutton
 
     def __init__(self, parent, tab):
