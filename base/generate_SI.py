@@ -366,7 +366,8 @@ class SiPlot(CapePlot):
 
         Ns = self.Ns
         ax = self.ax
-        ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
+        #ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
+        ns = range(2, 12, 2)
         npoints=40
 
         ctx=np.linspace(0, maxx, npoints+1)
