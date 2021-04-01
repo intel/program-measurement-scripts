@@ -285,7 +285,6 @@ class AnalyzerData(Observable):
         self.scale = scale
         self.y_axis = "{}".format(y_axis)
         self.x_axis = "{}".format(x_axis)
-        self.updated_notify_observers()
         
     def merge_metrics(self, df, metrics):
         self.levelData.merge_metrics(df, metrics)
@@ -386,7 +385,7 @@ class PlotTab(AnalyzerTab):
         self.tab_note = ttk.Notebook(self.window)
         self.axesTab = AxesTab(self.tab_note, self)
         self.tab_note.add(self.axesTab, text='Axes')
-        self.labelTab = LabelTab(self.tab_note, self)
+        self.labelTab = LabelTab(self.tab_note)
         self.tab_note.add(self.labelTab, text='Labels')
         self.plotData = None
         # Update names for plot buttons
@@ -426,7 +425,6 @@ class PlotTab(AnalyzerTab):
     def unhighlightPoints(self):
         self.analyzerData.guiState.unhighlightPoints(self.plotData.names)
 
-
     def setupGuiState(self, guiState):
         super().setupGuiState(guiState)
         guiState.add_observer(self.plotUpdater)
@@ -440,6 +438,7 @@ class PlotTab(AnalyzerTab):
     def setLevelData(self, levelData):
         super().setLevelData(levelData)
         self.labelTab.setLevelData(levelData)
+        self.axesTab.setLevelData(levelData)
 
     # Subclass needs to override this method
     def mk_plot(self):
@@ -492,6 +491,10 @@ class PlotTab(AnalyzerTab):
         metrics.extend(self.extra_metrics)
         metrics.extend(self.analyzerData.common_columns_end)
         return metrics
+
+    def update_axes(self):
+        self.analyzerData.update_axes(self.x_scale + self.y_scale, self.x_axis, self.y_axis)
+        self.try_adjust_plot()
         
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
@@ -507,8 +510,27 @@ class PlotTab(AnalyzerTab):
         self.variants = []
         self.current_labels = []
 
+class AxesTabData(AnalyzerData):
+    def __init__(self, loadedData, level):
+        super().__init__(loadedData, level, 'Axes')
+        self.axes = AxesTab.DUMMY_AXES.copy()
+        self.scales = AxesTab.DUMMY_SCALES.copy()
 
-class AxesTab(tk.Frame):
+    def setAxis(self, idx, value):
+        self.axes[idx] = value
+
+    def setScale(self, idx, value): 
+        self.scales[idx] = value
+
+    def getAxes(self):
+        return self.axes
+    
+    def getScales(self):
+        return self.scales
+
+class AxesTab(AnalyzerTab):
+    DUMMY_AXES = ['Choose X Axis Metric', 'Choose Y Axis Metric']
+    DUMMY_SCALES = ['Choose X Axis Scale', 'Choose Y Axis Scale']
     @staticmethod
     def all_metric_menu(parent, var):
         menubutton = tk.Menubutton(parent, textvariable=var, indicatoron=True,
@@ -534,82 +556,77 @@ class AxesTab(tk.Frame):
         return menubutton
 
     def __init__(self, parent, tab):
-        tk.Frame.__init__(self, parent)
+        super().__init__(parent, AxesTabData)
         self.parent = parent
         self.tab = tab
-        #self.plotType = plotType
-        # Axes metric options TODO: Should we limit the metrics allowed depending on the current plot?
+        # Axes metric options
         self.metric_label = tk.Label(self, text='Metrics:')
-        self.y_selected = tk.StringVar(value='Choose Y Axis Metric')
-        self.x_selected = tk.StringVar(value='Choose X Axis Metric')
-        self.x_menu = AxesTab.all_metric_menu(self, self.x_selected)
-        self.y_menu = AxesTab.all_metric_menu(self, self.y_selected)
+        self.axes = [self.mkAxisVar(i) for i in range(len(AxesTab.DUMMY_AXES))]
+        self.axis_menus = [AxesTab.all_metric_menu(self, a) for a in self.axes]
         # Axes scale options
         self.scale_label = tk.Label(self, text='Scales:')
-        self.yscale_selected = tk.StringVar(value='Choose Y Axis Scale')
-        self.xscale_selected = tk.StringVar(value='Choose X Axis Scale')
-        yscale_options = ['Choose Y Axis Scale', 'Linear', 'Log']
-        xscale_options = ['Choose X Axis Scale', 'Linear', 'Log']
-        self.yscale_menu = tk.OptionMenu(self, self.yscale_selected, *yscale_options)
-        self.xscale_menu = tk.OptionMenu(self, self.xscale_selected, *xscale_options)
-        self.yscale_menu['menu'].insert_separator(1)
-        self.xscale_menu['menu'].insert_separator(1)
+        self.scales = [self.mkScaleVar(i) for i in range(len(AxesTab.DUMMY_SCALES))]
+        self.scale_menus = [tk.OptionMenu(self, s, *([s.get()] + ['Linear', 'Log'])) for s in self.scales]
+        for menu in self.scale_menus: menu['menu'].insert_separator(1)
         # Update button to replot
         self.update = tk.Button(self, text='Update', command=self.update_axes)
 
-        # x_options = ['Choose X Axis Metric', MetricName.CAP_FP_GFLOP_P_S, RATE_INST_GI_P_S, RECIP_TIME_LOOP_MHZ]
-        # if self.plotType == 'Custom' or self.plotType == 'Scurve':
-        #     x_menu = AxesTab.all_metric_menu(self, self.x_selected, self.tab.data.gui)
-        #     y_menu = AxesTab.all_metric_menu(self, self.y_selected, self.tab.data.gui)
-        # else:  
-        #     if self.plotType == 'QPlot':
-        #         y_options = ['Choose Y Axis Metric', MetricName.CAP_L1_GB_P_S, MetricName.CAP_L2_GB_P_S, MetricName.CAP_L3_GB_P_S, MetricName.CAP_RAM_GB_P_S, MetricName.CAP_MEMMAX_GB_P_S]
-        #     elif self.plotType == 'TRAWL':
-        #         y_options = ['Choose Y Axis Metric', SPEEDUP_VEC, SPEEDUP_DL1]
-        #     elif self.plotType == 'Summary':
-        #         x_options.append(RECIP_TIME_LOOP_MHZ)
-        #         y_options = ['Choose Y Axis Metric', COVERAGE_PCT, TIME_LOOP_S, TIME_APP_S, RECIP_TIME_LOOP_MHZ]
-        #     else:
-        #         x_options = ['Choose X Axis Metric']
-        #         y_options = ['Choose Y Axis Metric']
-        #     y_menu = tk.OptionMenu(self, self.y_selected, *y_options)
-        #     x_menu = tk.OptionMenu(self, self.x_selected, *x_options)
-        #     y_menu['menu'].insert_separator(1)
-        #     x_menu['menu'].insert_separator(1)
+    def mkAxisVar(self, idx):
+        axis = tk.StringVar(value=AxesTab.DUMMY_AXES[idx])
+        axis.trace('w', lambda *args: self.axisChanged(idx))
+        return axis
+
+    def axisChanged(self, idx):
+        self.analyzerData.setAxis(idx, self.axes[idx].get())
+
+    def mkScaleVar(self, idx):
+        scale = tk.StringVar(value=AxesTab.DUMMY_SCALES[idx])
+        scale.trace('w', lambda *args: self.scaleChanged(idx))
+        return scale
+
+    def scaleChanged(self, idx):
+        self.analyzerData.setScale(idx, self.scales[idx].get())
+
+    # Override so not to monitor levelData
+    def setupLevelData(self, levelData):
+        pass
+
+    def setupAnalyzerData(self, analyzerData):
+        self.setAxes(analyzerData.getAxes())
+        self.setScales(analyzerData.getScales())
+
+    def setAxes(self, axes):
+        for i, axis in enumerate(axes):
+            self.axes[i].set(axis)
+
+    def setScales(self, scales):
+        for i, scale in enumerate(scales):
+            self.scales[i].set(scale)
 
     def render(self):
         # Tab grid
         self.metric_label.grid(row=0, column=0, padx=5, sticky=tk.W)
         self.scale_label.grid(row=0, column=1, padx=5, sticky=tk.W)
-        self.x_menu.grid(row=1, column=0, padx=5, sticky=tk.W)
-        self.y_menu.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
-        self.xscale_menu.grid(row=1, column=1, padx=5, sticky=tk.W)
-        self.yscale_menu.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        self.axis_menus[0].grid(row=1, column=0, padx=5, sticky=tk.W)
+        self.axis_menus[1].grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        self.scale_menus[0].grid(row=1, column=1, padx=5, sticky=tk.W)
+        self.scale_menus[1].grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
         self.update.grid(row=3, column=0, padx=5, sticky=tk.NW)
-
-    def hide(self):
-        self.metric_label.grid_remove()
-        self.scale_label.grid_remove()
-        self.x_menu.grid_remove()
-        self.y_menu.grid_remove()
-        self.xscale_menu.grid_remove()
-        self.yscale_menu.grid_remove()
-        self.update.grid_remove()
     
     def update_axes(self):
         # Get user selected metrics
-        if self.x_selected.get() != 'Choose X Axis Metric':
-            self.tab.x_axis = self.x_selected.get()
-        if self.y_selected.get() != 'Choose Y Axis Metric':
-            self.tab.y_axis = self.y_selected.get()
+        if self.axes[0].get() not in AxesTab.DUMMY_AXES:
+            self.tab.x_axis = self.axes[0].get()
+        if self.axes[1].get() not in AxesTab.DUMMY_AXES:
+            self.tab.y_axis = self.axes[1].get()
         # Get user selected scales
-        if self.xscale_selected.get() != 'Choose X Axis Scale':
-            self.tab.x_scale = self.xscale_selected.get().lower()
-        if self.yscale_selected.get() != 'Choose Y Axis Scale':
-            self.tab.y_scale = self.yscale_selected.get().lower()
-        # Set user selected metrics/scales if they have changed at least one
-        if self.x_selected.get() != 'Choose X Axis Metric' or self.y_selected.get() != 'Choose Y Axis Metric' or self.xscale_selected.get() != 'Choose X Axis Scale' or self.yscale_selected.get() != 'Choose Y Axis Scale':
-            self.tab.analyzerData.update_axes(self.tab.x_scale + self.tab.y_scale, self.tab.x_axis, self.tab.y_axis)
+        if self.scales[0].get() not in AxesTab.DUMMY_SCALES:
+            self.tab.x_scale = self.scales[0].get().lower()
+        if self.scales[1].get() not in AxesTab.DUMMY_SCALES:
+            self.tab.y_scale = self.scales[1].get().lower()
+        # Set user selected metrics/scales to the analyzerData
+        self.tab.update_axes()
+        
 
 class LabelTabData(AnalyzerData):
     def __init__(self, loadedData, level):
@@ -625,25 +642,13 @@ class LabelTabData(AnalyzerData):
 
 class LabelTab(AnalyzerTab):
     DUMMY_METRICS = ['Metric 1', 'Metric 2', 'Metric 3']
-    def __init__(self, parent, tab):
+    def __init__(self, parent):
         super().__init__(parent, LabelTabData)
-        #self.parent = parent
-        #self.tab = tab
-        self.metrics = [self.mkStringVar(i) for i in range(3)]
+        self.metrics = [self.mkStringVar(i) for i in range(len(LabelTab.DUMMY_METRICS))]
         self.menus = [AxesTab.all_metric_menu(self, m) for m in self.metrics]
-        #self.metric1 = tk.StringVar(value='Metric 1')
-        #self.metric2 = tk.StringVar(value='Metric 2')
-        #self.metric3 = tk.StringVar(value='Metric 3')
-        #self.metrics = [self.metric1, self.metric2, self.metric3]
-        # self.menu1 = AxesTab.all_metric_menu(self, self.metric[0])
-        # self.menu2 = AxesTab.all_metric_menu(self, self.metric[1])
-        # self.menu3 = AxesTab.all_metric_menu(self, self.metric[2])
         self.updateButton = tk.Button(self, text='Update', command=self.updateLabels)
         self.resetButton = tk.Button(self, text='Reset', command=self.reset)
 
-    # @property
-    # def level(self):
-    #     return self.data.level
     def mkStringVar(self, idx):
         metric = tk.StringVar(value=LabelTab.DUMMY_METRICS[idx])
         metric.trace('w', lambda *args: self.varChanged(idx))
@@ -652,8 +657,6 @@ class LabelTab(AnalyzerTab):
     def varChanged(self, idx):
         self.analyzerData.setMetric(idx, self.metrics[idx].get())
         
-
-
     @property
     def df(self):
         return self.levelData.df
@@ -662,16 +665,10 @@ class LabelTab(AnalyzerTab):
     def current_metrics(self):
         return [metric.get() for metric in self.metrics if metric.get() not in LabelTab.DUMMY_METRICS]
 
-    # @property
-    # def mappings(self):
-    #     return self.levelData.mapping
-
-    # @property
-    # def plotData(self):
-    #     return self.tab.plotInteraction.plotData
     # Override so not to monitor levelData
     def setupLevelData(self, levelData):
         pass        
+
     # Monitor gui state changes instead
     def setupGuiState(self, guiState):
         guiState.add_observer(self)
@@ -697,16 +694,12 @@ class LabelTab(AnalyzerTab):
 
     def resetMetrics(self):
         for metric, label in zip(self.metrics, LabelTab.DUMMY_METRICS):
-            m.set(label)
-        # self.metric1.set('Metric 1')
-        # self.metric2.set('Metric 2')
-        # self.metric3.set('Metric 3')
+            metric.set(label)
 
     def reset(self):
         self.guiState.reset_labels()
 
     def updateLabels(self):
-        # TODO: merge mapping speedups into master dataframe to avoid this check
         new_metrics = [metric for metric in self.current_metrics if metric in self.df.columns.tolist()]
         if not new_metrics: return # User hasn't selected any label metrics
         self.guiState.setLabels(new_metrics)
