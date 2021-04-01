@@ -48,8 +48,6 @@ class Plot3d(CapacityPlot):
 
         df = self.df
 
-        # Used to create a legend of file names to color for multiple plots
-        color_labels = self.compute_color_labels(df, short_names_path)
         if no_plot:
             return 
 
@@ -74,10 +72,10 @@ class Plot3d(CapacityPlot):
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, zs, mytext, 
-                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings)
+                       scale, df, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings)
         #self.df = df
 
-    def plot_data(self, title, filename, xs, ys, zs, mytexts, scale, df, color_labels=None, \
+    def plot_data(self, title, filename, xs, ys, zs, mytexts, scale, df, \
         x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
@@ -106,7 +104,7 @@ class Plot3d(CapacityPlot):
         self.ax.set_title(title, pad=40)
 
         # Legend
-        legend = self.mk_legend(color_labels)
+        legend = self.mk_legend()
 
         # Arrows between multiple runs
         # name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)

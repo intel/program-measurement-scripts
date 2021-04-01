@@ -37,7 +37,7 @@ class CoveragePlot(CapacityPlot):
     def mk_label_key(self):
         return "(name, MaxMemLevel[85%])"
 
-    def draw_contours(self, xmax, ymax, color_labels):
+    def draw_contours(self, xmax, ymax):
         plt.axvline(x=2)
         plt.axvline(x=8)
 

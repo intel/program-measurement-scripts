@@ -546,8 +546,6 @@ class CapePlot:
 
         df = self.df
 
-        # Used to create a legend of file names to color for multiple plots
-        color_labels = self.compute_color_labels(df, short_names_path)
         if no_plot:
             return 
 
@@ -562,34 +560,13 @@ class CapePlot:
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
         self.plot_data(self.extend_plot_title(variant, scale), outputfile, xs, ys, mytext, 
-                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis)
+                       scale, df, x_axis=x_axis, y_axis=y_axis)
 
     def extend_plot_title(self, variant, scale):
         return self.mk_plot_title(self.title, variant, scale)
 
-    def draw_contours(self, xmax, ymax, color_labels):
+    def draw_contours(self, xmax, ymax):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
-
-    def compute_color_labels(self, df, short_names_path=''):
-        color_labels = dict()
-        user_colors = [i for i in self.colors if i not in df['Color'].unique()]
-        i = 0
-        for color in sorted(df['Color'].unique()):
-            if color not in self.colors: # If it is user-specified then we want to display that in the legend
-                color_labels[color] = user_colors[i]
-                i += 1
-            else: # Otherwise we just use the app name in the legend
-                colorDf = df.loc[df['Color']==color].reset_index()
-                codelet = colorDf[NAME][0]
-                timestamp = colorDf[TIMESTAMP][0]
-                app_name = codelet.split(':')[0]
-                if short_names_path:
-                    short_names = pd.read_csv(short_names_path)
-                    row = short_names.loc[(short_names[NAME]==app_name) & \
-                        (short_names[TIMESTAMP]==timestamp)].reset_index(drop=True)
-                    if not row.empty: app_name = row[SHORT_NAME][0]
-                color_labels[app_name] = color
-        return color_labels
 
     @classmethod
     def get_min_max(cls, xs, ys):
@@ -610,7 +587,7 @@ class CapePlot:
         
         
     # Set filename to [] for GUI output
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, x_axis, y_axis, mappings=pd.DataFrame()):
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, x_axis, y_axis, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
         # if not self.fig:
@@ -623,10 +600,10 @@ class CapePlot:
         xmin, xmax, ymin, ymax = self.get_min_max(xs, ys)
 
         # Draw contours
-        self.draw_contours(xmax, ymax, color_labels)
+        self.draw_contours(xmax, ymax)
 
         # Plot data points
-        labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts, color_labels)
+        labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
 
         # Arrows between multiple runs
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
@@ -639,7 +616,7 @@ class CapePlot:
         ax.set(xlabel=x_axis, ylabel=y_axis)
         
         # Legend
-        legend = self.mk_legend(color_labels)
+        legend = self.mk_legend()
 
         # Plot rest of the plot (which can be adjusted later)
         self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title)
@@ -663,7 +640,7 @@ class CapePlot:
         ax.set_title(title, pad=40)
 
 
-    def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
+    def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
         markers = []
         for x, y, color, name, timestamp in zip(xs, ys, self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
@@ -673,7 +650,7 @@ class CapePlot:
         texts = [self.ax.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
-    def mk_legend(self, color_labels):
+    def mk_legend(self):
         ax = self.ax
         patches = []
         for label in self.color_map['Label'].unique():

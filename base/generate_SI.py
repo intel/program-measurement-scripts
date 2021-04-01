@@ -357,7 +357,7 @@ class SiPlot(CapePlot):
     def mk_label_key(self):
         return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (Name, Variant, MaxMemlevel[85%])"
 
-    def draw_contours(self, maxx, maxy, color_labels):
+    def draw_contours(self, maxx, maxy):
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
         min_xs, max_xs, min_ys, max_ys = self.get_min_max(cluster_and_cur_run_xs, cluster_and_cur_run_ys)

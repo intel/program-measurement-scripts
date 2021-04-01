@@ -26,7 +26,7 @@ class ScurvePlot(CapePlot):
         super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=MetricName.CAP_FP_GFLOP_P_S, mappings=mappings, short_names_path=short_names_path)
     
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
         # Scurve doesn't support mappings and x_axis is always 'Rank'
         x_axis = 'Rank'
@@ -39,10 +39,10 @@ class ScurvePlot(CapePlot):
         xs = np.array(self.scurve.x_vals)
         ys = np.array(self.scurve.y_vals)
         mytexts = np.array(self.scurve.labels)
-        super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
+        super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
             x_axis, y_axis, mappings)
 
-    def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
+    def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
         markers = []
         df.reset_index(drop=True, inplace=True)
@@ -53,7 +53,7 @@ class ScurvePlot(CapePlot):
         texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
-    def draw_contours(self, xmax, ymax, color_labels):
+    def draw_contours(self, xmax, ymax):
         plt.axhline(y=self.median)
 
 def scurve_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
