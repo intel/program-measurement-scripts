@@ -276,8 +276,9 @@ class DataTab(AnalyzerTab):
                 popupmenu.unpost() 
                 #mymenu = tk.Menu(popupmenu, tearoff = 0)
                 #popupmenu.add_cascade(label='Cape', menu=mymenu)
-            popupmenu.add_command(label='Highlight')
-            popupmenu.add_command(label='Remove', command=lambda: self.remove(event, rows, cols, outside))
+            popupmenu.add_command(label='Highlight Point', command=lambda: self.highlight(event, rows, cols, outside))
+            popupmenu.add_command(label='Remove Point', command=lambda: self.remove(event, rows, cols, outside))
+            popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
 
             popupmenu.bind("<FocusOut>", popupFocusOut)
             popupmenu.focus_set()
@@ -285,11 +286,16 @@ class DataTab(AnalyzerTab):
             return popupmenu
 
         def remove(self, event, rows, cols, outside):
-            rowclicked = self.get_row_clicked(event)
-            colclicked = self.get_col_clicked(event)
-            print(f'remove: ({rowclicked}, {colclicked})')
-            self.model.df.iloc[rows][KEY_METRICS]
+            #rowclicked = self.get_row_clicked(event)
+            #colclicked = self.get_col_clicked(event)
+            #print(f'remove: ({rowclicked}, {colclicked})')
+            self.parentframe.removeData(self.model.df.iloc[rows][KEY_METRICS])
 
+        def highlight(self, event, rows, cols, outside):
+            self.parentframe.highlightData(self.model.df.iloc[rows][KEY_METRICS])
+
+        def toggleLabel(self, event, rows, cols, outside):
+            self.parentframe.toggleLabelData(self.model.df.iloc[rows][KEY_METRICS])
             
     
     def __init__(self, parent, metrics=[], variants=[]):
@@ -314,6 +320,15 @@ class DataTab(AnalyzerTab):
     def setupGuiState(self, guiState):
         guiState.add_observer(self)
 
+    def removeData(self, nameTimestampDf):
+        self.guiState.removeData(nameTimestampDf)
+
+    def highlightData(self, nameTimestampDf):
+        self.guiState.highlightData(nameTimestampDf)
+
+    def toggleLabelData(self, nameTimestampDf):
+        self.guiState.toggleLabelData(nameTimestampDf)
+
     def setupAnalyzerData(self, analyzerData):
         analyzerData.add_observer(self)
 
@@ -337,8 +352,9 @@ class DataTab(AnalyzerTab):
     def notify(self, data):
         # Update table with latest loadedData df
         df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
-        selectedMask = self.analyzerData.guiState.get_selected_mask(self.analyzerData.df)
-        if selectedMask.any(): df = df[selectedMask]
+        selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
+        hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
+        if selectedMask.any(): df = df[selectedMask & ~hiddenMask]
         df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         self.summaryTable.model.df = df
         self.summaryTable.redraw()
@@ -351,17 +367,9 @@ class FilteringTab(AnalyzerTab):
     def __init__(self, parent):
         super().__init__(parent, FilteringData)
         self.setupThreshold()
-
-    def notify(self, data):
-        if self.analyzerData.df.empty:
-            return
         self.setOptions()
-        self.buildPointSelector()
-        self.buildVariantSelector()
         self.buildActionSelector()
         # Grid setup
-        self.pointSelector.grid(row=0, column=0)
-        self.variantSelector.grid(row=0, column=1)
         self.threshold_frame.grid(row=0, column=2, sticky=tk.NW)
         self.metric_menu.grid(row=0, column=1, sticky=tk.N)
         self.min_label.grid(row=1, column=1, sticky=tk.NW)
@@ -370,6 +378,15 @@ class FilteringTab(AnalyzerTab):
         self.max_entry.grid(row=2, column=2, sticky=tk.NW)
         self.action_menu.grid(row=3, column=1, pady=10, sticky=tk.NW)
         self.update_button.grid(row=0, column=3, sticky=tk.N)
+        self.selectPointCb.grid(row=4, column=1, sticky=tk.N)
+
+    def notify(self, data):
+        if self.analyzerData.df.empty:
+            return
+        self.buildPointSelector()
+        self.buildVariantSelector()
+        self.pointSelector.grid(row=0, column=0)
+        self.variantSelector.grid(row=0, column=1)
 
     def buildActionSelector(self):
         self.action_selected = tk.StringVar(value='Choose Action')
@@ -417,6 +434,9 @@ class FilteringTab(AnalyzerTab):
         self.max_entry = tk.Entry(self.threshold_frame, textvariable=self.max_num)
         # Update GUI State with selected filters
         self.update_button = tk.Button(self, text='Update', command=self.updateFilter)
+        selectPointVar = tk.IntVar(value=1)
+        self.selectPointCb = tk.Checkbutton(self.threshold_frame, var=selectPointVar, text='Select Point', onvalue=1, offvalue=0, 
+                                            command=lambda: self.guiState.setSelectPoint(selectPointVar.get()==1))
     
     def updateFilter(self):
         names = self.pointSelector.getUncheckedNames()

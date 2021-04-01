@@ -965,10 +965,10 @@ class PlotData():
         # for child in self.plotData.ax.get_children():
         #     print(child)
         action = self.guiState.action_selected
-        if action == 'Select Point':
+        if self.guiState.selectPoint:
             selected = self.getSelected(event)
             self.guiState.selectPoints(selected)
-            return
+
         if action == 'Choose Action': return
         for marker in self.markers:
             contains, points = marker.contains(event)
@@ -981,7 +981,7 @@ class PlotData():
                     self.guiState.removePoints([name]) 
                 elif action == 'Toggle Label': 
                     alpha = not self.name_text[name].get_alpha()
-                    self.guiState.toggleLabel(name, alpha)
+                    self.guiState.setLabel(name, alpha)
 
     def setupFrames(self, fig, canvasFrame, chartButtonFrame):
         # # NavigationToolbar2Tk can only be created if there isn't anything in the grid

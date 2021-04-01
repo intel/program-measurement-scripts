@@ -31,6 +31,7 @@ class PerLevelGuiState(Observable):
         self.filterMaxThreshold = 0
 
         # Currently selected plot interaction action
+        self.selectPoint = True
         self.action_selected = 'Choose Action'
 
         # The final mask used to select data points
@@ -47,6 +48,9 @@ class PerLevelGuiState(Observable):
         self.nonKeyColumnOrder = [m for m in ALL_METRICS if m not in KEY_METRICS] 
         self.guiDataDict = {}
 
+    def setSelectPoint(self, value):
+        self.selectPoint = value
+    
     def __getstate__(self):
         state = self.__dict__.copy()
         # Don't save observers as they are GUI components
@@ -77,9 +81,22 @@ class PerLevelGuiState(Observable):
             self.label_visibility[name] = alpha
         self.updated_notify_observers()
 
-    def toggleLabel(self, name, alpha):
+    def toggleLabelData(self, nameTimestampDf, notify=True):
+        for name in self.get_encoded_names(nameTimestampDf).tolist():
+            self.toggleLabel(name, notify=False)
+        if notify:
+            self.updated_notify_observers()
+
+
+    def toggleLabel(self, name, notify=True):
+        if name not in self.label_visibility:
+            self.label_visibility[name] = 0
+        self.setLabel(name, int(not self.label_visibility[name]), notify)
+    
+    def setLabel(self, name, alpha, notify=True):
         self.label_visibility[name] = alpha
-        self.updated_notify_observers()
+        if notify:
+            self.updated_notify_observers()
 
     def set_color_map(self, color_map_df):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
@@ -137,6 +154,9 @@ class PerLevelGuiState(Observable):
     # remove data with provided name and timestamp info
     def removeData(self, nameTimestampDf):
         self.removePoints(self.get_encoded_names(nameTimestampDf).tolist())
+
+    def highlightData(self, nameTimestampDf):
+        self.highlightPoints(self.get_encoded_names(nameTimestampDf).tolist())
 
     def selectPoints(self, names):
         self.selected = names
