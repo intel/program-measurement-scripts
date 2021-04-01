@@ -282,10 +282,12 @@ class AnalyzerData(Observable):
         print(f"{self.name} Notified from ", loadedData)
         self.updated_notify_observers()
 
-    def update_axes(self, scale, x_axis, y_axis):
-        self.scale = scale
-        self.y_axis = "{}".format(y_axis)
-        self.x_axis = "{}".format(x_axis)
+    def update_axes(self, x_scale, y_scale, x_axis, y_axis):
+        if x_scale: self.x_scale = x_scale
+        if y_scale: self.y_scale = y_scale
+        self.scale = self.x_scale + self.y_scale
+        if y_axis: self.y_axis = "{}".format(y_axis)
+        if x_axis: self.x_axis = "{}".format(x_axis)
         
     def merge_metrics(self, df, metrics):
         self.levelData.merge_metrics(df, metrics)
@@ -496,8 +498,8 @@ class PlotTab(AnalyzerTab):
         metrics.extend(self.analyzerData.common_columns_end)
         return metrics
 
-    def update_axes(self):
-        self.analyzerData.update_axes(self.x_scale + self.y_scale, self.x_axis, self.y_axis)
+    def update_axes(self, x_scale, y_scale, x_axis, y_axis):
+        self.analyzerData.update_axes(x_scale, y_scale, x_axis, y_axis)
         self.try_adjust_plot()
         
     def notify(self, data):
@@ -618,19 +620,23 @@ class AxesTab(AnalyzerTab):
         self.update.grid(row=3, column=0, padx=5, sticky=tk.NW)
     
     def update_axes(self):
+        x_axis = None
+        y_axis = None
+        x_scale = ''
+        y_scale = ''
         # Get user selected metrics
         if self.axes[0].get() not in AxesTab.DUMMY_AXES:
-            self.tab.x_axis = self.axes[0].get()
+            x_axis = self.axes[0].get()
         if self.axes[1].get() not in AxesTab.DUMMY_AXES:
-            self.tab.y_axis = self.axes[1].get()
+            y_axis = self.axes[1].get()
         # Get user selected scales
         if self.scales[0].get() not in AxesTab.DUMMY_SCALES:
-            self.tab.x_scale = self.scales[0].get().lower()
+            x_scale = self.scales[0].get().lower()
         if self.scales[1].get() not in AxesTab.DUMMY_SCALES:
-            self.tab.y_scale = self.scales[1].get().lower()
-        # Set user selected metrics/scales to the analyzerData
-        self.tab.update_axes()
-        
+            y_scale = self.scales[1].get().lower()
+        # Set user selected metrics/scales to the analyzerData if at least one changed
+        if x_scale or y_scale or x_axis or y_axis:
+            self.tab.update_axes(x_scale, y_scale, x_axis, y_axis)
 
 class LabelTabData(AnalyzerData):
     def __init__(self, loadedData, level):

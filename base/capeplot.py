@@ -619,7 +619,7 @@ class CapePlot:
         legend = self.mk_legend()
 
         # Plot rest of the plot (which can be adjusted later)
-        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title)
+        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, markers)
 
         try: self.fig.tight_layout()
         except: print("self.fig.tight_layout() failed")
@@ -629,16 +629,23 @@ class CapePlot:
                                self.variant)
 
     # TODO: Need to be able to update color labels
-    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title):
+    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, markers):
         # Set specified axis scales
         ax = self.ax
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
+        legend = self.mk_legend()
+        names = self.guiState.get_encoded_names(self.df).tolist()
+        name_marker = dict(zip(names, markers))
+        for color, name, timestamp in zip(self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
+            name = name+str(timestamp)
+            name_marker[name].set_color(color) 
 
+        # labels, markers = self.plot_markers_and_labels(self.df, xs, ys, mytexts)
         # (x, y) = zip(*DATA)
 
         #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
         ax.set_title(title, pad=40)
-
+        self.plotData.legend = legend
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
@@ -790,10 +797,11 @@ class PlotData():
         self.variant = variant
 
     def plot_adjustable(self, scale):
+        self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
+                                  title=self.plot.extend_plot_title(self.variant, scale), xs=self.xs, ys=self.ys, mytexts=self.mytext,
+                                  name_mapping=self.name_mapping, mymappings=self.mappings, markers=self.markers)
         self.updateMarkers()
         self.updateLabels()
-        self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
-                                  title=self.plot.extend_plot_title(self.variant, scale))
         self.canvas.draw()
 
     def updateMarkers(self):
@@ -810,7 +818,6 @@ class PlotData():
             if name in self.name_mapping: self.name_mapping[name].set_alpha(1)
         for name in self.name_mapping:
             if self.guiState.isHidden(name): self.name_mapping[name].set_alpha(0)
-        self.canvas.draw()
 
     def updateLabels(self):
         # Update labels on plot
@@ -837,7 +844,6 @@ class PlotData():
             newTitle += ', ' + metric
         newTitle += ')'
         self.legend.get_title().set_text(newTitle)
-        self.canvas.draw()
 
     def toggleLabels(self, alpha):
         self.guiState.toggleLabels(self.names, alpha)
