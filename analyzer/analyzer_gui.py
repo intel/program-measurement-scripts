@@ -101,7 +101,8 @@ class LoadedData(Observable):
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
-            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'))
+            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'), 
+                                        notify=False)
             self.updated_notify_observers()
             
         @property

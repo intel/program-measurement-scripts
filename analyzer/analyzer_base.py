@@ -98,11 +98,12 @@ class PerLevelGuiState(Observable):
         if notify:
             self.updated_notify_observers()
 
-    def set_color_map(self, color_map_df):
+    def set_color_map(self, color_map_df, notify=True):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
         color_map_df.fillna({'Color':'blue'}, inplace=True)
         self.color_map = color_map_df
-        self.updated_notify_observers()
+        if notify:
+            self.updated_notify_observers()
 
     def get_color_map(self):
         return self.color_map
