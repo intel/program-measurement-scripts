@@ -38,8 +38,9 @@ class CoveragePlot(CapacityPlot):
         return "(name, MaxMemLevel[85%])"
 
     def draw_contours(self, xmax, ymax):
-        plt.axvline(x=2)
-        plt.axvline(x=8)
+        ax = self.ax
+        ax.axvline(x=2)
+        ax.axvline(x=8)
 
 
 def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):

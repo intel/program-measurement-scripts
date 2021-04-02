@@ -24,8 +24,9 @@ class TrawlPlot(CapePlot):
                          default_y_axis=SPEEDUP_DL1.value, mappings=mappings, short_names_path=short_names_path)
 
     def draw_contours(self, xmax, ymax):
-        plt.axvline(x=xmax/2)
-        plt.axhline(y=ymax/2)
+        ax = self.ax
+        ax.axvline(x=xmax/2)
+        ax.axhline(y=ymax/2)
 
 
 def trawl_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
