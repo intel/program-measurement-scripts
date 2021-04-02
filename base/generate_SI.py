@@ -311,20 +311,21 @@ class SiPlot(CapePlot):
 
     def mk_plot_title(self, title, variant, scale):
         # chosen_node_set = self.chosen_node_set
-        chosen_node_set = 'Fix This'
+        chosen_node_list = sorted(set().union(*self.df['SiSatNodes'].to_list()))
         # If chosen_node_set is too long then we need to add more new lines as matplotlib doesn't handle this automatically
         # 80 chars is the max that will fit on a line
-        title = "{} : n = {}\n".format(title, len(chosen_node_set))
-        nodes = sorted(list(chosen_node_set))
-        chars = 0
-        for i, node in enumerate(nodes):
-            chars += len(node)
-            if chars > 80:
-                title += "\n"
-                chars = 0
-            title += node
-            if i != len(nodes) - 1:
-                title += ", "
+        title = f"{title} : n = {len(chosen_node_list)}\n"
+        title = title + ", ".join(chosen_node_list)
+        # nodes = sorted(list(chosen_node_set))
+        # chars = 0
+        # for i, node in enumerate(nodes):
+        #     chars += len(node)
+        #     if chars > 80:
+        #         title += "\n"
+        #         chars = 0
+        #     title += node
+        #     if i != len(nodes) - 1:
+        #         title += ", "
         return title
         # return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
 
