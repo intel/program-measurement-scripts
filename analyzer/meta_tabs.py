@@ -358,14 +358,22 @@ class DataTab(AnalyzerTab):
     
     def notify(self, data):
         # Update table with latest loadedData df
-        df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
+        out_df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
-        if selectedMask.any(): df = df[selectedMask]
+        if selectedMask.any(): out_df = out_df[selectedMask]
         if not self.guiState.showHiddenPointInTable: 
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
-            df = df [~hiddenMask]
-        df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
-        self.summaryTable.model.df = df
+            out_df = out_df [~hiddenMask]
+        out_df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
+        cnt_df = self.summaryTable.model.df
+        if not cnt_df.empty:
+            merged = pd.merge(cnt_df, out_df, on=KEY_METRICS, how='outer', indicator='Exist')
+            bothMask= (merged.Exist == 'both')
+            addedMask= (merged.Exist == 'right_only')
+            merged.drop(columns=['Exist'], inplace=True)
+            # 'left_only' are row to be dropped so ignored
+            out_df = merged[bothMask].append(merged[addedMask], ignore_index=True)
+        self.summaryTable.model.df = out_df
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
