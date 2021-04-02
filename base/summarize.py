@@ -676,7 +676,7 @@ def summary_formulas(formula_file_name):
         print_formulas(formula_file)
 
 def write_short_names(filename, df):
-    df[[NAME, TIMESTAMP, SHORT_NAME, VARIANT]].to_csv(filename, ignore_index=True)
+    df[[NAME, TIMESTAMP, SHORT_NAME, VARIANT]].to_csv(filename, index=False)
 
 def read_short_names(filename):
     with open(filename, 'r', encoding='utf-8-sig') as infile:
