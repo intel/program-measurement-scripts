@@ -381,6 +381,7 @@ class SiPlot(CapePlot):
 
         # Create a Rectangle patch
         # (but not saved in self.ctxs)
+        self.cluster_rects = {}
         for i, cluster in enumerate(self.df[NonMetricName.SI_CLUSTER_NAME].unique()):
             if cluster:
                 if cluster in self.color_map['Label'].tolist(): color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
@@ -391,6 +392,7 @@ class SiPlot(CapePlot):
                 print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
                 rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
                                 (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
+                self.cluster_rects[cluster] = rect
                 ax.add_patch(rect)
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed

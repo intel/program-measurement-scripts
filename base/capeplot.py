@@ -618,8 +618,11 @@ class CapePlot:
         # Legend
         legend = self.mk_legend()
 
+        names = self.guiState.get_encoded_names(df).tolist()
+        name_marker = dict(zip(names, markers)) if markers else None
+
         # Plot rest of the plot (which can be adjusted later)
-        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, markers)
+        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, name_marker)
 
         try: self.fig.tight_layout()
         except: print("self.fig.tight_layout() failed")
@@ -629,18 +632,21 @@ class CapePlot:
                                self.variant)
 
     # TODO: Need to be able to update color labels
-    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, markers):
+    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, name_marker):
         # Set specified axis scales
         ax = self.ax
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
         legend = self.mk_legend()
-        names = self.guiState.get_encoded_names(self.df).tolist()
-        name_marker = dict(zip(names, markers))
         for color, name, timestamp in zip(self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
             name = name+str(timestamp)
-            name_marker[name].set_color(color) 
+            if name in name_marker: name_marker[name].set_color(color)
 
-        self.draw_contours(xmax, ymax)
+        # Update color of cluster rectangles
+        if hasattr(self, 'cluster_rects'):
+            for cluster in self.cluster_rects:
+                if cluster in self.color_map['Label'].tolist(): 
+                    rect_color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
+                    self.cluster_rects[cluster].set_edgecolor(rect_color)
 
         # labels, markers = self.plot_markers_and_labels(self.df, xs, ys, mytexts)
         # (x, y) = zip(*DATA)
@@ -751,8 +757,6 @@ class CapePlot:
     def unhighlightPoints(self):
         self.plotData.unhighlightPoints()
         
-
-
 class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
@@ -801,7 +805,7 @@ class PlotData():
     def plot_adjustable(self, scale):
         self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
                                   title=self.plot.extend_plot_title(self.variant, scale), xs=self.xs, ys=self.ys, mytexts=self.mytext,
-                                  name_mapping=self.name_mapping, mymappings=self.mappings, markers=self.markers)
+                                  name_mapping=self.name_mapping, mymappings=self.mappings, name_marker=self.name_marker)
         self.updateMarkers()
         self.updateLabels()
         self.canvas.draw()

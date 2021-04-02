@@ -87,7 +87,6 @@ class PerLevelGuiState(Observable):
         if notify:
             self.updated_notify_observers()
 
-
     def toggleLabel(self, name, notify=True):
         if name not in self.label_visibility:
             self.label_visibility[name] = 0
