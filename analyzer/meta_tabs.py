@@ -251,8 +251,30 @@ class MappingsTab(AnalyzerTab):
 #             self.tab.siplotData.notify(self.tab.data.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class DataTabData(AnalyzerData):
+    class ColumnFilter:
+        def __init__(self, column):
+            self.column = column
+        
+        def apply(self, df):
+            mask = pd.Series([True] * len(df))
+            return mask
+
     def __init__(self, data, level):
         super().__init__(data, level, "DataTabData")
+        self.columnFilters = {}
+
+    def filterMask(self, df):
+        mask = pd.Series([True] * len(df))
+        for col, filter in self.columnFilters:
+            mask = mask & filter.apply(df[col])
+        return mask
+
+    def findOrCreateFilter(self, column):
+        return copy.deepcopy(self.columnFilters[column]) if column in self.columnFilters else DataTabData.ColumnFilter(column)
+
+    def setFilter(self, filter):
+        self.columnFilters[filter.column] = filter
+        
 
     # def notify(self, data):
     #     self.notify_observers()
@@ -280,6 +302,8 @@ class DataTab(AnalyzerTab):
             popupmenu.add_command(label='Unhighlight Point', command=lambda: self.unhighlight(event, rows, cols, outside))
             popupmenu.add_command(label='Remove Point', command=lambda: self.remove(event, rows, cols, outside))
             popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
+            popupmenu.add_command(label='Filter Column', command=lambda: self.filterColumn(event, rows, cols, outside), 
+                                  state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
 
             popupmenu.bind("<FocusOut>", popupFocusOut)
             popupmenu.focus_set()
@@ -300,7 +324,25 @@ class DataTab(AnalyzerTab):
 
         def toggleLabel(self, event, rows, cols, outside):
             self.parentframe.toggleLabelData(self.model.df.iloc[rows][KEY_METRICS])
+
+        def filterColumn(self, event, rows, cols, outside):
+            assert len(cols) == 1
+            DataTab.FilterDialog(self.parentframe,self.model.df.columns[cols[0]])
             
+    class FilterDialog(tk.simpledialog.Dialog):
+        def __init__(self, parent, column):
+            self.filter = parent.findOrCreateFilter(column)
+            super().__init__(parent)
+            
+
+        def body(self, master):
+            print('build dialog body')
+            # Add stuff to master frame
+            # GUI component Will work on the self.filter object
+
+        def apply(self):
+            # Done so set filter back 
+            self.parent.setFilter(self.filter)
     
     def __init__(self, parent, metrics=[], variants=[]):
         super().__init__(parent, DataTabData)
@@ -339,6 +381,12 @@ class DataTab(AnalyzerTab):
     def setupAnalyzerData(self, analyzerData):
         analyzerData.add_observer(self)
 
+    def findOrCreateFilter(self, column):
+        return self.analyzerData.findOrCreateFilter(column)
+
+    def setFilter(self, filter):
+        self.analyzerData.setFilter(filter)
+
     class ChooseColumnDialog(tk.simpledialog.Dialog):
         def body(self, master):
             self.metric = tk.StringVar(value='Metric')
@@ -361,6 +409,7 @@ class DataTab(AnalyzerTab):
         out_df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
         if selectedMask.any(): out_df = out_df[selectedMask]
+        out_df = out_df[self.analyzerData.filterMask(out_df)]
         if not self.guiState.showHiddenPointInTable: 
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
             out_df = out_df [~hiddenMask]
