@@ -32,6 +32,7 @@ class PerLevelGuiState(Observable):
 
         # Currently selected plot interaction action
         self.selectPoint = True
+        self.showHiddenPointInTable = False
         self.action_selected = 'Choose Action'
 
         # The final mask used to select data points
@@ -76,10 +77,12 @@ class PerLevelGuiState(Observable):
     def columnOrder(self):
         return KEY_METRICS + self.nonKeyColumnOrder
 
-    def toggleLabels(self, names, alpha):
-        for name in names:
+    # Only do this for non-hidden points
+    def setLabelAlphas(self, names, alpha, notify=True):
+        for name in set(names)-set(self.hidden):
             self.label_visibility[name] = alpha
-        self.updated_notify_observers()
+        if notify:
+            self.updated_notify_observers()
 
     def toggleLabelData(self, nameTimestampDf, notify=True):
         for name in self.get_encoded_names(nameTimestampDf).tolist():
@@ -90,9 +93,9 @@ class PerLevelGuiState(Observable):
     def toggleLabel(self, name, notify=True):
         if name not in self.label_visibility:
             self.label_visibility[name] = 0
-        self.setLabel(name, int(not self.label_visibility[name]), notify)
+        self.setLabelAlpha(name, int(not self.label_visibility[name]), notify)
     
-    def setLabel(self, name, alpha, notify=True):
+    def setLabelAlpha(self, name, alpha, notify=True):
         self.label_visibility[name] = alpha
         if notify:
             self.updated_notify_observers()
@@ -157,6 +160,9 @@ class PerLevelGuiState(Observable):
 
     def highlightData(self, nameTimestampDf):
         self.highlightPoints(self.get_encoded_names(nameTimestampDf).tolist())
+
+    def unhighlightData(self, nameTimestampDf):
+        self.unhighlightPoints(self.get_encoded_names(nameTimestampDf).tolist())
 
     def selectPoints(self, names):
         self.selected = names
@@ -443,7 +449,7 @@ class PlotTab(AnalyzerTab):
             alpha = 0
         else:
             self.toggle_labels_button['text'] = 'Hide Labels'
-        self.plot.toggleLabels(alpha)
+        self.plot.setLabelAlphas(alpha)
 
     def showPoints(self):
         self.plot.showPoints()

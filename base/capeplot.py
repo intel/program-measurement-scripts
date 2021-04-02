@@ -748,8 +748,8 @@ class CapePlot:
     def adjustText(self):
         self.plotData.adjustText()
 
-    def toggleLabels(self, alpha):
-        self.plotData.toggleLabels(alpha)
+    def setLabelAlphas(self, alpha):
+        self.plotData.setLabelAlphas(alpha)
 
     def showPoints(self):
         self.plotData.showPoints()
@@ -851,8 +851,8 @@ class PlotData():
         newTitle += ')'
         self.legend.get_title().set_text(newTitle)
 
-    def toggleLabels(self, alpha):
-        self.guiState.toggleLabels(self.names, alpha)
+    def setLabelAlphas(self, alpha):
+        self.guiState.setLabelAlphas(self.names, alpha)
         self.checkAdjusted()
 
     def showPoints(self):

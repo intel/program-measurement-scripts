@@ -277,6 +277,7 @@ class DataTab(AnalyzerTab):
                 #mymenu = tk.Menu(popupmenu, tearoff = 0)
                 #popupmenu.add_cascade(label='Cape', menu=mymenu)
             popupmenu.add_command(label='Highlight Point', command=lambda: self.highlight(event, rows, cols, outside))
+            popupmenu.add_command(label='Unhighlight Point', command=lambda: self.unhighlight(event, rows, cols, outside))
             popupmenu.add_command(label='Remove Point', command=lambda: self.remove(event, rows, cols, outside))
             popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
 
@@ -293,6 +294,9 @@ class DataTab(AnalyzerTab):
 
         def highlight(self, event, rows, cols, outside):
             self.parentframe.highlightData(self.model.df.iloc[rows][KEY_METRICS])
+
+        def unhighlight(self, event, rows, cols, outside):
+            self.parentframe.unhighlightData(self.model.df.iloc[rows][KEY_METRICS])
 
         def toggleLabel(self, event, rows, cols, outside):
             self.parentframe.toggleLabelData(self.model.df.iloc[rows][KEY_METRICS])
@@ -326,6 +330,9 @@ class DataTab(AnalyzerTab):
     def highlightData(self, nameTimestampDf):
         self.guiState.highlightData(nameTimestampDf)
 
+    def unhighlightData(self, nameTimestampDf):
+        self.guiState.unhighlightData(nameTimestampDf)
+
     def toggleLabelData(self, nameTimestampDf):
         self.guiState.toggleLabelData(nameTimestampDf)
 
@@ -353,8 +360,10 @@ class DataTab(AnalyzerTab):
         # Update table with latest loadedData df
         df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
-        hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
-        if selectedMask.any(): df = df[selectedMask & ~hiddenMask]
+        if selectedMask.any(): df = df[selectedMask]
+        if not self.guiState.showHiddenPointInTable: 
+            hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
+            df = df [~hiddenMask]
         df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         self.summaryTable.model.df = df
         self.summaryTable.redraw()
@@ -379,6 +388,7 @@ class FilteringTab(AnalyzerTab):
         self.action_menu.grid(row=3, column=1, pady=10, sticky=tk.NW)
         self.update_button.grid(row=0, column=3, sticky=tk.N)
         self.selectPointCb.grid(row=4, column=1, sticky=tk.N)
+        self.showHiddenCb.grid(row=4, column=2, sticky=tk.N)
 
     def notify(self, data):
         if self.analyzerData.df.empty:
@@ -434,9 +444,12 @@ class FilteringTab(AnalyzerTab):
         self.max_entry = tk.Entry(self.threshold_frame, textvariable=self.max_num)
         # Update GUI State with selected filters
         self.update_button = tk.Button(self, text='Update', command=self.updateFilter)
-        selectPointVar = tk.IntVar(value=1)
+        selectPointVar = tk.IntVar(value=1)  
         self.selectPointCb = tk.Checkbutton(self.threshold_frame, var=selectPointVar, text='Select Point', onvalue=1, offvalue=0, 
                                             command=lambda: self.guiState.setSelectPoint(selectPointVar.get()==1))
+        showHiddenInTableVar = tk.IntVar(value=0)  
+        self.showHiddenCb = tk.Checkbutton(self.threshold_frame, var=showHiddenInTableVar, text='Show Hidden Point in Table', onvalue=1, offvalue=0, 
+                                            command=lambda: self.guiState.setShowHiddenInTable(showHiddenInTableVar.get()==1))
     
     def updateFilter(self):
         names = self.pointSelector.getUncheckedNames()
