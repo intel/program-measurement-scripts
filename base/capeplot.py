@@ -624,7 +624,10 @@ class CapePlot:
         # Plot rest of the plot (which can be adjusted later)
         self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, name_marker)
 
-        try: self.fig.tight_layout()
+        try: 
+            self.fig.tight_layout()
+            self.fig.set_tight_layout(True)
+        #    self.fig.canvas.draw()
         except: print("self.fig.tight_layout() failed")
     
         self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
