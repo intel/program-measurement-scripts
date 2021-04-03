@@ -10,7 +10,8 @@ from pandastable import Table
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path, exportCSV, exportXlsx
-from analyzer_base import PlotTab, AnalyzerData, AnalyzerTab, AxesTab
+from analyzer_model import AnalyzerData 
+from analyzer_base import PlotTab, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
 from metric_names import MetricName as MN
 from metric_names import NonMetricName, KEY_METRICS
@@ -426,6 +427,7 @@ class DataTab(AnalyzerTab):
                 result_df= result_df.append(merged_in, ignore_index=True)
         else:
             result_df = out_df
+        result_df = result_df.reset_index(drop=True)
         result_df = result_df[self.analyzerData.filterMask(out_df)]
         self.summaryTable.model.df = result_df
         self.summaryTable.redraw()
