@@ -409,20 +409,25 @@ class DataTab(AnalyzerTab):
         out_df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
         if selectedMask.any(): out_df = out_df[selectedMask]
-        out_df = out_df[self.analyzerData.filterMask(out_df)]
         if not self.guiState.showHiddenPointInTable: 
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
             out_df = out_df [~hiddenMask]
         out_df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         cnt_df = self.summaryTable.model.df
         if not cnt_df.empty:
-            merged = pd.merge(cnt_df, out_df, on=KEY_METRICS, how='outer', indicator='Exist')
+            merged = pd.merge(cnt_df, out_df[KEY_METRICS], on=KEY_METRICS, how='outer', indicator='Exist')
             bothMask= (merged.Exist == 'both')
             addedMask= (merged.Exist == 'right_only')
-            merged.drop(columns=['Exist'], inplace=True)
             # 'left_only' are row to be dropped so ignored
-            out_df = merged[bothMask].append(merged[addedMask], ignore_index=True)
-        self.summaryTable.model.df = out_df
+            merged.drop(columns=['Exist'], inplace=True)
+            result_df = merged[bothMask]
+            if (addedMask.any()):
+                merged_in = pd.merge(out_df, merged[addedMask][KEY_METRICS], on=KEY_METRICS, how='inner')
+                result_df= result_df.append(merged_in, ignore_index=True)
+        else:
+            result_df = out_df
+        result_df = result_df[self.analyzerData.filterMask(out_df)]
+        self.summaryTable.model.df = result_df
         self.summaryTable.redraw()
 
 class FilteringData(AnalyzerData):
