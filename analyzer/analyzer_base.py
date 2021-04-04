@@ -16,9 +16,28 @@ from analyzer_model import AnalyzerData
 from plot_interaction import PlotInteraction
 from utils import Observable, exportCSV, exportXlsx
 
+# Frame that can be hidden and pause associated PasuableObserable object(s)
+class HideableTab(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+    
+    # Subclass should override to provide an PausableObservable object this cares about
+    def getPausables(self):
+        return []
+
+    # This method is called on hiding of this tab
+    def hide(self):
+        for pausable in self.getPausables():
+            pausable.pause()
+
+    # This method is called on exposing of this tab
+    def expose(self):
+        for pausable in self.getPausables():
+            pausable.resume()
+    
 
 # globals().update(MetricName.__members__)
-class GuiBaseTab(tk.Frame):
+class GuiBaseTab(HideableTab):
     def __init__(self, parent):
         super().__init__(parent)
         self.analyzerData = None
@@ -31,6 +50,9 @@ class GuiBaseTab(tk.Frame):
 
     def setupAnalyzerData(self, analyzerData):
         pass
+
+    def getPausables(self):
+        return [self.analyzerData]
 
     @property
     def level(self):
@@ -48,6 +70,7 @@ class GuiBaseTab(tk.Frame):
     def guiState(self):
         return self.levelData.guiState
 
+
 class AnalyzerTab(GuiBaseTab):
     def __init__(self, parent, analyzerDataClass):
         super().__init__(parent)
@@ -62,10 +85,9 @@ class AnalyzerTab(GuiBaseTab):
         levelData.add_observer(self)
 
     def setLevelData(self, levelData):
-        guiState = levelData.guiState
-        self.setupGuiState(guiState)
-        self.setupLevelData(levelData)
-        self.setAnalyzerData(guiState.findOrCreateGuiData(self.analyzerDataClass))
+        self.setAnalyzerData(levelData.guiState.findOrCreateGuiData(self.analyzerDataClass))
+        self.setupGuiState(self.guiState)
+        self.setupLevelData(self.levelData)
         
     # def setAnalyzerData(self, analyzerData):
     #     super().setAnalyzerData(analyzerData)
@@ -159,7 +181,8 @@ class PlotTab(AnalyzerTab):
 
     def setupGuiState(self, guiState):
         super().setupGuiState(guiState)
-        guiState.add_observer(self.plotUpdater)
+        # Link up analyer Data to guiState
+        guiState.add_observer(self.analyzerData)
     
     def setupAnalyzerData(self, analyzerData):
         super().setupAnalyzerData(analyzerData)

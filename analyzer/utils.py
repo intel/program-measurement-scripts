@@ -14,10 +14,12 @@ class Observable:
         self.updated = True
         
     def add_observer(self, observer):
+        assert (observer is not None)
         if observer not in self.observers:
             self.observers.append(observer)
 
     def rm_observer(self, observer):
+        assert (observer is not None)
         if observer in self.observers:
             self.observers.remove(observer)
 

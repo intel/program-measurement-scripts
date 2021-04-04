@@ -32,11 +32,33 @@ from meta_tabs import ShortNameTab, AxesTab, MappingsTab, GuideTab, FilteringTab
 from plot_interaction import PlotInteraction
 from analyzer_controller import AnalyzerController
 from analyzer_model import LoadedData
+from analyzer_base import HideableTab
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
 
-class LevelContainerTab(tk.Frame):
+class TabTrackingNB(ttk.Notebook): 
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.currentTab = None 
+        self.bind('<<NotebookTabChanged>>', self.plotTabChanged)
+
+    def plotTabChanged(self, evt):
+        print(f'updated ttnb tab:{self.index(self.select())}')
+        if self.currentTab:
+            self.currentTab.hide()
+        self.currentTab = self.nametowidget(self.select())
+        self.currentTab.expose()
+
+    def updateAllTabStatus(self):
+        for tabName in self.tabs():
+            tab = self.nametowidget(tabName)
+            if tab is self.currentTab:
+                tab.expose()
+            else:
+                tab.hide()
+                
+class LevelContainerTab(HideableTab):
     def __init__(self, parent, level):
         super().__init__(parent)
         self.level = level
@@ -46,7 +68,7 @@ class LevelContainerTab(tk.Frame):
         # Each level has its own paned window
         plotPw = tk.PanedWindow(self, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
         # Each level has its own plot tabs
-        self.plot_note = ttk.Notebook(plotPw)
+        self.plot_note = TabTrackingNB(plotPw)
 
         # Codelet Plot Data
         # 3D breaks 'name:marker' because of different plotting
@@ -67,7 +89,7 @@ class LevelContainerTab(tk.Frame):
         # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
         self.addPlotTab(ScurveAllTab(self.plot_note), name='S-Curve')
         # Create Per Level Tabs Underneath Plot Notebook
-        self.data_note = ttk.Notebook(plotPw)
+        self.data_note = TabTrackingNB(plotPw)
         # Data tabs
         self.addDataTab(DataTab(self.data_note), name='Data')
         # Short name tabs
@@ -82,25 +104,37 @@ class LevelContainerTab(tk.Frame):
         plotPw.add(self.plot_note, stretch='always')
         plotPw.add(self.data_note, stretch='always')
         plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.levelData = None
+
+
+    def getPausables(self):
+        return [self.levelData] if self.levelData else []
+        
+
+    def addTab(self, tab, name, tabs, notebook):
+        tabs.append(tab)
+        notebook.add(tab, text=name)
 
     def addPlotTab(self, tab, name):
-        self.plotTabs.append(tab)
-        self.plot_note.add(tab, text=name)
+        self.addTab(tab, name, self.plotTabs, self.plot_note)
 
     def addDataTab(self, tab, name):
-        self.dataTabs.append(tab)
-        self.data_note.add(tab, text=name)
+        self.addTab(tab, name, self.dataTabs, self.data_note)
 
     def resetTabValues(self):
         for tab in self.plotTabs:
             tab.resetTabValues()
 
     def setLevelData(self, levelData):
+        self.levelData = levelData
         for tab in self.plotTabs + self.dataTabs:
             tab.setLevelData(levelData)
 
-    def setLoadedData(self, loadedData):
-        self.setLevelData(loadedData.levelData[self.level])
+    def setLoadedData(self, loadedDataArg):
+        self.setLevelData(loadedDataArg.levelData[self.level])
+        # Update notebook to set the right exposed/hidden status to underlying gui states
+        self.plot_note.updateAllTabStatus()
+        self.data_note.updateAllTabStatus()
         
 
 
@@ -278,6 +312,8 @@ class AnalyzerGui(tk.Frame):
         self.oneviewTab.setLoadedData(loadedData) 
         for tab in self.allTabs:
             tab.setLoadedData(loadedData)
+        # Update notebook to set the right exposed/hidden status to underlying gui states
+        self.level_plot_note.updateAllTabStatus()
         
     def resetTabValues(self):
         #self.tabs = [gui.c_qplotTab, gui.c_trawlTab, gui.c_customTab, gui.c_siPlotTab, gui.c_summaryTab, \
@@ -332,7 +368,7 @@ class AnalyzerGui(tk.Frame):
         self.oneviewTab = OneviewTab(self.oneview_note)
         self.oneview_note.add(self.oneviewTab, text="Oneview")
         # Plots (Right Window)
-        self.level_plot_note = ttk.Notebook(infoPw)
+        self.level_plot_note = TabTrackingNB(infoPw)
         #self.codeletTab = CodeletTab(self.level_plot_note, self, root)
         self.codeletTab = CodeletTab(self.level_plot_note)
         #self.codeletTab.setLoadedData(self.loadedData)
@@ -346,7 +382,7 @@ class AnalyzerGui(tk.Frame):
         # self.level_plot_note.add(self.codeletTab, text='Codelet')
         # self.level_plot_note.add(self.sourceTab, text='Source')
         # self.level_plot_note.add(self.applicationTab, text='Application')
-        self.level_plot_note.bind('<<NotebookTabChanged>>', lambda evt: print(f'updated tab:{self.level_plot_note.index(self.level_plot_note.select())}'))
+        #self.level_plot_note.bind('<<NotebookTabChanged>>', lambda evt: print(f'updated level tab:{self.level_plot_note.index(self.level_plot_note.select())}'))
 
 
         # # Each level has its own paned window

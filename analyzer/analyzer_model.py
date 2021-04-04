@@ -19,10 +19,37 @@ from pathlib import Path
 
 from utils import Observable
 
+class PausableObserable(Observable):
+    '''Hideable GUI State tracks whether GUI data is hidden and will delay notifcation until exposed.'''
+    def __init__(self):
+        super().__init__()
+        # it is always safe to set this to False 
+        self._paused = False
+        self.notified = False
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
+        # May trigger notification if being notified before
+        if self.notified:
+            self.notify_observers()
+        
+    def notify_observers(self):
+        if self._paused:
+            print('Delayed notification')
+            self.notified = True
+            return
+        super().notify_observers()
+        # Reset to False after handling the notification.
+        self.notified = False
+
+
 
 class LoadedData(Observable):
         
-    class PerLevelData(Observable):
+    class PerLevelData(PausableObserable):
         def __init__(self, loadedData, level):
             super().__init__()
             self.level = level
@@ -36,6 +63,16 @@ class LoadedData(Observable):
             self.mapping = pd.DataFrame()
             # Put this here but may move it out.
             self.guiState = PerLevelGuiState(self, level)
+
+        # Also pause for guiState
+        def pause(self):
+            super().pause()
+            self.guiState.pause()
+
+        # Also resume for guiState
+        def resume(self):
+            super().resume()
+            self.guiState.resume()
             
 
         @classmethod
@@ -558,7 +595,7 @@ class LoadedData(Observable):
 
 
 
-class PerLevelGuiState(Observable):
+class PerLevelGuiState(PausableObserable):
     def __init__(self, levelData, level):
         super().__init__()
         self.level = level
@@ -769,16 +806,13 @@ class PerLevelGuiState(Observable):
 
     # Plot interaction objects for each plot at this level will be notified to avoid a complete redraw
 
-class AnalyzerData(Observable):
+class AnalyzerData(PausableObserable):
     def __init__(self, levelData, level, name):
         super().__init__()
         self.levelData = levelData
     #    self.mappings = pd.DataFrame()
         self.level = level
         self.name = name
-        # Only set to True when it is sure the data corresponding to GUI is hidden
-        # it is always safe to set this to False 
-        self.is_hidden = False
         #self.gui = gui
         #self.root = root
         # Watch for updates in loaded data
