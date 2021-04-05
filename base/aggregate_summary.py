@@ -86,9 +86,12 @@ def agg_fn(df):
     # First reconstruct the sc, xmm, ymm, zmm metrics
     # more precise to just compute scPercent from other vector percentage (see below)
     # scPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'SC')
-    xmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'XMM')
-    ymmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'YMM')
-    zmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'ZMM')
+    #xmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'XMM')
+    #ymmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'YMM')
+    #zmmPercent = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'ZMM')
+    xmmPercent = df['_xmmPercent']
+    ymmPercent = df['_ymmPercent']
+    zmmPercent = df['_zmmPercent']
     # Aggregate them 
     # Don't bother to compute scPercent because coverage may not sum to 1
     # Just compute aggregated xmm, ymm, zmm percentage and assume the rest as sc
@@ -102,9 +105,9 @@ def agg_fn(df):
 
     excludedMetrics = [SRC_NAME, 'AppName', 'codelet_name', 'LoopId', 'SrcInfo', 'AppNameWithSrcInfo']
     # Caclulate aggregate MEM_LEVEL
-    node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
-    metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
-    add_mem_max_level_columns(out_df, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
+    # node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
+    # metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
+    # add_mem_max_level_columns(out_df, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     # For the rest, compute time weighted average
     remainingMetrics = [x for x in df.columns if x not in list(out_df.columns) + excludedMetrics]
     for metric in remainingMetrics:
@@ -132,6 +135,10 @@ def aggregate_runs_df(df, level="app", short_name_df=pd.DataFrame(), mapping_df=
         newNameColumn = 'AppNameWithSrcInfo'
     # Need to fix datasize being nan's because groupby does not work
     dsMask = pd.isnull(df[DATA_SET])
+    # Perform some expensive operations in batch
+    df['_xmmPercent'] = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'XMM')
+    df['_ymmPercent'] = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'YMM')
+    df['_zmmPercent'] = parseVecType(df[COUNT_VEC_TYPE_OPS_PCT], 'ZMM')
     df.loc[dsMask, DATA_SET] = 'unknown'
     grouped = df.groupby([newNameColumn, VARIANT, NUM_CORES, DATA_SET, PREFETCHERS, TIMESTAMP])
     aggregated = grouped.apply(agg_fn)
@@ -139,6 +146,14 @@ def aggregate_runs_df(df, level="app", short_name_df=pd.DataFrame(), mapping_df=
     aggregated.reset_index(drop=True, inplace=True)
     # Add short names
     aggregated = pd.merge(left=aggregated, right=short_name_df[KEY_METRICS + [SHORT_NAME]], on=KEY_METRICS, how='left')
+    # Caclulate aggregate MEM_LEVEL
+    node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
+    #metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
+    metric_to_memlevel = lambda v: v.extractComponent()
+    add_mem_max_level_columns(aggregated, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
+
+    # Drop temporary columns
+    aggregated.drop(columns=['_xmmPercent','_ymmPercent','_zmmPercent'], inplace=True)
     aggregated_mapping_df = pd.DataFrame()
     if not mapping_df.empty:
         # Only select mapping with nodes in current summary data
