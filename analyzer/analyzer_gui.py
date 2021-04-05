@@ -44,7 +44,7 @@ class TabTrackingNB(ttk.Notebook):
         self.bind('<<NotebookTabChanged>>', self.plotTabChanged)
 
     def plotTabChanged(self, evt):
-        print(f'updated ttnb tab:{self.index(self.select())}')
+        #print(f'updated ttnb tab:{self.index(self.select())}')
         if self.currentTab:
             self.currentTab.hide()
         self.currentTab = self.nametowidget(self.select())
