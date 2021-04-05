@@ -11,7 +11,7 @@ from capedata import AggregateData, AnalyticsData
 from capedata import ShortNameData as CapeShortNameData
 from capedata import SummaryData
 from capeplot import CapacityData, CapeData
-from metric_names import ALL_METRICS, KEY_METRICS, NAME_FILE_METRICS
+from metric_names import ALL_METRICS, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
 from metric_names import MetricName as MN
 from sat_analysis import SatAnalysisData
 from generate_SI import SiData
@@ -183,7 +183,7 @@ class LoadedData(Observable):
             hidden=self.guiState.get_hidden_mask(raw_df)
             raw_df = raw_df[~hidden]
             write_raw_data(outfilename, raw_df)
-            sname_df = pd.merge(left=self.df[KEY_METRICS+MN.SHORT_NAME_METRICS], right=raw_df[KEY_METRICS], on=KEY_METRICS, how='right')
+            sname_df = pd.merge(left=self.df[KEY_METRICS+SHORT_NAME_METRICS], right=raw_df[KEY_METRICS], on=KEY_METRICS, how='right')
             # write short name files if short name not the same as Name
             if not sname_df[MN.NAME].equals(sname_df[MN.SHORT_NAME]):
                 # remove extension twice to remove ".raw.csv" extension
