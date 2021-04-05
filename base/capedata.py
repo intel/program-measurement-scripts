@@ -74,8 +74,9 @@ class AggregateData(SummaryGenerationData):
         return self
     
     def compute_impl(self, df):
+        short_name_df = pd.read_csv(self.short_names_path)
         aggDf, self.mapping = aggregate_runs_df(self.summaryDf.copy(deep=True), 
-                                                level=self.level, name_file=self.short_names_path)
+                                                level=self.level, short_name_df=short_name_df)
         return aggDf
 
     def input_output_args(self):

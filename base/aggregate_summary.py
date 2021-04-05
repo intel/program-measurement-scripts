@@ -11,7 +11,7 @@ from capelib import vector_ext_str
 from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from compute_transitions import aggregate_transitions
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -24,25 +24,15 @@ def parseVecType(text, vecType):
     expanded = text.str.extract(r"(?P<prefix>{}=)(?P<value>\d*\.?\d*)(?P<suffix>%.*)".format(vecType), expand=True)
     return pd.to_numeric(expanded['value']).fillna(0)/100
 
-def getShortName(df, short_names_path):
-    if short_names_path is not None and os.path.isfile(short_names_path):
-        with open(short_names_path, 'r', encoding='utf-8-sig') as infile:
-            rows = list(csv.DictReader(infile, delimiter=','))
-            for row in rows:
-                df.loc[(df[NAME]==row[NAME]) & (df[TIMESTAMP].astype(str)==row[TIMESTAMP]), SHORT_NAME] = row[SHORT_NAME]
-                #if df[NAME][0] == row[NAME]:
-                #    df[SHORT_NAME] = row['short_name']
-
-def agg_fn(df, short_names_path):
+def agg_fn(df):
     app_name, variant, numCores, ds, prefetchers, timestamp = df.name
 
     from_name_timestamps = [list(df[[NAME,TIMESTAMP]].itertuples(index=False, name=None))]
 
-    out_df = pd.DataFrame({NAME:[app_name], SHORT_NAME: [app_name], \
+    out_df = pd.DataFrame({NAME:[app_name], \
         VARIANT: [variant], NUM_CORES: [numCores], DATA_SET: [ds], \
             PREFETCHERS: [prefetchers], TIMESTAMP: [timestamp], \
             'From Name/Timestamp#': [from_name_timestamps]})
-    getShortName(out_df, short_names_path)
 
     keyMetrics = list(out_df.columns)
     # totalAppTime useful for many computations below
@@ -125,7 +115,7 @@ def agg_fn(df, short_names_path):
 
     return out_df
 
-def aggregate_runs_df(df, level="app", name_file=None, mapping_df = pd.DataFrame()):
+def aggregate_runs_df(df, level="app", short_name_df=pd.DataFrame(), mapping_df=pd.DataFrame()):
     df[['AppName', 'codelet_name']] = df.Name.str.split(pat=": ", expand=True)
     if level == "app":
         newNameColumn='AppName'
@@ -144,9 +134,11 @@ def aggregate_runs_df(df, level="app", name_file=None, mapping_df = pd.DataFrame
     dsMask = pd.isnull(df[DATA_SET])
     df.loc[dsMask, DATA_SET] = 'unknown'
     grouped = df.groupby([newNameColumn, VARIANT, NUM_CORES, DATA_SET, PREFETCHERS, TIMESTAMP])
-    aggregated = grouped.apply(agg_fn, short_names_path=name_file)
+    aggregated = grouped.apply(agg_fn)
     # Flatten the Multiindex
     aggregated.reset_index(drop=True, inplace=True)
+    # Add short names
+    aggregated = pd.merge(left=aggregated, right=short_name_df[KEY_METRICS + [SHORT_NAME]], on=KEY_METRICS, how='left')
     aggregated_mapping_df = pd.DataFrame()
     if not mapping_df.empty:
         # Only select mapping with nodes in current summary data
