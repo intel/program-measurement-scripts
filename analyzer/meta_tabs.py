@@ -305,6 +305,9 @@ class DataTab(AnalyzerTab):
             popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
             popupmenu.add_command(label='Filter Column', command=lambda: self.filterColumn(event, rows, cols, outside), 
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
+            #popupmenu.add_command(label='Stable Sort', command=lambda: self.stableSort(event, rows, cols, outside))
+            popupmenu.add_command(label='Sort Numerically', command=lambda: self.sortNumerically(event, rows, cols, outside),
+                                  state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
 
             popupmenu.bind("<FocusOut>", popupFocusOut)
             popupmenu.focus_set()
@@ -328,7 +331,44 @@ class DataTab(AnalyzerTab):
 
         def filterColumn(self, event, rows, cols, outside):
             assert len(cols) == 1
-            DataTab.FilterDialog(self.parentframe,self.model.df.columns[cols[0]])
+            DataTab.FilterDialog(self.parentframe, self.model.df.columns[cols[0]])
+
+        # def stableSort(self, event, rows, cols, outside):
+        #     colnames = self.model.df.columns[cols]
+        #     self.model.df.sort_values(by=list(colnames), ascending=True, inplace=True, ignore_index=True, kind='mergesort')
+        #     self.redraw()
+
+        def sortNumerically(self, event, rows, cols, outside):
+            assert len(cols) == 1
+            colname = self.model.df.columns[cols[0]]
+            try:
+                self.model.df['_SortKey'] = self.model.df[colname].astype(float)
+            except:
+                tk.messagebox.showerror("Numerical Sort Error", 
+                                        f"Error attempting to convert column '{colname}' to float.") 
+                return
+            self.model.df.sort_values(by=['_SortKey'], ascending=True, inplace=True, ignore_index=True, kind='mergesort')
+            self.model.df.drop(columns=['_SortKey'], inplace=True)
+            self.redraw()
+
+        def update_preserve_order(self, out_df):
+            cnt_df = self.model.df
+            if not cnt_df.empty:
+                merged = pd.merge(cnt_df, out_df[KEY_METRICS], on=KEY_METRICS, how='outer', indicator='Exist')
+                bothMask= (merged.Exist == 'both')
+                addedMask= (merged.Exist == 'right_only')
+                # 'left_only' are row to be dropped so ignored
+                merged.drop(columns=['Exist'], inplace=True)
+                result_df = merged[bothMask]
+                if (addedMask.any()):
+                    merged_in = pd.merge(out_df, merged[addedMask][KEY_METRICS], on=KEY_METRICS, how='inner')
+                    result_df= result_df.append(merged_in, ignore_index=True)
+            else:
+                result_df = out_df 
+                
+            result_df = result_df.reset_index(drop=True)
+            self.model.df = self.parentframe.filter(result_df)
+            self.redraw()
             
     class FilterDialog(tk.simpledialog.Dialog):
         def __init__(self, parent, column):
@@ -388,6 +428,9 @@ class DataTab(AnalyzerTab):
     def setFilter(self, filter):
         self.analyzerData.setFilter(filter)
 
+    def filter(self, df): 
+        return df[self.analyzerData.filterMask(df)]
+
     class ChooseColumnDialog(tk.simpledialog.Dialog):
         def body(self, master):
             self.metric = tk.StringVar(value='Metric')
@@ -414,23 +457,7 @@ class DataTab(AnalyzerTab):
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
             out_df = out_df [~hiddenMask]
         out_df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
-        cnt_df = self.summaryTable.model.df
-        if not cnt_df.empty:
-            merged = pd.merge(cnt_df, out_df[KEY_METRICS], on=KEY_METRICS, how='outer', indicator='Exist')
-            bothMask= (merged.Exist == 'both')
-            addedMask= (merged.Exist == 'right_only')
-            # 'left_only' are row to be dropped so ignored
-            merged.drop(columns=['Exist'], inplace=True)
-            result_df = merged[bothMask]
-            if (addedMask.any()):
-                merged_in = pd.merge(out_df, merged[addedMask][KEY_METRICS], on=KEY_METRICS, how='inner')
-                result_df= result_df.append(merged_in, ignore_index=True)
-        else:
-            result_df = out_df
-        result_df = result_df.reset_index(drop=True)
-        result_df = result_df[self.analyzerData.filterMask(out_df)]
-        self.summaryTable.model.df = result_df
-        self.summaryTable.redraw()
+        self.summaryTable.update_preserve_order(out_df)
 
 class FilteringData(AnalyzerData):
     def __init__(self, data, level):
