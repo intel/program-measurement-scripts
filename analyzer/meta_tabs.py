@@ -6,7 +6,7 @@ import copy
 import operator
 from os.path import expanduser
 from tkinter import messagebox
-from pandastable import Table
+from pandastable import Table, config
 from transitions.extensions import GraphMachine as Machine
 from transitions import State
 from utils import center, Observable, resource_path, exportCSV, exportXlsx
@@ -284,11 +284,27 @@ class DataTab(AnalyzerTab):
 
     #Override table class for customized behavior.  SEE: https://readthedocs.org/projects/pandastable/downloads/pdf/latest/ 
     class DataTable(Table):
+        def __init__(self, parent):
+            super().__init__(parent, dataframe=pd.DataFrame(columns=KEY_METRICS), showtoolbar=False, showstatusbar=True)
+            options = {'align': 'w', 'cellbackgr': '#F4F4F3', 'cellwidth': 80, 'colheadercolor': '#535b71', 'floatprecision': 2, 
+                       'font': 'Arial', 'fontsize': 10, 'fontstyle': '', 'grid_color': '#ABB1AD', 
+                       'linewidth': 1, 'rowheight': 22, 'rowselectedcolor': '#E4DED4', 'textcolor': 'black'}
+            config.apply_options(options, self)
+            self.doneSetWrap = False
+            #self.show()
+            #self.setWrap()
+            
         def handle_left_click(self, event):
-            rowclicked = self.get_row_clicked(event)
-            colclicked = self.get_col_clicked(event)
-            print(f'leftclicked: ({rowclicked}, {colclicked})')
+            #rowclicked = self.get_row_clicked(event)
+            #colclicked = self.get_col_clicked(event)
+            #print(f'leftclicked: ({rowclicked}, {colclicked})')
+            # TODO: add selection
             super().handle_left_click(event)
+
+        def show(self):
+            super().show()
+            # NOTE: Has to do setWrap() after finishing show() so override and call it
+            self.setWrap()
 
         # Note this will replace the original menu.  
         # In progress checking with developers to add the items instead of replacement..
@@ -363,8 +379,11 @@ class DataTab(AnalyzerTab):
                 if (addedMask.any()):
                     merged_in = pd.merge(out_df, merged[addedMask][KEY_METRICS], on=KEY_METRICS, how='inner')
                     result_df= result_df.append(merged_in, ignore_index=True)
+                # Take the out_df order and append rest of cnt_df columns
+                combined_column_order = list(out_df.columns) + [c for c in cnt_df.columns if c not in out_df.columns]
+                result_df = result_df[combined_column_order]
             else:
-                result_df = out_df 
+                result_df = out_df
                 
             result_df = result_df.reset_index(drop=True)
             self.model.df = self.parentframe.filter(result_df)
@@ -388,7 +407,7 @@ class DataTab(AnalyzerTab):
     def __init__(self, parent, metrics=[], variants=[]):
         super().__init__(parent, DataTabData)
         # self.summaryTable = Table(self, dataframe=df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)[metrics], showtoolbar=False, showstatusbar=True)
-        self.summaryTable = DataTab.DataTable(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
+        self.summaryTable = DataTab.DataTable(self)
         self.table_button_frame = tk.Frame(self)
         self.table_button_frame.grid(row=4, column=1)
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.analyzerData.df))
