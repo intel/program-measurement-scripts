@@ -387,8 +387,8 @@ class SiPlot(CapePlot):
             if cluster:
                 if cluster in self.color_map['Label'].tolist(): color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
                 else: 
-                    try: color = self.colors[i]
-                    except: color = self.colors[0]
+                    try: color = self.COLOR_ORDER[i]
+                    except: color = self.DEFAULT_COLOR
                 target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
                 print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
                 rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 

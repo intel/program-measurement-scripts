@@ -16,6 +16,7 @@ from metric_names import MetricName as MN
 from sat_analysis import SatAnalysisData
 from generate_SI import SiData
 from pathlib import Path
+from capeplot import CapePlot
 
 from utils import Observable
 
@@ -506,7 +507,7 @@ class LoadedData(Observable):
     #     root.wait_window(self.win)
 
     def compute_colors(self, df, clusters=False):
-        colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+        colors = CapePlot.COLOR_ORDER
         colorDf = pd.DataFrame() 
         timestamps = df['Timestamp#'].dropna().unique()
         # Get saved color column from short names file
@@ -685,7 +686,7 @@ class PerLevelGuiState(PausableObserable):
 
     def set_color_map(self, color_map_df, notify=True):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
-        color_map_df.fillna({'Color':'blue'}, inplace=True)
+        color_map_df.fillna({'Color': CapePlot.DEFAULT_COLOR}, inplace=True)
         self.color_map = color_map_df
         if notify:
             self.updated_notify_observers()

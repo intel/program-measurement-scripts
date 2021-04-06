@@ -415,6 +415,8 @@ class CapacityData(NodeCentricData):
 
 # Base class for all plots
 class CapePlot:
+    COLOR_ORDER = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+    DEFAULT_COLOR = COLOR_ORDER[0]
     def __init__(self, data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         # Data is a list of data
@@ -435,7 +437,7 @@ class CapePlot:
         self._x_axis = x_axis
         self._y_axis = y_axis
         self.short_names_path = short_names_path
-        self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+        #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         self.fig = None
         self.fig, self.ax = plt.subplots()
         self.ax.clear()

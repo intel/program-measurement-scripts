@@ -15,14 +15,18 @@ from analyzer_base import PlotTab, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
 from metric_names import MetricName as MN
 from metric_names import NonMetricName, KEY_METRICS
+from capeplot import CapePlot
 globals().update(MN.__members__)
 
 class ShortNameData(AnalyzerData):
     def __init__(self, data, level):
         super().__init__(data, level, "ShortNameTabData")
+        self.shortNameTable = pd.DataFrame(columns=KEY_METRICS+[MN.SHORT_NAME, MN.VARIANT, 'Label'])
 
     # def notify(self, data):
     #     self.notify_observers()
+    def exportCSV(self, export_file_path):
+        self.shortNameTable.to_csv(export_file_path, index=False, header=True)
 
 class ShortNameTab(AnalyzerTab):
     def __init__(self, parent):
@@ -35,7 +39,7 @@ class ShortNameTab(AnalyzerTab):
         self.cluster_color_button = tk.Button(table_button_frame, text="Color by Cluster", command=lambda: self.colorClusters())
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
-        self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+        #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         self.table.show()
         self.update_button.grid(row=0, column=0)
         self.cluster_color_button.grid(row=0, column=1)
@@ -51,13 +55,14 @@ class ShortNameTab(AnalyzerTab):
 
     def colorClusters(self):
         # Update the GUI state color map with colors for each codelet and the label for the legend
+        colors = CapePlot.COLOR_ORDER
         df = self.analyzerData.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]].copy(deep=True)
         df[NonMetricName.SI_CLUSTER_NAME].replace({'':'No Cluster'}, inplace=True)
         df = df.reindex(columns = df.columns.tolist() + ['Label','Color'])
         for i, cluster in enumerate(df[NonMetricName.SI_CLUSTER_NAME].unique()):
-            if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, self.colors[i+1]]
+            if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, colors[i+1]]
         # All points without a cluster will be blue
-        df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', self.colors[0]]
+        df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', CapePlot.DEFAULT_COLOR]
         self.analyzerData.levelData.color_by_cluster(df)
 
     def findAndReplace(self):
@@ -71,13 +76,14 @@ class ShortNameTab(AnalyzerTab):
     # Merge user input labels with current mappings and replot
     def updateLabels(self):
         # Fill in the Color column based on unique user inputted labels
+        colors = CapePlot.COLOR_ORDER
         df = self.table.model.df.copy(deep=True)
         df['Color'] = ''
         for i, label in enumerate(df['Label'].unique()):
             if i < len(self.colors):
-                df.loc[df['Label']==label, ['Color']] = self.colors[i]
+                df.loc[df['Label']==label, ['Color']] = colors[i]
             else: # Make all blue when run out of colors
-                df.loc[df['Label']==label, ['Color']] = self.colors[0]
+                df.loc[df['Label']==label, ['Color']] = CapePlot.DEFAULT_COLOR
         # Update short names in each of the main dfs
         self.analyzerData.levelData.loadedData.update_short_names(df, self.level)
 
