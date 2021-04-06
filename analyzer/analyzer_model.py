@@ -92,8 +92,7 @@ class LoadedData(Observable):
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
-            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=pd.read_csv(short_names_path)[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'), 
-                                        notify=False)
+            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=self.short_names_df[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'), notify=False)
             self.updated_notify_observers()
             
         @property
@@ -112,7 +111,9 @@ class LoadedData(Observable):
         def short_names_path(self):
             return self.loadedData.short_names_path
         
-        
+        @property
+        def short_names_df(self):
+            return self.loadedData.short_names_df
         
         @property
         def df(self):
@@ -152,11 +153,11 @@ class LoadedData(Observable):
         def color_by_cluster(self, df):
             self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
 
-        def update_short_names(self, new_short_names):
+        def update_short_names(self):
             for item in self._shortnameDataItems:
                 # Will reread short name files (should have been updated)
                 item.compute() 
-            self.guiState.set_color_map(new_short_names[KEY_METRICS+['Label', 'Color']])
+            self.guiState.set_color_map(self.short_names_df[KEY_METRICS+['Label', 'Color']])
             self.updated_notify_observers()
             
         def merge_metrics(self, df, metrics):
@@ -261,6 +262,7 @@ class LoadedData(Observable):
         self.removedIntermediates = False
         self.transitions = 'disabled'
         self.urls = []
+        self.short_names_df = pd.read_csv(self.short_names_path)
 
     def get_df(self, level):
         return self.levelData[level].df
@@ -288,19 +290,18 @@ class LoadedData(Observable):
 
     def update_short_names(self, new_short_names, level):
         # Update local database
-        all_short_names = pd.read_csv(self.short_names_path)
-        merged = pd.concat([all_short_names, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
-        merged.to_csv(self.short_names_path, index=False)
+        self.short_names_df = pd.concat([self.short_names_df, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
+        self.short_names_df.to_csv(self.short_names_path, index=False)
         # Next update summary sheets for each level and notify observers
         #for level in self.levelData:
         # self.merge_metrics(new_short_names, [SHORT_NAME, VARIANT, 'Color'], level)
-        self.levelData[level].update_short_names(new_short_names)
+        self.levelData[level].update_short_names()
     
     def check_cape_paths(self):
         if not os.path.isfile(self.short_names_path):
             Path(self.cape_path).mkdir(parents=True, exist_ok=True)
             #open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=KEY_METRICS+NAME_FILE_METRICS+ ['Color']).to_csv(self.short_names_path, index=False)
+            pd.DataFrame(columns=KEY_METRICS+NAME_FILE_METRICS+ ['Label', 'Color']).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
             pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', 'Before Variant', 'After Variant', 
@@ -322,9 +323,8 @@ class LoadedData(Observable):
         datafile = os.path.basename(os.path.dirname(data_dir))
         shortnamefile = self.meta_filename('.names.csv')
         names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
-        short_names_db = pd.read_csv(self.short_names_path) if os.path.isfile(self.short_names_path) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
-        # Only add entries not already in short_names_db
-        merged = pd.merge(left=short_names_db, right=names, on=KEY_METRICS, how='outer')
+        # Only add entries not already in self.short_names_df
+        merged = pd.merge(left=self.short_names_df, right=names, on=KEY_METRICS, how='outer')
         updated = False
         for n in NAME_FILE_METRICS:
             need_update = merged[n+'_x'].isna()  
@@ -334,11 +334,11 @@ class LoadedData(Observable):
         if updated.any():
             # For key metrics, move them as is
             for n in KEY_METRICS:
-                short_names_db[n] = merged[n]
+                self.short_names_df[n] = merged[n]
             # For short name metrics, move the merged metrics *_x to db
             for n in NAME_FILE_METRICS:
-                short_names_db[n] = merged[n+'_x']
-            short_names_db.to_csv(self.short_names_path, index=False)
+                self.short_names_df[n] = merged[n+'_x']
+            self.short_names_df.to_csv(self.short_names_path, index=False)
 
     # TODO: remove this property
     @property
@@ -512,9 +512,8 @@ class LoadedData(Observable):
         timestamps = df['Timestamp#'].dropna().unique()
         # Get saved color column from short names file
         if not clusters and os.path.getsize(self.short_names_path) > 0:
-            all_short_names = pd.read_csv(self.short_names_path)
             df.drop(columns=['Color'], inplace=True, errors='ignore')
-            df = pd.merge(left=df, right=all_short_names[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
+            df = pd.merge(left=df, right=self.short_names_df[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
             toAdd = df[df['Color'].notnull()]
             colorDf = colorDf.append(toAdd, ignore_index=True)
         elif clusters:

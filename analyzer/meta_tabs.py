@@ -80,7 +80,7 @@ class ShortNameTab(AnalyzerTab):
         df = self.table.model.df.copy(deep=True)
         df['Color'] = ''
         for i, label in enumerate(df['Label'].unique()):
-            if i < len(self.colors):
+            if i < len(colors):
                 df.loc[df['Label']==label, ['Color']] = colors[i]
             else: # Make all default color when run out of colors
                 df.loc[df['Label']==label, ['Color']] = CapePlot.DEFAULT_COLOR
