@@ -570,6 +570,10 @@ class CapePlot:
     def draw_contours(self, xmax, ymax):
         self.ctxs = []  # Do nothing but set the ctxs objects to be empty
 
+    # Subclass override to update their specific contours
+    def update_contours(self):
+        pass
+
     @classmethod
     def get_min_max(cls, xs, ys):
         finiteXs = xs[np.isfinite(xs)]
@@ -642,16 +646,13 @@ class CapePlot:
         ax = self.ax
         self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
         legend = self.mk_legend()
+        # Update color of points
         for color, name, timestamp in zip(self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
             name = name+str(timestamp)
             if name in name_marker: name_marker[name].set_color(color)
 
-        # Update color of cluster rectangles
-        if hasattr(self, 'cluster_rects'):
-            for cluster in self.cluster_rects:
-                if cluster in self.color_map['Label'].tolist(): 
-                    rect_color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
-                    self.cluster_rects[cluster].set_edgecolor(rect_color)
+        # Update contours
+        self.update_contours()
 
         # labels, markers = self.plot_markers_and_labels(self.df, xs, ys, mytexts)
         # (x, y) = zip(*DATA)

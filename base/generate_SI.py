@@ -396,6 +396,12 @@ class SiPlot(CapePlot):
                 self.cluster_rects[cluster] = rect
                 ax.add_patch(rect)
 
+    def update_contours(self):
+        for cluster in self.cluster_rects:
+            if cluster in self.color_map['Label'].tolist(): 
+                rect_color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
+                self.cluster_rects[cluster].set_edgecolor(rect_color)
+
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 
 
