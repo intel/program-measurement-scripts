@@ -321,7 +321,7 @@ class DataTab(AnalyzerTab):
             popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
             popupmenu.add_command(label='Filter Column', command=lambda: self.filterColumn(event, rows, cols, outside), 
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
-            #popupmenu.add_command(label='Stable Sort', command=lambda: self.stableSort(event, rows, cols, outside))
+            popupmenu.add_command(label='Stable Sort', command=lambda: self.stableSort(event, rows, cols, outside))
             popupmenu.add_command(label='Sort Numerically', command=lambda: self.sortNumerically(event, rows, cols, outside),
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
 
@@ -349,10 +349,10 @@ class DataTab(AnalyzerTab):
             assert len(cols) == 1
             DataTab.FilterDialog(self.parentframe, self.model.df.columns[cols[0]])
 
-        # def stableSort(self, event, rows, cols, outside):
-        #     colnames = self.model.df.columns[cols]
-        #     self.model.df.sort_values(by=list(colnames), ascending=True, inplace=True, ignore_index=True, kind='mergesort')
-        #     self.redraw()
+        def stableSort(self, event, rows, cols, outside):
+            colnames = self.model.df.columns[cols]
+            self.model.df.sort_values(by=list(colnames), ascending=True, inplace=True, ignore_index=True, kind='mergesort')
+            self.redraw()
 
         def sortNumerically(self, event, rows, cols, outside):
             assert len(cols) == 1
