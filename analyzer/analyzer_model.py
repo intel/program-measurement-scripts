@@ -382,8 +382,8 @@ class LoadedData(Observable):
         appDf = dfs['Application']
         SummaryData(summaryDf).set_sources([last_source]).set_short_names_path(short_names_path).compute('summary-Codelet')
         AnalyticsData(summaryDf).set_filename(self.meta_filename('.analytics.csv')).compute()
-        AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).compute('summary-Source')
-        AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).compute('summary-Application')
+        AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).set_short_names_df(self.short_names_df).compute('summary-Source')
+        AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).set_short_names_df(self.short_names_df).compute('summary-Application')
         
         for level in self.levelData:
             df = dfs[level]
