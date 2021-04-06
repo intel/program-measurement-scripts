@@ -997,7 +997,7 @@ class PlotData():
         # # Refresh the canvas
         # for slave in canvasFrame.pack_slaves():
         #     slave.destroy()
-        # Store initial xlim and ylim for adjustText 
+        # Store initial xlim and ylim for adjustText
         self.setLims()
         # Create canvas and toolbar for plot
         self.canvas = FigureCanvasTkAgg(fig, canvasFrame)
@@ -1007,7 +1007,7 @@ class PlotData():
         # which may not be the case for chartButtonFrame
         toolbarFrame = tk.Frame(chartButtonFrame)
         self.toolbar = NavigationToolbar2Tk(self.canvas, toolbarFrame)
-        self.canvas.get_tk_widget().pack(side=tk.LEFT, anchor=tk.N, padx=10)
+        self.canvas.get_tk_widget().pack(expand=True, fill=tk.BOTH)
         self.canvas.draw()
         toolbarFrame.grid(column=5, row=0, sticky=tk.S)
         self.toolbar.update()
