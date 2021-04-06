@@ -82,7 +82,7 @@ class ShortNameTab(AnalyzerTab):
         for i, label in enumerate(df['Label'].unique()):
             if i < len(self.colors):
                 df.loc[df['Label']==label, ['Color']] = colors[i]
-            else: # Make all blue when run out of colors
+            else: # Make all default color when run out of colors
                 df.loc[df['Label']==label, ['Color']] = CapePlot.DEFAULT_COLOR
         # Update short names in each of the main dfs
         self.analyzerData.levelData.loadedData.update_short_names(df, self.level)
