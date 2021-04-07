@@ -34,5 +34,11 @@ class AnalyzerController:
         if choice == 'Overwrite':
             self.gui.resetTabValues() 
         self.gui.loadUrl(choice, url)
-        self.gui.wait(lambda: self.loadedData.loadFile(choice, data_dir, source, url))
+        self.wait_for_work('File loading', lambda: self.loadedData.loadFile(choice, data_dir, source, url))
         #self.loadedData.loadFile(choice, data_dir, source, url)
+
+    # Try to run long running work and cause GUI to tell user to wait
+    # work_function will be invoked as work_function()
+    def wait_for_work(self, work_name, work_function):
+        self.gui.wait_for_work(work_name, work_function)
+        

@@ -339,11 +339,12 @@ class AnalyzerGui(tk.Frame):
         # gui.c_siplotData.run_cluster = True
 
     class ProgressDialog(tk.simpledialog.Dialog):
-        def __init__(self, parent, work_function):
+        def __init__(self, parent, work_name, work_function):
             self.work_function = work_function
             self.parent = parent
             self.progress = None
-            threading.Thread(target=self.run, name='Doing work').start()
+            # Need to launch thread first because the constructor will block code execution
+            threading.Thread(target=self.run, name=work_name).start()
             # Pass Toplevel to make sure dialog in better position
             super().__init__(parent.winfo_toplevel())
             
@@ -357,15 +358,15 @@ class AnalyzerGui(tk.Frame):
         def run(self):
             self.work_function()
             self.progress.stop()
-            self.cancel()
+            self.ok()
 
         # Override to get rid of the "OK", "Cancel" buttons
         def buttonbox(self):
             pass
             
     # work_function will be invoked as work_function()
-    def wait(self, work_function):
-        AnalyzerGui.ProgressDialog(self, work_function)
+    def wait_for_work(self, work_name, work_function):
+        AnalyzerGui.ProgressDialog(self, work_name, work_function)
 
     def loadUrl(self, choice, url):
         if choice != 'Append':
