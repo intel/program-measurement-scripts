@@ -1016,6 +1016,12 @@ class PlotData():
         self.toolbar.update()
     
 
+    def getName(self, marker):
+        return self.marker_realname[marker]
+
+    def getTimestamp(self, marker):
+        return self.marker_timestamps[marker]
+
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
