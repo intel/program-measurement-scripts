@@ -336,7 +336,25 @@ class AnalyzerGui(tk.Frame):
         # # Reset cluster var for SIPlotData so find_si_clusters() is called again 
         # gui.c_siplotData.run_cluster = True
 
+    class ProgressDialog(tk.simpledialog.Dialog):
+        def __init__(self, parent):
+            # Pass Toplevel to make sure dialog in better position
+            super().__init__(parent.winfo_toplevel())
+            self.parent = parent
+            
+        def body(self, master):
+            progress = ttk.Progressbar(master, mode='indeterminate', maximum=50)
+            progress.pack()
+            progress.start(25)
+
+        def buttonbox(self):
+            pass
+            
+        
     def loadUrl(self, choice, url):
+        #AnalyzerGui.ProgressDialog(self)
+
+
         if choice != 'Append':
             self.oneviewTab.removePages() # Remove any previous OV HTML
 
@@ -455,7 +473,7 @@ class AnalyzerGui(tk.Frame):
         # a_plot_note.add(self.a_trawlTab, text='TRAWL')
         # a_plot_note.add(self.a_qplotTab, text='QPlot')
         # a_plot_note.add(self.a_customTab, text='Custom')
-        # # Create Per Level Tabs Underneath Plot Notebook
+        # # Create Per Level Tabs Underneath Plot Not
         # c_data_note = ttk.Notebook(c_plotPw)
         # s_data_note = ttk.Notebook(s_plotPw)
         # a_data_note = ttk.Notebook(a_plotPw)
