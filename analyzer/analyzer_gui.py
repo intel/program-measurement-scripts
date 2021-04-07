@@ -1,3 +1,5 @@
+import threading
+import time
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
@@ -337,24 +339,35 @@ class AnalyzerGui(tk.Frame):
         # gui.c_siplotData.run_cluster = True
 
     class ProgressDialog(tk.simpledialog.Dialog):
-        def __init__(self, parent):
+        def __init__(self, parent, work_function):
+            self.work_function = work_function
+            self.parent = parent
+            self.progress = None
+            threading.Thread(target=self.run, name='Doing work').start()
             # Pass Toplevel to make sure dialog in better position
             super().__init__(parent.winfo_toplevel())
-            self.parent = parent
             
         def body(self, master):
-            progress = ttk.Progressbar(master, mode='indeterminate', maximum=50)
-            progress.pack()
-            progress.start(25)
+            label = tk.Label(master, text='Data loading in progress')
+            self.progress = ttk.Progressbar(master, mode='indeterminate', maximum=50)
+            label.pack()
+            self.progress.pack()
+            self.progress.start(25)
 
+        def run(self):
+            self.work_function()
+            self.progress.stop()
+            self.cancel()
+
+        # Override to get rid of the "OK", "Cancel" buttons
         def buttonbox(self):
             pass
             
-        
+    # work_function will be invoked as work_function()
+    def wait(self, work_function):
+        AnalyzerGui.ProgressDialog(self, work_function)
+
     def loadUrl(self, choice, url):
-        #AnalyzerGui.ProgressDialog(self)
-
-
         if choice != 'Append':
             self.oneviewTab.removePages() # Remove any previous OV HTML
 

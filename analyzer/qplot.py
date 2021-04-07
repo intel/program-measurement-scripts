@@ -66,5 +66,6 @@ class QPlotTab(PlotTab):
         return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
-        return QPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', "test", self.analyzerData.scale, "QPlot", 
-                     False, True, self.analyzerData.x_axis, self.analyzerData.y_axis, self.analyzerData.mappings, self.analyzerData.short_names_path)
+        return QPlot()
+        # return QPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', "test", self.analyzerData.scale, "QPlot", 
+        #              False, True, self.analyzerData.x_axis, self.analyzerData.y_axis, self.analyzerData.mappings, self.analyzerData.short_names_path)

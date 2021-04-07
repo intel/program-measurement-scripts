@@ -160,6 +160,8 @@ class PlotTab(AnalyzerTab):
         self.window.add(self.tab_note, stretch='never')
         self.plot = None
         self.plotUpdater = PlotTab.PlotUpdater(self)
+        self.plot = self.mk_plot()
+        self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
 
     def adjustText(self):
         self.plot.adjustText()
@@ -222,11 +224,12 @@ class PlotTab(AnalyzerTab):
         if self.df.empty:
             return
 
-        if not self.plot:
-            self.plot = self.mk_plot()
-            self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
-        else:
-            self.update_plot()
+        # if not self.plot:
+        #     self.plot = self.mk_plot()
+        #     self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
+        # else:
+        #     self.update_plot()
+        self.update_plot()
 
         self.plot.compute_and_plot()
         #self.fig, self.plotData = self.plot.fig, self.plot.plotData
@@ -254,6 +257,7 @@ class PlotTab(AnalyzerTab):
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
         #metrics = self.get_metrics()
+        #self.after(0, self.full_plot)
         self.full_plot()
 
     def resetTabValues(self):

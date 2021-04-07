@@ -417,17 +417,26 @@ class CapacityData(NodeCentricData):
 class CapePlot:
     COLOR_ORDER = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
     DEFAULT_COLOR = COLOR_ORDER[0]
-    def __init__(self, data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
-        default_y_axis, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+    def __init__(self, data=None, levelData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=None, x_axis=None, y_axis=None, \
+        default_y_axis=None, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
+        self.ctxs = []
+        #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+        self.fig = None
+        self.fig, self.ax = plt.subplots()
+        self.ax.clear()
+        self.footnoteText = None
+        self.plotData = PlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, legend=None, title=None, 
+                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self, 
+                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None)
+        self._setAttrs(data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+            default_y_axis, default_x_axis, filtering, mappings, short_names_path)
+
+    def _setAttrs(self, data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
+        default_y_axis, default_x_axis, filtering, mappings, short_names_path):
         # Data is a list of data
         self.data = data
         self.levelData = levelData
         self.level = level
-        self.guiState = levelData.guiState
-        self.default_y_axis = default_y_axis
-        self.default_x_axis = default_x_axis
-        self.ctxs = []
-        self.filtering = filtering
         self.variant = variant
         self.outputfile_prefix = outputfile_prefix
         self.scale = scale
@@ -436,15 +445,15 @@ class CapePlot:
         self.gui = gui
         self._x_axis = x_axis
         self._y_axis = y_axis
+        self.default_y_axis = default_y_axis
+        self.default_x_axis = default_x_axis
+        self.filtering = filtering
         self.short_names_path = short_names_path
-        #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
-        self.fig = None
-        self.fig, self.ax = plt.subplots()
-        self.ax.clear()
-        self.footnoteText = None
-        self.plotData = PlotData(df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, legend=None, title=title, 
-                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self, 
-                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=variant)
+        #self.guiState = levelData.guiState
+        self.plotData.setAttrs (df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, legend=None, title=title, 
+                                labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self, 
+                                xmax=None, ymax=None, xmin=None, ymin=None, variant=variant)
+
 
     def setData(self, data):
         self.data = data
@@ -486,7 +495,7 @@ class CapePlot:
         #     return pd.DataFrame()
         # df = pd.concat([data.df for data in self.data], ignore_index=True)
         # return df
-        return self.levelData.df
+        return None if self.levelData is None else self.levelData.df
 
     @property
     def mapping(self):
@@ -496,6 +505,9 @@ class CapePlot:
     def color_map(self):
         return self.levelData.color_map
 
+    @property
+    def guiState(self):
+        return None if self.levelData is None else self.levelData.guiState
     # # Setter of df (May remove), delegate to self.data
     # @df.setter
     # def df(self, v):
@@ -774,7 +786,6 @@ class PlotData():
 
     def setAttrs(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
-        names = guiState.get_encoded_names(df).tolist()
         self.xs = xs
         self.ys = ys
         self.mytext = mytexts
@@ -785,28 +796,31 @@ class PlotData():
         self.title = title
         self.texts = labels
         self.markers = markers
+        self.text_arrow = {}
+        self.name_mapping = name_mapping
+        self.mappings = mymappings
+        self.plot = plot
+        self.xmax = xmax
+        self.ymax = ymax
+        self.xmin = xmin
+        self.ymin = ymin
+        self.variant = variant
+        if df is None:
+            return
+        names = guiState.get_encoded_names(df).tolist()
         self.names = names
         self.timestamps = df[TIMESTAMP].values.tolist()
         self.marker_text = dict(zip(markers,labels)) if markers else None
         self.marker_name = dict(zip(markers,names)) if markers else None
         self.name_marker = dict(zip(names, markers)) if markers else None
         self.name_text = dict(zip(names, labels)) if labels else None
-        self.text_arrow = {}
         self.text_name = dict(zip(labels, names)) if labels else None
-        self.name_mapping = name_mapping
-        self.mappings = mymappings
         if hasattr(self, 'guiState') and self.guiState is not None:
             self.guiState.rm_observer(self)
         self.guiState = guiState
         #self.guiState.add_observer(self)
-        self.plot = plot
         if hasattr(self, 'canvas') and self.canvas is not None:
-            self.canvas.draw()
-        self.xmax = xmax
-        self.ymax = ymax
-        self.xmin = xmin
-        self.ymin = ymin
-        self.variant = variant
+            self.thread_safe_canvas_draw()
 
     def plot_adjustable(self, scale):
         self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
@@ -814,7 +828,7 @@ class PlotData():
                                   name_mapping=self.name_mapping, mymappings=self.mappings, name_marker=self.name_marker)
         self.updateMarkers()
         self.updateLabels()
-        self.canvas.draw()
+        self.thread_safe_canvas_draw()
 
     def updateMarkers(self):
         # Hide/Show the markers, labels, and arrows
@@ -916,7 +930,7 @@ class PlotData():
             for child in self.ax.get_children():
                 if isinstance(child, matplotlib.text.Annotation) or (isinstance(child, matplotlib.text.Text) and child.get_text() not in [self.title, '', self.ax.get_title()]):
                     child.remove()
-            # Create new texts that maintain the current visibility
+            # Create new texts that maintain the current visibilty
             self.texts = [self.ax.text(self.xs[i], self.ys[i], self.mytext[i], alpha=1 if i not in hiddenTexts else 0, color='k' if i not in highlightedTexts else 'r') for i in range(len(self.mytext))]
             # Update marker to text mappings with the new texts
             self.marker_text = dict(zip(self.markers,self.texts))
@@ -938,11 +952,16 @@ class PlotData():
                 index += 1
         #self.root.after(0, self.canvas.draw)
         # TODO: WARNING global variable used here. May want to get it from GUI componenet.
-        self.canvas.get_tk_widget().after(0, self.canvas.draw)
+        self.thread_safe_canvas_draw()
         self.adjusted = True
         self.adjusting = False
         print('Done Adjust text')
 
+    # See: https://github.com/matplotlib/matplotlib/issues/13293
+    # matplotlib not threadsafe so use the workaround to schedule draw in GUI thread.
+    def thread_safe_canvas_draw(self):
+        self.canvas.get_tk_widget().after(0, self.canvas.draw)
+        
     def adjustText(self):
         if not self.adjusting: 
             self.adjusting = True
@@ -1011,7 +1030,7 @@ class PlotData():
         toolbarFrame = tk.Frame(chartButtonFrame)
         self.toolbar = NavigationToolbar2Tk(self.canvas, toolbarFrame)
         self.canvas.get_tk_widget().pack(expand=True, fill=tk.BOTH)
-        self.canvas.draw()
+        #self.canvas.draw()
         toolbarFrame.grid(column=5, row=0, sticky=tk.S)
         self.toolbar.update()
     

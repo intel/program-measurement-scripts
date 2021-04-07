@@ -59,5 +59,6 @@ class SummaryTab(PlotTab):
         return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
-        return CoveragePlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', "test", self.analyzerData.scale, "Coverage", no_plot=False, gui=True, 
-                            x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, mappings=self.mappings)
+        return CoveragePlot()
+        # return CoveragePlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', "test", self.analyzerData.scale, "Coverage", no_plot=False, gui=True, 
+        #                     x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, mappings=self.mappings)

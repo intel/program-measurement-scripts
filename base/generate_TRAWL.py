@@ -18,7 +18,7 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class TrawlPlot(CapePlot):
-    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
+    def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=False, x_axis=None, y_axis=None, 
                  mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=SPEEDUP_DL1.value, mappings=mappings, short_names_path=short_names_path)

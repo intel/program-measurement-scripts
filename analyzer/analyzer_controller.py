@@ -34,4 +34,5 @@ class AnalyzerController:
         if choice == 'Overwrite':
             self.gui.resetTabValues() 
         self.gui.loadUrl(choice, url)
-        self.loadedData.loadFile(choice, data_dir, source, url)
+        self.gui.wait(lambda: self.loadedData.loadFile(choice, data_dir, source, url))
+        #self.loadedData.loadFile(choice, data_dir, source, url)

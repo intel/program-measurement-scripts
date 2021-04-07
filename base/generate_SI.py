@@ -245,7 +245,7 @@ DEFAULT_CHOSEN_NODE_SET=BASIC_NODE_SET
 # class SiPlot(CapacityPlot):
 #     def __init__(self, data, variant, outputfile_prefix, norm, title, 
 class SiPlot(CapePlot):
-    def __init__(self, data, loadedData, level, variant, outputfile_prefix, norm, title, 
+    def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, norm=None, title=None, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
         super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
                          default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
@@ -258,6 +258,13 @@ class SiPlot(CapePlot):
         #self.cur_run_df = cur_run_df
         #self.cluster_df = cluster_df
         self.filter_data = filter_data
+
+    def setAttrs(self, data, loadedData, level, variant, outputfile_prefix, norm, title, 
+                 filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+        self._setAttrs(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
+                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
+                         short_names_path=short_names_path)
+
 
     # df here is the cur_run_df
     # def mk_data(self, df):
