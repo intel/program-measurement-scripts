@@ -846,9 +846,10 @@ class PlotData():
             if self.guiState.isHidden(name): alpha = 0
             self.name_marker[name].set_alpha(alpha)
             self.name_text[name].set_alpha(self.guiState.labelVisbility(name))
-            # Unhighlight/highlight points
+            # Unhighlight/highlight and select points
+            self.unhighlight(self.name_marker[name])
+            if name in self.guiState.selected: self.select(self.name_marker[name])
             if name in self.guiState.highlighted: self.highlight(self.name_marker[name])
-            else: self.unhighlight(self.name_marker[name])
             # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
             if name in self.name_mapping: self.name_mapping[name].set_alpha(1)
         for name in self.name_mapping:
@@ -921,10 +922,15 @@ class PlotData():
         marker.set_markersize(6.0)
         text.set_color('k')
 
+    def select(self, marker):
+        marker.set_marker('^')
+        marker.set_markeredgecolor('k')
+        marker.set_markeredgewidth(0.5)
+        marker.set_markersize(7.0)
+
     # Return encoded names of data points selected by the event
     def getSelected(self, event):
         return [self.marker_name[m] for m in self.markers if m.contains(event)[0]]
-
         
     def thread_adjustText(self):
         print('Adjusting text...')
