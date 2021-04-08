@@ -398,7 +398,7 @@ class DataTab(AnalyzerTab):
             result_df = self.parentframe.filter(result_df)
             highlightedMask = result_df['_highlighted']
             self.model.df = result_df.drop(columns=['_highlighted'])
-            self.setRowColors(rows=result_df.index.to_list(), clr='white', cols='all')
+            self.resetColors()
             self.setRowColors(rows=result_df.index[highlightedMask].to_list(), clr='red', cols='all')
             self.redraw()
             
