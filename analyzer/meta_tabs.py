@@ -419,7 +419,7 @@ class DataTab(AnalyzerTab):
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.analyzerData.df))
         self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.analyzerData.df))
         #self.export_rawcsv_button = tk.Button(self.table_button_frame, text="Export Shown Points as Raw CSV", command=self.exportShownDataRawCSV)
-        self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column First", command=self.moveColumnsFirst)
+        self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column(s) First", command=self.moveColumnsFirst)
         self.summaryTable.show()
         self.export_summary_button.grid(row=0, column=0)
         self.export_colored_summary_button.grid(row=0, column=1)
