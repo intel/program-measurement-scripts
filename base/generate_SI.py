@@ -304,9 +304,9 @@ class SiPlot(CapePlot):
     def mk_labels(self):
         l_df = self.df
         orig_codelet_index = l_df[SHORT_NAME]
-        orig_codelet_variant = l_df[VARIANT]
+        # orig_codelet_variant = l_df[VARIANT]
         orig_codelet_memlevel = l_df[MEM_LEVEL]
-        mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_memlevel[i]))  for i in range(len(orig_codelet_index))]
+        mytext= [str('({0}, {1})'.format( orig_codelet_index[i], orig_codelet_memlevel[i]))  for i in range(len(orig_codelet_index))]
         return mytext
 
 
