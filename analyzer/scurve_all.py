@@ -34,8 +34,8 @@ class ScurveAllData(PlotAnalyzerData):
 
 
 class ScurveAllTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, ScurveAllData, 'Scurve_all', [])
+    def __init__(self, parent, container):
+        super().__init__(parent, container, ScurveAllData, 'Scurve_all', [])
 
     def get_metrics(self):
         return self.analyzerData.df.columns.tolist()

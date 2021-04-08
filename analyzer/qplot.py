@@ -52,8 +52,8 @@ class QPlotData(PlotAnalyzerData):
     #     self.notify_observers()
 
 class QPlotTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, QPlotData, 'QPlot', [MN.CAP_L1_GB_P_S, MN.CAP_L2_GB_P_S, MN.CAP_L3_GB_P_S, \
+    def __init__(self, parent, container):
+        super().__init__(parent, container, QPlotData, 'QPlot', [MN.CAP_L1_GB_P_S, MN.CAP_L2_GB_P_S, MN.CAP_L3_GB_P_S, \
                 MN.CAP_RAM_GB_P_S, MN.CAP_MEMMAX_GB_P_S])
 
     # Create meta tabs

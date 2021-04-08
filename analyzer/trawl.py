@@ -39,8 +39,8 @@ class TRAWLData(PlotAnalyzerData):
     #     self.notify_observers()
 
 class TrawlTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, TRAWLData, 'TRAWL', [SPEEDUP_VEC, SPEEDUP_DL1])
+    def __init__(self, parent, container):
+        super().__init__(parent, container, TRAWLData, 'TRAWL', [SPEEDUP_VEC, SPEEDUP_DL1])
 
     # # Create meta tabs
     # def buildTableTabs(self):

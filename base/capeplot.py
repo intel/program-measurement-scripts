@@ -421,7 +421,7 @@ class CapePlot:
         default_y_axis=None, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         self.ctxs = []
         #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
-        self.fig = None
+        self.container = None
         self.fig, self.ax = plt.subplots()
         self.ax.clear()
         self.footnoteText = None
@@ -759,9 +759,14 @@ class CapePlot:
             ax.set_xlim((0, xmax))
             ax.set_ylim((ymin, ymax))
 
-    def setupFrames(self, canvasFrame, chartButtonFrame):
+    @property
+    def control(self):
+        return self.container.control
+    
+    def setupFrames(self, canvasFrame, chartButtonFrame, container):
         # NavigationToolbar2Tk can only be created if there isn't anything in the grid
         self.plotData.setupFrames(self.fig, canvasFrame, chartButtonFrame)
+        self.container = container
 
     def adjustText(self):
         self.plotData.adjustText()
@@ -822,6 +827,10 @@ class PlotData():
         if hasattr(self, 'canvas') and self.canvas is not None:
             self.thread_safe_canvas_draw()
 
+    @property
+    def control(self):
+        return None if self.plot is None else self.plot.control
+    
     def plot_adjustable(self, scale):
         self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
                                   title=self.plot.extend_plot_title(self.variant, scale), xs=self.xs, ys=self.ys, mytexts=self.mytext,
@@ -962,6 +971,7 @@ class PlotData():
     def thread_safe_canvas_draw(self):
         self.canvas.get_tk_widget().after(0, self.canvas.draw)
         
+    # control is the controller object in Analyzer_controller which provides the method to run long running job displaying status
     def adjustText(self):
         if not self.adjusting: 
             self.adjusting = True
@@ -970,7 +980,10 @@ class PlotData():
             else: 
                 # Do this in mainthread
                 plt_sca(self.ax)
-                threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
+                if self.control:
+                    self.control.display_work('Adjusting text...', self.thread_adjustText)
+                else: 
+                    threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
     def onDraw(self, event):
         if self.adjusted and (self.cur_xlim != self.ax.get_xlim() or self.cur_ylim != self.ax.get_ylim()) and \

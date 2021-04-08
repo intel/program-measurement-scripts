@@ -114,9 +114,12 @@ class PlotTab(AnalyzerTab):
         def notify(self, data):
             self.plotTab.try_adjust_plot()
     
-    def __init__(self, parent, analyzerDataClass, title='', extra_metrics=[], name=''):
+    # NOTE: some parameter notes: parent is the GUI level parent (e.g. notebook object of tab) while container is logical level parent (which may skip a few level of GUI parents)
+    #       The control object will therefore be retrieved from container rather than parent to avoid extra hoppes of references.
+    def __init__(self, parent, container, analyzerDataClass, title='', extra_metrics=[], name=''):
         super().__init__(parent, analyzerDataClass)
         self.title = 'FE_tier1'
+        self.container = container
         self.variants = []
         self.current_labels = []
         self.extra_metrics = extra_metrics
@@ -161,7 +164,11 @@ class PlotTab(AnalyzerTab):
         self.plot = None
         self.plotUpdater = PlotTab.PlotUpdater(self)
         self.plot = self.mk_plot()
-        self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame)
+        self.plot.setupFrames(self.canvasFrame, self.chartButtonFrame, self)
+
+    @property
+    def control(self):
+        return self.container.control
 
     def adjustText(self):
         self.plot.adjustText()

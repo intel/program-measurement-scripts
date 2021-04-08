@@ -36,8 +36,8 @@ class Data3d(PlotAnalyzerData):
 #         self.notify_observers()
 
 class Tab3d(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, Data3d, '3D', [])
+    def __init__(self, parent, container):
+        super().__init__(parent, container, Data3d, '3D', [])
 
     # def notify(self, data):
     #     # Metrics to be displayed in the data table are unique for each plot

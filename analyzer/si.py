@@ -44,8 +44,8 @@ class SIPlotData(PlotAnalyzerData):
         self.run_cluster = True
 
 class SIPlotTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, SIPlotData, 'FE_tier1',
+    def __init__(self, parent, container):
+        super().__init__(parent, container, SIPlotData, 'FE_tier1',
                          ['Saturation', 'Intensity', 'SI', NMN.SI_CLUSTER_NAME])
         self.cluster = resource_path(os.path.join('clusters', 'FE_tier1.csv'))
     

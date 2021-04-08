@@ -43,8 +43,8 @@ class CustomData(PlotAnalyzerData):
         #self.notify_observers()
 
 class CustomTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, CustomData, 'Custom', [])
+    def __init__(self, parent, container):
+        super().__init__(parent, container, CustomData, 'Custom', [])
 
     # def notify(self, data):
     #     # Metrics to be displayed in the data table are unique for each plot

@@ -41,8 +41,8 @@ class CoverageData(PlotAnalyzerData):
     #     self.notify_observers()
 
 class SummaryTab(PlotTab):
-    def __init__(self, parent):
-        super().__init__(parent, CoverageData, 'Summary', [])
+    def __init__(self, parent, container):
+        super().__init__(parent, container, CoverageData, 'Summary', [])
 
     # def notify(self, data):
     #     super().notify(data)

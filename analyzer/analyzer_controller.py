@@ -38,7 +38,13 @@ class AnalyzerController:
         #self.loadedData.loadFile(choice, data_dir, source, url)
 
     # Try to run long running work and cause GUI to tell user to wait
+    # This call will cause GUI not accepting user inputs
     # work_function will be invoked as work_function()
     def wait_for_work(self, work_name, work_function):
         self.gui.wait_for_work(work_name, work_function)
         
+    # Try to run long running work and cause GUI to tell user work is being done
+    # This call will let GUI continue accept user inputs
+    # work_function will be invoked as work_function()
+    def display_work(self, work_name, work_function):
+        self.gui.display_work(work_name, work_function)

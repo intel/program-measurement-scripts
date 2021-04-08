@@ -61,9 +61,12 @@ class TabTrackingNB(ttk.Notebook):
                 tab.hide()
                 
 class LevelContainerTab(HideableTab):
-    def __init__(self, parent, level):
+    # NOTE: some parameter notes: parent is the GUI level parent (e.g. notebook object of tab) while container is logical level parent (which may skip a few level of GUI parents)
+    #       The control object will therefore be retrieved from container rather than parent to avoid extra hoppes of references.
+    def __init__(self, parent, container, level):
         super().__init__(parent)
         self.level = level
+        self.container = container
         self.plotTabs = []
         self.dataTabs = []
         parent.add(self, text=level)
@@ -82,14 +85,14 @@ class LevelContainerTab(HideableTab):
         # Codelet Plot Tabs
         # self.3dTab = Tab3d(self.plot_note, self.3dData)
         # self.scurveTab = ScurveTab(self.plot_note, self.scurveData)
-        self.addPlotTab(SummaryTab(self.plot_note), name='Summary')
-        self.addPlotTab(TrawlTab(self.plot_note), name='TRAWL')
-        self.addPlotTab(QPlotTab(self.plot_note), name='QPlot')
-        self.addPlotTab(SIPlotTab(self.plot_note), name='SI Plot')
-        self.addPlotTab(CustomTab(self.plot_note), name='Custom')
+        self.addPlotTab(SummaryTab(self.plot_note, container), name='Summary')
+        self.addPlotTab(TrawlTab(self.plot_note, container), name='TRAWL')
+        self.addPlotTab(QPlotTab(self.plot_note, container), name='QPlot')
+        self.addPlotTab(SIPlotTab(self.plot_note, container), name='SI Plot')
+        self.addPlotTab(CustomTab(self.plot_note, container), name='Custom')
         # self.addPlotTab(self.3dTab, name='3D')
         # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
-        self.addPlotTab(ScurveAllTab(self.plot_note), name='S-Curve')
+        self.addPlotTab(ScurveAllTab(self.plot_note, container), name='S-Curve')
         # Create Per Level Tabs Underneath Plot Notebook
         self.data_note = TabTrackingNB(plotPw)
         # Data tabs
@@ -108,6 +111,9 @@ class LevelContainerTab(HideableTab):
         plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.levelData = None
 
+    @property
+    def control(self):
+        return self.container.control
 
     def getPausables(self):
         return [self.levelData] if self.levelData else []
@@ -142,16 +148,16 @@ class LevelContainerTab(HideableTab):
 
     
 class CodeletTab(LevelContainerTab):
-    def __init__(self, parent):
-        super().__init__(parent, 'Codelet')
+    def __init__(self, parent, container):
+        super().__init__(parent, container, 'Codelet')
 
 class ApplicationTab(LevelContainerTab):
-    def __init__(self, parent):
-        super().__init__(parent, 'Application')
+    def __init__(self, parent, container):
+        super().__init__(parent, container, 'Application')
 
 class SourceTab(LevelContainerTab):
-    def __init__(self, parent):
-        super().__init__(parent, 'Source')
+    def __init__(self, parent, container):
+        super().__init__(parent, container, 'Source')
 
 class ExplorerPanelTab(tk.Frame):
     def __init__(self, parent):
@@ -339,7 +345,10 @@ class AnalyzerGui(tk.Frame):
         # gui.c_siplotData.run_cluster = True
 
     class ProgressDialog(tk.simpledialog.Dialog):
-        def __init__(self, parent, work_name, work_function):
+        # modal - if True, make this window taking all inputs from user
+        def __init__(self, parent, work_name, work_function, modal=True):
+            self.modal = modal
+            self.work_name = work_name
             self.work_function = work_function
             self.parent = parent
             self.progress = None
@@ -348,8 +357,13 @@ class AnalyzerGui(tk.Frame):
             # Pass Toplevel to make sure dialog in better position
             super().__init__(parent.winfo_toplevel())
             
+        # This method will cause the dialog window take all inputs from users, making results of GUI not accepting user inputs
+        def grab_set(self):
+            if self.modal: 
+                super().grab_set()
+        
         def body(self, master):
-            label = tk.Label(master, text='Data loading in progress')
+            label = tk.Label(master, text=f'In progress: {self.work_name}')
             self.progress = ttk.Progressbar(master, mode='indeterminate', maximum=50)
             label.pack()
             self.progress.pack()
@@ -366,7 +380,10 @@ class AnalyzerGui(tk.Frame):
             
     # work_function will be invoked as work_function()
     def wait_for_work(self, work_name, work_function):
-        AnalyzerGui.ProgressDialog(self, work_name, work_function)
+        AnalyzerGui.ProgressDialog(self, work_name, work_function, modal=True)
+
+    def display_work(self, work_name, work_function):
+        AnalyzerGui.ProgressDialog(self, work_name, work_function, modal=False)
 
     def loadUrl(self, choice, url):
         if choice != 'Append':
@@ -402,13 +419,13 @@ class AnalyzerGui(tk.Frame):
         # Plots (Right Window)
         self.level_plot_note = TabTrackingNB(infoPw)
         #self.codeletTab = CodeletTab(self.level_plot_note, self, root)
-        self.codeletTab = CodeletTab(self.level_plot_note)
+        self.codeletTab = CodeletTab(self.level_plot_note, self)
         #self.codeletTab.setLoadedData(self.loadedData)
         #self.sourceTab = SourceTab(self.level_plot_note, self, root)
-        self.sourceTab = SourceTab(self.level_plot_note)
+        self.sourceTab = SourceTab(self.level_plot_note, self)
         #self.codeletTab.setLoadedData(self.loadedData)
         #self.applicationTab = ApplicationTab(self.level_plot_note, self, root)
-        self.applicationTab = ApplicationTab(self.level_plot_note)
+        self.applicationTab = ApplicationTab(self.level_plot_note, self)
         #self.codeletTab.setLoadedData(self.loadedData)
 
         # self.level_plot_note.add(self.codeletTab, text='Codelet')
