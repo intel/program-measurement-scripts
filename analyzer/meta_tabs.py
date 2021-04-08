@@ -373,10 +373,13 @@ class DataTab(AnalyzerTab):
             self.model.df.drop(columns=['_SortKey'], inplace=True)
             self.redraw()
 
+        # _highlighted column expected in out_df
+        # will be used but not displayed in table
         def update_preserve_order(self, out_df):
             cnt_df = self.model.df
+            #cnt_df['_highlighted'] = None
             if not cnt_df.empty:
-                merged = pd.merge(cnt_df, out_df[KEY_METRICS], on=KEY_METRICS, how='outer', indicator='Exist')
+                merged = pd.merge(cnt_df, out_df[KEY_METRICS+['_highlighted']], on=KEY_METRICS, how='outer', indicator='Exist')
                 bothMask= (merged.Exist == 'both')
                 addedMask= (merged.Exist == 'right_only')
                 # 'left_only' are row to be dropped so ignored
@@ -392,7 +395,11 @@ class DataTab(AnalyzerTab):
                 result_df = out_df
                 
             result_df = result_df.reset_index(drop=True)
-            self.model.df = self.parentframe.filter(result_df)
+            result_df = self.parentframe.filter(result_df)
+            highlightedMask = result_df['_highlighted']
+            self.model.df = result_df.drop(columns=['_highlighted'])
+            self.setRowColors(rows=result_df.index.to_list(), clr='white', cols='all')
+            self.setRowColors(rows=result_df.index[highlightedMask].to_list(), clr='red', cols='all')
             self.redraw()
             
     class FilterDialog(tk.simpledialog.Dialog):
@@ -479,7 +486,9 @@ class DataTab(AnalyzerTab):
         # Update table with latest loadedData df
         out_df = self.analyzerData.df[[m for m in self.analyzerData.columnOrder if m in self.analyzerData.df.columns]]
         selectedMask = self.guiState.get_selected_mask(self.analyzerData.df)
-        if selectedMask.any(): out_df = out_df[selectedMask]
+        out_df['_highlighted'] = self.guiState.get_highlighted_mask(self.analyzerData.df)
+        if selectedMask.any(): 
+            out_df = out_df[selectedMask]
         if not self.guiState.showHiddenPointInTable: 
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
             out_df = out_df [~hiddenMask]
