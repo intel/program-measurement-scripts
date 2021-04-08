@@ -1022,8 +1022,8 @@ class PlotData():
             contains, points = marker.contains(event)
             if contains and marker.get_alpha():
                 name = self.marker_name[marker]
-                if action == 'Highlight Point': 
-                    if marker.get_marker() == 'o': self.guiState.highlightPoints([name])
+                if action == 'Highlight Point':
+                    if marker.get_marker() != '*': self.guiState.highlightPoints([name])
                     else: self.guiState.unhighlightPoints([name])
                 elif action == 'Remove Point':
                     self.guiState.removePoints([name]) 
