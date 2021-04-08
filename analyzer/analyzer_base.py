@@ -298,13 +298,26 @@ class AxesTab(AnalyzerTab):
     DUMMY_AXES = ['Choose X Axis Metric', 'Choose Y Axis Metric']
     DUMMY_SCALES = ['Choose X Axis Scale', 'Choose Y Axis Scale']
     @staticmethod
-    def all_metric_menu(parent, var):
+    def all_metric_menu(parent, var, group=False):
         menubutton = tk.Menubutton(parent, textvariable=var, indicatoron=True,
                            borderwidth=2, relief="raised", highlightthickness=2)
         main_menu = tk.Menu(menubutton, tearoff=False)
         menubutton.configure(menu=main_menu)
         main_menu.add_radiobutton(value=var.get(), label=var.get(), variable=var)
         main_menu.insert_separator(1)
+        if group: 
+            single_menu = tk.Menu(main_menu, tearoff=False)
+            main_menu.add_cascade(label='Single', menu=single_menu)
+            group_menu = tk.Menu(main_menu, tearoff=False)
+            main_menu.add_cascade(label='Group', menu=group_menu)
+            AxesTab.single_metric_menu(var, single_menu)
+            AxesTab.group_metric_menu(var, group_menu)
+        else: 
+            AxesTab.single_metric_menu(var, main_menu)
+        return menubutton
+
+    @staticmethod
+    def single_metric_menu(var, main_menu):
         # TRAWL/QPlot/SIPlot metrics
         for category, metrics in PLOT_METRICS.items():
             menu = tk.Menu(main_menu, tearoff=False)
@@ -319,7 +332,17 @@ class AxesTab(AnalyzerTab):
             summary_menu.add_cascade(label=category, menu=menu)
             for metric in metrics:
                 menu.add_radiobutton(value=metric, label=metric, variable=var)
-        return menubutton
+
+    @staticmethod
+    def group_metric_menu(var, main_menu):
+        # TRAWL/QPlot/SIPlot metrics
+        for category in PLOT_METRICS:
+            main_menu.add_radiobutton(value=category, label=category, variable=var)
+        # Summary categories/metrics
+        summary_menu = tk.Menu(main_menu, tearoff=False)
+        main_menu.add_cascade(label='All', menu=summary_menu)
+        for category in CATEGORIZED_METRICS:
+            summary_menu.add_radiobutton(value=category, label=category, variable=var)
 
     def __init__(self, parent, tab):
         super().__init__(parent, AxesTabData)

@@ -14,7 +14,7 @@ from analyzer_model import AnalyzerData
 from analyzer_base import PlotTab, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
 from metric_names import MetricName as MN
-from metric_names import NonMetricName, KEY_METRICS
+from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
 from capeplot import CapePlot
 globals().update(MN.__members__)
 
@@ -419,7 +419,7 @@ class DataTab(AnalyzerTab):
         self.export_summary_button = tk.Button(self.table_button_frame, text="Export Summary Sheet", command=lambda: exportCSV(self.analyzerData.df))
         self.export_colored_summary_button = tk.Button(self.table_button_frame, text="Export Colored Summary", command=lambda: exportXlsx(self.analyzerData.df))
         #self.export_rawcsv_button = tk.Button(self.table_button_frame, text="Export Shown Points as Raw CSV", command=self.exportShownDataRawCSV)
-        self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column First", command=self.moveColumnFirst)
+        self.move_column_first_button = tk.Button(self.table_button_frame, text="Move Column First", command=self.moveColumnsFirst)
         self.summaryTable.show()
         self.export_summary_button.grid(row=0, column=0)
         self.export_colored_summary_button.grid(row=0, column=1)
@@ -459,19 +459,21 @@ class DataTab(AnalyzerTab):
     class ChooseColumnDialog(tk.simpledialog.Dialog):
         def body(self, master):
             self.metric = tk.StringVar(value='Metric')
-            self.menu = AxesTab.all_metric_menu(master, self.metric)
+            self.menu = AxesTab.all_metric_menu(master, self.metric, group=True)
             self.menu.grid(row=0, column=0)
             return self.menu
 
         def apply(self):
             self.result = self.metric.get()
-            if self.result == 'Metric':
-                self.result = None
+            if self.result == 'Metric': self.result = None
+            elif self.result in PLOT_METRICS: self.result = PLOT_METRICS[self.result]
+            elif self.result in CATEGORIZED_METRICS: self.result = CATEGORIZED_METRICS[self.result]
+            else: self.result = [self.result]
         
-    def moveColumnFirst(self):
-        column = DataTab.ChooseColumnDialog(self).result
-        if column:
-            self.analyzerData.moveColumnFirst(column)
+    def moveColumnsFirst(self):
+        columns = DataTab.ChooseColumnDialog(self).result
+        if columns:
+            self.analyzerData.moveColumnsFirst(columns)
     
     def notify(self, data):
         # Update table with latest loadedData df

@@ -651,9 +651,10 @@ class PerLevelGuiState(PausableObserable):
             self.guiDataDict[guiDataClass] = guiDataClass(self.levelData, self.level)
         return self.guiDataDict[guiDataClass]
     
-    def moveColumnFirst(self, column):
-        if column in self.columnOrder:
-            self.nonKeyColumnOrder = [column]+[m for m in self.nonKeyColumnOrder if m != column]
+    def moveColumnsFirst(self, columns):
+        columns = [column for column in columns if column in self.columnOrder]
+        if columns:
+            self.nonKeyColumnOrder = columns+[m for m in self.nonKeyColumnOrder if m not in columns]
             self.updated_notify_observers()
         
     @property
@@ -869,8 +870,8 @@ class AnalyzerData(PausableObserable):
         return self.levelData.guiState.columnOrder
 
     # Move need to move this to controller class (Plot interaction?)
-    def moveColumnFirst(self, column):
-        self.levelData.guiState.moveColumnFirst(column)
+    def moveColumnsFirst(self, columns):
+        self.levelData.guiState.moveColumnsFirst(columns)
 
     def setFilter(self, metric, minimum, maximum, names, variants):
         self.levelData.guiState.setFilter(metric, minimum, maximum, names, variants)
