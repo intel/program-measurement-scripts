@@ -9,7 +9,7 @@ from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 import copy
 from capeplot import CapePlot
-from capeplot import CapeData
+from capedata import CapeData
 from metric_names import MetricName
 from statistics import median
 import math

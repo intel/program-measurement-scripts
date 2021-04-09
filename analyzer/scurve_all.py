@@ -7,7 +7,6 @@ from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_scurve_all import scurve_all_plot
 from generate_scurve_all import ScurveAllPlot
-from capeplot import CapeData
 import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction

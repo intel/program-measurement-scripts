@@ -13,7 +13,6 @@ from capelib import calculate_energy_derived_metrics
 from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from collections import OrderedDict
-from capeplot import CapeData
 
 from xlsxgen import XlsxGenerator
 
@@ -74,44 +73,44 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
 LFBFields = [MetricName.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
 
-class SummaryData(CapeData): 
-    def __init__(self, df):
-        super().__init__(df) 
-        self.sources = []
+# class SummaryData(CapeData): 
+#     def __init__(self, df):
+#         super().__init__(df) 
+#         self.sources = []
     
-    def set_sources(self, sources):
-        self.sources = sources
-        return self
-    def set_short_names_path(self, short_names_path):
-        self.short_names_path = short_names_path
-        return self
+#     def set_sources(self, sources):
+#         self.sources = sources
+#         return self
+#     def set_short_names_path(self, short_names_path):
+#         self.short_names_path = short_names_path
+#         return self
         
-    def compute_impl(self, df):
-        in_files = self.sources
-        in_files_format = [ determine_file_format(src) for src in in_files ]
-        #exts = [ os.path.splitext(src)[1] for src in in_files ]
-        #in_files_format = [ 'csv' if ext == '.csv' else 'xlsx' for ext in exts ]
+#     def compute_impl(self, df):
+#         in_files = self.sources
+#         in_files_format = [ determine_file_format(src) for src in in_files ]
+#         #exts = [ os.path.splitext(src)[1] for src in in_files ]
+#         #in_files_format = [ 'csv' if ext == '.csv' else 'xlsx' for ext in exts ]
 
-        # in_files_format = [None] * len(sources)
-        # for index, source in enumerate(sources):
-        #     in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
-        user_op_file = None
-        request_no_cqa = False
-        request_use_cpi = False
-        request_skip_energy = False
-        request_skip_stalls = False
+#         # in_files_format = [None] * len(sources)
+#         # for index, source in enumerate(sources):
+#         #     in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
+#         user_op_file = None
+#         request_no_cqa = False
+#         request_use_cpi = False
+#         request_skip_energy = False
+#         request_skip_stalls = False
 
-        # Codelet summary
-        # mapping not used 
-        df, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, request_use_cpi, 
-                                             request_skip_energy, request_skip_stalls, self.short_names_path, False, True, None)
+#         # Codelet summary
+#         # mapping not used 
+#         df, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, request_use_cpi, 
+#                                              request_skip_energy, request_skip_stalls, self.short_names_path, False, True, None)
         
-        return df 
+#         return df 
 
-    def input_output_args(self):
-        input_args = []
-        output_args = SUMMARY_METRICS
-        return input_args, output_args
+#     def input_output_args(self):
+#         input_args = []
+#         output_args = SUMMARY_METRICS
+#         return input_args, output_args
 
 def counter_sum(row, cols):
     sum = 0
