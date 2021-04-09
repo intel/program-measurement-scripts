@@ -8,9 +8,10 @@ from summarize import read_raw_data, write_raw_data, write_short_names
 
 import pandas as pd
 from capedata import AggregateData, AnalyticsData
-from capedata import ShortNameData as CapeShortNameData
+#from capedata import ShortNameData as CapeShortNameData
+from capedata import MergeShortNameData
 from capedata import SummaryData
-from capeplot import CapacityData, CapeData
+from capeplot import CapacityData, CapeData, CapePlotColor
 from metric_names import ALL_METRICS, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
 from metric_names import MetricName as MN
 from sat_analysis import SatAnalysisData
@@ -83,9 +84,19 @@ class LoadedData(Observable):
             lst.append(data)
             return data
             
+        class LevelShortNameData(MergeShortNameData):
+            def __init__(self, df, levelData):
+                super().__init__(df) 
+                self.levelData = levelData
+                
+            @property
+            def merge_df(self):
+                return self.levelData.short_names_df 
+            
         def setup_df(self, df, append, short_names_path):
             df = self.update_list(self._dfs, df, append)
-            self.update_list(self._shortnameDataItems, CapeShortNameData(df).set_filename(short_names_path).compute(), append)
+            #self.update_list(self._shortnameDataItems, CapeShortNameData(df).set_filename(short_names_path).compute(), append)
+            self.update_list(self._shortnameDataItems, LoadedData.PerLevelData.LevelShortNameData(df, self).compute(), append)
             self.update_list(self._capacityDataItems, CapacityData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'capacity-{self.level}'), append)
             satAnalysisData = self.update_list(self._satAnalysisDataItems, SatAnalysisData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'sat_analysis-{self.level}'), append)
 
@@ -507,7 +518,7 @@ class LoadedData(Observable):
     #     root.wait_window(self.win)
 
     def compute_colors(self, df, clusters=False):
-        colors = CapePlot.COLOR_ORDER
+        colors = CapePlotColor.COLOR_ORDER
         colorDf = pd.DataFrame() 
         timestamps = df['Timestamp#'].dropna().unique()
         # Get saved color column from short names file
@@ -686,7 +697,7 @@ class PerLevelGuiState(PausableObserable):
 
     def set_color_map(self, color_map_df, notify=True):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
-        color_map_df.fillna({'Color': CapePlot.DEFAULT_COLOR}, inplace=True)
+        color_map_df.fillna({'Color': CapePlotColor.DEFAULT_COLOR}, inplace=True)
         self.color_map = color_map_df
         if notify:
             self.updated_notify_observers()

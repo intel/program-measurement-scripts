@@ -22,6 +22,7 @@ from capedata import CapeData
 globals().update(MetricName.__members__)
 from capelib import add_mem_max_level_columns
 from metric_names import KEY_METRICS
+import hashlib
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
@@ -235,11 +236,48 @@ class CapacityData(NodeCentricData):
         return df
         #self.op_metric_name = op_metric_name
     
+class CapePlotColor:
+    COLOR_ORDER = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+    DEFAULT_COLOR = COLOR_ORDER[0]
+
+    @classmethod
+    def hash(cls, name):
+        # Hash excluding the default color
+        return int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16) % (len(cls.COLOR_ORDER) - 1) + 1
+
+    @classmethod
+    def hashColors(cls, names):
+        # Map from names to index to index space of COLOR_ORDER with potential collisons
+        hashs = np.array([cls.hash(name) for name in names])
+        # Follow determine indices of hashs successful hashs without collison (first occurrences)
+        successfulHashs, successfulIndices = np.unique(hashs, return_index=True)
+        # This array record, given the hashed location, which original index of names array it is from 
+        hashToNameIndices=np.array([-1]*len(cls.COLOR_ORDER))
+        hashToNameIndices[successfulHashs] = successfulIndices
+        # Use a linear probing scheme to fill collided hashs.  Basically look for next open slots for each collision
+        # The order of assignment will pick smallest hashs first and so on.
+        remainingIndices = sorted([idx for idx in range(len(hashs)) if idx not in successfulIndices])
+        remainingHashs = [hashs[idx] for idx in remainingIndices]
+        # Get remaining slot 
+        openSlots = np.where(hashToNameIndices == -1)[0]
+        openSlots = openSlots[openSlots>0] # Excluding the default color slot (which will be used when run out of colors)
+        for indexToAssign, collidedHash in zip(remainingIndices, remainingHashs):
+            if openSlots.size == 0: 
+                # Assign remaining hashs to default
+                hashs[indexToAssign] = 0
+                continue
+            biggerMask = openSlots>collidedHash
+            # Find next slot just bigger than collidedHash if not, get the earliest slot.  This simulate a round robin scheduling
+            slot = openSlots[np.amin(np.where(biggerMask))] if np.any(biggerMask) else np.amin(openSlots)
+            hashToNameIndices[slot] = indexToAssign
+            openSlots = openSlots[openSlots != slot]
+            hashs[indexToAssign] = slot
+
+        return [cls.COLOR_ORDER[idx] for idx in hashs]
+        
 
 # Base class for all plots
 class CapePlot:
-    COLOR_ORDER = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
-    DEFAULT_COLOR = COLOR_ORDER[0]
     def __init__(self, data=None, levelData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=None, x_axis=None, y_axis=None, \
         default_y_axis=None, default_x_axis = MetricName.CAP_FP_GFLOP_P_S, filtering = False, mappings=pd.DataFrame(), short_names_path=''):
         self.ctxs = []

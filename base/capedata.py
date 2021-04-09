@@ -286,10 +286,24 @@ class MetaData(CapeData):
             return pd.DataFrame(columns=KEY_METRICS + self.output_args())
         data = pd.read_csv(self.filename)
         df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
-        if MetricName.SHORT_NAME in df.columns:
-            naMask = df[MetricName.SHORT_NAME].isna()
-            df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
         return df 
+
+class MergeDataFrameData(CapeData):
+    def __init__(self, df):
+        super().__init__(df) 
+
+    # Subclass override to provide data frame
+    @property
+    @abstractmethod
+    def merge_df(self):
+        return None 
+
+    def compute_impl(self, df):
+        if self.merge_df is None:
+            return pd.DataFrame(columns=KEY_METRICS + self.output_args())
+        df = pd.merge(left=df, right=self.merge_df, on=KEY_METRICS, how='left')
+        return df 
+    
 
 
 class AnalyticsData(MetaData): 
@@ -301,9 +315,36 @@ class AnalyticsData(MetaData):
         output_args = ANALYTICS_METRICS
         return input_args, output_args
 
-class ShortNameData(MetaData): 
+class ShortNameData:
+    def fix_up(self, df):
+        naMask = df[MetricName.SHORT_NAME].isna()
+        df.loc[naMask, MetricName.SHORT_NAME] = df.loc[naMask, MetricName.NAME] 
+        return df
+        
+
+# Attempt to use multiple inheritance to separate handling of data source and data kind
+class MetaShortNameData(MetaData, ShortNameData): 
     def __init__(self, df):
         super().__init__(df) 
+
+    def compute_impl(self, df):
+        df = super().compute_impl(df)
+        return self.fix_up(df) 
+
+    def input_output_args(self):
+        input_args = []
+        output_args = SHORT_NAME_METRICS
+        return input_args, output_args
+
+class MergeShortNameData(MergeDataFrameData, ShortNameData): 
+    def __init__(self, df):
+        super().__init__(df) 
+
+    def compute_impl(self, df):
+        df = super().compute_impl(df)
+        return self.fix_up(df)
+
+    # Subclass should still need to override merge_df(self) to provide data frame 
 
     def input_output_args(self):
         input_args = []
