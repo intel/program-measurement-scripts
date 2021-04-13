@@ -462,7 +462,7 @@ class CapePlot:
         print("Updater plot")
         # Will call back to self.plot_rest() with some info saved in plotData
         # TODO: Need to update to handle color legend update
-        self.plotData.plot_adjustable(scale)
+        self.plot_adjustable(scale)
         
         
     # Set filename to [] for GUI output
@@ -476,16 +476,16 @@ class CapePlot:
         self.ax.clear()
         ax = self.ax
 
-        xmin, xmax, ymin, ymax = self.get_min_max(xs, ys)
+        self.xmin, self.xmax, self.ymin, self.ymax = self.get_min_max(xs, ys)
 
         # Draw contours
-        self.draw_contours(xmax, ymax)
+        self.draw_contours(self.xmax, self.ymax)
 
         # Plot data points
         labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
 
         # Arrows between multiple runs
-        name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
+        name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, self.xmax, self.ymax)
 
         # Add footnote with datafile and timestamp
         #plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
@@ -500,29 +500,28 @@ class CapePlot:
         names = self.guiState.get_encoded_names(df).tolist()
         name_marker = dict(zip(names, markers)) if markers else None
 
+        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+            name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
+            self.variant)
+
         # Plot rest of the plot (which can be adjusted later)
-        self.plot_adjustable(scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, name_marker)
+        self.plot_adjustable(scale)
 
         try: 
             self.fig.tight_layout()
             self.fig.set_tight_layout(True)
         #    self.fig.canvas.draw()
         except: print("self.fig.tight_layout() failed")
-    
-        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
-                               name_mapping, mymappings, self.guiState, self, xmax, ymax, xmin, ymin, 
-                               self.variant)
 
-    # TODO: Need to be able to update color labels
-    def plot_adjustable(self, scale, xmax, ymax, xmin, ymin, title, xs, ys, mytexts, name_mapping, mymappings, name_marker):
+    def plot_adjustable(self, scale):
         # Set specified axis scales
         ax = self.ax
-        self.set_plot_scale(scale, xmax, ymax, xmin, ymin)
-        legend = self.mk_legend()
+        self.set_plot_scale(scale, self.xmax, self.ymax, self.xmin, self.ymin)
+        self.plotData.legend = self.mk_legend()
         # Update color of points
         for color, name, timestamp in zip(self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
             name = name+str(timestamp)
-            if name in name_marker: name_marker[name].set_color(color)
+            if name in self.plotData.name_marker: self.plotData.name_marker[name].set_color(color)
 
         # Update contours
         self.update_contours()
@@ -531,8 +530,10 @@ class CapePlot:
         # (x, y) = zip(*DATA)
 
         #adjust_text(texts, arrowprops=dict(arrowstyle="-|>", color='r', alpha=0.5))
-        ax.set_title(title, pad=40)
-        self.plotData.legend = legend
+        ax.set_title(self.extend_plot_title(self.plotData.variant, scale), pad=40)
+        self.plotData.updateMarkers()
+        self.plotData.updateLabels()
+        self.plotData.thread_safe_canvas_draw()
 
     def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
@@ -691,14 +692,6 @@ class PlotData():
     @property
     def control(self):
         return None if self.plot is None else self.plot.control
-    
-    def plot_adjustable(self, scale):
-        self.plot.plot_adjustable(scale, self.xmax, self.ymax, self.xmin, self.ymin, 
-                                  title=self.plot.extend_plot_title(self.variant, scale), xs=self.xs, ys=self.ys, mytexts=self.mytext,
-                                  name_mapping=self.name_mapping, mymappings=self.mappings, name_marker=self.name_marker)
-        self.updateMarkers()
-        self.updateLabels()
-        self.thread_safe_canvas_draw()
 
     def updateMarkers(self):
         # Hide/Show the markers, labels, and arrows
@@ -751,22 +744,6 @@ class PlotData():
 
     def unhighlightPoints(self):
         self.guiState.unhighlightPoints(self.names)
-
-    # def toggleLabel(self, marker):
-    #     label = self.marker_text[marker]
-    #     label.set_alpha(not label.get_alpha())
-    #     if label in self.text_arrow: self.text_arrow[label].set_visible(label.get_alpha())
-    #     self.canvas.draw()
-    
-    # def toggleLabels(self, alpha, adjusted):
-    #     for marker in self.marker_text:
-    #         if marker.get_alpha(): 
-    #             self.marker_text[marker].set_alpha(alpha) 
-    #             if adjusted: 
-    #                 # possibly called adjustText after a zoom and no arrow is mapped to this label outside of the current axes
-    #                 # TODO: Create "marker:arrow" to simplify this statement
-    #                 if self.marker_text[marker] in self.text_arrow: self.text_arrow[self.marker_text[marker]].set_visible(alpha)
-    #     self.canvas.draw()
 
     def highlight(self, marker):
         text = self.marker_text[marker]
