@@ -19,7 +19,7 @@ import getpass
 
 class ScrolledTreePane(tk.Frame):
     TIMESTAMP_STR = r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}'
-    def __init__(self, parent, rootName, gui, guiRoot):
+    def __init__(self, parent, rootName, gui):
         tk.Frame.__init__(self, parent)
         self.treeview = ttk.Treeview(self)
         vsb = ttk.Scrollbar(self, orient=tk.VERTICAL)
@@ -38,7 +38,6 @@ class ScrolledTreePane(tk.Frame):
         self.setupLocalRoots()
         self.setupRemoteRoots()
         self.setupOneDriveRoots()
-        self.guiRoot = guiRoot
         self.gui = gui
 
     @property
@@ -370,7 +369,7 @@ class ScrolledTreePane(tk.Frame):
             
     
     def create_dialog_win(self, title, message, options):
-        return ScrolledTreePane.DialogWin(title, message, options, self.guiRoot).choice
+        return ScrolledTreePane.DialogWin(title, message, options, self).choice
 
 
 class DataSourcePanel(ScrolledTreePane):
@@ -656,8 +655,8 @@ class DataSourcePanel(ScrolledTreePane):
                              parent, ScrolledTreePane.WebServer())
 
 
-    def __init__(self, parent, gui, root):
-        super().__init__(parent, 'Data Source', gui, root)
+    def __init__(self, parent, gui):
+        super().__init__(parent, 'Data Source', gui)
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
 
     def show_options_data(self, select_fn, node=None):
@@ -822,8 +821,8 @@ class AnalysisResultsPanel(ScrolledTreePane):
             #self.container.after(1000, lambda: self.container.setFocus(self))
             self.container.setFocus(self)
 
-    def __init__(self, parent, gui, root):
-        super().__init__(parent, 'Analysis Results', gui, root)
+    def __init__(self, parent, gui):
+        super().__init__(parent, 'Analysis Results', gui)
 
     # def openLocalFile(self, levels=[]):
     #     self.loadFn(levels)
@@ -838,11 +837,11 @@ class AnalysisResultsPanel(ScrolledTreePane):
         AnalysisResultsPanel.UserNode(cape_cache_path, cape_cache_path, 'Local', self, self.rootNode)
 
 class ExplorerPanel(tk.PanedWindow):
-    def __init__(self, parent, gui, root):
+    def __init__(self, parent, gui):
         super().__init__(parent, orient="horizontal")
-        top = DataSourcePanel(self, gui, root)
+        top = DataSourcePanel(self, gui)
         top.pack(side = tk.LEFT, expand=True)
-        bot = AnalysisResultsPanel(self, gui, root)
+        bot = AnalysisResultsPanel(self, gui)
         bot.pack(side = tk.LEFT, expand=True)
         self.add(top, stretch='always')
         self.add(bot, stretch='always')

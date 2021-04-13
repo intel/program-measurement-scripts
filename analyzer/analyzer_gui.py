@@ -32,9 +32,9 @@ from scurve import ScurveTab
 from scurve_all import ScurveAllTab
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab, GuideTab, FilteringTab, DataTab
 from plot_interaction import PlotInteraction
-from analyzer_controller import AnalyzerController
 from analyzer_model import LoadedData
 from analyzer_base import HideableTab
+from analyzer_controller import AnalyzerController
 
 # pywebcopy produces a lot of logging that clouds other useful information
 logging.disable(logging.CRITICAL)
@@ -235,7 +235,7 @@ class AnalyzerGui(tk.Frame):
         filemenu = tk.Menu(menubar, tearoff=0)
         # filemenu.add_command(label="Save State", command=self.saveState)
         # filemenu.add_command(label="Save State(Testing)", command=self.saveStateTest)
-        # filemenu.add_command(label="New")#, command=self.configTab.new)
+        filemenu.add_command(label="New Window", command=self.newWindow)
         # filemenu.add_command(label="Open")#, command=self.configTab.open)
         # filemenu.add_command(label="Save")#, command=lambda: self.configTab.save(False))
         # filemenu.add_command(label="Save As...")#, command=lambda: self.configTab.save(True))
@@ -254,7 +254,7 @@ class AnalyzerGui(tk.Frame):
         # Explorer Panel and Guide tab in global notebook
         self.global_note = ttk.Notebook(self.pw)
 
-        self.explorerPanel = ExplorerPanel(self.global_note, self, root)
+        self.explorerPanel = ExplorerPanel(self.global_note, self)
         self.global_note.add(self.explorerPanel, text='Data Source')
 
         # TODO: Refactor Guide Tab to not need a specific tab as a parameter
@@ -273,6 +273,18 @@ class AnalyzerGui(tk.Frame):
         # self.choice = ''
         self.control = None
 
+    def newWindow(self):
+        window = tk.Toplevel(self.master)
+        window.geometry(self.winfo_toplevel().geometry())
+        self.fillWindow(window)
+
+    @staticmethod
+    def fillWindow(window):
+        gui = AnalyzerGui(window)
+        loadedData = LoadedData()
+        # Will also link loadedData to gui 
+        control = AnalyzerController(gui, loadedData)
+    
     def setControl(self, control):
         self.control = control
         
@@ -582,12 +594,8 @@ def check_focus(event):
     if root.focus_get() is None:
         root.focus_force()
 
-        
-
-
 if __name__ == '__main__':
     parser = ArgumentParser(description='Cape Analyzer')
-    global root
     root = tk.Tk()
     root.title("Cape Analyzer")
     root.bind("<Button-1>", check_focus)
@@ -599,10 +607,8 @@ if __name__ == '__main__':
 
     # The AnalyzerGui is global so that the data source panel can access it
     # global gui
-    gui = AnalyzerGui(root)
-    loadedData = LoadedData()
-    # Will also link loadedData to gui
-    control = AnalyzerController(gui, loadedData)
+
+    AnalyzerGui.fillWindow(root)
 
     # Allow pyinstaller to find all CEFPython binaries
     # TODO: Add handling of framework nad resource paths for Mac

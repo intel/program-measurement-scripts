@@ -124,7 +124,8 @@ class LoadedData(Observable):
         
         @property
         def short_names_df(self):
-            return self.loadedData.short_names_df
+            return pd.merge(left=self.loadedData.short_names_df, right=self.df[KEY_METRICS], on=KEY_METRICS, how='right')
+            #return self.loadedData.short_names_df
         
         @property
         def df(self):
@@ -335,6 +336,9 @@ class LoadedData(Observable):
         shortnamefile = self.meta_filename('.names.csv')
         names = pd.read_csv(shortnamefile) if os.path.isfile(shortnamefile) else pd.DataFrame(columns=KEY_METRICS + NAME_FILE_METRICS)
         # Only add entries not already in self.short_names_df
+        if not set(names.columns).issuperset(set(KEY_METRICS+NAME_FILE_METRICS)):
+            # Skip if shortname file not compatible
+            return
         merged = pd.merge(left=self.short_names_df, right=names, on=KEY_METRICS, how='outer')
         updated = False
         for n in NAME_FILE_METRICS:
@@ -909,6 +913,7 @@ class AnalyzerData(PausableObserable):
         self.scale = self.x_scale + self.y_scale
         if y_axis: self.y_axis = "{}".format(y_axis)
         if x_axis: self.x_axis = "{}".format(x_axis)
+        self.updated_notify_observers()
         
     def merge_metrics(self, df, metrics):
         self.levelData.merge_metrics(df, metrics)

@@ -259,7 +259,7 @@ class PlotTab(AnalyzerTab):
 
     def update_axes(self, x_scale, y_scale, x_axis, y_axis):
         self.analyzerData.update_axes(x_scale, y_scale, x_axis, y_axis)
-        self.try_adjust_plot()
+        #self.try_adjust_plot()
         
     def notify(self, data):
         # Metrics to be displayed in the data table are unique for each plot
