@@ -23,8 +23,6 @@ class ShortNameData(AnalyzerData):
         super().__init__(data, level, "ShortNameTabData")
         self.shortNameTable = pd.DataFrame(columns=KEY_METRICS+[MN.SHORT_NAME, MN.VARIANT, 'Label'])
 
-    # def notify(self, data):
-    #     self.notify_observers()
     def exportCSV(self, export_file_path):
         self.shortNameTable.to_csv(export_file_path, index=False, header=True)
 
@@ -39,7 +37,6 @@ class ShortNameTab(AnalyzerTab):
         self.cluster_color_button = tk.Button(table_button_frame, text="Color by Cluster", command=lambda: self.colorClusters())
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
-        #self.colors = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
         self.table.show()
         self.update_button.grid(row=0, column=0)
         self.cluster_color_button.grid(row=0, column=1)
@@ -67,13 +64,6 @@ class ShortNameTab(AnalyzerTab):
         df['Label'] = df[NonMetricName.SI_CLUSTER_NAME]
         df = self.assignColors(df)
         df.loc[df['Label']=='No Cluster', 'Color'] = CapePlotColor.DEFAULT_COLOR
-
-        # df[NonMetricName.SI_CLUSTER_NAME].replace({'':'No Cluster'}, inplace=True)
-        # df = df.reindex(columns = df.columns.tolist() + ['Label','Color'])
-        # for i, cluster in enumerate(df[NonMetricName.SI_CLUSTER_NAME].unique()):
-        #     if cluster != 'No Cluster': df.loc[df[NonMetricName.SI_CLUSTER_NAME]==cluster, ['Label','Color']] = [cluster, colors[i+1]]
-        # # All points without a cluster will be blue
-        # df.loc[df[NonMetricName.SI_CLUSTER_NAME]=='No Cluster', ['Label','Color']] = ['No Cluster', CapePlotColor.DEFAULT_COLOR]
         self.analyzerData.levelData.color_by_cluster(df)
 
     def findAndReplace(self):
@@ -89,13 +79,6 @@ class ShortNameTab(AnalyzerTab):
         # Fill in the Color column based on unique user inputted labels
         df = self.table.model.df.copy(deep=True)
         df = self.assignColors(df)
-
-        # df['Color'] = ''
-        # for i, label in enumerate(df['Label'].unique()):
-        #     if i < len(colors):
-        #         df.loc[df['Label']==label, ['Color']] = colors[i]
-        #     else: # Make all default color when run out of colors
-        #         df.loc[df['Label']==label, ['Color']] = CapePlotColor.DEFAULT_COLOR
         # Update short names in each of the main dfs
         self.analyzerData.levelData.loadedData.update_short_names(df, self.level)
 
@@ -107,28 +90,22 @@ class MappingsData(AnalyzerData):
     def __init__(self, data, level):
         super().__init__(data, level, "Mappings")
 
-    # def notify(self, data):
-    #     self.notify_observers()
-
 class MappingsTab(AnalyzerTab):
     def __init__(self, parent):
         super().__init__(parent, MappingsData)
         self.table = Table(self, dataframe=pd.DataFrame(), showtoolbar=False, showstatusbar=True)
-        self.setupCustomOptions()
+        self.edit_button = tk.Button(self, text="Edit", command=self.editMappings)
+        # self.update_button = tk.Button(self, text="Update", command=self.updateMapping)
+        self.table.show()
+        self.edit_button.grid(row=10, column=0)
+        # self.update_button.grid(row=10, column=1, sticky=tk.W)
         # TODO: Fix showing/hiding intermediate mappings
         #if gui.loadedData.removedIntermediates: tk.Button(self, text="Show Intermediates", command=self.showIntermediates).grid(row=3, column=1)
         #else: tk.Button(self, text="Remove Intermediates", command=self.removeIntermediates).grid(row=3, column=1)
-        self.table.show()
-        self.edit_button.grid(row=10, column=0)
-        self.update_button.grid(row=10, column=1, sticky=tk.W)
 
     def notify(self, data):
-        self.placeholderCheck()
+        self.table.model.df = self.analyzerData.levelData.mapping_df
         self.table.redraw()
-    
-    def updateTable(self):
-        self.table.redraw()
-        self.win.destroy()
 
     def addMapping(self):
         # extract timestamp,name,short_name from selected before and after to add to mappings
@@ -138,9 +115,7 @@ class MappingsTab(AnalyzerTab):
         toAdd['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
         toAdd['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
         toAdd['Difference'] = self.analyzerData.df.loc[(self.analyzerData.df[NAME] == toAdd['After Name'][0]) & (self.analyzerData.df[TIMESTAMP] == toAdd['After Timestamp'][0])][VARIANT].iloc[0]
-        self.analyzerData.loadedData.add_mapping(self.analyzerData.level, toAdd)
-        self.table.model.df = self.mappings
-        self.updateTable()
+        self.analyzerData.levelData.loadedData.add_mapping(self.analyzerData.level, toAdd)
     
     def removeMapping(self):
         toRemove = pd.DataFrame()
@@ -148,25 +123,18 @@ class MappingsTab(AnalyzerTab):
         toRemove['Before Timestamp'] = [int(self.before_selected.get().rsplit('[')[2][:-1])]
         toRemove['After Name'] = [self.after_selected.get().split(']')[1].split('[')[0][1:-1]]
         toRemove['After Timestamp'] = [int(self.after_selected.get().rsplit('[')[2][:-1])]
-        # Update loadedData and database mappings
-        self.analyzerData.loadedData.remove_mapping(self.analyzerData.level, toRemove)
-        self.placeholderCheck()
-        self.updateTable()
+        self.analyzerData.levelData.loadedData.remove_mapping(self.analyzerData.level, toRemove)
 
-    def placeholderCheck(self):
-        # Add placeholder row if current mappings table is now empty for proper GUI display
-        if self.mappings.empty:
-            self.table.model.df = pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference', 'DataSource', 'Before Variant', 'After Variant'])
-            self.table.model.df = self.table.model.df.append(pd.Series(name='temp'))
-        else: self.table.model.df = self.mappings
+    # def placeholderCheck(self):
+    #     # Add placeholder row if current mappings table is now empty for proper GUI display
+    #     if self.mappings.empty:
+    #         self.table.model.df = pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', SPEEDUP_TIME_LOOP_S, SPEEDUP_TIME_APP_S, SPEEDUP_RATE_FP_GFLOP_P_S, 'Difference', 'DataSource', 'Before Variant', 'After Variant'])
+    #         self.table.model.df = self.table.model.df.append(pd.Series(name='temp'))
+    #     else: self.table.model.df = self.mappings
 
     def updateMapping(self):
         # Update observers with the new mappings
         self.analyzerData.loadedData.update_mapping(self.analyzerData.level)
-
-    def setupCustomOptions(self):
-        self.edit_button = tk.Button(self, text="Edit", command=self.editMappings)
-        self.update_button = tk.Button(self, text="Update", command=self.updateMapping)
 
     def editMappings(self):
         options = "[" + self.analyzerData.df[SHORT_NAME] + "] " + self.analyzerData.df[NAME] + " [" + self.analyzerData.df[TIMESTAMP].map(str) + "]"
@@ -188,9 +156,9 @@ class MappingsTab(AnalyzerTab):
         self.choice = 'cancel'
         self.win.destroy()
 
-    def selectAction(self, metric):
-        self.choice = metric
-        self.win.destroy()
+    # def selectAction(self, metric):
+    #     self.choice = metric
+    #     self.win.destroy()
 
     # def showIntermediates(self):
     #     self.tab.data.loadedData.mapping = self.tab.data.loadedData.orig_mapping.copy(deep=True)
@@ -223,51 +191,6 @@ class MappingsTab(AnalyzerTab):
     #     data_tab_pairs = [(self.tab.data.gui.qplotData, self.tab.data.gui.c_qplotTab), (self.tab.data.gui.trawlData, self.tab.data.gui.c_trawlTab), (self.tab.data.gui.siplotData, self.tab.data.gui.c_siPlotTab), (self.tab.data.gui.customData, self.tab.data.gui.c_customTab), (self.tab.data.gui.coverageData, self.tab.data.gui.c_summaryTab)]
     #     for data, tab in data_tab_pairs:
     #         data.notify(self.loadedData, x_axis=tab.x_axis, y_axis=tab.y_axis, variants=tab.variants, scale=tab.x_scale+tab.y_scale)
-
-    # @staticmethod
-    # def restoreCustom(df, all_mappings):
-    #     # for each row in all_mappings
-    #     # if before and after are in df -> add to mappings
-    #     # Auto change user's saved mapping file with the latest naming convention
-    #     mappings_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'mappings.csv')
-    #     all_mappings.rename(columns={'before_name':'Before Name', 'before_timestamp#':'Before Timestamp', \
-    #     'after_name':'After Name', 'after_timestamp#':'After Timestamp'}, inplace=True)
-    #     all_mappings.to_csv(mappings_path, index=False)
-    #     before = pd.merge(left=df[[NAME, TIMESTAMP]], right=all_mappings, left_on=[NAME, TIMESTAMP], right_on=['Before Name', 'Before Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
-    #     mappings = pd.merge(left=df[[NAME, TIMESTAMP]], right=before, left_on=[NAME, TIMESTAMP], right_on=['After Name', 'After Timestamp'], how='inner').drop(columns=[NAME, TIMESTAMP])
-    #     return mappings
-
-# class ClusterTab(tk.Frame):
-#     def __init__(self, parent, tab):
-#         tk.Frame.__init__(self, parent)
-#         self.parent = parent
-#         self.tab = tab
-#         self.cluster_path = resource_path('clusters')
-#         self.cluster_selected = tk.StringVar(value='Choose Cluster')
-#         cluster_options = ['Choose Cluster']
-#         for cluster in os.listdir(self.cluster_path):
-#             cluster_options.append(cluster[:-4])
-#         self.cluster_menu = tk.OptionMenu(self, self.cluster_selected, *cluster_options)
-#         self.cluster_menu['menu'].insert_separator(1)
-#         update = tk.Button(self, text='Update', command=self.update)
-#         colors = tk.Button(self, text='Color by Cluster', command=self.updateColors)
-#         self.cluster_menu.pack(side=tk.LEFT, anchor=tk.NW)
-#         update.pack(side=tk.LEFT, anchor=tk.NW)
-#         colors.pack(side=tk.LEFT, anchor=tk.NW, padx=10)
-
-#     def updateColors(self):
-#         table_df = self.tab.shortnameTab.table.model.df
-#         table_df = pd.merge(left=table_df, right=self.tab.df[KEY_METRICS + [NonMetricName.SI_CLUSTER_NAME]], how='left', on=KEY_METRICS)
-#         table_df['Color'] = table_df[NonMetricName.SI_CLUSTER_NAME]
-#         table_df.drop(columns=[NonMetricName.SI_CLUSTER_NAME], inplace=True, errors='ignore')
-#         self.tab.shortnameTab.updateLabels(table_df)
-    
-#     def update(self):
-#         if self.cluster_selected.get() != 'Choose Cluster':
-#             path = os.path.join(self.cluster_path, self.cluster_selected.get() + '.csv')
-#             self.tab.cluster = path
-#             self.tab.title = self.cluster_selected.get()
-#             self.tab.siplotData.notify(self.tab.data.loadedData, variants=self.tab.variants, update=True, cluster=path, title=self.cluster_selected.get())
 
 class DataTabData(AnalyzerData):
     class ColumnFilter:

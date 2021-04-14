@@ -62,7 +62,6 @@ class LoadedData(Observable):
             self._capacityDataItems = []
             self._satAnalysisDataItems = []
             self._siDataItems = [] 
-            self.mapping = pd.DataFrame()
             # Put this here but may move it out.
             self.guiState = PerLevelGuiState(self, level)
 
@@ -126,6 +125,13 @@ class LoadedData(Observable):
         def short_names_df(self):
             return pd.merge(left=self.loadedData.short_names_df, right=self.df[KEY_METRICS], on=KEY_METRICS, how='right')
             #return self.loadedData.short_names_df
+
+        @property
+        def mapping_df(self):
+            before = pd.merge(left=self.df[KEY_METRICS], right=self.loadedData.mappings_df, left_on=KEY_METRICS, right_on=['Before Name', 'Before Timestamp'], 
+                            how='inner').drop(columns=KEY_METRICS)
+            return pd.merge(left=self.df[KEY_METRICS], right=before, left_on=KEY_METRICS, right_on=['After Name', 'After Timestamp'], 
+                                how='inner').drop(columns=KEY_METRICS)
         
         @property
         def df(self):
@@ -156,7 +162,6 @@ class LoadedData(Observable):
             self.clear_df()
             #for col in KEY_METRICS:
             #    self.df[col] = None
-            self.mapping = pd.DataFrame()
 
         @property
         def color_map(self):
@@ -164,6 +169,9 @@ class LoadedData(Observable):
 
         def color_by_cluster(self, df):
             self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
+
+        def update_mapping(self):
+            self.updated_notify_observers()
 
         def update_short_names(self):
             for item in self._shortnameDataItems:
@@ -275,21 +283,13 @@ class LoadedData(Observable):
         self.transitions = 'disabled'
         self.urls = []
         self.short_names_df = pd.read_csv(self.short_names_path)
+        self.mappings_df = pd.read_csv(self.mappings_path)
 
     def get_df(self, level):
         return self.levelData[level].df
 
     def get_mapping(self, level):
         return self.levelData[level].mapping
-
-    def remove_mapping(self, level, toRemove):
-        self.levelData[level].guiState.remove_mapping(toRemove)
-
-    def add_mapping(self, level, toAdd):
-        self.levelData[level].guiState.add_mapping(toAdd)
-
-    def update_mapping(self, level):
-        self.levelData[level].updated()
 
     def setFilter(self, level, metric, minimum, maximum, names, variants):
         self.levelData[level].guiState.setFilter(metric, minimum, maximum, names, variants)
@@ -300,13 +300,28 @@ class LoadedData(Observable):
     def color_by_cluster(self, df, level):
         self.levelData[level].color_by_cluster(df)
 
+    def remove_mapping(self, level, toRemove):
+        # Remove from local database
+        self.mappings_df = self.mappings_df.drop(self.mappings_df[(self.mappings_df['Before Name'] == toRemove['Before Name'].iloc[0]) & \
+                                                                  (self.mappings_df['Before Timestamp'] == toRemove['Before Timestamp'].iloc[0]) & \
+                                                                  (self.mappings_df['After Name'] == toRemove['After Name'].iloc[0]) & \
+                                                                  (self.mappings_df['After Timestamp'] == toRemove['After Timestamp'].iloc[0])].index)
+        self.mappings_df.to_csv(self.mappings_path, index=False)
+        # Notify observers
+        self.levelData[level].update_mapping()
+
+    def add_mapping(self, level, toAdd):
+        # Add to local database
+        self.mappings_df = pd.concat([self.mappings_df, toAdd]).drop_duplicates(['Before Timestamp', 'Before Name', 'After Timestamp', 'After Name']).reset_index(drop=True)
+        self.mappings_df.to_csv(self.mappings_path, index=False)
+        # Notify observers
+        self.levelData[level].update_mapping()
+
     def update_short_names(self, new_short_names, level):
         # Update local database
         self.short_names_df = pd.concat([self.short_names_df, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
         self.short_names_df.to_csv(self.short_names_path, index=False)
-        # Next update summary sheets for each level and notify observers
-        #for level in self.levelData:
-        # self.merge_metrics(new_short_names, [SHORT_NAME, VARIANT, 'Color'], level)
+        # Notify observers
         self.levelData[level].update_short_names()
     
     def check_cape_paths(self):
@@ -418,7 +433,7 @@ class LoadedData(Observable):
 
             # cl.append_dataframe_rows(self.get_df(level), df)
             # Add mappings to levelData for each level
-            self.loadMapping(level)
+            # self.loadMapping(level)
 
         # TODO: Append other levels?
         self.names = summaryDf[KEY_METRICS+NAME_FILE_METRICS]
@@ -554,8 +569,7 @@ class LoadedData(Observable):
 
     def loadMapping(self, level):
         df = self.get_df(level)
-        all_mappings = pd.read_csv(self.mappings_path)
-        before = pd.merge(left=df[KEY_METRICS], right=all_mappings, left_on=KEY_METRICS, right_on=['Before Name', 'Before Timestamp'], 
+        before = pd.merge(left=df[KEY_METRICS], right=self.mappings_df, left_on=KEY_METRICS, right_on=['Before Name', 'Before Timestamp'], 
                           how='inner').drop(columns=KEY_METRICS)
         mappings = pd.merge(left=df[KEY_METRICS], right=before, left_on=KEY_METRICS, right_on=['After Name', 'After Timestamp'], 
                             how='inner').drop(columns=KEY_METRICS)
@@ -711,22 +725,6 @@ class PerLevelGuiState(PausableObserable):
     
     # Write methods to update the fields and then call 
     # self.loadedData.levelData[level].updated() to notify all observers
-    def add_mapping(self, toAdd):
-        all_mappings = pd.read_csv(self.mappings_path)
-        all_mappings = all_mappings.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
-        all_mappings.to_csv(self.mappings_path, index=False)
-        self.levelData.mapping = self.levelData.mapping.append(toAdd, ignore_index=True).drop_duplicates().reset_index(drop=True)
-
-    def remove_mapping(self, toRemove):
-        all_mappings = pd.read_csv(self.mappings_path)
-        to_update = [all_mappings, self.levelData.mapping]
-        for mapping in to_update:
-            mapping.drop(mapping[(mapping['Before Name']==toRemove['Before Name'].iloc[0]) & \
-                        (mapping['Before Timestamp']==toRemove['Before Timestamp'].iloc[0]) & \
-                        (mapping['After Name']==toRemove['After Name'].iloc[0]) & \
-                        (mapping['After Timestamp']==toRemove['After Timestamp'].iloc[0])].index, inplace=True)
-        all_mappings.to_csv(self.mappings_path, index=False)
-
     def reset_labels(self):
         self.labels = []
         self.updated_notify_observers()
@@ -858,7 +856,7 @@ class AnalyzerData(PausableObserable):
 
     @property
     def mappings(self):
-        return self.levelData.mapping
+        return self.levelData.mapping_df
 
     @property
     def variants(self):

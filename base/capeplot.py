@@ -360,7 +360,7 @@ class CapePlot:
 
     @property
     def mapping(self):
-        return self.levelData.mapping
+        return self.levelData.mapping_df
 
     @property
     def color_map(self):
@@ -705,9 +705,11 @@ class PlotData():
             if name in self.guiState.selected: self.select(self.name_marker[name])
             if name in self.guiState.highlighted: self.highlight(self.name_marker[name])
             # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
-            if name in self.name_mapping: self.name_mapping[name].set_alpha(1)
+            if name in self.name_mapping: 
+                for arrow in self.name_mapping[name]: arrow.set_alpha(1)
         for name in self.name_mapping:
-            if self.guiState.isHidden(name): self.name_mapping[name].set_alpha(0)
+            if self.guiState.isHidden(name): 
+                for arrow in self.name_mapping[name]: arrow.set_alpha(0)
 
     def updateLabels(self):
         # Update labels on plot

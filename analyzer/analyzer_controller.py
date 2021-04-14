@@ -5,7 +5,7 @@ class AnalyzerController:
     '''Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) 
         but do not deal with their details.
         It coordiantes between them.
-        E.g. it can say "Look at a certain tab and hightlight specifici data points".
+        E.g. it can say "Look at a certain tab and hightlight specific data points".
         It should set the Model and the notify methods will update GUI automatically.'''
     def __init__(self, gui, loadedData):
         self.gui = gui
