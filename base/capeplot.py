@@ -286,7 +286,7 @@ class CapePlot:
         self.fig, self.ax = plt.subplots()
         self.ax.clear()
         self.footnoteText = None
-        self.plotData = PlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, legend=None, title=None, 
+        self.plotData = PlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, title=None, 
                                  labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self, 
                                  xmax=None, ymax=None, xmin=None, ymin=None, variant=None)
         self._setAttrs(data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
@@ -311,7 +311,7 @@ class CapePlot:
         self.filtering = filtering
         self.short_names_path = short_names_path
         #self.guiState = levelData.guiState
-        self.plotData.setAttrs (df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, legend=None, title=title, 
+        self.plotData.setAttrs (df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, title=title, 
                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self, 
                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=variant)
 
@@ -493,31 +493,33 @@ class CapePlot:
         self.footnoteText = self.fig.text(0, 0.005, self.levelData.source_title, horizontalalignment='left')
 
         ax.set(xlabel=x_axis, ylabel=y_axis)
-        
-        # Legend
-        legend = self.mk_legend()
 
         names = self.guiState.get_encoded_names(df).tolist()
         name_marker = dict(zip(names, markers)) if markers else None
 
-        self.plotData.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+        self.fig.set_tight_layout(True)
+
+        self.plotData.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
             name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
             self.variant)
 
         # Plot rest of the plot (which can be adjusted later)
         self.plot_adjustable(scale)
 
-        try: 
-            self.fig.tight_layout()
-            self.fig.set_tight_layout(True)
-        #    self.fig.canvas.draw()
-        except: print("self.fig.tight_layout() failed")
+        # try: 
+        #     self.fig.tight_layout()
+        #     self.fig.set_tight_layout(True)
+        # #    self.fig.canvas.draw()
+        # except: print("self.fig.tight_layout() failed")
 
     def plot_adjustable(self, scale):
         # Set specified axis scales
         ax = self.ax
         self.set_plot_scale(scale, self.xmax, self.ymax, self.xmin, self.ymin)
-        self.plotData.legend = self.mk_legend()
+        # Update legend
+        legend = self.mk_legend()
+        self.plotData.legend = legend
+        self.plotData.orig_legend = legend.get_title().get_text()
         # Update color of points
         for color, name, timestamp in zip(self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
             name = name+str(timestamp)
@@ -643,23 +645,21 @@ class CapePlot:
         self.plotData.unhighlightPoints()
         
 class PlotData():
-    def __init__(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+    def __init__(self, df, xs, ys, mytexts, ax, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
-        self.setAttrs(df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+        self.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
                       name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant)
         self.canvas = None
         self.adjusted = False
         self.adjusting = False
 
-    def setAttrs(self, df, xs, ys, mytexts, ax, legend, title, labels, markers, 
+    def setAttrs(self, df, xs, ys, mytexts, ax, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
         self.xs = xs
         self.ys = ys
         self.mytext = mytexts
         self.orig_mytext = copy.deepcopy(mytexts)
         self.ax = ax
-        self.legend = legend
-        self.orig_legend = legend.get_title().get_text() if legend else None
         self.title = title
         self.texts = labels
         self.markers = markers
