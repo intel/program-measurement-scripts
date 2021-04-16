@@ -641,6 +641,7 @@ class PerLevelGuiState(PausableObserable):
         self.filterMetric = None
         self.filterMinThreshold = 0
         self.filterMaxThreshold = 0
+        self.hidden_mask = []
 
         # Currently selected plot interaction action
         self.selectPoint = True
@@ -729,6 +730,15 @@ class PerLevelGuiState(PausableObserable):
         self.labels = []
         self.updated_notify_observers()
 
+    def setFilterMask(self, hidden_mask):
+        self.hidden_mask = hidden_mask
+        df = self.levelData.df[hidden_mask]
+        self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
+        self.hidden = list(dict.fromkeys(self.hidden))
+        self.showLabels()
+        self.hideLabels(self.hidden)
+        self.updated_notify_observers()
+
     def setFilter(self, metric, minimum, maximum, names, variants):
         self.filterMetric = metric
         self.filterMinThreshold = minimum
@@ -736,13 +746,11 @@ class PerLevelGuiState(PausableObserable):
         self.selectedVariants = variants
         self.hidden = names
         # Add codelet names outside of filtered range to hidden names
+        hidden_mask = [False] * len(self.levelData.df)
         if metric:
-            df = self.levelData.df.loc[(self.levelData.df[metric] < minimum) | (self.levelData.df[metric] > maximum)]
-            self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
-        self.hidden = list(dict.fromkeys(self.hidden))
-        self.showLabels()
-        self.hideLabels(self.hidden)
-        self.updated_notify_observers()
+            hidden_mask = self.levelData.df[metric] < minimum
+            hidden_mask &= self.levelData.df[metric] > maximum
+        self.setFilterMask(hidden_mask)
 
     def removePoints(self, names):
         self.hidden.extend(names)
