@@ -745,10 +745,10 @@ class PerLevelGuiState(PausableObserable):
         self.selectedVariants = variants
         self.hidden = names
         # Add codelet names outside of filtered range to hidden names
-        hidden_mask = [False] * len(self.levelData.df)
+        hidden_mask = [val in names for val in (self.levelData.df[MN.NAME]+self.levelData.df[MN.TIMESTAMP].astype(str))]
         if metric:
-            hidden_mask = self.levelData.df[metric] < minimum
-            hidden_mask &= self.levelData.df[metric] > maximum
+            hidden_mask |= self.levelData.df[metric] < minimum
+            hidden_mask |= self.levelData.df[metric] > maximum
         self.setFilterMask(hidden_mask)
 
     def removePoints(self, names):
