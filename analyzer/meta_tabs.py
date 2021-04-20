@@ -215,11 +215,24 @@ class DataTabData(AnalyzerData):
             mask = mask & filter.apply(df)
         return mask
 
+    def removeFilter(self, column):
+        if column in self.columnFilters:
+            self.columnFilters.pop(column)
+            self.updateFilter()
+
+    def removeAllFilters(self):
+        if self.columnFilters:
+            self.columnFilters = {}
+            self.updateFilter()
+
     def findOrCreateFilter(self, column):
         return copy.deepcopy(self.columnFilters[column]) if column in self.columnFilters else DataTabData.ColumnFilter(column)
 
     def setFilter(self, filter):
         self.columnFilters[filter.column] = filter
+        self.updateFilter()
+    
+    def updateFilter(self):
         mask = self.filterMask(self.df)
         # Currently mask contains everything that should be shown (starts with) so send in the ~mask
         self.levelData.guiState.setFilterMask(~mask)
@@ -271,6 +284,8 @@ class DataTab(AnalyzerTab):
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
             popupmenu.add_command(label='Remove Filter', command=lambda: self.removeFilter(event, rows, cols, outside), 
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
+            popupmenu.add_command(label='Remove All Filters', command=lambda: self.removeAllFilters(event, rows, cols, outside), 
+                                  state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
             popupmenu.add_command(label='Stable Sort', command=lambda: self.stableSort(event, rows, cols, outside))
             popupmenu.add_command(label='Sort Numerically', command=lambda: self.sortNumerically(event, rows, cols, outside),
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
@@ -301,10 +316,10 @@ class DataTab(AnalyzerTab):
 
         def removeFilter(self, event, rows, cols, outside):
             assert len(cols) == 1
-            column = cols[0]
-            #TODO: Remove column filter from DataTabData's columnFilters
-            # self.parent.analyzerDataClass
-            
+            self.parentframe.removeFilter(self.model.df.columns[cols[0]])
+
+        def removeAllFilters(self, event, rows, cols, outside):
+            self.parentframe.removeAllFilters()
 
         def stableSort(self, event, rows, cols, outside):
             colnames = self.model.df.columns[cols]
@@ -421,6 +436,12 @@ class DataTab(AnalyzerTab):
 
     def setFilter(self, filter):
         self.analyzerData.setFilter(filter)
+
+    def removeFilter(self, column):
+        self.analyzerData.removeFilter(column)
+
+    def removeAllFilters(self):
+        self.analyzerData.removeAllFilters()
 
     def filter(self, df): 
         return df[self.analyzerData.filterMask(df)]

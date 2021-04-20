@@ -733,8 +733,7 @@ class PerLevelGuiState(PausableObserable):
     def setFilterMask(self, hidden_mask):
         self.hidden_mask = hidden_mask
         df = self.levelData.df[hidden_mask]
-        self.hidden.extend((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist())
-        self.hidden = list(dict.fromkeys(self.hidden))
+        self.hidden = list(dict.fromkeys((df[MN.NAME]+df[MN.TIMESTAMP].astype(str)).tolist()))
         self.showLabels()
         self.hideLabels(self.hidden)
         self.updated_notify_observers()
