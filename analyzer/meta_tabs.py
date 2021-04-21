@@ -196,13 +196,17 @@ class DataTabData(AnalyzerData):
     class ColumnFilter:
         def __init__(self, column):
             self.column = column
-            self.starts_with = ''
+            self.string = ''
+            self.fn = None
 
-        def set_string(self, start):
-            self.starts_with = start
+        def set_string(self, string):
+            self.string = string
+
+        def set_fn(self, fn):
+            self.fn = fn
         
         def apply(self, df):
-            mask = df[self.column].astype(str).str.startswith(self.starts_with)
+            mask = [self.fn(entry, self.string) for entry in df[self.column].astype(str)]
             return mask
 
     def __init__(self, data, level):
@@ -375,11 +379,15 @@ class DataTab(AnalyzerTab):
 
         def body(self, master):
             # Add stuff to master frame
-            start_label = tk.Label(master, text='Starts with: ')
-            self.start_text = tk.StringVar()
-            start_entry = tk.Entry(master, textvariable=self.start_text)
-            start_label.grid(row=0, column=0, padx=10, pady=10)
-            start_entry.grid(row=0, column=1, padx=10, pady=10)
+            self.filter_selected = tk.StringVar(value='Starts with')
+            self.filter_options = {'Starts with':str.startswith, 'Contains':str.__contains__, 'Equals':str.__eq__}
+            self.filter_menu = tk.OptionMenu(master, self.filter_selected, *self.filter_options)
+
+            self.entry_text = tk.StringVar()
+            entry = tk.Entry(master, textvariable=self.entry_text)
+            self.filter_menu.grid(row=0, column=0, padx=10, pady=10)
+            entry.grid(row=0, column=1, padx=10, pady=10)
+
             # GUI component Will work on the self.filter object
 
         def buttonbox(self):
@@ -389,7 +397,8 @@ class DataTab(AnalyzerTab):
             box.pack()
 
         def apply(self):
-            self.filter.set_string(self.start_text.get())
+            self.filter.set_string(self.entry_text.get())
+            self.filter.set_fn(self.filter_options[self.filter_selected.get()])
             # Done so set filter back 
             self.parent.setFilter(self.filter)
             self.destroy()
