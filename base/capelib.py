@@ -414,12 +414,14 @@ def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
     default_ = kwargs.pop('default', 0)
+    result = None
     for arg in argv:
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            # should use None test because 0 is valid number and considered False in Python.
-            return type_(in_row[arg] if in_row[arg] is not None else default_)
+            result = in_row[arg] if result is None or pd.isna(result) else result
+    if result is not None:
+        return type_(default_ if pd.isna(result) else result)
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):
