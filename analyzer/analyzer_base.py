@@ -52,7 +52,7 @@ class GuiBaseTab(HideableTab):
         pass
 
     def getPausables(self):
-        return [self.analyzerData]
+        return [self.analyzerData] if self.analyzerData else []
 
     @property
     def level(self):
