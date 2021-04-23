@@ -196,9 +196,17 @@ class DataTabData(AnalyzerData):
     class ColumnFilter:
         def __init__(self, column):
             self.column = column
+            self.string = ''
+            self.fn = None
+
+        def set_string(self, string):
+            self.string = string
+
+        def set_fn(self, fn):
+            self.fn = fn
         
         def apply(self, df):
-            mask = pd.Series([True] * len(df))
+            mask = [self.fn(entry, self.string) for entry in df[self.column].astype(str)]
             return mask
 
     def __init__(self, data, level):
@@ -207,16 +215,31 @@ class DataTabData(AnalyzerData):
 
     def filterMask(self, df):
         mask = pd.Series([True] * len(df))
-        for col, filter in self.columnFilters:
-            mask = mask & filter.apply(df[col])
+        for col, filter in self.columnFilters.items():
+            mask = mask & filter.apply(df)
         return mask
+
+    def removeFilter(self, column):
+        if column in self.columnFilters:
+            self.columnFilters.pop(column)
+            self.updateFilter()
+
+    def removeAllFilters(self):
+        if self.columnFilters:
+            self.columnFilters = {}
+            self.updateFilter()
 
     def findOrCreateFilter(self, column):
         return copy.deepcopy(self.columnFilters[column]) if column in self.columnFilters else DataTabData.ColumnFilter(column)
 
     def setFilter(self, filter):
         self.columnFilters[filter.column] = filter
-        
+        self.updateFilter()
+    
+    def updateFilter(self):
+        mask = self.filterMask(self.df)
+        # Currently mask contains everything that should be shown (starts with) so send in the ~mask
+        self.levelData.guiState.setFilterMask(~mask)
 
     # def notify(self, data):
     #     self.notify_observers()
@@ -227,6 +250,7 @@ class DataTab(AnalyzerTab):
     class DataTable(Table):
         def __init__(self, parent):
             super().__init__(parent, dataframe=pd.DataFrame(columns=KEY_METRICS), showtoolbar=False, showstatusbar=True)
+            self.parent = parent
             options = {'align': 'w', 'cellbackgr': '#F4F4F3', 'cellwidth': 80, 'colheadercolor': '#535b71', 'floatprecision': 2, 
                        'font': 'Arial', 'fontsize': 10, 'fontstyle': '', 'grid_color': '#ABB1AD', 
                        'linewidth': 1, 'rowheight': 22, 'rowselectedcolor': '#E4DED4', 'textcolor': 'black'}
@@ -262,6 +286,10 @@ class DataTab(AnalyzerTab):
             popupmenu.add_command(label='Toggle Label', command=lambda: self.toggleLabel(event, rows, cols, outside))
             popupmenu.add_command(label='Filter Column', command=lambda: self.filterColumn(event, rows, cols, outside), 
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
+            popupmenu.add_command(label='Remove Filter', command=lambda: self.removeFilter(event, rows, cols, outside), 
+                                  state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
+            popupmenu.add_command(label='Remove All Filters', command=lambda: self.removeAllFilters(event, rows, cols, outside), 
+                                  state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
             popupmenu.add_command(label='Stable Sort', command=lambda: self.stableSort(event, rows, cols, outside))
             popupmenu.add_command(label='Sort Numerically', command=lambda: self.sortNumerically(event, rows, cols, outside),
                                   state=tk.NORMAL if len(cols) == 1 else tk.DISABLED)
@@ -289,6 +317,13 @@ class DataTab(AnalyzerTab):
         def filterColumn(self, event, rows, cols, outside):
             assert len(cols) == 1
             DataTab.FilterDialog(self.parentframe, self.model.df.columns[cols[0]])
+
+        def removeFilter(self, event, rows, cols, outside):
+            assert len(cols) == 1
+            self.parentframe.removeFilter(self.model.df.columns[cols[0]])
+
+        def removeAllFilters(self, event, rows, cols, outside):
+            self.parentframe.removeAllFilters()
 
         def stableSort(self, event, rows, cols, outside):
             colnames = self.model.df.columns[cols]
@@ -340,17 +375,33 @@ class DataTab(AnalyzerTab):
     class FilterDialog(tk.simpledialog.Dialog):
         def __init__(self, parent, column):
             self.filter = parent.findOrCreateFilter(column)
-            super().__init__(parent)
-            
+            super().__init__(parent, title="Filter")
 
         def body(self, master):
-            print('build dialog body')
             # Add stuff to master frame
+            self.filter_selected = tk.StringVar(value='Starts with')
+            self.filter_options = {'Starts with':str.startswith, 'Contains':str.__contains__, 'Equals':str.__eq__}
+            self.filter_menu = tk.OptionMenu(master, self.filter_selected, *self.filter_options)
+
+            self.entry_text = tk.StringVar()
+            entry = tk.Entry(master, textvariable=self.entry_text)
+            self.filter_menu.grid(row=0, column=0, padx=10, pady=10)
+            entry.grid(row=0, column=1, padx=10, pady=10)
+
             # GUI component Will work on the self.filter object
 
+        def buttonbox(self):
+            box = tk.Frame(self)
+            apply_button = tk.Button(box, text="Apply", command=self.apply)
+            apply_button.pack(pady=10)
+            box.pack()
+
         def apply(self):
+            self.filter.set_string(self.entry_text.get())
+            self.filter.set_fn(self.filter_options[self.filter_selected.get()])
             # Done so set filter back 
             self.parent.setFilter(self.filter)
+            self.destroy()
     
     def __init__(self, parent, metrics=[], variants=[]):
         super().__init__(parent, DataTabData)
@@ -395,6 +446,12 @@ class DataTab(AnalyzerTab):
     def setFilter(self, filter):
         self.analyzerData.setFilter(filter)
 
+    def removeFilter(self, column):
+        self.analyzerData.removeFilter(column)
+
+    def removeAllFilters(self):
+        self.analyzerData.removeAllFilters()
+
     def filter(self, df): 
         return df[self.analyzerData.filterMask(df)]
 
@@ -426,7 +483,7 @@ class DataTab(AnalyzerTab):
             out_df = out_df[selectedMask]
         if not self.guiState.showHiddenPointInTable: 
             hiddenMask = self.guiState.get_hidden_mask(self.analyzerData.df)
-            out_df = out_df [~hiddenMask]
+            out_df = out_df[~hiddenMask]
         out_df.sort_values(by=MN.COVERAGE_PCT, ascending=False, inplace=True)
         self.summaryTable.update_preserve_order(out_df)
 
