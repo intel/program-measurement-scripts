@@ -688,7 +688,8 @@ class PerLevelGuiState(PausableObserable):
         
     @property
     def columnOrder(self):
-        return KEY_METRICS + self.nonKeyColumnOrder
+        # Make SHORT_NAME just after KEY_METRICS
+        return KEY_METRICS + [MN.SHORT_NAME] + [c for c in self.nonKeyColumnOrder if c != MN.SHORT_NAME]
 
     # Only do this for non-hidden points
     def setLabelAlphas(self, names, alpha, notify=True):
