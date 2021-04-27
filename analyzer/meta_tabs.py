@@ -63,7 +63,10 @@ class ShortNameTab(AnalyzerTab):
         df[NonMetricName.SI_CLUSTER_NAME].replace({'':'No Cluster'}, inplace=True)
         df['Label'] = df[NonMetricName.SI_CLUSTER_NAME]
         df = self.assignColors(df)
-        df.loc[df['Label']=='No Cluster', 'Color'] = CapePlotColor.DEFAULT_COLOR
+        ncMask = df['Label']=='No Cluster'
+        # needed .value possibly due to a Pandas bug
+        # See:https://stackoverflow.com/questions/24188729/pandas-adding-a-series-to-a-dataframe-causes-nan-values-to-appear
+        df.loc[ncMask, 'Color'] = pd.Series([CapePlotColor.DEFAULT_COLOR]*len(df[ncMask])).values
         self.analyzerData.levelData.color_by_cluster(df)
 
     def findAndReplace(self):

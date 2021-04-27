@@ -237,7 +237,13 @@ class CapacityData(NodeCentricData):
         #self.op_metric_name = op_metric_name
     
 class CapePlotColor:
-    COLOR_ORDER = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+    COLOR_MAP = matplotlib.cm.get_cmap('hsv')
+    #COLOR_MAP = matplotlib.cm.get_cmap('gist_ncar')
+    NUM_COLORS = 25
+    COLOR_ORDER1 = ['blue', 'red', 'green', 'pink', 'black', 'yellow', 'purple', 'cyan', 'lime', 'grey', 'brown', 'salmon', 'gold', 'slateblue']
+    COLOR_ORDER = [None] * NUM_COLORS
+    for i in range(NUM_COLORS):
+        COLOR_ORDER[i] = COLOR_MAP(i/NUM_COLORS) 
     DEFAULT_COLOR = COLOR_ORDER[0]
 
     @classmethod

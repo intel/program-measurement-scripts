@@ -559,11 +559,13 @@ class LoadedData(Observable):
                 colorDf = colorDf.append(curDf, ignore_index=True)
         elif clusters:
             toAdd = df[df['Color'] == '']
-            toAdd['Color'] = colors[0]
+            #toAdd['Color'] = colors[0]
+            toAdd['Color'] = [CapePlotColor.DEFAULT_COLOR] * len(toAdd)
             colorDf = colorDf.append(toAdd, ignore_index=True)
         else:
             toAdd = df[df['Color'].isna()]
-            toAdd['Color'] = colors[0]
+            #toAdd['Color'] = colors[0]
+            toAdd['Color'] = [CapePlotColor.DEFAULT_COLOR] * len(toAdd)
             colorDf = colorDf.append(toAdd, ignore_index=True)
         return colorDf
 
@@ -717,7 +719,11 @@ class PerLevelGuiState(PausableObserable):
 
     def set_color_map(self, color_map_df, notify=True):
         if 'Label' not in color_map_df: color_map_df['Label'] = ''
-        color_map_df.fillna({'Color': CapePlotColor.DEFAULT_COLOR}, inplace=True)
+        naMask = color_map_df['Color'].isna()
+        # needed .value possibly due to a Pandas bug
+        # See:https://stackoverflow.com/questions/24188729/pandas-adding-a-series-to-a-dataframe-causes-nan-values-to-appear
+        color_map_df.loc[naMask,'Color']=pd.Series([CapePlotColor.DEFAULT_COLOR]*len(color_map_df[naMask])).values
+        #color_map_df.fillna({'Color': CapePlotColor.DEFAULT_COLOR}, inplace=True)
         self.color_map = color_map_df
         if notify:
             self.updated_notify_observers()
