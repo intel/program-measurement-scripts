@@ -259,7 +259,7 @@ class AnalyzerGui(tk.Frame):
 
         # TODO: Refactor Guide Tab to not need a specific tab as a parameter
         # self.guide_tab = GuideTab(self.global_note, self.c_summaryTab)
-        self.guide_tab = tk.Frame(self.global_note)
+        self.guide_tab = GuideTab(self.global_note)
         self.global_note.add(self.guide_tab, text='Guide')
 
         self.global_note.pack(side = tk.BOTTOM, fill=tk.BOTH, expand=True)
@@ -284,6 +284,7 @@ class AnalyzerGui(tk.Frame):
         loadedData = LoadedData()
         # Will also link loadedData to gui 
         control = AnalyzerController(gui, loadedData)
+        gui.guide_tab.fsm.setControl(control)
     
     def setControl(self, control):
         self.control = control
