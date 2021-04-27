@@ -417,9 +417,6 @@ class LoadedData(Observable):
         
         for level in self.levelData:
             df = dfs[level]
-            # TODO: avoid adding Color to df
-            # NOTE: Will returns a new df after this call
-            df = self.compute_colors(df)
             self.levelData[level].setup_df(df, append, short_names_path)
             # df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
 
@@ -438,15 +435,8 @@ class LoadedData(Observable):
         # TODO: Append other levels?
         self.names = summaryDf[KEY_METRICS+NAME_FILE_METRICS]
 
-        # TODO: get rid of special handling of VARIANT
-        # Store all unique variants for variant tab options
-        self.all_variants = summaryDf[MN.VARIANT].dropna().unique()
-        # Get default variant (most frequent)
-        self.default_variant = summaryDf[MN.VARIANT].value_counts().idxmax()
-
         # Add diagnostic variables from analyticsDf
         #self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
-
 
         self.notify_observers()
 
@@ -467,8 +457,6 @@ class LoadedData(Observable):
         self.mapping = self.levels['Codelet']['mapping']
         self.src_mapping = self.levels['Source']['mapping']
         self.app_mapping = self.levels['Application']['mapping']
-        # Get default variant (most frequent)
-        self.default_variant = [self.summaryDf[MN.VARIANT].value_counts().idxmax()]
         self.analytics = pd.DataFrame()
         self.sources = []
         self.restore = True
@@ -535,37 +523,6 @@ class LoadedData(Observable):
     #         b['command'] = lambda b=b, ts=ts : self.orderAction(b, ts) 
     #         b.grid(row=index+1, column=1, padx=20, pady=10)
     #     root.wait_window(self.win)
-
-    def compute_colors(self, df, clusters=False):
-        colors = CapePlotColor.COLOR_ORDER
-        colorDf = pd.DataFrame() 
-        timestamps = df['Timestamp#'].dropna().unique()
-        # Get saved color column from short names file
-        if not clusters and os.path.getsize(self.short_names_path) > 0:
-            df.drop(columns=['Color'], inplace=True, errors='ignore')
-            df = pd.merge(left=df, right=self.short_names_df[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
-            toAdd = df[df['Color'].notnull()]
-            colorDf = colorDf.append(toAdd, ignore_index=True)
-        elif clusters:
-            toAdd = df[df['Color'] != '']
-            colorDf = colorDf.append(toAdd, ignore_index=True)
-        # Group data by timestamps if less than 2
-        #TODO: This is a quick fix for getting multiple colors for whole files, use design doc specs in future
-        if len(self.sources) > 1 and len(timestamps) <= 2:
-            for index, timestamp in enumerate(timestamps):
-                curDf = df.loc[(df['Timestamp#']==timestamp)]
-                curDf = curDf[curDf['Color'].isna()]
-                curDf['Color'] = colors[index]
-                colorDf = colorDf.append(curDf, ignore_index=True)
-        elif clusters:
-            toAdd = df[df['Color'] == '']
-            toAdd['Color'] = colors[0]
-            colorDf = colorDf.append(toAdd, ignore_index=True)
-        else:
-            toAdd = df[df['Color'].isna()]
-            toAdd['Color'] = colors[0]
-            colorDf = colorDf.append(toAdd, ignore_index=True)
-        return colorDf
 
     def loadMapping(self, level):
         df = self.get_df(level)
