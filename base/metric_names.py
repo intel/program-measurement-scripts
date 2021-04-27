@@ -269,6 +269,7 @@ class NonMetricName(CapeEnum):
     SI_SAT_NODES = "SiSatNodes"
     SI_SAT_TIER = "SiTier"
     SI_SW_BIAS = "Net_SW_Bias"
+    SI_TIER_NORMALIZED = "Normalized_Tier"
 
 KEY_METRICS = [ MetricName.NAME, MetricName.TIMESTAMP ]
 

@@ -19,7 +19,7 @@ from capedata import AggregateData
 from aggregate_summary import aggregate_runs_df
 from compute_transitions import compute_end2end_transitions
 import tempfile
-import pkg_resources.py2_warn
+#import pkg_resources.py2_warn
 from web_browser import BrowserFrame
 from cefpython3 import cefpython as cef
 import sys

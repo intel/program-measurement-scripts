@@ -38,7 +38,7 @@ DO_DEBUG_LOGS = False
 PRINT_ALL_CLUSTERS = False
 PRINT_COLOURED_TIERS = False
 RUN_SI = True
-RUN_SW_BIAS = False
+RUN_SW_BIAS = True
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
 CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
@@ -66,8 +66,14 @@ primaryCuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Me
 cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 
+SW_BIAS_COLUMNS = ['Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 'Nd_Recurrence' , 'Nd_RHS',
+                  'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', NonMetricName.SI_TIER_NORMALIZED]
+SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT, MetricName.COUNT_OPS_CVT_PCT,
+               MetricName.COUNT_OPS_DIV_PCT] #, 'rhs_op_count', 'recurrence', 'clu_scores']
 OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
 NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+if RUN_SW_BIAS:
+  NEEDED_CLUSTER_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS + SW_BIAS_COLUMNS + SW_BIAS_IP
 NEEDED_TEST_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS
 
 class SatAnalysisData(NodeWithUnitData):
@@ -80,7 +86,7 @@ class SatAnalysisData(NodeWithUnitData):
 
   # Return (expected inputs, expected outputs)
   def input_output_args(self):
-    input_args = SiData.capacities(self.chosen_node_set)+[MetricName.SHORT_NAME]+ALL_NODE_LIST+[MetricName.CAP_ALLMAX_GB_P_S]
+    input_args = SiData.capacities(self.chosen_node_set)+[MetricName.SHORT_NAME]+ALL_NODE_LIST+[MetricName.CAP_ALLMAX_GB_P_S] + SW_BIAS_IP
     output_args = OUTPUT_COLUMNS
     return input_args, output_args
 
@@ -552,7 +558,16 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
             peer_codelet_df[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(peer_codelet_df)
             peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
+            if RUN_SW_BIAS:
+                compute_sw_bias(peer_codelet_df)
+                compute_sw_bias(testDF)
             my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF, chosen_node_set)
+            s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
+            peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
+            my_test_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
+            if RUN_SW_BIAS:
+                compute_sw_bias(my_test_df)
+                compute_sw_bias(my_cluster_df)
             all_test_codelets = all_test_codelets.append(my_test_df)
             # cluster_name = str(codelet_tier) + str(satTrafficList)
             cluster_name = str(codelet_tier) + ' ' + satTrafficString
@@ -593,6 +608,9 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             # empty tuple more friendly to group by operations
             testDF[NonMetricName.SI_CLUSTER_NAME] = ''
             testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
+            if RUN_SW_BIAS:
+              compute_sw_bias(testDF)
+            testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
             all_test_codelets = all_test_codelets.append(testDF)
             print (short_name, "No Cluster for the SI Test =>")
             no_cluster+=1
@@ -660,13 +678,6 @@ def do_sat_analysis(testSetDF, chosen_node_set, disable = False):
         codelet_tested += 1
 		    #find the saturation clusters
         all_clusters, all_test_codelets = find_cluster(satSetDF, testDF, short_name, 0, all_clusters, all_test_codelets)
-        if RUN_SW_BIAS:
-            sw_bias_df = compute_sw_bias(testDF)
-            testDF = pd.merge(testDF, sw_bias_df)
-            if DO_DEBUG_LOGS:
-               filename=short_name[-9:]
-               re.sub('[^\w\-_\. ]', '_', filename)
-               testDF.to_csv(filename + '_sw_bias.csv', index = True, header=True)
     result_df.to_csv('Result_report.csv', index = True, header=True)
     print ("Total No. of codelets tested : ", codelet_tested)
     print ("Total No. of codelets Passed SI : ", si_passed)
