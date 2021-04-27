@@ -38,7 +38,7 @@ DO_DEBUG_LOGS = False
 PRINT_ALL_CLUSTERS = False
 PRINT_COLOURED_TIERS = False
 RUN_SI = True
-RUN_SW_BIAS = True
+RUN_SW_BIAS = False
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
 CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
@@ -68,8 +68,8 @@ subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Metr
 
 SW_BIAS_COLUMNS = ['Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 'Nd_Recurrence' , 'Nd_RHS',
                   'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', NonMetricName.SI_TIER_NORMALIZED]
-SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT, MetricName.COUNT_OPS_CVT_PCT,
-               MetricName.COUNT_OPS_DIV_PCT] #, 'rhs_op_count', 'recurrence', 'clu_scores']
+SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
+              MetricName.COUNT_OPS_CVT_PCT, MetricName.COUNT_OPS_DIV_PCT]
 OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
 NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 if RUN_SW_BIAS:
