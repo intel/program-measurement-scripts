@@ -414,6 +414,10 @@ class LoadedData(Observable):
         AnalyticsData(summaryDf).set_filename(self.meta_filename('.analytics.csv')).compute()
         AggregateData(srcDf).set_summary_df(summaryDf).set_level('src').set_short_names_path(short_names_path).set_short_names_df(self.short_names_df).compute('summary-Source')
         AggregateData(appDf).set_summary_df(summaryDf).set_level('app').set_short_names_path(short_names_path).set_short_names_df(self.short_names_df).compute('summary-Application')
+        # Fill the extra columns in summary but not aggregated by None
+        for extra in summaryDf.columns:
+            if extra not in srcDf.columns: srcDf[extra] = None
+            if extra not in appDf.columns: appDf[extra] = None
         
         for level in self.levelData:
             df = dfs[level]
