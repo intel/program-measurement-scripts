@@ -49,11 +49,11 @@ class ScurvePlot(CapePlot):
             markers.extend(ax.plot(x, y, marker='o', color='blue', 
                                    label=label, linestyle='', alpha=1))
 
-        texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
+        texts = [self.ax.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
     def draw_contours(self, xmax, ymax):
-        plt.axhline(y=self.median)
+        self.ax.axhline(y=self.median)
 
 def scurve_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
     mappings=pd.DataFrame(), short_names_path=''):
