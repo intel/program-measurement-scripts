@@ -350,12 +350,12 @@ class SiPlot(CapePlot):
         if scale == 'linear' or scale == 'linearlinear':
             pass
         elif scale == 'log' or scale == 'loglog':
-            plt.xscale("log")
-            plt.yscale("log")
+            ax.set_xscale("log")
+            ax.set_yscale("log")
         elif scale == 'loglinear':
-            plt.xscale("log")
+            ax.set_xscale("log")
         elif scale == 'linearlog':
-            plt.yscale("log")
+            ax.set_yscale("log")
 
         print("Entering plot_data_orig_point")
 
