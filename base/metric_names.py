@@ -197,6 +197,7 @@ class MetricName(CapeEnum):
     SRC_INIT_ONLY_B = "Src[Exp[InitOnly]]"
     SRC_RECURRENCE_B = "Src[Expr[Recurrence]]"
     SRC_SCALAR_REDUCTION_B = "Src[Expr[ScalarReduction]]"
+    SRC_CLU_SCORE = "Src[Expr[CluScore]]"
 
     SRC_DDG_TRUE_CYCLIC_B = "Src[Ddg[TrueCyclic]]"
     SRC_DDG_ARTIFICIAL_CYCLIC_B = "Src[Ddg[ArtificialCyclic]]"
@@ -322,7 +323,7 @@ NAME_FILE_METRICS = [ MetricName.SHORT_NAME, MetricName.VARIANT ]
 GENERAL_METRICS = [ MetricName.GENERAL_RATING, MetricName.GENERAL_ADVICE, MetricName.GENERAL_INFO_URL ]
 SRC_METRICS = [ MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_INIT_ONLY_B, MetricName.SRC_RECURRENCE_B,
     MetricName.SRC_SCALAR_REDUCTION_B, MetricName.SRC_DDG_TRUE_CYCLIC_B, MetricName.SRC_DDG_ARTIFICIAL_CYCLIC_B, 
-    MetricName.SRC_ARRAY_ACCESS_OFFSETS, MetricName.SRC_LOOP_LIMITS ]  
+    MetricName.SRC_ARRAY_ACCESS_OFFSETS, MetricName.SRC_LOOP_LIMITS, MetricName.SRC_CLU_SCORE ]  
 ANALYTICS_METRICS = SRC_METRICS + GENERAL_METRICS
 CAPACITY_METRICS = [ m for m in ALL_METRICS if m.startswith("C_") ]
 

@@ -116,7 +116,7 @@ def compute_sw_bias(mainDataFrame):
                                                        + mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)
                                                        + mainDataFrame[MetricName.COUNT_OPS_CVT_PCT].apply(find_cnvt_ops_factor)
                                                        + mainDataFrame[MetricName.COUNT_OPS_DIV_PCT].apply(find_div_ops)
-                                                       + mainDataFrame['clu_scores'].apply(find_clu_factor)))
+                                                       + mainDataFrame[MetricName.SRC_CLU_SCORE].apply(find_clu_factor)))
 
     # Compute Positive SW Bias
     if 'Pos_SW_Bias' not in mainDataFrame.columns:
@@ -137,18 +137,18 @@ def compute_sw_bias(mainDataFrame):
     if 'Nd_VEC_OPS' not in mainDataFrame.columns:
         mainDataFrame.insert(addAfterColumn, "Nd_VEC_OPS", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_vec_ops)))
     if 'Nd_DIV_OPS' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_DIV_OPS", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_div_ops)))
+        mainDataFrame.insert(addAfterColumn, "Nd_DIV_OPS", ( mainDataFrame[MetricName.COUNT_OPS_DIV_PCT].apply(find_div_ops)))
     if 'Nd_FMA_OPS' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_FMA_OPS", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_fma_ops)))
+        mainDataFrame.insert(addAfterColumn, "Nd_FMA_OPS", ( mainDataFrame[MetricName.COUNT_OPS_FMA_PCT].apply(find_fma_ops)))
     if 'Nd_ISA_EXT_TYPE' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_ISA_EXT_TYPE", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_inst_set_factor)))
+        mainDataFrame.insert(addAfterColumn, "Nd_ISA_EXT_TYPE", ( mainDataFrame[MetricName.COUNT_VEC_TYPE_OPS_PCT].apply(find_inst_set_factor)))
 
     if 'Nd_clu_score' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_clu_score", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_clu_factor)))
+        mainDataFrame.insert(addAfterColumn, "Nd_clu_score", ( mainDataFrame[MetricName.SRC_CLU_SCORE].apply(find_clu_factor)))
     if 'Nd_Recurrence' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_Recurrence", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_recurrence_factor)))
+        mainDataFrame.insert(addAfterColumn, "Nd_Recurrence", ( mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)))
     if 'Nd_RHS' not in mainDataFrame.columns:
-        mainDataFrame.insert(addAfterColumn, "Nd_RHS", ( mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_rhs_ops)))
+        mainDataFrame.insert(addAfterColumn, "Nd_RHS", ( mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)))
 
     sw_bias_df['Neg_SW_Bias'] =  mainDataFrame['Neg_SW_Bias']
     sw_bias_df['Pos_SW_Bias'] =  mainDataFrame['Pos_SW_Bias']
