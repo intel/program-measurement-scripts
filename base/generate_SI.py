@@ -9,12 +9,11 @@ import warnings
 import datetime
 import copy
 from capeplot import CapacityPlot
-from capeplot import CapePlot
+from capeplot import CapePlot, CapePlotColor
 from capeplot import NodeWithUnitData
 
 import matplotlib.pyplot as plt
 from matplotlib import style
-from adjustText import adjust_text
 from matplotlib.patches import Rectangle
 import statistics
 from matplotlib.legend import Legend
@@ -50,36 +49,36 @@ class SiData(NodeWithUnitData):
         self.cluster_df = cluster_df
         return self
 
-    def compute_capacity(self, df):
-        chosen_node_set = self.chosen_node_set
-        norm = self.norm
-        print("The node list are as follows :")
-        print(chosen_node_set)
-        chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
-        chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
-        chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
-        # for node in chosen_basic_node_set:
-        #     print ("The current node : ", node)
-        #     formula=capacity_formula[node]
-        #     df['C_{}'.format(node)]=formula(df)
+    # def compute_capacity(self, df):
+    #     chosen_node_set = self.chosen_node_set
+    #     norm = self.norm
+    #     print("The node list are as follows :")
+    #     print(chosen_node_set)
+    #     chosen_basic_node_set = BASIC_NODE_SET & chosen_node_set
+    #     chosen_buffer_node_set = BUFFER_NODE_SET & chosen_node_set
+    #     chosen_scalar_node_set = SCALAR_NODE_SET & chosen_node_set
+    #     # for node in chosen_basic_node_set:
+    #     #     print ("The current node : ", node)
+    #     #     formula=capacity_formula[node]
+    #     #     df['C_{}'.format(node)]=formula(df)
 
-        # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
-        #self.compute_norm(norm, df, chosen_basic_node_set, MetricName.CAP_MEMMAX_GB_P_S)
-        #print ("<=====compute_capacity======>")
-        self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
-        print ("<=====compute_cu_scalar======>")
+    #     # Dropped C_max calculation as we did that in capacity phase that metric was C_allmax [G*/s]
+    #     #self.compute_norm(norm, df, chosen_basic_node_set, MetricName.CAP_MEMMAX_GB_P_S)
+    #     #print ("<=====compute_capacity======>")
+    #     self.compute_norm(norm, df, chosen_scalar_node_set, 'C_scalar')
+    #     print ("<=====compute_cu_scalar======>")
 
-        for node in chosen_buffer_node_set:
-            formula=capacity_formula[node]
-            df['C_{}'.format(node)]=formula(df)
-        # # Compute memory level 
-        # chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
-        # # Below will get the C_* name with max value
-        # df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
-        # # Remove the first two characters which is 'C_'
-        # df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
-        # # Drop the unit
-        # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
+    #     for node in chosen_buffer_node_set:
+    #         formula=capacity_formula[node]
+    #         df['C_{}'.format(node)]=formula(df)
+    #     # # Compute memory level 
+    #     # chosen_mem_node_set = MEM_NODE_SET & chosen_node_set
+    #     # # Below will get the C_* name with max value
+    #     # df[MEM_LEVEL]=df[list(map(lambda n: "C_{}".format(n), chosen_mem_node_set))].idxmax(axis=1)
+    #     # # Remove the first two characters which is 'C_'
+    #     # df[MEM_LEVEL] = df[MEM_LEVEL].apply((lambda v: v[2:]))
+    #     # # Drop the unit
+    #     # df[MEM_LEVEL] = df[MEM_LEVEL].str.replace(" \[.*\]","", regex=True)
 
 
     def compute_norm(self, norm, df, node_set, lhs):
@@ -246,7 +245,7 @@ DEFAULT_CHOSEN_NODE_SET=BASIC_NODE_SET
 # class SiPlot(CapacityPlot):
 #     def __init__(self, data, variant, outputfile_prefix, norm, title, 
 class SiPlot(CapePlot):
-    def __init__(self, data, loadedData, level, variant, outputfile_prefix, norm, title, 
+    def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, norm=None, title=None, 
                  filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
         super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
                          default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
@@ -259,6 +258,13 @@ class SiPlot(CapePlot):
         #self.cur_run_df = cur_run_df
         #self.cluster_df = cluster_df
         self.filter_data = filter_data
+
+    def setAttrs(self, data, loadedData, level, variant, outputfile_prefix, norm, title, 
+                 filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
+        self._setAttrs(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot=False, gui=True, x_axis=None, y_axis=None, 
+                         default_y_axis = 'Saturation', default_x_axis = 'Intensity', filtering = filtering, mappings=mappings, 
+                         short_names_path=short_names_path)
+
 
     # df here is the cur_run_df
     # def mk_data(self, df):
@@ -298,9 +304,9 @@ class SiPlot(CapePlot):
     def mk_labels(self):
         l_df = self.df
         orig_codelet_index = l_df[SHORT_NAME]
-        orig_codelet_variant = l_df[VARIANT]
+        # orig_codelet_variant = l_df[VARIANT]
         orig_codelet_memlevel = l_df[MEM_LEVEL]
-        mytext= [str('({0}, {1}, {2})'.format( orig_codelet_index[i], orig_codelet_variant[i], orig_codelet_memlevel[i]))  for i in range(len(orig_codelet_index))]
+        mytext= [str('({0}, {1})'.format( orig_codelet_index[i], orig_codelet_memlevel[i]))  for i in range(len(orig_codelet_index))]
         return mytext
 
 
@@ -312,20 +318,21 @@ class SiPlot(CapePlot):
 
     def mk_plot_title(self, title, variant, scale):
         # chosen_node_set = self.chosen_node_set
-        chosen_node_set = 'Fix This'
+        chosen_node_list = sorted(set().union(*self.df['SiSatNodes'].to_list()))
         # If chosen_node_set is too long then we need to add more new lines as matplotlib doesn't handle this automatically
         # 80 chars is the max that will fit on a line
-        title = "{} : n = {}\n".format(title, len(chosen_node_set))
-        nodes = sorted(list(chosen_node_set))
-        chars = 0
-        for i, node in enumerate(nodes):
-            chars += len(node)
-            if chars > 80:
-                title += "\n"
-                chars = 0
-            title += node
-            if i != len(nodes) - 1:
-                title += ", "
+        title = f"{title} : n = {len(chosen_node_list)}\n"
+        title = title + ", ".join(chosen_node_list)
+        # nodes = sorted(list(chosen_node_set))
+        # chars = 0
+        # for i, node in enumerate(nodes):
+        #     chars += len(node)
+        #     if chars > 80:
+        #         title += "\n"
+        #         chars = 0
+        #     title += node
+        #     if i != len(nodes) - 1:
+        #         title += ", "
         return title
         # return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
 
@@ -358,7 +365,7 @@ class SiPlot(CapePlot):
     def mk_label_key(self):
         return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (Name, Variant, MaxMemlevel[85%])"
 
-    def draw_contours(self, maxx, maxy, color_labels):
+    def draw_contours(self, maxx, maxy):
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
         min_xs, max_xs, min_ys, max_ys = self.get_min_max(cluster_and_cur_run_xs, cluster_and_cur_run_ys)
@@ -367,7 +374,8 @@ class SiPlot(CapePlot):
 
         Ns = self.Ns
         ax = self.ax
-        ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
+        #ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
+        ns = range(2, 12, 2)
         npoints=40
 
         ctx=np.linspace(0, maxx, npoints+1)
@@ -381,17 +389,25 @@ class SiPlot(CapePlot):
 
         # Create a Rectangle patch
         # (but not saved in self.ctxs)
+        self.cluster_rects = {}
         for i, cluster in enumerate(self.df[NonMetricName.SI_CLUSTER_NAME].unique()):
             if cluster:
-                if cluster in color_labels: color = color_labels[cluster]
+                if cluster in self.color_map['Label'].tolist(): color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
                 else: 
-                    try: color = self.colors[i]
-                    except: color = self.colors[0]
+                    try: color = self.COLOR_ORDER[i]
+                    except: color = CapePlotColor.DEFAULT_COLOR
                 target_df = self.cluster_df.loc[self.cluster_df[NonMetricName.SI_CLUSTER_NAME] == cluster]
                 print ("intensity anchor points :" , min(target_df['Intensity']) , " , " , min(target_df['Saturation']))
                 rect = Rectangle((min(target_df['Intensity']),min(target_df['Saturation'])),(max(target_df['Intensity'])- min(target_df['Intensity'])), 
                                 (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
+                self.cluster_rects[cluster] = rect
                 ax.add_patch(rect)
+
+    def update_contours(self):
+        for cluster in self.cluster_rects:
+            if cluster in self.color_map['Label'].tolist(): 
+                rect_color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
+                self.cluster_rects[cluster].set_edgecolor(rect_color)
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 

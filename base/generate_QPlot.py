@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
-from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
 from capeplot import CapacityData
@@ -27,7 +26,7 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class QPlot(CapacityPlot):
-	def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
+	def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=False, x_axis=None, y_axis=None, 
               mappings=pd.DataFrame(), short_names_path=''): 
 		super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                    default_y_axis=MetricName.CAP_MEMMAX_GB_P_S,  mappings=mappings, short_names_path=short_names_path)
@@ -49,7 +48,7 @@ class QPlot(CapacityPlot):
 		chosen_node_set = self.chosen_node_set
 		return "{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale)
 
-	def draw_contours(self, xmax, ymax, color_labels):
+	def draw_contours(self, xmax, ymax):
 		ns = [1,2,4,8,16,32,64]
 		ax = self.ax
 
@@ -71,12 +70,12 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	# Normalize the column names
 		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
-	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
+	df_XFORM, fig_XFORM, plotData_XFORM = None, None, None
+	#df_XFORM, fig_XFORM, plotData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
 
-	#df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
+	#df_ORIG, fig_ORIG, plotData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	## Return dataframe and figure for GUI
-	#return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
+	#return (df_XFORM, fig_XFORM, plotData_XFORM, df_ORIG, fig_ORIG, plotData_ORIG)
 
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
@@ -86,7 +85,7 @@ def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants
 	data.compute()
 	plot = QPlot(data, 'ORIG', outputfile, scale, title, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	plot.compute_and_plot()
-	return (df_XFORM, fig_XFORM, textData_XFORM, plot.df, plot.fig, plot.plotData)
+	return (df_XFORM, fig_XFORM, plotData_XFORM, plot.df, plot.fig, plot.plotData)
 
 
 

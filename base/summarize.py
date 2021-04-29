@@ -13,7 +13,6 @@ from capelib import calculate_energy_derived_metrics
 from capelib import add_mem_max_level_columns
 from capelib import compute_speedup
 from collections import OrderedDict
-from capeplot import CapeData
 
 from xlsxgen import XlsxGenerator
 
@@ -26,13 +25,13 @@ import pandas as pd
 import numpy as np
 import warnings
 
-from metric_names import MetricName
+from metric_names import MetricName as MN
 from metric_names import KEY_METRICS
 from metric_names import SUMMARY_METRICS
 from metric_names import ANALYTICS_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
-globals().update(MetricName.__members__)
+globals().update(MN.__members__)
 
 # At least Python version 3.6 is required
 assert sys.version_info >= (3,6)
@@ -41,7 +40,7 @@ args = None
 variants = {}
 short_names = {}
 field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPETITIONS, COUNT_VEC_TYPE_OPS_PCT, TIME_LOOP_S, RECIP_TIME_LOOP_MHZ,
-                COUNT_INSTS_GI, RATE_INST_GI_P_S,
+                COUNT_INSTS_GI, COUNT_FP_GFLOP, RATE_INST_GI_P_S,
                 E_PKG_J, P_PKG_W,
                 EPO_PKG_INST_J_P_GI, RPE_INST_PKG_GI_P_JS, ROPE_INST_PKG_GI2_P_JS,
                 E_DRAM_J, P_DRAM_W,
@@ -71,47 +70,47 @@ StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB'
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' }}
 
-LFBFields = [MetricName.busyLfbPct(i) for i in range(0,11)]
+LFBFields = [MN.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
 
-class SummaryData(CapeData): 
-    def __init__(self, df):
-        super().__init__(df) 
-        self.sources = []
+# class SummaryData(CapeData): 
+#     def __init__(self, df):
+#         super().__init__(df) 
+#         self.sources = []
     
-    def set_sources(self, sources):
-        self.sources = sources
-        return self
-
-    def set_short_names_path(self, short_names_path):
-        self.short_names_path = short_names_path
-        return self
+#     def set_sources(self, sources):
+#         self.sources = sources
+#         return self
+#     def set_short_names_path(self, short_names_path):
+#         self.short_names_path = short_names_path
+#         return self
         
-    def compute_impl(self, df):
-        in_files = self.sources
-        exts = [ os.path.splitext(src)[1] for src in in_files ]
-        in_files_format = [ 'csv' if ext == '.csv' else 'xlsx' for ext in exts ]
+#     def compute_impl(self, df):
+#         in_files = self.sources
+#         in_files_format = [ determine_file_format(src) for src in in_files ]
+#         #exts = [ os.path.splitext(src)[1] for src in in_files ]
+#         #in_files_format = [ 'csv' if ext == '.csv' else 'xlsx' for ext in exts ]
 
-        # in_files_format = [None] * len(sources)
-        # for index, source in enumerate(sources):
-        #     in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
-        user_op_file = None
-        request_no_cqa = False
-        request_use_cpi = False
-        request_skip_energy = False
-        request_skip_stalls = False
+#         # in_files_format = [None] * len(sources)
+#         # for index, source in enumerate(sources):
+#         #     in_files_format[index] = 'csv' if os.path.splitext(source)[1] == '.csv' else 'xlsx'
+#         user_op_file = None
+#         request_no_cqa = False
+#         request_use_cpi = False
+#         request_skip_energy = False
+#         request_skip_stalls = False
 
-        # Codelet summary
-        # mapping not used 
-        df, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, request_use_cpi, 
-                                             request_skip_energy, request_skip_stalls, self.short_names_path, False, True, None)
+#         # Codelet summary
+#         # mapping not used 
+#         df, self.mapping = summary_report_df(in_files, in_files_format, user_op_file, request_no_cqa, request_use_cpi, 
+#                                              request_skip_energy, request_skip_stalls, self.short_names_path, False, True, None)
         
-        return df 
+#         return df 
 
-    def input_output_args(self):
-        input_args = []
-        output_args = SUMMARY_METRICS
-        return input_args, output_args
+#     def input_output_args(self):
+#         input_args = []
+#         output_args = SUMMARY_METRICS
+#         return input_args, output_args
 
 def counter_sum(row, cols):
     sum = 0
@@ -134,9 +133,10 @@ def arch_helper(row):
 
 
 def calculate_codelet_name(out_row, in_row):
-    out_row[NAME] = '{0}: {1}'.format(
-        getter(in_row, 'application.name', type=str),
-        getter(in_row, 'codelet.name', type=str))
+    out_row[NAME]=in_row[NAME]
+    # out_row[NAME] = '{0}: {1}'.format(
+    #     getter(in_row, 'application.name', type=str),
+    #     getter(in_row, 'codelet.name', type=str))
     name_key = (out_row[NAME], in_row[TIMESTAMP])
     name_key = name_key if name_key in short_names else out_row[NAME]
     # Short Name is default set to actual name
@@ -325,7 +325,7 @@ def calculate_stall_percentages(res, row, skip_stalls):
         arch = arch_helper(row)
         unhlt = getter(row, 'CPU_CLK_UNHALTED_THREAD')
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
-            res[MetricName.stallPct(buf)] = 100 * getter(row, StallDict[arch][buf]) / unhlt
+            res[MN.stallPct(buf)] = 100 * getter(row, StallDict[arch][buf]) / unhlt
         try:
             res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FE']) / unhlt
         except:
@@ -348,8 +348,8 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
         return calculate_from_counter('UNC_DDR_ENERGY_STATUS', 'FREERUN_DRAM_ENERGY_STATUS')
 
     def calculate_derived_metrics(kind, energy):
-        out_row[MetricName.energy(kind)] = energy
-        out_row[MetricName.power(kind)] = energy / time
+        out_row[MN.energy(kind)] = energy
+        out_row[MN.power(kind)] = energy / time
         calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec)
 
     # Can extend to report PP0, PP1 but ignore for now.
@@ -386,9 +386,9 @@ def calculate_lfb_histogram(out_row, row, enable_lfb):
         for x in range(1,11): 
             i = ("0x%x" if x > 9 else "%x") % x 
             cnt = fmt % i
-            out_row[MetricName.busyLfbPct(x-1)] = 100 * max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
+            out_row[MN.busyLfbPct(x-1)] = 100 * max(0, getter(row, prv) - getter(row, cnt)) / getter(row, clk)
             prv = cnt
-        out_row[MetricName.busyLfbPct(x)] = 100 * getter(row, prv) / getter(row, clk)
+        out_row[MN.busyLfbPct(x)] = 100 * getter(row, prv) / getter(row, clk)
     except:
         pass
 
@@ -448,6 +448,7 @@ def build_row_output(in_row, user_op_column_name_dict, use_cpi, skip_energy, \
     calculate_codelet_name(out_row, in_row)
     calculate_expr_settings(out_row, in_row)
     iterations_per_rep = calculate_iterations_per_rep(in_row)
+    out_row[MN.COUNT_ITERS_KIT] = iterations_per_rep
     time = calculate_time(out_row, in_row, iterations_per_rep, use_cpi)
     try:
         num_ops, ops_per_sec = calculate_num_insts(out_row, in_row, iterations_per_rep, time)
@@ -520,6 +521,7 @@ def unify_column_names(colnames):
 #     retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
 #     return new_mapping_df[retainColumns]
     
+
 def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
                    skip_stalls, name_file, enable_lfb, incl_meta_data, mapping_df):
     if name_file:
@@ -528,24 +530,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     df = pd.DataFrame()  # empty df as start and keep appending in loop next
     for index, inputfile in enumerate(inputfiles):
         print(inputfile, file=sys.stderr)
-        if (input_format[index] == 'csv'):
-            input_data_source = sys.stdin if (inputfile == '-') else inputfile
-            cur_df = pd.read_csv(input_data_source, delimiter=',')
-            # For CapeScripts data, just use experiment timestamp as the time stamp
-            #cur_df['Timestamp#'] = cur_df['Expr TS#']
-            cur_df['Timestamp#'] = cur_df['TS#']
-            cur_df['Source Name'] = None
-        else:
-            # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
-            input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
-            cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
-            # For Oneview output, needs to read the 'Experiment_Summary' tab for Timestamp
-            expr_summ_df = pd.read_excel(input_data_source, sheet_name='Experiment_Summary')
-            ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
-            ts_string = ts_row.iloc[0,1]
-            date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
-            cur_df['Timestamp#'] = int(date_time_obj.timestamp())
-            cur_df['Source Name']=cur_df['code.name']
+        cnt_format = input_format[index]
+        cur_df = read_raw_data(inputfile, cnt_format)
 
         df = df.append(cur_df, ignore_index=True)
 
@@ -604,6 +590,43 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
         new_mapping_df = compute_speedup(output_rows, mapping_df)
     return output_rows, new_mapping_df
 
+def determine_file_format(filename):
+    return 'csv' if os.path.splitext(filename)[1] == '.csv' else 'xlsx'
+    
+# Only CSV format is supported
+def write_raw_data(outputfile, df):
+    # This will also write Timestamp#, Source Name and Name columns to csv
+    # Timestamp# and Source Name column will be read back and used
+    # Name will be overwritten
+    # See: read_raw_data()
+    df.to_csv(outputfile, index=False)
+
+def read_raw_data(inputfile, cnt_format=None):
+    cnt_format = cnt_format if cnt_format else determine_file_format(inputfile)
+    if (cnt_format == 'csv'):
+        input_data_source = sys.stdin if (inputfile == '-') else inputfile
+        cur_df = pd.read_csv(input_data_source, delimiter=',')
+        # For CapeScripts data, just use experiment timestamp as the time stamp
+        #cur_df['Timestamp#'] = cur_df['Expr TS#']
+        if 'Timestamp#' not in cur_df.columns:
+            cur_df['Timestamp#'] = cur_df['TS#']
+        if 'Source Name' not in cur_df.columns:
+            cur_df['Source Name'] = None
+    else:
+        # Very subtle differnce between read_csv and read_excel about input files so need to call read() for stdin
+        input_data_source = sys.stdin.buffer.read() if (inputfile == '-') else inputfile
+        cur_df = pd.read_excel(input_data_source, sheet_name='QPROF_full')
+        # For Oneview output, needs to read the 'Experiment_Summary' tab for Timestamp
+        expr_summ_df = pd.read_excel(input_data_source, sheet_name='Experiment_Summary')
+        ts_row = expr_summ_df[expr_summ_df.iloc[:,0]=='Timestamp']
+        ts_string = ts_row.iloc[0,1]
+        date_time_obj = datetime.strptime(ts_string, '%Y-%m-%d %H:%M:%S')
+        cur_df['Timestamp#'] = int(date_time_obj.timestamp())
+        cur_df['Source Name']=cur_df['code.name']
+    cur_df['Name']=cur_df[['application.name', 'codelet.name']].apply(
+        lambda row: f'{row[0]}: {row[1]}', axis=1)
+    return cur_df
+
 
 def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, use_cpi, skip_energy,
                    skip_stalls, name_file, enable_lfb=False, incl_meta_data=False, mapping_file=None):
@@ -651,6 +674,9 @@ def summary_report(inputfiles, outputfile, input_format, user_op_file, no_cqa, u
 def summary_formulas(formula_file_name):
     with open (formula_file_name, 'w') as formula_file:
         print_formulas(formula_file)
+
+def write_short_names(filename, df):
+    df[[NAME, TIMESTAMP, SHORT_NAME, VARIANT]].to_csv(filename, index=False)
 
 def read_short_names(filename):
     with open(filename, 'r', encoding='utf-8-sig') as infile:

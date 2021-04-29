@@ -103,7 +103,7 @@ transitions = [['proceed', States.INIT, States.Astart],
 class Observable:
     def __init__(self):
         self.observers = []
-    def add_observers(self, observer):
+    def add_observer(self, observer):
         self.observers.append(observer)
     def notify_observers(self):
         for observer in self.observers:
@@ -111,7 +111,7 @@ class Observable:
             
 class Observer:
     def __init__(self, observable):
-        observable.add_observers(self)
+        observable.add_observer(self)
         
     def notify(self, observable):
         print("Notified from ", observable)
@@ -140,7 +140,7 @@ class Gui(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.pack()
         self.fsm = fsm
-        self.fsm.add_observers(self)
+        self.fsm.add_observer(self)
         self.canvas = tk.Canvas(self, width=500, height=250)
         self.canvas.pack(side=tk.LEFT)
         self.img = tk.PhotoImage(file=fsm.file)

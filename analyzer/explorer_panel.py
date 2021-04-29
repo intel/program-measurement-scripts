@@ -15,9 +15,11 @@ from utils import center
 import datetime
 from shutil import copyfile
 from abc import ABC, abstractmethod
+import getpass
 
 class ScrolledTreePane(tk.Frame):
-    def __init__(self, parent):
+    TIMESTAMP_STR = r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}'
+    def __init__(self, parent, rootName, gui):
         tk.Frame.__init__(self, parent)
         self.treeview = ttk.Treeview(self)
         vsb = ttk.Scrollbar(self, orient=tk.VERTICAL)
@@ -28,8 +30,97 @@ class ScrolledTreePane(tk.Frame):
         hsb.configure(command=self.treeview.xview)
         self.treeview.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
         self.treeview.pack(fill=tk.BOTH, expand=1)  
+        self.opening = False
+        self.firstOpen = True
+        self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
+        self.treeview.bind("<Button-3>", self.handleRightClickEvent)
+        self.rootNode = ScrolledTreePane.MetaTreeNode(rootName, None, self)
+        self.setupLocalRoots()
+        self.setupRemoteRoots()
+        self.setupOneDriveRoots()
+        self.gui = gui
 
-class DataSourcePanel(ScrolledTreePane):
+    @property
+    def control(self):
+        return self.gui.control
+
+    # Subclass override following root setting up methods to add more root nodes
+    def setupLocalRoots(self):
+        pass
+    def setupRemoteRoots(self):
+        pass
+
+    def setupOneDriveRoots(self):
+        self.oneDriveNode = ScrolledTreePane.MetaTreeNode('OneDrive', self.rootNode, self)
+        home_dir=expanduser("~")
+
+        cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data')
+        self.setupOneDriveRoot('Intel (Internal)', cape_onedrive)
+
+        cape_onedrive_ext=os.path.join(home_dir, 'Intel Corporation', 'QProf - Shared Documents', 'Cape GUI Data')
+        self.setupOneDriveRoot('Intel (External)', cape_onedrive_ext)
+        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
+
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
+        pass
+
+    def setFocus(self, node):
+        self.treeview.see(node.id)        
+        self.treeview.focus(node.id)
+        self.treeview.selection_set(node.id)
+    
+    # Right click on panel.  Creating context menu for choices.
+    def handleRightClickEvent(self, event):
+        focus = self.treeview.focus()
+        node = None
+        if len(focus) == 0:
+            state = tk.DISABLED
+        else:
+            nodeId = int(focus)
+            node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
+            state = tk.NORMAL if node.isSavable() else tk.DISABLED
+
+        popup = self.makeRightClickPopup(node, state)
+        try:
+            popup.tk_popup(event.x_root, event.y_root,0)
+        finally:
+            popup.grab_release()
+
+    def makeRightClickPopup(self, node, state):
+        popup = tk.Menu(self, tearoff=0)
+        popup.add_command(label="Save", command=lambda: node.save(), state=state)
+        return popup
+        
+    def handleOpenEvent(self, event):
+        if not self.opening: # finish opening one file before another is started
+            self.opening = True
+            nodeId = int(self.treeview.focus())
+            node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
+            try:
+                node.open()
+            finally:
+                self.opening = False
+        if self.firstOpen:
+            self.firstOpen = False
+            self.treeview.column('#0', minwidth=600, width=600)
+
+    def insertNode(self, parent, node):
+        parent_str = parent.id if parent else ''
+        self.treeview.insert(parent_str,'end',node.id,text=node.name)
+
+    def moveChildToLast(self, parent, node):
+        parent_str = parent.id if parent else ''
+        self.treeview.move(node.id, parent_str,'end')
+    
+    def loadState(self, input_path):
+        self.control.loadState(input_path)
+
+    def saveState(self, out_path):
+        self.control.saveState(out_path)
+        
+    def saveRawData(self, out_path):
+        self.control.exportShownDataRawCSV(out_path)
+
     class DataSource(ABC):
         # Download data file (.raw.csv or .xlsx) at data_url and associated meta files to local_dir
         # TODO: just use data_filename to name meta files to avoid looping data files
@@ -66,6 +157,10 @@ class DataSourcePanel(ScrolledTreePane):
         @abstractmethod
         def isValidURL(self, fullurl): 
             return False
+
+        @abstractmethod
+        def mkdir(self, fullurl): 
+            pass
         
 
     class WebServer(DataSource):
@@ -110,6 +205,9 @@ class DataSourcePanel(ScrolledTreePane):
         def isdir(self, fullurl): 
             return fullurl.endswith('/')
 
+        def mkdir(self, fullurl): 
+            raise Exception("Cannot make directory for Web data source")
+
             
     class FileSystem(DataSource):
         def getContentType (self, path):
@@ -133,40 +231,52 @@ class DataSourcePanel(ScrolledTreePane):
 
         def get_file(self, src, dst): 
             copyfile(src, dst)
-            
-    
+
+        def mkdir(self, fullurl): 
+            Path(fullurl).mkdir(parents=True, exist_ok=True)
+
     class DataTreeNode:
         nextId = 0
         nodeDict = {}
-        def __init__(self, name, parent):
+        def __init__(self, name, parent, container):
             self.name = name
             self.parent = parent
-            self.id = DataSourcePanel.DataTreeNode.nextId
+            self.id = ScrolledTreePane.DataTreeNode.nextId
             self.children = []
             if parent: parent.children.append(self)
-            DataSourcePanel.DataTreeNode.nextId += 1
-            DataSourcePanel.DataTreeNode.nodeDict[self.id]=self
+            ScrolledTreePane.DataTreeNode.nextId += 1
+            ScrolledTreePane.DataTreeNode.nodeDict[self.id]=self
+            self.container = container
+            self.container.insertNode(parent, self)
 
         @classmethod
         def lookupNode(cls, id):
             return cls.nodeDict[id]
 
         def open(self):
-            print("node open:", self.name, self.id) 
+            print(f"node open: {self.name}, {self.id}") 
 
+        def isSavable(self):
+            return False
+
+        # Subclass override to save the data
+        def save(self):
+            print(f"node save: {self.name}, {self.id}")
+
+        
     # Meta tree node including "Previously Visited"
     # Meta node may/may not have real_path but does not have virtual_path
     class MetaTreeNode(DataTreeNode):
-        def __init__(self, name, parent, real_path=None):
-            super().__init__(name, parent)
+        def __init__(self, name, parent, container, real_path=None):
+            super().__init__(name, parent, container)
             self.real_path=real_path
 
+            
     class RealTreeNode(DataTreeNode):
         def __init__(self, name, parent, virtual_path, real_path, container, data_source):
-            super().__init__(name, parent)
+            super().__init__(name, parent, container)
             self.virtual_path = virtual_path
             self.real_path = real_path
-            self.container = container
             self.data_src = data_source
 
         def get_root_virtual_path(self):
@@ -176,7 +286,7 @@ class DataSourcePanel(ScrolledTreePane):
             else:
                 # If parent is not real node, the url of this node is the root
                 return self.virtual_path
-        
+
     class InternalNode(RealTreeNode):
         def __init__(self, virtual_path, real_path, name, container, parent, 
                      data_source, terminalNodeClass):
@@ -187,10 +297,7 @@ class DataSourcePanel(ScrolledTreePane):
 
         # Whether to skip next potential child with name
         def skip(self, name):
-            #return False
-            # Skip meta path
-            return os.path.join(self.virtual_path, name) == os.path.join(self.get_root_virtual_path(), "meta")
-
+            return False
 
         # Return names and time_stamps of potential children nodes to visit
         def get_children_names_timestamps(self):
@@ -207,14 +314,13 @@ class DataSourcePanel(ScrolledTreePane):
 
         # Create an terminal node to be added if name tells us this is terminal
         def makeTerminalNodeOrNone(self, name, time_stamp):
-            full_virtual_path = os.path.join(self.virtual_path,  name)
-            if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')): 
-                full_real_path = os.path.join(self.real_path, name, time_stamp, name)
-                # Use self.terminalNodeClass rather than explict class name so this handles subclassing automatically
-                return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            # By default don't create terminal nodes.  Subclass override to create.
             return None
 
-            
+        def moveChildToLast(self, node):
+            self.container.moveChildToLast(self, node)
+            self.children.remove(node)
+            self.children.append(node)
 
         def open(self):
             print("internal node open:", self.name, self.id) 
@@ -223,23 +329,85 @@ class DataSourcePanel(ScrolledTreePane):
             # Show directories and data files (.xlsx or .raw.csv)
             # Iterate internal nodes following revserse order of timestamps
             for time_stamp, name in sorted(zip(time_stamps, names), reverse=True):
-                if name in [child.name for child in self.children]:
+                children_names = [child.name for child in self.children]
+                if name in children_names:
+                    node = self.children[children_names.index(name)]
+                    self.moveChildToLast(node)
                     continue  # Skip if already added
 
                 if self.skip(name):
                     continue
 
                 node = self.makeInternalNodeOrNone(name, time_stamp)
-                node = node if node else self.makeTerminalNodeOrNone(name, time_stamp)
-                if node: self.container.insertNode(self, node)
+                if node is None:
+                    node = self.makeTerminalNodeOrNone(name, time_stamp)
+                #if node: self.container.insertNode(self, node)
 
-            
     class TerminalNode(RealTreeNode):
         def __init__(self, virtual_path, real_path, name, container, parent, data_source):
             super().__init__(name, parent, virtual_path, real_path, container, data_source)
 
         def open(self):
             print("terminal node open:", self.name, self.id, self.real_path)
+
+    # Simple dialog class
+    class DialogWin:
+        def __init__(self, title, message, options, root):
+            self.win = tk.Toplevel()
+            center(self.win)
+            self.win.protocol("WM_DELETE_WINDOW", lambda option='Cancel' : select_fn(option))
+            self.win.title(title)
+            tk.Label(self.win, text=message).grid(row=0, columnspan=len(options), padx=15, pady=10)
+            for i, option in enumerate(options):
+                tk.Button(self.win, text=option, command=lambda choice=option:self.choose(choice )).grid(row=1, column=i, pady=10)
+            self.choice = None
+            root.wait_window(self.win)
+
+        def choose(self, choice):
+            self.choice = choice
+            self.win.destroy()
+            
+    
+    def create_dialog_win(self, title, message, options):
+        return ScrolledTreePane.DialogWin(title, message, options, self).choice
+
+
+class DataSourcePanel(ScrolledTreePane):
+    def makeRightClickPopup(self, node, state):
+        popup = super().makeRightClickPopup(node, state)
+        popup.add_command(label="Make Folder", command=lambda: node.makeFolder(), state=state)
+        return popup
+        
+    class DataSourceInternalNode(ScrolledTreePane.InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, 
+                     data_source, terminalNodeClass):
+            super().__init__(virtual_path, real_path, name, container, parent, data_source, terminalNodeClass)
+
+        def makeFolder(self):
+            pass
+        
+        # Whether to skip next potential child with name
+        def skip(self, name):
+            #return False
+            # Skip meta path
+            return os.path.join(self.virtual_path, name) == os.path.join(self.get_root_virtual_path(), "meta")
+
+
+        # Create an terminal node to be added if name tells us this is terminal
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path,  name)
+            if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')): 
+                full_real_path = os.path.join(self.real_path, name, time_stamp, name)
+                # Use self.terminalNodeClass rather than explict class name so this handles subclassing automatically
+                return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
+
+    class DataSourceTerminalNode(ScrolledTreePane.TerminalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent, data_source):
+            super().__init__(virtual_path, real_path, name, container, parent, data_source)
+
+        def open(self):
+            super().open()
             self.container.show_options_data(select_fn=self.user_selection, node=self)
 
         # Normally the real path points to the file to load
@@ -257,7 +425,6 @@ class DataSourcePanel(ScrolledTreePane):
         #     self.container.openLocalFile(choice, os.path.dirname(file_to_load), file_to_load, url)
 
         def user_selection(self, choice, node=None):
-            if self.container.win: self.container.win.destroy()
             if choice == 'Cancel': return 
 
             file_to_load = self.file_to_load()
@@ -313,13 +480,12 @@ class DataSourcePanel(ScrolledTreePane):
             if updated: all_mappings.to_csv(mappings_path, index=False)
 
 
-    class RemoteNode(InternalNode):
+    class RemoteNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
-                             DataSourcePanel.WebServer(), DataSourcePanel.RemoteDataNode)
+                             ScrolledTreePane.WebServer(), DataSourcePanel.RemoteDataNode)
 
         def user_selection(self, choice, node=None):
-            if self.container.win: self.container.win.destroy()
             if choice != 'Open Webpage': return 
             # The only choice is to load HTML
             url = self.virtual_path
@@ -376,10 +542,10 @@ class DataSourcePanel(ScrolledTreePane):
     # Data will only be loaded under timestamp directories.
     # For cache local directory, virtual_path refers to original path and real_path refers to the cache path
     # - same as other nodes
-    class CacheLocalDirNode(InternalNode):
+    class CacheLocalDirNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
-                             DataSourcePanel.FileSystem(), DataSourcePanel.CacheTimestampDirNode) 
+                             ScrolledTreePane.FileSystem(), DataSourcePanel.CacheTimestampDirNode) 
         # Whether to skip next potential child with name
         # Don't skip any directories under cache local directory
         def skip(self, name):
@@ -393,27 +559,54 @@ class DataSourcePanel(ScrolledTreePane):
         # Create an internal node to be added if name tells us this is internal
         def makeInternalNodeOrNone(self, name, time_stamp):
             full_real_path = os.path.join(self.real_path, name)
-            if self.data_src.isdir(full_real_path) and not re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name):
+            if self.data_src.isdir(full_real_path) and not re.match(ScrolledTreePane.TIMESTAMP_STR, name):
                 return self.internalNodeClass(self.virtual_path+'/'+name, full_real_path, name, self.container, self)
             return None
 
         # Create an terminal node to be added if name tells us this is terminal
         def makeTerminalNodeOrNone(self, name, time_stamp):
             full_real_path = os.path.join(self.real_path, name)
-            if self.data_src.isdir(full_real_path) and re.match(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}', name): # timestamp directory holding several files to be loaded 
+            if self.data_src.isdir(full_real_path) and re.match(ScrolledTreePane.TIMESTAMP_STR, name): # timestamp directory holding several files to be loaded 
                 return self.terminalNodeClass(self.virtual_path, full_real_path, name, self.container, self)
             return None
 
     # This tree should not visit cache directory
-    class NonCacheLocalDirNode(InternalNode):
+    class NonCacheLocalDirNode(DataSourceInternalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, parent, 
-                             DataSourcePanel.FileSystem(), DataSourcePanel.NonCacheLocalFileNode)
+                             ScrolledTreePane.FileSystem(), DataSourcePanel.NonCacheLocalFileNode)
 
         # will skip the cape folder
         def skip(self, name):
             full_virtual_path = os.path.join(self.virtual_path,  name)
             return super().skip(name) or os.path.samefile (full_virtual_path, self.container.cape_path)
+
+        def isSavable(self):
+            return True
+
+        def refreshFocusNode(self, nodeName):
+            self.open()
+            resultNode = [n for n in self.children if n.name == nodeName][0]
+            self.container.setFocus(resultNode)
+            
+        def makeFolder(self):
+            dest = tk.simpledialog.askstring("Folder Creation", "Provide a short name for new folder.", parent=self.container)
+            folder_path = os.path.join(self.virtual_path, dest)
+            if self.data_src.isdir(folder_path): 
+                if not tk.messagebox.askyesnocancel("Folder Creation Error", "Folder already exists."):
+                    return
+            self.data_src.mkdir(folder_path)
+            self.refreshFocusNode(dest)
+
+        def save(self):
+            dest = tk.simpledialog.askstring("Saving Raw Data", "Provide a short name for this raw data.", parent=self.container)
+            new_file = dest+'.raw.csv'
+            out_path = os.path.join(self.virtual_path, new_file)
+            if self.data_src.isfile(out_path): 
+                if not tk.messagebox.askyesnocancel("Data File Exist", "Overwrite existing data file?"):
+                    return
+            self.container.saveRawData(out_path)
+            self.refreshFocusNode(new_file)
 
         # def open(self):
         #     print("noncached dir node open:", self.name, self.id)
@@ -437,10 +630,10 @@ class DataSourcePanel(ScrolledTreePane):
 
     # Terminal node of the tree supposed to be for loading data and no more expansions
 
-    class CacheTimestampDirNode(TerminalNode):
+    class CacheTimestampDirNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
-                             parent, DataSourcePanel.FileSystem())
+                             parent, ScrolledTreePane.FileSystem())
 
         # For timestamp directory, the file to load is the data file contained
         # in this directory.
@@ -451,243 +644,209 @@ class DataSourcePanel(ScrolledTreePane):
         def get_files(self, file_to_load):
             pass  # Nothing to do when browsing cached directory
             
-    class NonCacheLocalFileNode(TerminalNode):
+    class NonCacheLocalFileNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
-                             parent, DataSourcePanel.FileSystem())
+                             parent, ScrolledTreePane.FileSystem())
 
-    class RemoteDataNode(TerminalNode):
+    class RemoteDataNode(DataSourceTerminalNode):
         def __init__(self, virtual_path, real_path, name, container, parent):
             super().__init__(virtual_path, real_path, name, container, 
-                             parent, DataSourcePanel.WebServer())
+                             parent, ScrolledTreePane.WebServer())
 
 
-    def __init__(self, parent, loadDataSrcFn, gui, root):
-        ScrolledTreePane.__init__(self, parent)
+    def __init__(self, parent, gui):
+        super().__init__(parent, 'Data Source', gui)
         self.cape_path = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape')
-        self.loadDataSrcFn = loadDataSrcFn
-        self.gui = gui
-        self.root = root
-        self.dataSrcNode = DataSourcePanel.MetaTreeNode('Data Source', None)
-        self.localNode = DataSourcePanel.MetaTreeNode('Local', self.dataSrcNode)
-        self.remoteNode = DataSourcePanel.MetaTreeNode('Remote', self.dataSrcNode)
-        self.oneDriveNode = DataSourcePanel.MetaTreeNode('OneDrive', self.dataSrcNode)
-        self.insertNode(None, self.dataSrcNode)
-        self.insertNode(self.dataSrcNode, self.localNode)
-        self.insertNode(self.dataSrcNode, self.remoteNode)
-        self.insertNode(self.dataSrcNode, self.oneDriveNode)
-        self.opening = False
-        self.firstOpen = True
-        self.win = None
-        self.setupLocalRoots()
-        self.setupRemoteRoots()
-        self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
 
     def show_options_data(self, select_fn, node=None):
         if len(self.gui.loadedData.sources) >= 2: # Currently can only append max 2 files
-            self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'], select_fn, node)
+            choice = self.create_dialog_win('Max Data', 'You have the max number of data files open.\nWould you like to overwrite with the new data?', ['Overwrite', 'Cancel'])
         elif len(self.gui.loadedData.sources) >= 1: # User has option to append to existing file
-            self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'], select_fn, node)
+            choice = self.create_dialog_win('Existing Data', 'Would you like to append to the existing\ndata or overwrite with the new data?', ['Append', 'Overwrite', 'Cancel'])
         if not self.gui.loadedData.sources: # Nothing currently loaded so just load the data with no need to warn the user
-            select_fn('Overwrite', node)
+            choice = 'Overwrite'
+        select_fn(choice, node)
 
     def show_options_html(self, select_fn):
         # OV webpage with no xlsx file
-        self.create_dialog_win('Missing Data', 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?', ['Open Webpage', 'Cancel'], select_fn)
+        choice = self.create_dialog_win('Missing Data', 'This file is missing the corresponding data file.\nWould you like to clear any existing plots and\nonly load this webpage?', ['Open Webpage', 'Cancel'])
+        select_fn(choice, None)
 
-    def create_dialog_win(self, title, message, options, select_fn, node=None):
-        self.win = tk.Toplevel()
-        center(self.win)
-        self.win.protocol("WM_DELETE_WINDOW", lambda option='Cancel' : select_fn(option))
-        self.win.title(title)
-        tk.Label(self.win, text=message).grid(row=0, columnspan=len(options), padx=15, pady=10)
-        for i, option in enumerate(options):
-            tk.Button(self.win, text=option, command=lambda choice=option:select_fn(choice, node)).grid(row=1, column=i, pady=10)
-        self.root.wait_window(self.win)
 
-    def insertNode(self, parent, node):
-        parent_str = parent.id if parent else ''
-        self.treeview.insert(parent_str,'end',node.id,text=node.name)
         
     def openLocalFile(self, choice, data_dir, source, url):
-        self.loadDataSrcFn(choice, data_dir, source, url)
+        self.control.loadFile(choice, data_dir, source, url)
 
-    def handleOpenEvent(self, event):
-        if not self.opening: # finish opening one file before another is started
-            self.opening = True
-            nodeId = int(self.treeview.focus())
-            node = DataSourcePanel.DataTreeNode.lookupNode(nodeId)
-            node.open()
-            self.opening = False
-        if self.firstOpen:
-            self.firstOpen = False
-            self.treeview.column('#0', minwidth=600, width=600) # Current fix for horizontal scrolling
+    # def handleOpenEvent(self, event):
+    #     if not self.opening: # finish opening one file before another is started
+    #         self.opening = True
+    #         nodeId = int(self.treeview.focus())
+    #         node = ScrolledTreePane.DataTreeNode.lookupNode(nodeId)
+    #         node.open()
+    #         self.opening = False
+    #     if self.firstOpen:
+    #         self.firstOpen = False
+    #         self.treeview.column('#0', minwidth=600, width=600) # Current fix for horizontal scrolling
 
     def setupLocalRoot(self, nonCachePath, name, localMetaNode):
         if not os.path.isdir(nonCachePath):
             return
         cacheRootRealPath = self.cacheRoot.real_path
-        self.insertNode(localMetaNode, DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(cacheRootRealPath, name), name, self, localMetaNode) )
+        nonCacheNode = DataSourcePanel.NonCacheLocalDirNode(nonCachePath, os.path.join(cacheRootRealPath, name), name, self, localMetaNode)
         cache_path = os.path.join(cacheRootRealPath, name)
         Path(cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.cacheRoot, DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot))
+        cacheNode = DataSourcePanel.CacheLocalDirNode(nonCachePath, cache_path, name, self, self.cacheRoot)
+        return nonCacheNode, cacheNode
 
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
+        cape_onedrive=os.path.join(oneDriveRoot, 'data_source')
+        self.setupLocalRoot(cape_onedrive, oneDriveName, self.oneDriveNode)
+
+    
     # This includes OneDrive sync roots
     def setupLocalRoots(self):
+        self.localNode = ScrolledTreePane.MetaTreeNode('Local', self.rootNode, self)
+
         home_dir=expanduser("~")
         cape_cache_path = os.path.join(home_dir, 'AppData', 'Roaming', 'Cape')
         cache_root_path = os.path.join(cape_cache_path,'Previously Visited')
         if not os.path.isdir(cache_root_path): Path(cache_root_path).mkdir(parents=True, exist_ok=True)
         #self.cacheRoot = DataSourcePanel.CacheLocalDirNode(None, cache_root_path , 'Previously Visited', self, self.localNode) 
-        self.cacheRoot = DataSourcePanel.MetaTreeNode('Previously Visited', self.localNode, cache_root_path)
-        self.insertNode(self.localNode, self.cacheRoot)
+        self.cacheRoot = ScrolledTreePane.MetaTreeNode('Previously Visited', self.localNode, self, cache_root_path)
         
         self.setupLocalRoot(home_dir, 'Home', self.localNode)
         #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(home_dir, self.cape_path, os.path.join(self.cape_path, 'Home'), 'Home', self) )
 
-        cape_onedrive=os.path.join(home_dir, 'Intel Corporation', 'Cape Project - Documents', 'Cape GUI Data', 'data_source')
-        cape_onedrive_ext=os.path.join(home_dir, 'Intel Corporation', 'QProf - Shared Documents', 'Cape GUI Data', 'data_source')
-        self.setupLocalRoot(cape_onedrive, 'Intel (Internal)', self.oneDriveNode)
-        self.setupLocalRoot(cape_onedrive_ext, 'Intel (External)', self.oneDriveNode)
-        #self.insertNode(self.localNode, DataSourcePanel.NonCacheLocalDirNode(cape_onedrive, self.cape_path, os.path.join(self.cape_path, 'Intel'), 'Intel', self) )
-
 
     def setupRemoteRoot(self, url, name):
         cache_path = os.path.join(self.cacheRoot.real_path, name)
-        self.insertNode(self.remoteNode, DataSourcePanel.RemoteNode(url, cache_path, name, self, self.remoteNode))
         Path(cache_path).mkdir(parents=True, exist_ok=True)
+
+        remoteNode = DataSourcePanel.RemoteNode(url, cache_path, name, self, self.remoteNode)
         cacheNode = DataSourcePanel.CacheLocalDirNode(url, cache_path, name, self, self.cacheRoot)
-        self.insertNode(self.cacheRoot, cacheNode)
+        return remoteNode, cacheNode
 
     def setupRemoteRoots(self):
+        self.remoteNode = ScrolledTreePane.MetaTreeNode('Remote', self.rootNode, self)
         self.setupRemoteRoot('https://vectorization.computer/data/', 'UIUC')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview/', 'UVSQ')
         self.setupRemoteRoot('https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/', 'UVSQ_2020')
 
 
 class AnalysisResultsPanel(ScrolledTreePane):
-    class DataTreeNode:
-        nextId = 0
-        nodeDict = {}
-        def __init__(self, name):
-            self.name = name
-            self.id = AnalysisResultsPanel.DataTreeNode.nextId
-            AnalysisResultsPanel.DataTreeNode.nextId += 1
-            AnalysisResultsPanel.DataTreeNode.nodeDict[self.id]=self
+    class ARInternalNode(ScrolledTreePane.InternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent,
+                     data_source, terminalNodeClass):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             data_source, terminalNodeClass)
+            assert virtual_path == real_path
 
-        @classmethod
-        def lookupNode(cls, id):
-            return cls.nodeDict[id]
+        def saveTo(self, dest):
+            out_path = os.path.join(self.virtual_path, dest)
+            self.data_src.mkdir(out_path)
+            self.open()
+            resultNode = [n for n in self.children if n.name == dest][0]
+            resultNode.save()
+
+
+    # Try to use a simple structure /root/user/result/<TIME STAMP>.  
+    # This is the root level and will see user as next level
+    class RootNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), None)
+            # Override this to use ResultNode as internal node
+            self.internalNodeClass = AnalysisResultsPanel.UserNode
+
+        def isSavable(self):
+            return True
+
+        def save(self):
+            uid = getpass.getuser()
+            self.saveTo(uid)
+
+    # This will be the root for local roots
+    # This is the user level and will see resul as next level
+    class UserNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), None)
+            # Override this to use ResultNode as internal node
+            self.internalNodeClass = AnalysisResultsPanel.ResultNode
+        def isSavable(self):
+            # Only allow save if this is Local directory or this is current user's directory
+            return self.name == 'Local' or self.name == getpass.getuser()
+
+        def save(self):
+            stateName = tk.simpledialog.askstring("Analysis Results", "Provide a short name for this analysis result.", parent=self.container)
+            if not stateName: return
+            self.saveTo(stateName)
+
+    # This is the result level and will see timestamp node as next level
+    class ResultNode(ARInternalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             ScrolledTreePane.FileSystem(), AnalysisResultsPanel.TimestampNode)
+
+        def makeInternalNodeOrNone(self, name, time_stamp):
+            return None  # Will not make internal node at this level
+        
+        def makeTerminalNodeOrNone(self, name, time_stamp):
+            full_virtual_path = os.path.join(self.virtual_path, name)
+            full_real_path = os.path.join(self.real_path, name)
+            if self.data_src.isdir(full_real_path) and \
+                re.match(ScrolledTreePane.TIMESTAMP_STR, name): # timestamp directory holding several files to be loaded 
+                return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)
+            return None
+
+        def isSavable(self):
+            return self.parent.isSavable()
+
+        def save(self):
+            self.saveTo(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
+
+    # This is the timestamp level and will be the terminal node
+    class TimestampNode(ScrolledTreePane.TerminalNode):
+        def __init__(self, virtual_path, real_path, name, container, parent):
+            super().__init__(virtual_path, real_path, name, container, parent, 
+                             ScrolledTreePane.FileSystem())
+            assert virtual_path == real_path
 
         def open(self):
-            print("node open:", self.name, self.id) 
+            self.container.loadState(self.virtual_path)
 
-    class MetaTreeNode(DataTreeNode):
-        def __init__(self, name):
-            super().__init__(name)
+        def save(self):
+            self.container.saveState(self.virtual_path)
+            #self.container.after(1000, lambda: self.container.setFocus(self))
+            self.container.setFocus(self)
 
-    class LocalTreeNode(DataTreeNode):
-        def __init__(self, path, name, container):
-            super().__init__(name)
-            self.container = container
-            self.path = path
-            self.data_src = DataSourcePanel.FileSystem()
+    def __init__(self, parent, gui):
+        super().__init__(parent, 'Analysis Results', gui)
 
-    class LocalFileNode(LocalTreeNode):
-        def __init__(self, path, name, container, df=pd.DataFrame(), srcDf=pd.DataFrame(), appDf=pd.DataFrame(), \
-            mapping=pd.DataFrame(), srcMapping=pd.DataFrame(), appMapping=pd.DataFrame(), \
-            analytics=pd.DataFrame(), data={}):
-            super().__init__(path, name, container)
+    # def openLocalFile(self, levels=[]):
+    #     self.loadFn(levels)
 
-        def open(self):
-            print("file node open:", self.name, self.id) 
-
-    class LocalDirNode(LocalTreeNode):
-        def __init__(self, path, name, container):
-            super().__init__(path, name+'/', container)
-            self.children = []
-            self.analysis_result = False
-            self.df = pd.DataFrame()
-            self.srcDf = pd.DataFrame()
-            self.appDf = pd.DataFrame()
-            self.mapping = pd.DataFrame()
-            self.srcMapping = pd.DataFrame()
-            self.appMapping = pd.DataFrame()
-            self.analytics = pd.DataFrame()
-            self.data = {}
-
-        def open(self):
-            print("dir node open:", self.name, self.id) 
-            for d in os.listdir(self.path):
-                if d not in self.children:
-                    self.children.append(d)
-                    fullpath = os.path.join(self.path, d)
-                    # Just display directory names 
-                    if os.path.isdir(fullpath):
-                        self.analysis_result = False
-                        self.container.insertNode(self, AnalysisResultsPanel.LocalDirNode(fullpath, d, self.container))
-                    # Load analysis results directory
-                    else:
-                        self.analysis_result = True
-                        if d == 'summary.xlsx': self.df = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'srcSummary.xlsx': self.srcDf = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'appSummary.xlsx': self.appDf = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'mapping.xlsx': self.mapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'srcMapping.xlsx': self.srcMapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'appMapping.xlsx': self.appMapping = pd.read_excel(os.path.join(self.path, d))
-                        if d == 'data.pkl': 
-                            data_file = open(os.path.join(self.path, d), 'rb')
-                            self.data = pickle.load(data_file)
-                            data_file.close()
-
-            if self.analysis_result:
-                codelet = {'summary':self.df, 'mapping':self.mapping, 'data':self.data['Codelet']}
-                source = {'summary':self.srcDf, 'mapping':self.srcMapping, 'data':self.data['Source']}
-                app = {'summary':self.appDf, 'mapping':self.appMapping, 'data':self.data['Application']}
-                self.levels = [codelet, source, app]
-                self.container.openLocalFile(self.levels)
-
-    def __init__(self, parent, loadSavedStateFn):
-        ScrolledTreePane.__init__(self, parent)
-        self.loadSavedStateFn = loadSavedStateFn
-        self.analysisResultsNode = AnalysisResultsPanel.MetaTreeNode('Analysis Results')
-        self.insertNode(None, self.analysisResultsNode)
-        self.opening = False
-        self.firstOpen = True
-        self.setupLocalRoots()
-        self.treeview.bind("<<TreeviewOpen>>", self.handleOpenEvent)
-
-    def insertNode(self, parent, node):
-        parent_str = parent.id if parent else ''
-        self.treeview.insert(parent_str,'end',node.id,text=node.name) 
-
-    def openLocalFile(self, levels=[]):
-        self.loadSavedStateFn(levels)
-
-    def handleOpenEvent(self, event):
-        if not self.opening: # finish opening one file before another is started
-            self.opening = True
-            nodeId = int(self.treeview.focus())
-            node = AnalysisResultsPanel.DataTreeNode.lookupNode(nodeId)
-            node.open()
-            self.opening = False
-        if self.firstOpen:
-            self.firstOpen = False
-            self.treeview.column('#0', minwidth=300, width=300)
-
+    def setupOneDriveRoot(self, oneDriveName, oneDriveRoot):
+        cape_onedrive=os.path.join(oneDriveRoot, 'analysis_results')
+        oneDriveNode = AnalysisResultsPanel.RootNode(cape_onedrive, cape_onedrive, oneDriveName, self, self.oneDriveNode)
+    
     def setupLocalRoots(self):
         cape_cache_path= os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'Analysis Results')
         if not os.path.isdir(cape_cache_path): Path(cape_cache_path).mkdir(parents=True, exist_ok=True)
-        self.insertNode(self.analysisResultsNode, AnalysisResultsPanel.LocalDirNode(cape_cache_path, 'Local', self) )
+        AnalysisResultsPanel.UserNode(cape_cache_path, cape_cache_path, 'Local', self, self.rootNode)
 
 class ExplorerPanel(tk.PanedWindow):
-    def __init__(self, parent, loadDataSrcFn, loadSavedStateFn, gui, root):
-        tk.PanedWindow.__init__(self, parent, orient="horizontal")
-        top = DataSourcePanel(self, loadDataSrcFn, gui, root)
+    def __init__(self, parent, gui):
+        super().__init__(parent, orient="horizontal")
+        top = DataSourcePanel(self, gui)
         top.pack(side = tk.LEFT, expand=True)
-        bot = AnalysisResultsPanel(self, loadSavedStateFn)
+        bot = AnalysisResultsPanel(self, gui)
         bot.pack(side = tk.LEFT, expand=True)
         self.add(top, stretch='always')
         self.add(bot, stretch='always')
         self.pack(fill=tk.BOTH,expand=True)
         self.configure(sashrelief=tk.RAISED)
+        self.gui = gui
+
+        

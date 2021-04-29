@@ -97,7 +97,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     ops_dict = {itype : 0 for itype in itypes}
     inst_dict = {itype : 0 for itype in itypes}
 
-    def calculate_rate_and_counts(op_rate_name, inst_rate_name, calculate_counts_per_iter, add_global_count):
+    def calculate_rate_and_counts(op_rate_name, op_count_name, inst_rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
@@ -108,7 +108,12 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             nonlocal ops_dict
             nonlocal inst_dict
             cnts_per_iter, inst_cnts_per_iter = calculate_counts_per_iter(in_row)
-            out_row[op_rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            op_count_per_rep = (cnts_per_iter.SUM * iterations_per_rep) / 1E9 
+
+            if op_count_name:
+                out_row[op_count_name] =  op_count_per_rep
+                
+            out_row[op_rate_name] =  op_count_per_rep / time
             if inst_rate_name: out_row[inst_rate_name] = (inst_cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
@@ -125,12 +130,12 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, None, calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, None, calculate_iops_counts_per_iter, True)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, COUNT_FP_GFLOP, None, calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, None, None, calculate_iops_counts_per_iter, True)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
-    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, None, calculate_cvtops_counts_per_iter, True)
-    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, None, calculate_packops_counts_per_iter, True)
-    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, RATE_LDST_GI_P_S, calculate_memops_counts_per_iter, True)
+    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, None, None, calculate_cvtops_counts_per_iter, True)
+    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, None, None, calculate_packops_counts_per_iter, True)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, None, RATE_LDST_GI_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
     out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0
@@ -403,18 +408,20 @@ def find_vector_ext(op_counts):
 
 def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
     out_row[MetricName.epo(kind)] = energy / num_ops
-    out_row[MetricName.rpe(kind)] = ops_per_sec / energy
-    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    out_row[MetricName.rpe(kind)] = ops_per_sec / energy if energy != 0 else math.nan
+    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy if energy != 0 else math.nan
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
     default_ = kwargs.pop('default', 0)
+    result = None
     for arg in argv:
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            # should use None test because 0 is valid number and considered False in Python.
-            return type_(in_row[arg] if in_row[arg] is not None else default_)
+            result = in_row[arg] if result is None or pd.isna(result) else result
+    if result is not None:
+        return type_(default_ if pd.isna(result) else result)
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):

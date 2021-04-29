@@ -1,6 +1,6 @@
 import tkinter as tk
 from utils import Observable
-from analyzer_base import AnalyzerTab, AnalyzerData
+from analyzer_base import PlotTab, PlotAnalyzerData
 import pandas as pd
 from generate_custom import custom_plot
 from generate_custom import CustomPlot
@@ -9,17 +9,17 @@ import copy
 from tkinter import ttk
 from plot_interaction import PlotInteraction
 from pandastable import Table
-from meta_tabs import ShortNameTab, VariantTab, AxesTab, MappingsTab
-from metric_names import MetricName
-globals().update(MetricName.__members__)
+from meta_tabs import ShortNameTab, AxesTab, MappingsTab
+from metric_names import MetricName as MN
+#globals().update(MetricName.__members__)
 
-class CustomData(AnalyzerData):
-    def __init__(self, loadedData, gui, root, level):
-        super().__init__(loadedData, gui, root, level, 'Custom')
+class CustomData(PlotAnalyzerData):
+    def __init__(self, loadedData, level):
+        super().__init__(loadedData, level, 'Custom', x_axis=MN.RATE_FP_GFLOP_P_S, y_axis=MN.COVERAGE_PCT)
 
-    def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
-        print("CustomData Notified from ", loadedData)
-        super().notify(loadedData, update, variants, mappings) 
+    # def notify(self, loadedData, x_axis=None, y_axis=None, variants=[], update=False, scale='linear', level='All', mappings=pd.DataFrame()):
+    #     print("CustomData Notified from ", loadedData)
+    #     super().notify(loadedData, update, variants, mappings) 
         
         
         # df = self.df.copy(deep=True)
@@ -35,30 +35,27 @@ class CustomData(AnalyzerData):
         #                   x_axis=x_axis, y_axis=y_axis, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
         # plot.compute_and_plot()
         # self.fig = plot.fig
-        # self.textData = plot.plotData
+        # self.plotData = plot.plotData
 
         # Generate Plot
-        #custom_df, self.fig, self.textData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+        #custom_df, self.fig, self.plotData = custom_plot(self.df.copy(deep=True), 'test', scale, 'Custom', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
         #    variants=self.variants, mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
-        self.notify_observers()
+        #self.notify_observers()
 
-class CustomTab(AnalyzerTab):
-    def __init__(self, parent, data):
-        super().__init__(parent, data, 'Custom', RATE_FP_GFLOP_P_S, COVERAGE_PCT, [])
+class CustomTab(PlotTab):
+    def __init__(self, parent, container):
+        super().__init__(parent, container, CustomData, 'Custom', [])
 
-    def notify(self, data):
-        # Metrics to be displayed in the data table are unique for each plot
-        metrics = self.data.df.columns.tolist()
-        super().setup(metrics)
-        self.buildTableTabs()
-    
-    # Create meta tabs
-    def buildTableTabs(self):
-        super().buildTableTabs()
-        # self.axesTab = AxesTab(self.tableNote, self, 'Custom')
-        # self.tableNote.add(self.axesTab, text="Axes")
+    # def notify(self, data):
+    #     # Metrics to be displayed in the data table are unique for each plot
+    #     metrics = self.analyzerData.df.columns.tolist()
+    #     super().setup(metrics)
+
+    def update_plot(self):
+        return super().update_plot().setData(self.analyzerData.capacityDataItems)
 
     def mk_plot(self):
-        return CustomPlot(self.data.capacityDataItems, self.data.loadedData, self.data.level, 'ORIG', 'test', self.data.scale, 'Custom', no_plot=False, gui=True, 
-                          x_axis=self.data.x_axis, y_axis=self.data.y_axis, 
-                          mappings=self.mappings, short_names_path=self.data.gui.loadedData.short_names_path)
+        return CustomPlot()
+        # return CustomPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'Custom', no_plot=False, gui=True, 
+        #                   x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 
+        #                   mappings=self.mappings, short_names_path=self.analyzerData.short_names_path)

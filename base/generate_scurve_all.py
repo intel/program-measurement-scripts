@@ -7,10 +7,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
-from adjustText import adjust_text
 import copy
 from capeplot import CapePlot
-from capeplot import CapeData
+from capedata import CapeData
 from metric_names import MetricName
 from statistics import median
 import math
@@ -22,12 +21,12 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class ScurveAllPlot(CapePlot):
-    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
+    def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=False, x_axis=None, y_axis=None, 
                  mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=MetricName.CAP_FP_GFLOP_P_S, mappings=mappings, short_names_path=short_names_path)
     
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
         # Scurve doesn't support mappings
         mappings = pd.DataFrame()
@@ -44,14 +43,14 @@ class ScurveAllPlot(CapePlot):
         xs = np.array([i for i in range(len(ys))])
         if x_axis: x_axis = 'Ranked Order (' + x_axis + ')'
         else: x_axis = 'Ranked Order (' + self.default_x_axis + ')'
-        super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
+        super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
             x_axis, y_axis, mappings)
 
     def mk_mappings(self, mappings, df, x_axis, y_axis, xmax, ymax):
         # Mappings implementation not ready yet for s-curve
         return dict(), []
 
-    def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
+    def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
         markers = []
         for x, y, color, name, timestamp in zip(xs, ys, self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
@@ -61,7 +60,7 @@ class ScurveAllPlot(CapePlot):
         texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
-    def draw_contours(self, xmax, ymax, color_labels):
+    def draw_contours(self, xmax, ymax):
         plt.axhline(y=self.median)
 
 def scurve_all_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
