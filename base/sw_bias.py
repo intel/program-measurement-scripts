@@ -112,8 +112,8 @@ def compute_sw_bias(mainDataFrame):
     # Compute Negative SW Bias
     if 'Neg_SW_Bias' not in mainDataFrame.columns:
         addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_FP_GFLOP_P_S) + 1
-        mainDataFrame.insert(addAfterColumn, "Neg_SW_Bias", (mainDataFrame['rhs_op_count'].apply(find_rhs_ops)
-                                                       + mainDataFrame['recurrence'].apply(find_recurrence_factor)
+        mainDataFrame.insert(addAfterColumn, "Neg_SW_Bias", (mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)
+                                                       + mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)
                                                        + mainDataFrame[MetricName.COUNT_OPS_CVT_PCT].apply(find_cnvt_ops_factor)
                                                        + mainDataFrame[MetricName.COUNT_OPS_DIV_PCT].apply(find_div_ops)
                                                        + mainDataFrame['clu_scores'].apply(find_clu_factor)))

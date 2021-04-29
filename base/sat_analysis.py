@@ -69,7 +69,8 @@ subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, Metr
 SW_BIAS_COLUMNS = ['Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 'Nd_Recurrence' , 'Nd_RHS',
                   'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', NonMetricName.SI_TIER_NORMALIZED]
 SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
-              MetricName.COUNT_OPS_CVT_PCT, MetricName.COUNT_OPS_DIV_PCT]
+              MetricName.COUNT_OPS_CVT_PCT, MetricName.COUNT_OPS_DIV_PCT,
+              MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_RECURRENCE_B]
 OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER]
 NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 if RUN_SW_BIAS:
