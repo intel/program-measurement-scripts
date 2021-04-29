@@ -30,6 +30,7 @@ from custom import CustomTab
 from plot_3d import Data3d, Tab3d
 from scurve import ScurveTab
 from scurve_all import ScurveAllTab
+from swbias import SWbiasTab
 from meta_tabs import ShortNameTab, AxesTab, MappingsTab, GuideTab, FilteringTab, DataTab
 from plot_interaction import PlotInteraction
 from analyzer_model import LoadedData
@@ -93,6 +94,7 @@ class LevelContainerTab(HideableTab):
         # self.addPlotTab(self.3dTab, name='3D')
         # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
         self.addPlotTab(ScurveAllTab(self.plot_note, container), name='S-Curve')
+        self.addPlotTab(SWbiasTab(self.plot_note, container), name='SWbias')
         # Create Per Level Tabs Underneath Plot Notebook
         self.data_note = TabTrackingNB(plotPw)
         # Data tabs
