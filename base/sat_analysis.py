@@ -569,14 +569,14 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             if RUN_SW_BIAS:
                 compute_sw_bias(my_test_df)
                 compute_sw_bias(my_cluster_df)
-            all_test_codelets = all_test_codelets.append(my_test_df)
+            all_test_codelets = all_test_codelets.append(my_test_df[NEEDED_TEST_DF_COLUMNS])
             # cluster_name = str(codelet_tier) + str(satTrafficList)
             cluster_name = str(codelet_tier) + ' ' + satTrafficString
             my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
             peer_dfs = [peer_codelet_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
             if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
-                all_clusters = all_clusters.append(my_cluster_df)
+                all_clusters = all_clusters.append(my_cluster_df[NEEDED_CLUSTER_DF_COLUMNS])
             if DO_DEBUG_LOGS:
                 filename=short_name[-9:]
                 re.sub('[^\w\-_\. ]', '_', filename)
@@ -612,7 +612,8 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
             if RUN_SW_BIAS:
               compute_sw_bias(testDF)
             testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
-            all_test_codelets = all_test_codelets.append(testDF)
+            testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
+            all_test_codelets = all_test_codelets.append(testDF[NEEDED_TEST_DF_COLUMNS])
             print (short_name, "No Cluster for the SI Test =>")
             no_cluster+=1
             findUniqueTiers(peer_codelet_df, satTrafficList, codelet_tier)
