@@ -102,7 +102,10 @@ class LoadedData(Observable):
             cluster_df = satAnalysisData.cluster_df
             CapacityData(cluster_df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).compute(f'cluster-{self.level}') 
             self.update_list(self._siDataItems, SiData(df).set_chosen_node_set(LoadedData.CHOSEN_NODE_SET).set_norm("row").set_cluster_df(cluster_df).compute(f'si-{self.level}'), append)
-            self.guiState.set_color_map(pd.merge(left=self.df[KEY_METRICS], right=self.short_names_df[KEY_METRICS+['Color']], on=KEY_METRICS, how='left'), notify=False)
+            initial_color_map = self.df[KEY_METRICS]
+            initial_color_map['Color'] = None
+            initial_color_map['Label'] = ''
+            self.guiState.set_color_map(initial_color_map, notify=False)
             self.updated_notify_observers()
             
         @property
@@ -177,7 +180,7 @@ class LoadedData(Observable):
             for item in self._shortnameDataItems:
                 # Will reread short name files (should have been updated)
                 item.compute() 
-            self.guiState.set_color_map(self.short_names_df[KEY_METRICS+['Label', 'Color']])
+            # self.guiState.set_color_map(self.short_names_df[KEY_METRICS+['Label', 'Color']])
             self.updated_notify_observers()
             
         def merge_metrics(self, df, metrics):
@@ -328,7 +331,7 @@ class LoadedData(Observable):
         if not os.path.isfile(self.short_names_path):
             Path(self.cape_path).mkdir(parents=True, exist_ok=True)
             #open(self.short_names_path, 'wb') 
-            pd.DataFrame(columns=KEY_METRICS+NAME_FILE_METRICS+ ['Label', 'Color']).to_csv(self.short_names_path, index=False)
+            pd.DataFrame(columns=KEY_METRICS+NAME_FILE_METRICS+ ['Label']).to_csv(self.short_names_path, index=False)
         if not os.path.isfile(self.mappings_path):
             open(self.mappings_path, 'wb')
             pd.DataFrame(columns=['Before Name', 'Before Timestamp', 'After Name', 'After Timestamp', 'Before Variant', 'After Variant', 

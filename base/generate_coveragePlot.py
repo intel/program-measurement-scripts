@@ -39,8 +39,8 @@ class CoveragePlot(CapacityPlot):
 
     def draw_contours(self, xmax, ymax):
         ax = self.ax
-        ax.axvline(x=2)
-        ax.axvline(x=8)
+        ax.axvline(x=(xmax/3))
+        ax.axvline(x=(2*xmax/3))
 
 
 def coverage_plot(df, outputfile, scale, title, no_plot, chosen_node_set, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
