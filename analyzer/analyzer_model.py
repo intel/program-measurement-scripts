@@ -170,7 +170,7 @@ class LoadedData(Observable):
         def color_map(self):
             return self.guiState.get_color_map()
 
-        def color_by_cluster(self, df):
+        def update_colors(self, df):
             self.guiState.set_color_map(df[KEY_METRICS+['Label', 'Color']])
 
         def update_mapping(self):
@@ -300,8 +300,8 @@ class LoadedData(Observable):
     def updateLabels(self, metrics, level):
         self.levelData[level].updateLabels(metrics)
 
-    def color_by_cluster(self, df, level):
-        self.levelData[level].color_by_cluster(df)
+    def update_colors(self, df, level):
+        self.levelData[level].update_colors(df)
 
     def remove_mapping(self, level, toRemove):
         # Remove from local database

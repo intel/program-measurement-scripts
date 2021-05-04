@@ -61,6 +61,17 @@ class ShortNameTab(AnalyzerTab):
         df['Label'] = df[NonMetricName.SI_CLUSTER_NAME]
         df = self.assignColors(df)
         ncMask = df['Label']=='No Cluster'
+        self.update_colors(ncMask, df)
+
+    def colorCustomLabels(self):
+        # Update the GUI state color map with colors for unique user inputted Labels
+        df = self.table.model.df[KEY_METRICS + ['Label']]
+        df['Label'].replace({'':'No Label'}, inplace=True)
+        df = self.assignColors(df)
+        ncMask = df['Label']=='No Label'
+        self.update_colors(ncMask, df)
+
+    def update_colors(self, ncMask, df):
         # needed .value possibly due to a Pandas bug
         # See:https://stackoverflow.com/questions/24188729/pandas-adding-a-series-to-a-dataframe-causes-nan-values-to-appear
         df.loc[ncMask, 'Color'] = pd.Series([CapePlotColor.DEFAULT_COLOR]*len(df[ncMask])).values
@@ -68,7 +79,7 @@ class ShortNameTab(AnalyzerTab):
         self.table.model.df.drop(columns=['Label'], inplace=True)
         self.table.model.df = pd.merge(left=self.table.model.df, right=df[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
         self.table.redraw()
-        self.analyzerData.levelData.color_by_cluster(df)
+        self.analyzerData.levelData.update_colors(df)
 
     def findAndReplace(self):
         find=tk.simpledialog.askstring("Find", "Find what:")
@@ -81,6 +92,8 @@ class ShortNameTab(AnalyzerTab):
     # Merge user input labels with current mappings and replot
     def updateLabels(self):
         df = self.table.model.df.copy(deep=True)
+        # Update the color map according to the user specified labels
+        self.colorCustomLabels()
         # Fill in the Color column based on unique user inputted labels
         # df = self.assignColors(df)
         # Update short names in each of the main dfs
