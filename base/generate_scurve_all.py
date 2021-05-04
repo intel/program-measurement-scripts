@@ -14,6 +14,7 @@ from metric_names import MetricName
 from statistics import median
 import math
 import numpy as np
+from metric_names import KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -33,18 +34,26 @@ class ScurveAllPlot(CapePlot):
         # Get median value of data
         self.median = median(ys.tolist())
         mytext = self.mk_labels()
+        # Created a ranked order by sorting the values and using their new index as the x-axis
         temp_df = pd.DataFrame()
         temp_df['x-metric'] = xs.tolist()
         temp_df['y-metric'] = ys.tolist()
         temp_df['label'] = mytext
+        # Need to add the key metrics so we can label/color the sorted points
+        temp_df[NAME] = self.df[NAME]
+        temp_df[TIMESTAMP] = self.df[TIMESTAMP]
         temp_df = temp_df.sort_values(by=['x-metric'])
         mytexts = np.array(temp_df['label'].tolist())
         ys = np.array(temp_df['y-metric'].tolist())
         xs = np.array([i for i in range(len(ys))])
+        self.ordered_key_metrics = temp_df[[NAME, TIMESTAMP]]
         if x_axis: x_axis = 'Ranked Order (' + x_axis + ')'
         else: x_axis = 'Ranked Order (' + self.default_x_axis + ')'
         super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
             x_axis, y_axis, mappings)
+
+    def get_names(self):
+        return self.guiState.get_encoded_names(self.df.sort_values(by=[self.x_axis])).tolist()
 
     def mk_mappings(self, mappings, df, x_axis, y_axis, xmax, ymax):
         # Mappings implementation not ready yet for s-curve
@@ -53,7 +62,9 @@ class ScurveAllPlot(CapePlot):
     def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
         markers = []
-        for x, y, color, name, timestamp in zip(xs, ys, self.color_map['Color'], self.color_map[NAME], self.color_map[TIMESTAMP]):
+        self.ordered_key_metrics.drop(columns=['Color'], inplace=True, errors='ignore')
+        sorted_color_map = pd.merge(left=self.ordered_key_metrics, right=self.color_map[KEY_METRICS + ['Color']], on=KEY_METRICS, how='left')
+        for x, y, color, name, timestamp in zip(xs, ys, sorted_color_map['Color'], sorted_color_map[NAME], sorted_color_map[TIMESTAMP]):
             markers.extend(ax.plot(x, y, marker='o', color=color, 
                                    label=name+str(timestamp), linestyle='', alpha=1))
 

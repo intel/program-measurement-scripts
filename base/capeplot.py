@@ -294,7 +294,7 @@ class CapePlot:
         self.footnoteText = None
         self.plotData = PlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, title=None, 
                                  labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self, 
-                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None)
+                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None, names=None)
         self._setAttrs(data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
 
@@ -319,7 +319,7 @@ class CapePlot:
         #self.guiState = levelData.guiState
         self.plotData.setAttrs (df=self.df, xs=None, ys=None, mytexts=None, ax=self.ax, title=title, 
                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=self.guiState, plot=self, 
-                                xmax=None, ymax=None, xmin=None, ymin=None, variant=variant)
+                                xmax=None, ymax=None, xmin=None, ymin=None, variant=variant, names=None)
 
 
     def setData(self, data):
@@ -469,7 +469,10 @@ class CapePlot:
         # Will call back to self.plot_rest() with some info saved in plotData
         # TODO: Need to update to handle color legend update
         self.plot_adjustable(scale)
-        
+
+    def get_names(self):
+        # This is subclassed by S-Curve to return the ordered encoded names
+        return self.guiState.get_encoded_names(self.df).tolist()
         
     # Set filename to [] for GUI output
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, x_axis, y_axis, mappings=pd.DataFrame()):
@@ -500,14 +503,13 @@ class CapePlot:
 
         ax.set(xlabel=x_axis, ylabel=y_axis)
 
-        names = self.guiState.get_encoded_names(df).tolist()
-        name_marker = dict(zip(names, markers)) if markers else None
+        names = self.get_names()
 
         self.fig.set_tight_layout(True)
 
         self.plotData.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
             name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
-            self.variant)
+            self.variant, names)
 
         # Plot rest of the plot (which can be adjusted later)
         self.plot_adjustable(scale)
@@ -652,15 +654,15 @@ class CapePlot:
         
 class PlotData():
     def __init__(self, df, xs, ys, mytexts, ax, title, labels, markers, 
-                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
         self.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
-                      name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant)
+                      name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names)
         self.canvas = None
         self.adjusted = False
         self.adjusting = False
 
     def setAttrs(self, df, xs, ys, mytexts, ax, title, labels, markers, 
-                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant):
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
         self.xs = xs
         self.ys = ys
         self.mytext = mytexts
@@ -680,7 +682,6 @@ class PlotData():
         self.variant = variant
         if df is None:
             return
-        names = guiState.get_encoded_names(df).tolist()
         self.names = names
         self.timestamps = df[TIMESTAMP].values.tolist()
         self.marker_text = dict(zip(markers,labels)) if markers else None
