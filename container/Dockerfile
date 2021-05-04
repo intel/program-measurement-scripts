@@ -41,4 +41,5 @@ USER appuser
 WORKDIR /home/appuser
 COPY --chown=appuser rose-utils/ /home/appuser
 
-RUN cd /home/appuser/rose-utils
+WORKDIR /home/appuser/rose-utils
+RUN ./build.sh
