@@ -83,6 +83,7 @@ class SatAnalysisData(NodeWithUnitData):
 
   def compute_impl(self, df):
     self.cluster_df, si_df = do_sat_analysis(df, self.chosen_node_set)
+    si_df[NonMetricName.SI_TIER_NORMALIZED] = si_df[NonMetricName.SI_TIER_NORMALIZED].astype(float)
     return si_df
 
   # Return (expected inputs, expected outputs)
