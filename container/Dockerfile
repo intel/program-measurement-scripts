@@ -1,5 +1,5 @@
 # our local base image
-FROM ubuntu:18.04 
+FROM ubuntu:20.04 
 
 LABEL description="Container for use with CapeScripts" 
 
@@ -33,6 +33,7 @@ RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
 EXPOSE 22
 
 ENV ROSE_HOME=/usr/rose
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
 RUN groupadd -g 8088 appuser && \
    useradd -m -d /home/appuser -s /bin/bash -u 8088 -g appuser -G sudo appuser
