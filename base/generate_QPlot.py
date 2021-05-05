@@ -37,12 +37,12 @@ class QPlot(CapacityPlot):
 			indices = df[SHORT_NAME]
 		except:
 			indices = df[NAME]
-		memlevel = df[MEM_LEVEL]
-		mytext = [str('({0}, {1})'.format(indices[i], memlevel[i])) for i in range(len(indices))]
+		# memlevel = df[MEM_LEVEL]
+		mytext = [str('({0})'.format(indices[i])) for i in range(len(indices))]
 		return mytext
 
 	def mk_label_key(self):
-		return "(name, MaxMemLevel[85%])"
+		return "(name)"
 
 	def mk_plot_title(self, title, variant, scale):
 		chosen_node_set = self.chosen_node_set

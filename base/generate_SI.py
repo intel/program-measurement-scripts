@@ -305,8 +305,8 @@ class SiPlot(CapePlot):
         l_df = self.df
         orig_codelet_index = l_df[SHORT_NAME]
         # orig_codelet_variant = l_df[VARIANT]
-        orig_codelet_memlevel = l_df[MEM_LEVEL]
-        mytext= [str('({0}, {1})'.format( orig_codelet_index[i], orig_codelet_memlevel[i]))  for i in range(len(orig_codelet_index))]
+        # orig_codelet_memlevel = l_df[MEM_LEVEL]
+        mytext= [str('({0})'.format( orig_codelet_index[i] ))  for i in range(len(orig_codelet_index))]
         return mytext
 
 
@@ -363,7 +363,7 @@ class SiPlot(CapePlot):
         ax.set_ylim((0, ymax))
 
     def mk_label_key(self):
-        return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (Name, Variant, MaxMemlevel[85%])"
+        return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name)"
 
     def draw_contours(self, maxx, maxy):
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
