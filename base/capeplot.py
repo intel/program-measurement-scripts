@@ -577,15 +577,18 @@ class CapePlot:
         mappings = self.mapping
         if not mappings.empty:
             # Each codelet tracks their mapping arrow objects in 'name_mapping' for future showing/hiding
-            for i in mappings.index:
-                name_mapping[mappings['Before Name'][i]+str(mappings['Before Timestamp'][i])] = []
-                name_mapping[mappings['After Name'][i]+str(mappings['After Timestamp'][i])] = []
             for index in mappings.index:
-                before_row = self.df.loc[(self.df[NAME]==mappings['Before Name'][index]) & \
-                    (self.df[TIMESTAMP]==mappings['Before Timestamp'][index])].reset_index(drop=True)
-                after_row = self.df.loc[(self.df[NAME]==mappings['After Name'][index]) & \
-                    (self.df[TIMESTAMP]==mappings['After Timestamp'][index])].reset_index(drop=True)
-                if not before_row.empty and not after_row.empty:
+                # Extract the row corresponding to the mapping entry from the full data frame 
+                before_row = self.df.loc[(self.df[NAME] == mappings['Before Name'][index]) & (self.df[TIMESTAMP] == mappings['Before Timestamp'][index])].reset_index(drop=True)
+                after_row = self.df.loc[(self.df[NAME] == mappings['After Name'][index]) & (self.df[TIMESTAMP] == mappings['After Timestamp'][index])].reset_index(drop=True)
+                # Only add mappings if the row exists and if there isn't a NAN value in this plot's metrics
+                if not before_row.empty and not after_row.empty and not pd.isnull(before_row[self.x_axis].iloc[0]) and not pd.isnull(before_row[self.y_axis].iloc[0]) and not pd.isnull(after_row[self.x_axis].iloc[0]) and not pd.isnull(after_row[self.y_axis].iloc[0]):
+                    # Create new list if not already in the name_mapping dictionary
+                    before_key = mappings['Before Name'][index]+str(mappings['Before Timestamp'][index])
+                    after_key = mappings['After Name'][index]+str(mappings['After Timestamp'][index])
+                    if before_key not in name_mapping: name_mapping[before_key] = []
+                    if after_key not in name_mapping: name_mapping[after_key] = []
+                    # Get source and destination points for each arrow
                     x_axis = x_axis if x_axis else self.default_x_axis
                     y_axis = y_axis if y_axis else self.default_y_axis
                     xyA = (before_row[x_axis][0], before_row[y_axis][0])
@@ -603,6 +606,7 @@ class CapePlot:
                             shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
                             connectionstyle='arc3,rad=-0.3', alpha=1)
                     ax.add_artist(con)
+                    # Add this arrow to the list of arrows coming from this source
                     name_mapping[before_row[NAME][0] + str(before_row[TIMESTAMP][0])].append(con)
                     name_mapping[after_row[NAME][0] + str(after_row[TIMESTAMP][0])].append(con)
                     mymappings.append(con)
