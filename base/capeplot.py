@@ -884,7 +884,9 @@ class PlotData():
                     if marker.get_marker() != '*': self.guiState.highlightPoints([name])
                     else: self.guiState.unhighlightPoints([name])
                 elif action == 'Remove Point':
-                    self.guiState.removePoints([name]) 
+                    self.guiState.removePoints([name])
+                    #TODO: Quick fix to remove adjust text arrows after removing a point, instead should remove just that specific arrow
+                    self.checkAdjusted() 
                 elif action == 'Toggle Label': 
                     alpha = not self.name_text[name].get_alpha()
                     self.guiState.setLabel(name, alpha)
