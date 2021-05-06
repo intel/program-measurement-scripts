@@ -10,7 +10,7 @@ from analyzer_model import AnalyzerData
 from analyzer_base import PlotTab, AnalyzerTab, AxesTab
 # from plot_interaction import AxesTab
 from metric_names import MetricName as MN
-from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
+from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS, SHORT_NAME_METRICS
 from capeplot import CapePlot, CapePlotColor
 from fsm import FSM
 globals().update(MN.__members__)
@@ -97,7 +97,7 @@ class ShortNameTab(AnalyzerTab):
         # Fill in the Color column based on unique user inputted labels
         # df = self.assignColors(df)
         # Update short names in each of the main dfs
-        self.analyzerData.levelData.loadedData.update_short_names(df, self.level)
+        self.analyzerData.levelData.loadedData.update_short_names(df[KEY_METRICS+SHORT_NAME_METRICS], self.level)
 
     def exportCSV(self, table):
         export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')

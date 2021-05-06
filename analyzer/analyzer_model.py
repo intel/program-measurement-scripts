@@ -322,7 +322,11 @@ class LoadedData(Observable):
 
     def update_short_names(self, new_short_names, level):
         # Update local database
-        self.short_names_df = pd.concat([self.short_names_df, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
+        new_df = pd.concat([self.short_names_df, new_short_names]).drop_duplicates(KEY_METRICS, keep='last').reset_index(drop=True)
+        if new_df[KEY_METRICS+SHORT_NAME_METRICS].sort_values(by=KEY_METRICS, ignore_index=True).fillna('').equals(
+            self.short_names_df[KEY_METRICS+SHORT_NAME_METRICS].sort_values(by=KEY_METRICS, ignore_index=True).fillna('')):
+            return  # No change
+        self.short_names_df = new_df
         self.short_names_df.to_csv(self.short_names_path, index=False)
         # Notify observers
         self.levelData[level].update_short_names()
