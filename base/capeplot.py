@@ -473,6 +473,10 @@ class CapePlot:
     def get_names(self):
         # This is subclassed by S-Curve to return the ordered encoded names
         return self.guiState.get_encoded_names(self.df).tolist()
+
+    def set_font_size(self, labels, size):
+        for label in labels:
+            label.set_fontsize(size)
         
     # Set filename to [] for GUI output
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, x_axis, y_axis, mappings=pd.DataFrame()):
@@ -492,6 +496,7 @@ class CapePlot:
 
         # Plot data points
         labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
+        self.set_font_size(labels, 8.5)
 
         # Arrows between multiple runs
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, self.xmax, self.ymax)
@@ -646,6 +651,8 @@ class CapePlot:
 
     def adjustText(self):
         self.plotData.adjustText()
+        self.set_font_size(self.plotData.texts, 8.5)
+        self.plotData.thread_safe_canvas_draw()
 
     def setLabelAlphas(self, alpha):
         self.plotData.setLabelAlphas(alpha)
