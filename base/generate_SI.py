@@ -402,12 +402,22 @@ class SiPlot(CapePlot):
                                 (max(target_df['Saturation']) - min(target_df['Saturation'])),linewidth=1,edgecolor=color,facecolor='none')
                 self.cluster_rects[cluster] = rect
                 ax.add_patch(rect)
+        self.set_rect_visibility()
+
+    def set_rect_visibility(self):
+        for cluster in self.cluster_rects:
+            hidden_mask = self.guiState.get_hidden_mask(self.df)
+            if cluster not in self.df[~hidden_mask][NonMetricName.SI_CLUSTER_NAME].tolist():
+                self.cluster_rects[cluster].set_alpha(0)
+            else:
+                self.cluster_rects[cluster].set_alpha(1)
 
     def update_contours(self):
         for cluster in self.cluster_rects:
             if cluster in self.color_map['Label'].tolist(): 
                 rect_color = self.color_map.loc[self.color_map['Label']==cluster]['Color'].iloc[0]
                 self.cluster_rects[cluster].set_edgecolor(rect_color)
+        self.set_rect_visibility()
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
 

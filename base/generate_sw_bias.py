@@ -25,10 +25,12 @@ class SWbiasPlot(CapePlot):
 
     def draw_contours(self, xmax, ymax):
         ax = self.ax
-        # ax.axvline(x=xmax/2)
+        ax.axvline(x=0)
 
     def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
         super().set_plot_scale(scale, xmax, ymax, xmin, ymin)
+        self.ax.set_xlim((xmin, xmax))
+        self.ax.set_ylim((ymin, ymax))
         if not self.ax.yaxis_inverted():
             self.ax.invert_yaxis()
 

@@ -563,10 +563,18 @@ class CapePlot:
     def mk_legend(self):
         ax = self.ax
         patches = []
+        hidden_mask = self.guiState.get_hidden_mask(self.df)
+        visible_df = self.df[~hidden_mask]
+        visible_df['encoded_name'] = visible_df[NAME] + visible_df[TIMESTAMP].astype(str)
         for label in self.color_map['Label'].unique():
             if label:
-                patch = mpatches.Patch(label=label, color=self.color_map.loc[self.color_map['Label']==label]['Color'].iloc[0])
-                patches.append(patch)
+                mask = self.color_map['Label'] == label
+                masked_df = self.color_map[mask]
+                masked_df['encoded_name'] = masked_df[NAME] + masked_df[TIMESTAMP].astype(str)
+                exists = masked_df['encoded_name'].isin(visible_df['encoded_name'])
+                if sum(exists):
+                    patch = mpatches.Patch(label=label, color=self.color_map.loc[self.color_map['Label']==label]['Color'].iloc[0])
+                    patches.append(patch)
 
         if self.ctxs:  
             patches.extend(self.ctxs)
@@ -884,7 +892,9 @@ class PlotData():
                     if marker.get_marker() != '*': self.guiState.highlightPoints([name])
                     else: self.guiState.unhighlightPoints([name])
                 elif action == 'Remove Point':
-                    self.guiState.removePoints([name]) 
+                    self.guiState.removePoints([name])
+                    #TODO: Quick fix to remove adjust text arrows after removing a point, instead should remove just that specific arrow
+                    self.checkAdjusted() 
                 elif action == 'Toggle Label': 
                     alpha = not self.name_text[name].get_alpha()
                     self.guiState.setLabel(name, alpha)
