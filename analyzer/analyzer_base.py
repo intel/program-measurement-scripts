@@ -494,5 +494,7 @@ class LabelTab(AnalyzerTab):
 
     def updateLabels(self):
         new_metrics = [metric for metric in self.current_metrics if metric in self.df.columns.tolist()]
-        if not new_metrics: return # User hasn't selected any label metrics
-        self.guiState.setLabels(new_metrics)
+        if not new_metrics: 
+            self.reset()
+        else:
+            self.guiState.setLabels(new_metrics)
