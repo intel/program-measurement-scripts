@@ -48,3 +48,7 @@ class AnalyzerController:
     # work_function will be invoked as work_function()
     def display_work(self, work_name, work_function):
         self.gui.display_work(work_name, work_function)
+
+    # Auto-change to specific tab
+    def change_codelet_tab(self, idx):
+        self.gui.codeletTab.plot_note.select(idx)

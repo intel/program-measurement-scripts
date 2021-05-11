@@ -11,6 +11,8 @@ from metric_names import MetricName as MN
 from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
 globals().update(MN.__members__)
 
+tab_idx = {"Summary": 0, "TRAWL":1, "QPlot":2, "SIPlot":3, "Custom":4, "SCurve":5, "SWBias":6}
+
 class FSM(Observable):
     def __init__(self, parent):
         super().__init__()
@@ -19,31 +21,22 @@ class FSM(Observable):
         self.control = None
         # self.title = self.tab.plotInteraction.plotData['title']
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
-        # Temporary hardcoded points for each state
-        # self.a2_points = ['livermore_default: lloops.c_kernels_line1340_01587402719', 'NPB_2.3-OpenACC-C: sp.c_compute_rhs_line1452_01587402719']
-        # self.a3_points = ['TSVC_default: tsc.c_vbor_line5367_01587481116', 'NPB_2.3-OpenACC-C: cg.c_conj_grad_line549_01587481116', 'NPB_2.3-OpenACC-C: lu.c_pintgr_line2019_01587481116']
-        transitions = [{'trigger':'proceed', 'source':'INIT', 'dest':'AStart', 'after':'AStart'},
-                {'trigger':'details', 'source':'AStart', 'dest':'A1', 'after':'A1'},
-                {'trigger':'details', 'source':'A1', 'dest':'A11', 'after':'A11'},
-                {'trigger':'proceed', 'source':'A1', 'dest':'A2', 'after':'A2'},
-                {'trigger':'proceed', 'source':'A2', 'dest':'A3', 'after':'A3'},
-                {'trigger':'proceed', 'source':'A3', 'dest':'AEnd', 'after':'AEnd'},
-                {'trigger':'proceed', 'source':'AStart', 'dest':'AEnd', 'after':'AEnd'},
-                {'trigger':'proceed', 'source':'AEnd', 'dest':'B1', 'after':'B1'},
-                {'trigger':'proceed', 'source':'B1', 'dest':'B2', 'after':'B2'},
-                {'trigger':'proceed', 'source':'B2', 'dest':'BEnd', 'after':'BEnd'},
-                {'trigger':'proceed', 'source':'BEnd', 'dest':'End', 'after':'End'},
-                {'trigger':'previous', 'source':'End', 'dest':'BEnd', 'after':'BEnd'},
-                {'trigger':'previous', 'source':'BEnd', 'dest':'B2', 'after':'B2'},
-                {'trigger':'previous', 'source':'B2', 'dest':'B1', 'after':'B1'},
-                {'trigger':'previous', 'source':'B1', 'dest':'AEnd', 'after':'AEnd'},
-                {'trigger':'previous', 'source':'AEnd', 'dest':'AStart', 'after':'AStart'},
-                {'trigger':'previous', 'source':'AStart', 'dest':'INIT', 'after':'INIT'},
-                {'trigger':'previous', 'source':'A3', 'dest':'A2', 'after':'A2'},
-                {'trigger':'previous', 'source':'A2', 'dest':'A1', 'after':'A1'},
-                {'trigger':'previous', 'source':'A1', 'dest':'AStart', 'after':'AStart'},
-                {'trigger':'previous', 'source':'A11', 'dest':'A1', 'after':'A1'}]
-        states = ['INIT', 'AStart', State('A1', ignore_invalid_triggers=True), State('A11', ignore_invalid_triggers=True), 'A2', 'A3', 'AEnd', 'B1', 'B2', 'BEnd', 'End']
+
+        transitions = [
+                {'trigger':'proceed', 'source':'INIT', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'ACoverage', 'source':'Abeg', 'dest':'Abeg_1a', 'after':'Abeg_1a'},
+                {'trigger':'ATime', 'source':'Abeg', 'dest':'Abeg_1b', 'after':'Abeg_1b'},
+                {'trigger':'ASCurve', 'source':'Abeg', 'dest':'Abeg_2a', 'after':'Abeg_2a'},
+                {'trigger':'AUCurve', 'source':'Abeg', 'dest':'Abeg_2b', 'after':'Abeg_2b'},
+                {'trigger':'AQPlot', 'source':'Abeg', 'dest':'Abeg_3', 'after':'Abeg_3'},
+                {'trigger':'previous', 'source':'Abeg_3', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'previous', 'source':'Abeg_2b', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'previous', 'source':'Abeg_2a', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'previous', 'source':'Abeg_1b', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'previous', 'source':'Abeg_1a', 'dest':'Abeg', 'after':'Abeg'},
+                {'trigger':'previous', 'source':'Abeg', 'dest':'INIT', 'after':'INIT'}
+                ]
+        states = ['INIT', 'Abeg', 'Abeg_1a', 'Abeg_1b', 'Abeg_2a', 'Abeg_2b', 'Abeg_3']
 
         # if self.tab.data.loadedData.transitions == 'showing':
         #     self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
@@ -61,17 +54,69 @@ class FSM(Observable):
         # self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=MN.SRC_RHS_OP_COUNT, threshold=1, getNames=True) # Highlight RHS codelets
         # self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, getNames=True) # Highlight FMA codelets
 
+    def reset_buttons(self):
+        for button in self.control.gui.guide_tab.buttons:
+            button.grid_remove()
+
     def INIT(self):
         print("In INIT")
-        # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'INIT', pad=40)
+        self.reset_buttons()
+        self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.updated_notify_observers()
     
-    def AStart(self):
-        print("In AStart")
-        # self.tab.plotInteraction.showMarkers()
-        # self.tab.plotInteraction.unhighlightPoints()
-        # self.tab.labelTab.reset()
-        # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A-Start', pad=40)
+    def Abeg(self):
+        print("In Abeg")
+        # Setup buttons
+        self.reset_buttons()
+        self.control.gui.guide_tab.abeg_1a_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.abeg_1b_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.abeg_2a_button.grid(column=0, row=2, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.abeg_2b_button.grid(column=0, row=3, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.abeg_3_button.grid(column=0, row=4, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['Summary'])
+        self.updated_notify_observers()
+
+    def Abeg_1a(self):
+        print("In Abeg_1a")
+        # Setup buttons
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['Summary'])
+        self.updated_notify_observers()
+
+    def Abeg_1b(self):
+        print("In Abeg_1b")
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['Scurve'])
+        self.updated_notify_observers()
+
+    def Abeg_2a(self):
+        print("In Abeg_2a")
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['SCurve'])
+        self.updated_notify_observers()
+
+    def Abeg_2b(self):
+        print("In Abeg_2b")
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['SCurve'])
+        self.updated_notify_observers()
+
+    def Abeg_3(self):
+        print("In Abeg_3")
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # Auto-select plot
+        self.control.change_codelet_tab(tab_idx['QPlot'])
         self.updated_notify_observers()
 
     def A1(self):

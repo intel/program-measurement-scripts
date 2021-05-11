@@ -602,22 +602,35 @@ class GuideTab(tk.Frame):
         self.parent = parent
         # self.tab = tab
         # State GUI
-        self.canvas = tk.Canvas(self, width=500, height=250)
-        self.canvas.pack(side=tk.LEFT)
+        self.canvas = tk.Canvas(self, width=600, height=380)
+        self.canvas.pack(side=tk.LEFT, anchor=tk.NW)
         self.fsm = FSM(self)
         self.fsm.add_observer(self)
         self.img = tk.PhotoImage(file=self.fsm.file)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
 
-        bottomframe = tk.Frame(self)
-        bottomframe.pack(side=tk.BOTTOM)
+        self.buttonFrame = tk.Frame(self)
+        self.buttonFrame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        proceedButton = tk.Button(self, text="Proceed", command=self.fsm.proceed)
-        proceedButton.pack(side=tk.TOP)
-        detailsButton = tk.Button(self, text="Details", command=self.fsm.details)
-        detailsButton.pack(side=tk.TOP)
-        prevButton = tk.Button(self, text="Previous", command=self.fsm.previous)
-        prevButton.pack(side=tk.TOP)
+        self.create_fsm_buttons()
+
+        self.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+
+        # detailsButton = tk.Button(self.buttonFrame, text="Details", command=self.fsm.details)
+        # detailsButton.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # prevButton = tk.Button(self.buttonFrame, text="Previous", command=self.fsm.previous)
+        # prevButton.grid(column=0, row=2, sticky=tk.NW, pady=2)
+
+    def create_fsm_buttons(self):
+        self.proceed_button = tk.Button(self.buttonFrame, text='Proceed', command=self.fsm.proceed)
+        self.previous_button = tk.Button(self.buttonFrame, text='Previous', command=self.fsm.previous)
+        self.abeg_1a_button = tk.Button(self.buttonFrame, text='A Coverage (Abeg_1a)', command=self.fsm.ACoverage)
+        self.abeg_1b_button = tk.Button(self.buttonFrame, text='A Time (Abeg_1b)', command=self.fsm.ATime)
+        self.abeg_2a_button = tk.Button(self.buttonFrame, text='A S-Curve (Abeg_2a)', command=self.fsm.ASCurve)
+        self.abeg_2b_button = tk.Button(self.buttonFrame, text='A U-Curve (Abeg_2b)', command=self.fsm.AUCurve)
+        self.abeg_3_button = tk.Button(self.buttonFrame, text='A QPlot (Abeg_3)', command=self.fsm.AQPlot)
+        self.buttons = [self.proceed_button, self.previous_button, self.abeg_1a_button, self.abeg_1b_button, self.abeg_2a_button, \
+                        self.abeg_2b_button, self.abeg_3_button]
 
     def notify(self, observable):
         self.fsm.save_graph()
