@@ -529,6 +529,8 @@ class CapePlot:
         # Set specified axis scales
         ax = self.ax
         self.set_plot_scale(scale, self.xmax, self.ymax, self.xmin, self.ymin)
+        # Store axis limits to prevent adjustText from adjusting twice
+        self.plotData.setLims()
         # Update legend
         legend = self.mk_legend()
         self.plotData.legend = legend
@@ -861,12 +863,16 @@ class PlotData():
         if self.adjusted and (self.cur_xlim != self.ax.get_xlim() or self.cur_ylim != self.ax.get_ylim()) and \
             (self.home_xlim != self.ax.get_xlim() or self.home_ylim != self.ax.get_ylim()) and \
             self.toolbar.mode != 'pan/zoom': 
-            print("Ondraw adjusting")
             self.cur_xlim = self.ax.get_xlim()
             self.cur_ylim = self.ax.get_ylim()
+            print("Ondraw adjusting")
             self.adjustText()
 
     def setLims(self):
+        self.cur_xlim = self.ax.get_xlim()
+        self.cur_ylim = self.ax.get_ylim()
+
+    def setHomeLims(self):
         self.home_xlim = self.cur_xlim = self.ax.get_xlim()
         self.home_ylim = self.cur_ylim = self.ax.get_ylim()
 
@@ -907,7 +913,7 @@ class PlotData():
         # for slave in canvasFrame.pack_slaves():
         #     slave.destroy()
         # Store initial xlim and ylim for adjustText
-        self.setLims()
+        self.setHomeLims()
         # Create canvas and toolbar for plot
         self.canvas = FigureCanvasTkAgg(fig, canvasFrame)
         self.canvas.mpl_connect('button_press_event', self.onClick)
