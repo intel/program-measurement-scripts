@@ -34,7 +34,7 @@ class ScurveAllPlot(CapePlot):
         # Get median value of data
         self.median = median(ys.tolist())
         mytext = self.mk_labels()
-        # Created a ranked order by sorting the values and using their new index as the x-axis
+        # Created a rank order by sorting the values and using their new index as the x-axis
         temp_df = pd.DataFrame()
         temp_df['x-metric'] = xs.tolist()
         temp_df['y-metric'] = ys.tolist()
@@ -47,8 +47,8 @@ class ScurveAllPlot(CapePlot):
         ys = np.array(temp_df['y-metric'].tolist())
         xs = np.array([i for i in range(len(ys))])
         self.ordered_key_metrics = temp_df[[NAME, TIMESTAMP]]
-        if x_axis: x_axis = 'Ranked Order (' + x_axis + ')'
-        else: x_axis = 'Ranked Order (' + self.default_x_axis + ')'
+        if x_axis: x_axis = 'Rank Order (' + x_axis + ')'
+        else: x_axis = 'Rank Order (' + self.default_x_axis + ')'
         super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
             x_axis, y_axis, mappings)
 
