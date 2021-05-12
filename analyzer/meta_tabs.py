@@ -1,4 +1,5 @@
 import tkinter as tk
+from PIL import ImageTk, Image
 import pandas as pd
 import os
 import copy
@@ -602,12 +603,11 @@ class GuideTab(tk.Frame):
         self.parent = parent
         # self.tab = tab
         # State GUI
-        self.canvas = tk.Canvas(self, width=600, height=380)
+        self.canvas = tk.Canvas(self, width=1200, height=380)
         self.canvas.pack(side=tk.LEFT, anchor=tk.NW)
         self.fsm = FSM(self)
         self.fsm.add_observer(self)
-        self.img = tk.PhotoImage(file=self.fsm.file)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
+        self.update_canvas()
 
         self.buttonFrame = tk.Frame(self)
         self.buttonFrame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -624,19 +624,31 @@ class GuideTab(tk.Frame):
     def create_fsm_buttons(self):
         self.proceed_button = tk.Button(self.buttonFrame, text='Proceed', command=self.fsm.proceed)
         self.previous_button = tk.Button(self.buttonFrame, text='Previous', command=self.fsm.previous)
-        self.abeg_1a_button = tk.Button(self.buttonFrame, text='A Coverage (Abeg_1a)', command=self.fsm.ACoverage)
-        self.abeg_1b_button = tk.Button(self.buttonFrame, text='A Time (Abeg_1b)', command=self.fsm.ATime)
-        self.abeg_2a_button = tk.Button(self.buttonFrame, text='A S-Curve (Abeg_2a)', command=self.fsm.ASCurve)
-        self.abeg_2b_button = tk.Button(self.buttonFrame, text='A U-Curve (Abeg_2b)', command=self.fsm.AUCurve)
-        self.abeg_3_button = tk.Button(self.buttonFrame, text='A QPlot (Abeg_3)', command=self.fsm.AQPlot)
+        self.abeg_1a_button = tk.Button(self.buttonFrame, text='Application Coverage (CoverageSummary)', command=self.fsm.AppCoverage)
+        self.abeg_1b_button = tk.Button(self.buttonFrame, text='Library Time (TimeSummary)', command=self.fsm.LibTime)
+        self.abeg_2a_button = tk.Button(self.buttonFrame, text='Show Rank Order Plot (RankOrderPlot)', command=self.fsm.ASCurve)
+        self.abeg_2b_button = tk.Button(self.buttonFrame, text='A U-Curve (UCurve)', command=self.fsm.AUCurve)
+        self.abeg_3_button = tk.Button(self.buttonFrame, text='Show Intensity Plot (IntensityPlot)', command=self.fsm.AQPlot)
         self.buttons = [self.proceed_button, self.previous_button, self.abeg_1a_button, self.abeg_1b_button, self.abeg_2a_button, \
                         self.abeg_2b_button, self.abeg_3_button]
 
     def notify(self, observable):
         self.fsm.save_graph()
-        self.img = tk.PhotoImage(file=self.fsm.file)
+        self.update_canvas()
+
+    def update_canvas(self):
+        image = Image.open(self.fsm.file)
+        cwidth = self.canvas.winfo_reqwidth()
+        cheight = self.canvas.winfo_reqheight()
+        fitted_width = min(image.width, cwidth)
+        fitted_height = min(image.height, cheight)
+        scaling = min(fitted_width/image.width, fitted_height/image.height)
+        image = image.resize((int(scaling*image.width), int(scaling*image.height)), Image.ANTIALIAS)
+
+        self.img = ImageTk.PhotoImage(image)
         self.canvas.create_image(0, 0, anchor=tk.NW, image=self.img)
         self.canvas.update()
+        
 
 class Checklist(tk.Frame):
     def __init__(self, parent, options):
