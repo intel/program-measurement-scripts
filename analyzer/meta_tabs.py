@@ -621,16 +621,24 @@ class GuideTab(tk.Frame):
         # prevButton = tk.Button(self.buttonFrame, text="Previous", command=self.fsm.previous)
         # prevButton.grid(column=0, row=2, sticky=tk.NW, pady=2)
 
+    def mk_button(self, text, command):
+        button = tk.Button(self.buttonFrame, text=text, command=command)
+        self.buttons.append(button)
+        return button
+
+
     def create_fsm_buttons(self):
-        self.proceed_button = tk.Button(self.buttonFrame, text='Proceed', command=self.fsm.proceed)
-        self.previous_button = tk.Button(self.buttonFrame, text='Previous', command=self.fsm.previous)
-        self.abeg_1a_button = tk.Button(self.buttonFrame, text='Application Coverage (CoverageSummary)', command=self.fsm.AppCoverage)
-        self.abeg_1b_button = tk.Button(self.buttonFrame, text='Library Time (TimeSummary)', command=self.fsm.LibTime)
-        self.abeg_2a_button = tk.Button(self.buttonFrame, text='Show Rank Order Plot (RankOrderPlot)', command=self.fsm.ASCurve)
-        self.abeg_2b_button = tk.Button(self.buttonFrame, text='A U-Curve (UCurve)', command=self.fsm.AUCurve)
-        self.abeg_3_button = tk.Button(self.buttonFrame, text='Show Intensity Plot (IntensityPlot)', command=self.fsm.AQPlot)
-        self.buttons = [self.proceed_button, self.previous_button, self.abeg_1a_button, self.abeg_1b_button, self.abeg_2a_button, \
-                        self.abeg_2b_button, self.abeg_3_button]
+        self.buttons = []
+        self.proceed_button = self.mk_button(text='Proceed', command=self.fsm.proceed)
+        self.previous_button = self.mk_button(text='Previous', command=self.fsm.previous)
+        self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.AppCoverage)
+        self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.LibTime)
+        self.abeg_2a_button = self.mk_button(text='Show S Curve (ShowSCurve)', command=self.fsm.ShowSCurve)
+        self.abeg_2b_button = self.mk_button(text='Show U-Curve (ShowUCurve)', command=self.fsm.ShowUCurve)
+        self.abeg_3_button = self.mk_button(text='Show Intensity Plot (ShowIntensity)', command=self.fsm.ShowIntensity)
+        self.sido_analysis_button = self.mk_button(text='SIDO Analysis (SIDOAnalysis)', command=self.fsm.SIDOAnalysis)
+        self.swbias_reco_button = self.mk_button(text='SWBias Recommendations (SWBiasReco)', command=self.fsm.SWBiasReco)
+        self.show_oneview_button = self.mk_button(text='Show Oneview (ShowOneview)', command=self.fsm.ShowOneview)
 
     def notify(self, observable):
         self.fsm.save_graph()

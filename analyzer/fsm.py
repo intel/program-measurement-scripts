@@ -23,20 +23,31 @@ class FSM(Observable):
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
 
         transitions = [
-                {'trigger':'proceed', 'source':'INIT', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'ACoverage', 'source':'Abeg', 'dest':'Abeg_1a', 'after':'Abeg_1a'},
-                {'trigger':'ATime', 'source':'Abeg', 'dest':'Abeg_1b', 'after':'Abeg_1b'},
-                {'trigger':'ASCurve', 'source':'Abeg', 'dest':'Abeg_2a', 'after':'Abeg_2a'},
-                {'trigger':'AUCurve', 'source':'Abeg', 'dest':'Abeg_2b', 'after':'Abeg_2b'},
-                {'trigger':'AQPlot', 'source':'Abeg', 'dest':'Abeg_3', 'after':'Abeg_3'},
-                {'trigger':'previous', 'source':'Abeg_3', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'previous', 'source':'Abeg_2b', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'previous', 'source':'Abeg_2a', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'previous', 'source':'Abeg_1b', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'previous', 'source':'Abeg_1a', 'dest':'Abeg', 'after':'Abeg'},
-                {'trigger':'previous', 'source':'Abeg', 'dest':'INIT', 'after':'INIT'}
+                {'trigger':'proceed', 'source':'INIT', 'dest':'Setup', 'after':'Setup'},
+                {'trigger':'proceed', 'source':'Setup', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'AppCoverage', 'source':'BeginAnalysis', 'dest':'CoverageSummary', 'after':'CoverageSummary'},
+                {'trigger':'LibTime', 'source':'BeginAnalysis', 'dest':'TimeSummary', 'after':'TimeSummary'},
+                {'trigger':'ShowSCurve', 'source':'BeginAnalysis', 'dest':'SCurve', 'after':'SCurve'},
+                {'trigger':'ShowUCurve', 'source':'BeginAnalysis', 'dest':'UCurve', 'after':'UCurve'},
+                {'trigger':'ShowIntensity', 'source':'BeginAnalysis', 'dest':'IntensityPlot', 'after':'IntensityPlot'},
+                {'trigger':'SIDOAnalysis', 'source':'BeginAnalysis', 'dest':'SIDOResults', 'after':'SIDOResults'},
+                {'trigger':'SWBiasReco', 'source':'SIDOResults', 'dest':'SWBiasResults', 'after':'SWBiasResults'},
+                {'trigger':'ShowOneview', 'source':'SWBiasResults', 'dest':'Oneview', 'after':'Oneview'},
+                {'trigger':'previous', 'source':'Oneview', 'dest':'SWBiasResults', 'after':'SWBiasResults'},
+                {'trigger':'previous', 'source':'SWBiasResults', 'dest':'SIDOResults', 'after':'SIDOResults'},
+                {'trigger':'previous', 'source':'SIDOResults', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'IntensityPlot', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'UCurve', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'SCurve', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'TimeSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'CoverageSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'previous', 'source':'BeginAnalysis', 'dest':'Setup', 'after':'Setup'},
+                {'trigger':'previous', 'source':'Setup', 'dest':'INIT', 'after':'INIT'}
                 ]
-        states = ['INIT', 'Abeg', 'Abeg_1a', 'Abeg_1b', 'Abeg_2a', 'Abeg_2b', 'Abeg_3']
+        #states = ['INIT', 'Setup', 'BeginAnalysis', 'CoverageSummary', 'TimeSummary', 'SCurve', 'UCurve', 'IntensityPlot',
+        #          ]
+        # Collect all the states from source and dest and after for transitons
+        states = sorted(set([trans[node] for trans in transitions for node in ['source', 'dest', 'after']]))
 
         # if self.tab.data.loadedData.transitions == 'showing':
         #     self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
@@ -64,8 +75,17 @@ class FSM(Observable):
         self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.updated_notify_observers()
     
-    def Abeg(self):
-        print("In Abeg")
+    def Setup(self):
+        print("In Setup")
+        # Setup buttons
+        self.reset_buttons()
+        self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # TO ADD display mockup page to setup tool in Oneview tab
+        self.updated_notify_observers()
+
+    def BeginAnalysis(self):
+        print("In BeginAnslysis")
         # Setup buttons
         self.reset_buttons()
         self.control.gui.guide_tab.abeg_1a_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
@@ -73,13 +93,14 @@ class FSM(Observable):
         self.control.gui.guide_tab.abeg_2a_button.grid(column=0, row=2, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.abeg_2b_button.grid(column=0, row=3, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.abeg_3_button.grid(column=0, row=4, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.sido_analysis_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=6, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab(tab_idx['Summary'])
         self.updated_notify_observers()
 
-    def Abeg_1a(self):
-        print("In Abeg_1a")
+    def CoverageSummary(self):
+        print("In CoverageSummary")
         # Setup buttons
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
@@ -87,32 +108,53 @@ class FSM(Observable):
         self.control.change_codelet_tab(tab_idx['Summary'])
         self.updated_notify_observers()
 
-    def Abeg_1b(self):
-        print("In Abeg_1b")
+    def TimeSummary(self):
+        print("In TimeSummary")
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab(tab_idx['Scurve'])
         self.updated_notify_observers()
 
-    def Abeg_2a(self):
-        print("In Abeg_2a")
+    def SIDOResults(self):
+        print("In SIDOAnalysis")
+        self.reset_buttons()
+        self.control.gui.guide_tab.swbias_reco_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        self.updated_notify_observers()
+
+    def SWBiasResults(self):
+        print("In SWBiasResults")
+        self.reset_buttons()
+        self.control.gui.guide_tab.show_oneview_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        self.updated_notify_observers()
+
+    def Oneview(self):
+        print("In Oneview")
+        self.reset_buttons()
+        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.updated_notify_observers()
+        
+
+    def SCurve(self):
+        print("In SCurve")
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab(tab_idx['SCurve'])
         self.updated_notify_observers()
 
-    def Abeg_2b(self):
-        print("In Abeg_2b")
+    def UCurve(self):
+        print("In UCurve")
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab(tab_idx['SCurve'])
         self.updated_notify_observers()
 
-    def Abeg_3(self):
-        print("In Abeg_3")
+    def IntensityPlot(self):
+        print("In IntensityPlot")
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
