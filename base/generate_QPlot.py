@@ -45,8 +45,12 @@ class QPlot(CapacityPlot):
 		return "(name)"
 
 	def mk_plot_title(self, title, variant, scale):
-		chosen_node_set = self.chosen_node_set
-		return "{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale)
+		new_title = ""
+		if title: new_title += "{} : ".format(title)
+		if self.chosen_node_set: new_title += "N = {}{}, \n".format(len(self.chosen_node_set), str(sorted(list(self.chosen_node_set))))
+		if variant: new_title += "variant={}, ".format(variant)
+		if scale: new_title += "scale={}".format(scale)
+		return new_title
 
 	def draw_contours(self, xmax, ymax):
 		ns = [1,2,4,8,16,32,64]
