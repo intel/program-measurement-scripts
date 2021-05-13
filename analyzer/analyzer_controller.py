@@ -52,3 +52,7 @@ class AnalyzerController:
     # Auto-change to specific tab
     def change_codelet_tab(self, idx):
         self.gui.codeletTab.plot_note.select(idx)
+
+    def load_url(self, url):
+        self.gui.oneviewTab.set_url(url)
+        self.gui.oneviewTab.load_url()

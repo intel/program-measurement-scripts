@@ -82,6 +82,7 @@ class FSM(Observable):
         self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # TO ADD display mockup page to setup tool in Oneview tab
+        self.control.load_url("https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/")
         self.updated_notify_observers()
 
     def BeginAnalysis(self):
