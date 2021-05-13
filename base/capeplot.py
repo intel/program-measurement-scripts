@@ -478,9 +478,6 @@ class CapePlot:
         # This is subclassed by S-Curve to return the ordered encoded names
         return self.guiState.get_encoded_names(self.df).tolist()
 
-    def set_font_size(self, labels, size):
-        for label in labels:
-            label.set_fontsize(size)
         
     # Set filename to [] for GUI output
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, x_axis, y_axis, mappings=pd.DataFrame()):
@@ -513,7 +510,7 @@ class CapePlot:
         ax.set(xlabel=x_axis, ylabel=y_axis)
         names = self.get_names()
 
-        self.fig.set_tight_layout(True)
+        #self.fig.set_tight_layout(True)
 
         self.plotData.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
             name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
@@ -662,10 +659,13 @@ class CapePlot:
         self.plotData.setupFrames(self.fig, canvasFrame, chartButtonFrame)
         self.container = container
 
+    def tidy_plot(self):
+        self.plotData.tidy_plot()
+    
     def adjustText(self):
+        self.plotData.set_font_size(8.5)
         self.plotData.adjustText()
-        self.set_font_size(self.plotData.texts, 8.5)
-        self.plotData.thread_safe_canvas_draw()
+        #self.plotData.thread_safe_canvas_draw()
 
     def setLabelAlphas(self, alpha):
         self.plotData.setLabelAlphas(alpha)
@@ -847,6 +847,8 @@ class PlotData():
     # matplotlib not threadsafe so use the workaround to schedule draw in GUI thread.
     def thread_safe_canvas_draw(self):
         self.canvas.get_tk_widget().after(0, self.canvas.draw)
+
+    
         
     # control is the controller object in Analyzer_controller which provides the method to run long running job displaying status
     def adjustText(self):
@@ -862,6 +864,12 @@ class PlotData():
                 else: 
                     threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
+    def tidy_plot(self):
+        # Could have done this outside as well
+        # TODO: may merge PlotData with CapePlot
+        self.canvas.figure.tight_layout()
+        self.thread_safe_canvas_draw()
+
     def onDraw(self, event):
         if self.adjusted and (self.cur_xlim != self.ax.get_xlim() or self.cur_ylim != self.ax.get_ylim()) and \
             (self.home_xlim != self.ax.get_xlim() or self.home_ylim != self.ax.get_ylim()) and \
@@ -870,6 +878,11 @@ class PlotData():
             self.cur_ylim = self.ax.get_ylim()
             print("Ondraw adjusting")
             self.adjustText()
+
+    def set_font_size(self, size):
+        labels = self.texts
+        for label in labels:
+            label.set_fontsize(size)
 
     def setLims(self):
         self.cur_xlim = self.ax.get_xlim()
@@ -927,7 +940,8 @@ class PlotData():
         self.toolbar = NavigationToolbar2Tk(self.canvas, toolbarFrame)
         self.canvas.get_tk_widget().pack(expand=True, fill=tk.BOTH)
         #self.canvas.draw()
-        toolbarFrame.grid(column=5, row=0, sticky=tk.S)
+        # NOTE: Need to add just after buttons
+        toolbarFrame.grid(column=6, row=0, sticky=tk.S)
         self.toolbar.update()
     
 

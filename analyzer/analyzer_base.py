@@ -139,6 +139,7 @@ class PlotTab(AnalyzerTab):
         self.toggle_labels_button = tk.Button(self.chartButtonFrame, text='Hide Labels', command=self.toggleLabels)
         self.show_markers_button = tk.Button(self.chartButtonFrame, text='Show Points')
         self.unhighlight_button = tk.Button(self.chartButtonFrame, text='Unhighlight')
+        self.tidy_plot_button = tk.Button(self.chartButtonFrame, text='Tighten Plot', command=self.tidy_plot)
         # Notebook of plot specific tabs
         self.tab_note = ttk.Notebook(self.window)
         self.axesTab = AxesTab(self.tab_note, self)
@@ -154,6 +155,7 @@ class PlotTab(AnalyzerTab):
         self.labelTab.render()
         # Grid Layout
         self.tab_note.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.tidy_plot_button.grid(column=5, row=0, sticky=tk.S, pady=2)
         self.unhighlight_button.grid(column=4, row=0, sticky=tk.S, pady=2)
         self.show_markers_button.grid(column=3, row=0, sticky=tk.S, pady=2)
         self.toggle_labels_button.grid(column=2, row=0, sticky=tk.S, pady=2)
@@ -170,6 +172,9 @@ class PlotTab(AnalyzerTab):
     def control(self):
         return self.container.control
 
+    def tidy_plot(self):
+        self.plot.tidy_plot()
+        
     def adjustText(self):
         self.plot.adjustText()
     
