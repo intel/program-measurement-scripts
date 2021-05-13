@@ -631,14 +631,14 @@ class GuideTab(tk.Frame):
         self.buttons = []
         self.proceed_button = self.mk_button(text='Proceed', command=self.fsm.proceed)
         self.previous_button = self.mk_button(text='Previous', command=self.fsm.previous)
-        self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.AppCoverage)
-        self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.LibTime)
-        self.abeg_2a_button = self.mk_button(text='Show S Curve (ShowSCurve)', command=self.fsm.ShowSCurve)
-        self.abeg_2b_button = self.mk_button(text='Show U-Curve (ShowUCurve)', command=self.fsm.ShowUCurve)
-        self.abeg_3_button = self.mk_button(text='Show Intensity Plot (ShowIntensity)', command=self.fsm.ShowIntensity)
-        self.sido_analysis_button = self.mk_button(text='SIDO Analysis (SIDOAnalysis)', command=self.fsm.SIDOAnalysis)
-        self.swbias_reco_button = self.mk_button(text='SWBias Recommendations (SWBiasReco)', command=self.fsm.SWBiasReco)
-        self.show_oneview_button = self.mk_button(text='Show Oneview (ShowOneview)', command=self.fsm.ShowOneview)
+        self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.appCoverage)
+        self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.libTime)
+        self.abeg_2a_button = self.mk_button(text='Show S-Curve (showSCurve)', command=self.fsm.showSCurve)
+        self.abeg_2b_button = self.mk_button(text='Show U-Curve (showUCurve)', command=self.fsm.showUCurve)
+        self.abeg_3_button = self.mk_button(text='Show Arithmetic Intensity (showArithIntensity)', command=self.fsm.showArithIntensity)
+        self.sido_analysis_button = self.mk_button(text='SIDO Analysis (sidoAnalysis)', command=self.fsm.sidoAnalysis)
+        self.swbias_reco_button = self.mk_button(text='SWBias Recommendations (swbiasReco)', command=self.fsm.swbiasReco)
+        self.show_oneview_button = self.mk_button(text='Show Oneview (showOneview)', command=self.fsm.showOneview)
 
     def notify(self, observable):
         self.fsm.save_graph()

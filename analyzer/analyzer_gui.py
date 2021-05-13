@@ -46,6 +46,10 @@ class TabTrackingNB(ttk.Notebook):
         self.currentTab = None 
         self.bind('<<NotebookTabChanged>>', self.plotTabChanged)
 
+    def change_tab(self, name):
+        tabNames = [self.tab(i, option='text') for i in self.tabs()]
+        self.select(tabNames.index(name))
+        
     def plotTabChanged(self, evt):
         #print(f'updated ttnb tab:{self.index(self.select())}')
         if self.currentTab:
@@ -117,6 +121,9 @@ class LevelContainerTab(HideableTab):
     def control(self):
         return self.container.control
 
+    def change_tab(self, name):
+        self.plot_note.change_tab(name)
+        
     def getPausables(self):
         return [self.levelData] if self.levelData else []
         

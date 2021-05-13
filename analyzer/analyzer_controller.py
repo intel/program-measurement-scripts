@@ -50,5 +50,6 @@ class AnalyzerController:
         self.gui.display_work(work_name, work_function)
 
     # Auto-change to specific tab
-    def change_codelet_tab(self, idx):
-        self.gui.codeletTab.plot_note.select(idx)
+    def change_codelet_tab(self, name):
+        self.gui.codeletTab.change_tab(name)
+        #self.gui.codeletTab.plot_note.select(idx)
