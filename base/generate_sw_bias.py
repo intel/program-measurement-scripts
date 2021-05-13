@@ -33,8 +33,8 @@ class SWbiasPlot(CapePlot):
         xmax = 0 if xmax < 0 else xmax
         self.ax.set_xlim((xmin, xmax))
         self.ax.set_ylim((0, ymax))
-        if not self.ax.yaxis_inverted():
-            self.ax.invert_yaxis()
+        # if not self.ax.yaxis_inverted():
+        #     self.ax.invert_yaxis()
         self.ax.spines['left'].set_position('zero')
         self.ax.spines['top'].set_color('none')
         self.ax.spines['right'].set_color('none')
