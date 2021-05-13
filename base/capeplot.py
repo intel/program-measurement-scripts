@@ -25,7 +25,7 @@ from metric_names import KEY_METRICS
 import hashlib
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
-plt.rcParams.update({'font.size': 7}) # Set consistent font size for all plots
+plt.rcParams.update({'font.size': 8.5}) # Set consistent font size for all plots
 
 
 class NodeCentricData(CapeData):
@@ -393,7 +393,11 @@ class CapePlot:
         return "(name)"
 
     def mk_plot_title(self, title, variant, scale):
-        return "{}\nvariant={}, scale={}".format(title, variant, scale)
+        new_title = ""
+        if title: new_title += "{}\n".format(title)
+        if variant: new_title += "variant={}, ".format(variant)
+        if scale: new_title += "scale={}".format(scale)
+        return new_title
         
     # Override to update the data frame containing plot data.
     def filter_data_points(self, in_df):
@@ -496,7 +500,7 @@ class CapePlot:
 
         # Plot data points
         labels, markers = self.plot_markers_and_labels(df, xs, ys, mytexts)
-        self.set_font_size(labels, 8.5)
+        # self.set_font_size(labels, 8.5)
 
         # Arrows between multiple runs
         name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, self.xmax, self.ymax)
@@ -507,7 +511,6 @@ class CapePlot:
         self.footnoteText = self.fig.text(0, 0.005, self.levelData.source_title, horizontalalignment='left')
 
         ax.set(xlabel=x_axis, ylabel=y_axis)
-
         names = self.get_names()
 
         self.fig.set_tight_layout(True)

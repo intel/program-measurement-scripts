@@ -202,6 +202,16 @@ class OneviewTab(tk.Frame):
     def loadPage(self):
         if len(self.urls) == 1: self.loadFirstPage()
         elif len(self.urls) > 1: self.loadSecondPage()
+
+    def set_url(self, url):
+        self.url = url
+
+    def load_url(self):
+        self.removePages()
+        self.browser1 = BrowserFrame(self.window)
+        self.window.add(self.browser1, stretch='always')
+        self.addRefresh()
+        self.browser1.change_browser(url=self.url)
     
     def loadFirstPage(self):
         self.removePages()

@@ -53,3 +53,7 @@ class AnalyzerController:
     def change_codelet_tab(self, name):
         self.gui.codeletTab.change_tab(name)
         #self.gui.codeletTab.plot_note.select(idx)
+
+    def load_url(self, url):
+        self.gui.oneviewTab.set_url(url)
+        self.gui.oneviewTab.load_url()
