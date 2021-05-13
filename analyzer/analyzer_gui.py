@@ -266,9 +266,9 @@ class AnalyzerGui(tk.Frame):
 
         self.pw=tk.PanedWindow(parent, orient="vertical", sashrelief=tk.RIDGE, sashwidth=6, sashpad=3)
 
-        fullPw = self.buildTabs(self.pw)
-        fullPw.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
-        self.pw.add(fullPw, stretch='always')
+        self.fullPw = self.buildTabs(self.pw)
+        self.fullPw.pack(side = tk.TOP, fill=tk.BOTH, expand=True)
+        self.pw.add(self.fullPw, stretch='always')
 
         # Explorer Panel and Guide tab in global notebook
         self.global_note = ttk.Notebook(self.pw)
@@ -304,6 +304,13 @@ class AnalyzerGui(tk.Frame):
         # Will also link loadedData to gui 
         control = AnalyzerController(gui, loadedData)
         gui.guide_tab.fsm.setControl(control)
+    
+    def minimizeOneview(self):
+        self.fullPw.sash_place(0, 1, 1)
+
+    def maximizeOneview(self):
+        self.fullPw.sash_place(0, self.fullPw.winfo_width(), 1)
+
     
     def setControl(self, control):
         self.control = control

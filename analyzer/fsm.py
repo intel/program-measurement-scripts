@@ -73,6 +73,7 @@ class FSM(Observable):
         print("In INIT")
         self.reset_buttons()
         self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.minimizeOneview()
         self.updated_notify_observers()
     
     def Setup(self):
@@ -83,6 +84,7 @@ class FSM(Observable):
         self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # TO ADD display mockup page to setup tool in Oneview tab
         self.control.load_url("https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/")
+        self.control.maximizeOneview()
         self.updated_notify_observers()
 
     def BeginAnalysis(self):
@@ -96,6 +98,7 @@ class FSM(Observable):
         self.control.gui.guide_tab.abeg_3_button.grid(column=0, row=4, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.sido_analysis_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.previous_button.grid(column=0, row=6, sticky=tk.NW, pady=2)
+        self.control.minimizeOneview()
         # Auto-select plot
         self.control.change_codelet_tab('Summary')
         self.updated_notify_observers()
@@ -131,6 +134,8 @@ class FSM(Observable):
         self.reset_buttons()
         self.control.gui.guide_tab.show_oneview_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # TODO: May want to implement exit state action to take care of this minimization operation
+        self.control.minimizeOneview()
         # Auto-select plot
         self.control.change_codelet_tab('SWbias')
         self.updated_notify_observers()
@@ -139,6 +144,7 @@ class FSM(Observable):
         print("In Oneview")
         self.reset_buttons()
         self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        self.control.maximizeOneview()
         self.updated_notify_observers()
         
 
