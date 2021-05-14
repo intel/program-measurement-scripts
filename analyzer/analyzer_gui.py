@@ -46,6 +46,18 @@ class TabTrackingNB(ttk.Notebook):
         self.currentTab = None 
         self.bind('<<NotebookTabChanged>>', self.plotTabChanged)
 
+    def get_tab_name(self, name):
+        name = '!' + name.replace('-', '').replace(' ', '').lower()
+        tab_names = list(self.children.keys())
+        for tab_name in tab_names:
+            if name in tab_name:
+                return tab_name
+
+    def set_plot_scale(self, scale):
+        name = self.tab(self.select(), 'text')
+        tab_name = self.get_tab_name(name)
+        self.children[tab_name].plot.set_plot_scale(scale)
+
     def change_tab(self, name):
         tabNames = [self.tab(i, option='text') for i in self.tabs()]
         self.select(tabNames.index(name))
@@ -123,6 +135,9 @@ class LevelContainerTab(HideableTab):
 
     def change_tab(self, name):
         self.plot_note.change_tab(name)
+
+    def set_plot_scale(self, scale):
+        self.plot_note.set_plot_scale(scale)
         
     def getPausables(self):
         return [self.levelData] if self.levelData else []

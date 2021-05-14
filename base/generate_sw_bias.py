@@ -27,12 +27,12 @@ class SWbiasPlot(CapePlot):
         ax = self.ax
         # ax.axvline(x=0)
 
-    def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
-        super().set_plot_scale(scale, xmax, ymax, xmin, ymin)
-        xmin = 0 if xmin > 0 else xmin
-        xmax = 0 if xmax < 0 else xmax
-        self.ax.set_xlim((xmin, xmax))
-        self.ax.set_ylim((0, ymax))
+    def set_plot_scale(self, scale):
+        super().set_plot_scale(scale)
+        self.xmin = 0 if self.xmin > 0 else self.xmin
+        self.xmax = 0 if self.xmax < 0 else self.xmax
+        self.ax.set_xlim((self.xmin, self.xmax))
+        self.ax.set_ylim((0, self.ymax))
         # if not self.ax.yaxis_inverted():
         #     self.ax.invert_yaxis()
         self.ax.spines['left'].set_position('zero')

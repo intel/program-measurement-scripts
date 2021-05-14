@@ -17,6 +17,10 @@ Examples of filtering points (operators: le, ge, ne, eq)
 self.control.remove_points(operator=operator.le, metric=RATE_FP_GFLOP_P_S, threshold=1, level='Codelet')
 self.control.remove_points(operator=operator.ne, metric=DATA_SET, threshold=1700, level='Codelet')
 
+Example of changing axis scale
+
+self.control.set_plot_scale(x_scale='linear', y_scale='log')
+
 """
 
 class FSM(Observable):

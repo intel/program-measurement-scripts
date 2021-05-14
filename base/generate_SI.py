@@ -337,15 +337,15 @@ class SiPlot(CapePlot):
         return title
         # return "{} \n n = {}{} \n".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))))
 
-    def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
+    def set_plot_scale(self, scale):
         ax = self.ax
         cluster_and_cur_run_ys = self.cluster_and_cur_run_df['Saturation']
         cluster_and_cur_run_xs = self.cluster_and_cur_run_df['Intensity']
         min_xs, max_xs, min_ys, max_ys = self.get_min_max(cluster_and_cur_run_xs, cluster_and_cur_run_ys)
-        xmax=max(max_xs, xmax)
-        ymax=max(max_ys, ymax)
-        xmin=min(min_xs, xmin)
-        ymin=min(min_ys, ymin)
+        self.xmax=max(max_xs, self.xmax)
+        self.ymax=max(max_ys, self.ymax)
+        self.xmin=min(min_xs, self.xmin)
+        self.ymin=min(min_ys, self.ymin)
 
         # Set specified axis scales
         if scale == 'linear' or scale == 'linearlinear':
@@ -360,8 +360,8 @@ class SiPlot(CapePlot):
 
         print("Entering plot_data_orig_point")
 
-        ax.set_xlim((0, xmax))
-        ax.set_ylim((0, ymax))
+        ax.set_xlim((0, self.xmax))
+        ax.set_ylim((0, self.ymax))
 
     def mk_label_key(self):
         return "I$_C$$_G$ = 1.59, " + "S$_C$$_G$ = 4.06, " + "k$_C$$_G$ = 6.48, Label = (name)"

@@ -528,7 +528,7 @@ class CapePlot:
     def plot_adjustable(self, scale):
         # Set specified axis scales
         ax = self.ax
-        self.set_plot_scale(scale, self.xmax, self.ymax, self.xmin, self.ymin)
+        self.set_plot_scale(scale)
         # Store axis limits to prevent adjustText from adjusting twice
         self.plotData.setLims()
         # Update legend
@@ -627,28 +627,28 @@ class CapePlot:
                     mymappings.append(con)
         return name_mapping, mymappings
 
-    def set_plot_scale(self, scale, xmax, ymax, xmin, ymin):
+    def set_plot_scale(self, scale):
         ax = self.ax
         if scale == 'linear' or scale == 'linearlinear':
             ax.set_xscale("linear")
             ax.set_yscale("linear")
-            ax.set_xlim((0, xmax))
-            ax.set_ylim((0, ymax))
+            ax.set_xlim((0, self.xmax))
+            ax.set_ylim((0, self.ymax))
         elif scale == 'log' or scale == 'loglog':
             ax.set_xscale("log")
             ax.set_yscale("log")
-            ax.set_xlim((xmin, xmax))
-            ax.set_ylim((ymin, ymax))
+            ax.set_xlim((self.xmin, self.xmax))
+            ax.set_ylim((self.ymin, self.ymax))
         elif scale == 'loglinear':
             ax.set_xscale("log")
             ax.set_yscale("linear")
-            ax.set_xlim((xmin, xmax))
-            ax.set_ylim((0, ymax))
+            ax.set_xlim((self.xmin, self.xmax))
+            ax.set_ylim((0, self.ymax))
         elif scale == 'linearlog':
             ax.set_xscale("linear")
             ax.set_yscale("log")
-            ax.set_xlim((0, xmax))
-            ax.set_ylim((ymin, ymax))
+            ax.set_xlim((0, self.xmax))
+            ax.set_ylim((self.ymin, self.ymax))
 
     @property
     def control(self):
