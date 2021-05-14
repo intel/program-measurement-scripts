@@ -11,15 +11,19 @@ from metric_names import MetricName as MN
 from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
 globals().update(MN.__members__)
 
-#tab_idx = {"Summary": 0, "TRAWL":1, "QPlot":2, "SIPlot":3, "Custom":4, "SCurve":5, "SWBias":6}
+"""
+Examples of filtering points (operators: le, ge, ne, eq)
+
+self.control.remove_points(operator=operator.le, metric=RATE_FP_GFLOP_P_S, threshold=1, level='Codelet')
+self.control.remove_points(operator=operator.ne, metric=DATA_SET, threshold=1700, level='Codelet')
+
+"""
 
 class FSM(Observable):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        # self.tab = self.parent.tab
         self.control = None
-        # self.title = self.tab.plotInteraction.plotData['title']
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
 
         transitions = [
@@ -59,11 +63,6 @@ class FSM(Observable):
 
         self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
         self.save_graph()
-
-        # Get points that we want to save for each state
-        # self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=MN.SPEEDUP_TIME_LOOP_S, threshold=1, getNames=True) # Highlight SIDO codelets
-        # self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=MN.SRC_RHS_OP_COUNT, threshold=1, getNames=True) # Highlight RHS codelets
-        # self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, getNames=True) # Highlight FMA codelets
 
     def reset_buttons(self):
         for button in self.control.gui.guide_tab.buttons:
@@ -172,81 +171,8 @@ class FSM(Observable):
         self.control.change_codelet_tab('QPlot')
         self.updated_notify_observers()
 
-    def A1(self):
-        print("In A1")
-        # if self.tab.data.loadedData.transitions == 'showing':
-        #     print("going back to orig variants")
-        #     self.tab.data.loadedData.transitions = 'hiding'
-        #     self.tab.plotInteraction.showMarkers()
-        #     self.tab.variantTab.checkListBox.showOrig()
-        # else:
-        #     print("A1 state after orig variants")
-        #     self.tab.plotInteraction.showMarkers()
-        #     self.tab.plotInteraction.unhighlightPoints()
-        #     # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A1 (SIDO>1)', pad=40)
-        #     self.a1_highlighted = self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, show=True, highlight=True) # Highlight SIDO codelets
-        #     self.updateLabels(SPEEDUP_TIME_LOOP_S)
-        self.updated_notify_observers()
-
-    def A11(self):
-        print("In A11")
-        # if self.tab.data.loadedData.transitions != 'showing':
-        #     self.tab.data.loadedData.transitions = 'showing'
-        #     for name in self.tab.plotInteraction.plotData['names']:
-        #         if name not in self.a1_highlighted:
-        #             self.tab.plotInteraction.togglePoint(self.tab.plotInteraction.plotData['name:marker'][name], visible=False)
-        #     self.tab.variantTab.checkListBox.showAllVariants()
-        self.updated_notify_observers()
-
-    def A2(self):
-        print("In A2")
-        # self.tab.plotInteraction.unhighlightPoints()
-        # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A2 (RHS=1)', pad=40)
-        # self.tab.plotInteraction.A_filter(relate=operator.gt, metric=SPEEDUP_TIME_LOOP_S, threshold=1, highlight=False, remove=True) # Remove SIDO codelets
-        # self.a2_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=True, show=True) # Highlight RHS codelets
-        # self.updateLabels(SRC_RHS_OP_COUNT)
-        self.updated_notify_observers()
-
-    def A3(self):
-        print("In A3")
-        # self.tab.plotInteraction.unhighlightPoints()
-        # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A3 (FMA)', pad=40)
-        # self.tab.plotInteraction.A_filter(relate=operator.eq, metric=SRC_RHS_OP_COUNT, threshold=1, highlight=False, remove=True) # Remove RHS codelets
-        # self.a3_highlighted = self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True) # Highlight FMA codelets
-        # self.updateLabels(COUNT_OPS_FMA_PCT)
-        self.updated_notify_observers()
-
-    def AEnd(self):
-        print("In AEnd")
-        # self.tab.plotInteraction.plotData['ax'].set_title(self.title + ', ' + 'A-End', pad=40)
-        # self.all_highlighted = self.a1_highlighted + self.a2_highlighted + self.a3_highlighted
-        # self.tab.plotInteraction.A_filter(relate=operator.eq, metric='', threshold=1, highlight=True, show=True, points=self.all_highlighted) # Highlight all previously highlighted codelets
-        # self.updateLabels('advice')
-        self.updated_notify_observers()
-
-    def B1(self):
-        print("In B1")
-        self.updated_notify_observers()
-
-    def B2(self):
-        print("In B2")
-        self.updated_notify_observers()
-
-    def BEnd(self):
-        print("In BEnd")
-        self.updated_notify_observers()
-
-    def End(self):
-        print("In End")
-        self.updated_notify_observers()
-
     def setControl(self, control):
         self.control = control
 
     def save_graph(self):
         self.machine.get_graph(show_roi=True).draw(self.file, prog='dot')
-    
-    # def updateLabels(self, metric):
-    #     self.tab.labelTab.resetMetrics()
-    #     self.tab.labelTab.metric1.set(metric)
-    #     self.tab.labelTab.updateLabels()

@@ -1,5 +1,8 @@
 import os
 import pickle
+from metric_names import MetricName as MN
+from metric_names import NonMetricName, KEY_METRICS, CATEGORIZED_METRICS, PLOT_METRICS
+globals().update(MN.__members__)
 
 class AnalyzerController:
     '''Control part of Analyzer.  It knows about GUI (View) and LoadedData (Model) 
@@ -62,3 +65,28 @@ class AnalyzerController:
     def load_url(self, url):
         self.gui.oneviewTab.set_url(url)
         self.gui.oneviewTab.load_url()
+
+    def remove_points(self, operator, metric, threshold, level):
+        df = self.loadedData.levelData[level].df
+        # TODO: Only enable the state diagram once data is loaded so this doesn't error on an empty df
+        df = df.loc[operator(df[metric].astype(str), str(threshold))]
+        names = (df[NAME] + df[TIMESTAMP].astype(str)).tolist()
+        self.loadedData.levelData[level].guiState.removePoints(names)
+
+    #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
+    # def A_filter(self, relate, metric, threshold, level):
+    #     df = self.gui.loadedData.summaryDf
+    #     names = []
+    #     if metric and metric in df.columns.tolist(): names = [name + timestamp for name,timestamp in zip(df.loc[relate(df[metric], threshold)][NAME], df.loc[relate(df[metric], threshold)][TIMESTAMP].astype(str))]
+    #     names.extend(points)
+    #     if getNames: return names
+    #     for name in names:
+    #         try: 
+    #             marker = self.plotData.name_marker[name]
+    #             if highlight and marker.get_marker() == 'o': self.highlightPoint(marker)
+    #             elif not highlight and marker.get_marker() == '*': self.highlightPoint(marker)
+    #             if remove: self.togglePoint(marker, visible=False)
+    #             elif show: self.togglePoint(marker, visible=True)
+    #         except: pass
+    #     self.drawPlots()
+    #     return names
