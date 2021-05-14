@@ -321,7 +321,8 @@ class SiPlot(CapePlot):
         chosen_node_list = sorted(set().union(*self.df['SiSatNodes'].to_list()))
         # If chosen_node_set is too long then we need to add more new lines as matplotlib doesn't handle this automatically
         # 80 chars is the max that will fit on a line
-        title = f"{title} : n = {len(chosen_node_list)}\n"
+        title = "" if title is None else f"{title} : "
+        title = f"{title}n = {len(chosen_node_list)}\n"
         title = title + ", ".join(chosen_node_list)
         # nodes = sorted(list(chosen_node_set))
         # chars = 0
