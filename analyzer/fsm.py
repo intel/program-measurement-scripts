@@ -30,7 +30,7 @@ class FSM(Observable):
         self.control = None
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
 
-        transitions = [
+        self.transitions = [
                 {'trigger':'proceed', 'source':'INIT', 'dest':'Setup', 'after':'Setup'},
                 {'trigger':'proceed', 'source':'Setup', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'appCoverage', 'source':'BeginAnalysis', 'dest':'CoverageSummary', 'after':'CoverageSummary'},
@@ -52,10 +52,21 @@ class FSM(Observable):
                 {'trigger':'previous', 'source':'BeginAnalysis', 'dest':'Setup', 'after':'Setup'},
                 {'trigger':'previous', 'source':'Setup', 'dest':'INIT', 'after':'INIT'}
                 ]
+        self.transition_names = { 'proceed': 'Proceed', 
+                                  'previous': 'Previous', 
+                                  'appCoverage': 'Application Coverage (CoverageSummary)', 
+                                  'libTime': 'Library Time (TimeSummary)', 
+                                  'showSCurve': 'Show S-Curve (showSCurve)', 
+                                  'showUCurve': 'Show U-Curve (showUCurve)', 
+                                  'showArithIntensity': 'Show Arithmetic Intensity (showArithIntensity)', 
+                                  'sidoAnalysis': 'SIDO Analysis (sidoAnalysis)', 
+                                  'swbiasReco': 'SWBias Recommendations (swbiasReco)', 
+                                  'showOneview': 'Show Oneview (showOneview)'
+                                  }
         #states = ['INIT', 'Setup', 'BeginAnalysis', 'CoverageSummary', 'TimeSummary', 'SCurve', 'UCurve', 'ArithIntensityPlot',
         #          ]
         # Collect all the states from source and dest and after for transitons
-        states = sorted(set([trans[node] for trans in transitions for node in ['source', 'dest', 'after']]))
+        states = self.sorted([trans[node] for trans in self.transitions for node in ['source', 'dest', 'after']])
 
         # if self.tab.data.loadedData.transitions == 'showing':
         #     self.machine = Machine(model=self, states=states, initial='A11', transitions=transitions)
@@ -65,26 +76,37 @@ class FSM(Observable):
         # else:
         #     self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
 
-        self.machine = Machine(model=self, states=states, initial='INIT', transitions=transitions)
+        self.machine = Machine(model=self, states=states, initial='INIT', transitions=self.transitions)
         self.save_graph()
 
     def reset_buttons(self):
         for button in self.control.gui.guide_tab.buttons:
             button.grid_remove()
 
+    @staticmethod
+    def sorted(lst):
+        return sorted(set(lst))
+
+    def get_all_transitions(self):
+        transitions = self.sorted([transition['trigger'] for transition in self.transitions ])
+        return transitions, [self.transition_names[transition] for transition in transitions]
+
+    def get_next_transitions(self):
+        return self.sorted([transition['trigger'] for transition in self.transitions if transition['source'] == self.state])
+
     def INIT(self):
         print("In INIT")
-        self.reset_buttons()
-        self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.control.minimizeOneview()
         self.updated_notify_observers()
     
     def Setup(self):
         print("In Setup")
-        # Setup buttons
-        self.reset_buttons()
-        self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # # Setup buttons
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # TO ADD display mockup page to setup tool in Oneview tab
         self.control.load_url("https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/")
         self.control.maximizeOneview()
@@ -93,14 +115,14 @@ class FSM(Observable):
     def BeginAnalysis(self):
         print("In BeginAnslysis")
         # Setup buttons
-        self.reset_buttons()
-        self.control.gui.guide_tab.abeg_1a_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.abeg_1b_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.abeg_2a_button.grid(column=0, row=2, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.abeg_2b_button.grid(column=0, row=3, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.abeg_3_button.grid(column=0, row=4, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.sido_analysis_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=6, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.abeg_1a_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.abeg_1b_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.abeg_2a_button.grid(column=0, row=2, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.abeg_2b_button.grid(column=0, row=3, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.abeg_3_button.grid(column=0, row=4, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.sido_analysis_button.grid(column=0, row=5, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=6, sticky=tk.NW, pady=2)
         self.control.minimizeOneview()
         # Auto-select plot
         self.control.change_codelet_tab('Summary')
@@ -109,34 +131,34 @@ class FSM(Observable):
     def CoverageSummary(self):
         print("In CoverageSummary")
         # Setup buttons
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('Summary')
         self.updated_notify_observers()
 
     def TimeSummary(self):
         print("In TimeSummary")
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('Summary')
         self.updated_notify_observers()
 
     def SIDOResults(self):
         print("In sidoAnalysis")
-        self.reset_buttons()
-        self.control.gui.guide_tab.swbias_reco_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.swbias_reco_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('SI Plot')
         self.updated_notify_observers()
 
     def SWBiasResults(self):
         print("In SWBiasResults")
-        self.reset_buttons()
-        self.control.gui.guide_tab.show_oneview_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.show_oneview_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # TODO: May want to implement exit state action to take care of this minimization operation
         self.control.minimizeOneview()
         # Auto-select plot
@@ -145,32 +167,32 @@ class FSM(Observable):
 
     def Oneview(self):
         print("In Oneview")
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         self.control.maximizeOneview()
         self.updated_notify_observers()
         
 
     def SCurve(self):
         print("In SCurve")
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('S-Curve')
         self.updated_notify_observers()
 
     def UCurve(self):
         print("In UCurve")
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('S-Curve')
         self.updated_notify_observers()
 
     def ArithIntensityPlot(self):
         print("In ArithIntensityPlot")
-        self.reset_buttons()
-        self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        # self.reset_buttons()
+        # self.control.gui.guide_tab.previous_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
         # Auto-select plot
         self.control.change_codelet_tab('QPlot')
         self.updated_notify_observers()

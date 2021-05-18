@@ -396,7 +396,10 @@ class DataSourcePanel(ScrolledTreePane):
         # Create an terminal node to be added if name tells us this is terminal
         def makeTerminalNodeOrNone(self, name, time_stamp):
             full_virtual_path = os.path.join(self.virtual_path,  name)
-            if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')): 
+            #if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx')): 
+            # NOTE: Added .advixeproj as mockup for demo.
+            # TODO: really load Advisor/VTune data
+            if self.data_src.isfile(full_virtual_path) and full_virtual_path.endswith(('.raw.csv', '.xlsx', '.advixeproj', '.amplxeproj')): 
                 full_real_path = os.path.join(self.real_path, name, time_stamp, name)
                 # Use self.terminalNodeClass rather than explict class name so this handles subclassing automatically
                 return self.terminalNodeClass(full_virtual_path, full_real_path, name, self.container, self)

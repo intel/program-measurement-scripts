@@ -42,7 +42,7 @@ fig = plt.figure(figsize =(10, 7))
   
 # Creating axes instance 
 ax = fig.add_axes([0.1, 0.1, .8, .8]) 
-
+median_speedup = combinedDf['uspeedup_uiuc_intel'].median()
 #plt.stem(combinedDf['Rank'], combinedDf['uspeedup_uiuc_intel'])
 combinedDf[MN.NAME]=combinedDf[MN.NAME].str.replace('LinAlg: ','').str.replace('.c_de','').str.replace('-extern-assign-','-').str.replace('I1a','')
 plt.plot(combinedDf['Rank'], combinedDf['uspeedup_uiuc_intel'], '.-', markersize=15)
@@ -50,6 +50,7 @@ texts = [ plt.text(combinedDf.iloc[i]['Rank'], combinedDf.iloc[i]['uspeedup_uiuc
     for i in range(len(combinedDf))]
 adjust_text(texts, arrowprops=dict(arrowstyle='->', color='black'), force_text=(.2,.5), expand_text=(2,2))
 plt.axvline(x=0, lw=2, color='red')
+plt.axhline(y=median_speedup, lw=2, color='red')
 plt.title('UCurve: Speedup comparison of UIUC (Right) vs. Intel (Left)')
 plt.ylim(bottom=1)
 plt.show() 

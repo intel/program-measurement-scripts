@@ -607,42 +607,51 @@ class GuideTab(tk.Frame):
         self.canvas.pack(side=tk.LEFT, anchor=tk.NW)
         self.fsm = FSM(self)
         self.fsm.add_observer(self)
-        self.update_canvas()
 
         self.buttonFrame = tk.Frame(self)
         self.buttonFrame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         self.create_fsm_buttons()
+        self.refresh()
 
-        self.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
+        #self.proceed_button.grid(column=0, row=0, sticky=tk.NW, pady=2)
 
         # detailsButton = tk.Button(self.buttonFrame, text="Details", command=self.fsm.details)
         # detailsButton.grid(column=0, row=1, sticky=tk.NW, pady=2)
         # prevButton = tk.Button(self.buttonFrame, text="Previous", command=self.fsm.previous)
         # prevButton.grid(column=0, row=2, sticky=tk.NW, pady=2)
 
-    def mk_button(self, text, command):
-        button = tk.Button(self.buttonFrame, text=text, command=command)
-        self.buttons.append(button)
-        return button
-
-
     def create_fsm_buttons(self):
-        self.buttons = []
-        self.proceed_button = self.mk_button(text='Proceed', command=self.fsm.proceed)
-        self.previous_button = self.mk_button(text='Previous', command=self.fsm.previous)
-        self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.appCoverage)
-        self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.libTime)
-        self.abeg_2a_button = self.mk_button(text='Show S-Curve (showSCurve)', command=self.fsm.showSCurve)
-        self.abeg_2b_button = self.mk_button(text='Show U-Curve (showUCurve)', command=self.fsm.showUCurve)
-        self.abeg_3_button = self.mk_button(text='Show Arithmetic Intensity (showArithIntensity)', command=self.fsm.showArithIntensity)
-        self.sido_analysis_button = self.mk_button(text='SIDO Analysis (sidoAnalysis)', command=self.fsm.sidoAnalysis)
-        self.swbias_reco_button = self.mk_button(text='SWBias Recommendations (swbiasReco)', command=self.fsm.swbiasReco)
-        self.show_oneview_button = self.mk_button(text='Show Oneview (showOneview)', command=self.fsm.showOneview)
+        self.button_map = dict()
+        # get_all_transitions() return two arrays transition and transition name
+        for transition, transition_name in zip(*self.fsm.get_all_transitions()):
+            self.button_map[transition] = tk.Button(self.buttonFrame, text=transition_name, command=getattr(self.fsm, transition))
+        # self.proceed_button = self.mk_button(text='Proceed', command=self.fsm.proceed)
+        # self.previous_button = self.mk_button(text='Previous', command=self.fsm.previous)
+        # self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.appCoverage)
+        # self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.libTime)
+        # self.abeg_2a_button = self.mk_button(text='Show S-Curve (showSCurve)', command=self.fsm.showSCurve)
+        # self.abeg_2b_button = self.mk_button(text='Show U-Curve (showUCurve)', command=self.fsm.showUCurve)
+        # self.abeg_3_button = self.mk_button(text='Show Arithmetic Intensity (showArithIntensity)', command=self.fsm.showArithIntensity)
+        # self.sido_analysis_button = self.mk_button(text='SIDO Analysis (sidoAnalysis)', command=self.fsm.sidoAnalysis)
+        # self.swbias_reco_button = self.mk_button(text='SWBias Recommendations (swbiasReco)', command=self.fsm.swbiasReco)
+        # self.show_oneview_button = self.mk_button(text='Show Oneview (showOneview)', command=self.fsm.showOneview)
 
-    def notify(self, observable):
+    def reset_buttons(self):
+        for button in self.button_map.values():
+            button.grid_remove()
+        row = 0
+        for transition in self.fsm.get_next_transitions():
+            self.button_map[transition].grid(column=0, row=row, sticky=tk.NW, pady=2)
+            row = row + 1
+    
+    def refresh(self):
+        self.reset_buttons()
         self.fsm.save_graph()
         self.update_canvas()
+
+    def notify(self, observable):
+        self.refresh()
 
     def update_canvas(self):
         image = Image.open(self.fsm.file)
