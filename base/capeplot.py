@@ -615,11 +615,11 @@ class CapePlot:
                         (xmax - xyB[0] < xyB[0] and xmax - xyA[0] < xyA[0] and xyA[1] > xyB[1]):
                         con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", \
                             shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                            connectionstyle='arc3,rad=0.3', alpha=1)
+                            connectionstyle='arc3,rad=0.1', alpha=1)
                     else:
                         con = ConnectionPatch(xyA, xyB, 'data', 'data', arrowstyle="-|>", \
                             shrinkA=2.5, shrinkB=2.5, mutation_scale=13, fc="w", \
-                            connectionstyle='arc3,rad=-0.3', alpha=1)
+                            connectionstyle='arc3,rad=-0.1', alpha=1)
                     ax.add_artist(con)
                     # Add this arrow to the list of arrows coming from this source
                     name_mapping[before_row[NAME][0] + str(before_row[TIMESTAMP][0])].append(con)
