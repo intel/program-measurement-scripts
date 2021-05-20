@@ -32,13 +32,13 @@ class FSM(Observable):
 
         self.transitions = [
                 {'trigger':'proceed', 'source':'INIT', 'dest':'Setup', 'after':'Setup'},
-                {'trigger':'proceed', 'source':'Setup', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
+                {'trigger':'proceed', 'source':'Setup', 'dest':'BeginAnalysis', 'before':'leavingHtml', 'after':'BeginAnalysis'},
                 {'trigger':'appCoverage', 'source':'BeginAnalysis', 'dest':'CoverageSummary', 'after':'CoverageSummary'},
                 {'trigger':'libTime', 'source':'BeginAnalysis', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'showMemLevel', 'source':'TimeSummary', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'showSCurve', 'source':'MemLevelAdded', 'dest':'SCurve', 'after':'SCurve'},
                 {'trigger':'showUCurve', 'source':'SCurve', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'before':'leavingUCurve', 'after':'L1ArithIntensityPlot'},
+                {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'before':'leavingHtml', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'showMaxArithIntensity', 'source':'L1ArithIntensityPlot', 'dest':'MaxArithIntensityPlot', 'after':'MaxArithIntensityPlot'},
 
                 # {'trigger':'showSCurve', 'source':'BeginAnalysis', 'dest':'SCurve', 'after':'SCurve'},
@@ -53,13 +53,13 @@ class FSM(Observable):
                 # {'trigger':'previous', 'source':'SIDOResults', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'MaxArithIntensityPlot', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'previous', 'source':'L1ArithIntensityPlot', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'before':'leavingUCurve', 'after':'SCurve'},
+                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'before':'leavingHtml', 'after':'SCurve'},
                 {'trigger':'previous', 'source':'SCurve', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'previous', 'source':'MemLevelAdded', 'before':'returnFromMemLevelAdded', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'previous', 'source':'TimeSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'CoverageSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'BeginAnalysis', 'dest':'Setup', 'after':'Setup'},
-                {'trigger':'previous', 'source':'Setup', 'dest':'INIT', 'after':'INIT'}
+                {'trigger':'previous', 'source':'Setup', 'dest':'INIT', 'before':'leavingHtml', 'after':'INIT'}
                 ]
         self.transition_names = { 'proceed': 'Proceed', 
                                   'previous': 'Previous', 
@@ -115,13 +115,13 @@ class FSM(Observable):
     def Setup(self):
         print("In Setup")
         # TO ADD display mockup page to setup tool in Oneview tab
-        self.control.load_url("https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/")
+        #self.control.load_url("https://datafront.maqao.exascale-computing.eu/public_html/oneview2020/")
+        self.control.load_url("file:///C:/Users/cwong29/Intel Corporation/Cape Project - Documents/Cape GUI Data/data_source/demo-may-2021/Setup-mockup.html")
         self.control.maximizeOneview()
         self.updated_notify_observers()
 
     def BeginAnalysis(self):
         print("In BeginAnslysis")
-        self.control.minimizeOneview()
         # Auto-select plot
         self.control.change_codelet_tab('Summary')
         self.updated_notify_observers()
@@ -158,8 +158,6 @@ class FSM(Observable):
 
     def SWBiasResults(self):
         print("In SWBiasResults")
-        # TODO: May want to implement exit state action to take care of this minimization operation
-        self.control.minimizeOneview()
         # Auto-select plot
         self.control.change_codelet_tab('SWbias')
         self.updated_notify_observers()
@@ -183,8 +181,8 @@ class FSM(Observable):
         self.control.maximizeOneview()
         self.updated_notify_observers()
 
-    def leavingUCurve(self):
-        print("Leaving UCurve")
+    def leavingHtml(self):
+        print("Leaving Html")
         self.control.minimizeOneview()
         self.updated_notify_observers()
 
