@@ -53,21 +53,36 @@ class TabTrackingNB(ttk.Notebook):
             if name in tab_name:
                 return tab_name
 
-    def set_plot_scale(self, scale):
+    def get_current_tab(self):
         name = self.tab(self.select(), 'text')
         tab_name = self.get_tab_name(name)
-        self.children[tab_name].plot.set_plot_scale(scale)
-
-    def change_tab(self, name):
-        tabNames = [self.tab(i, option='text') for i in self.tabs()]
-        self.select(tabNames.index(name))
+        return self.children[tab_name]
         
-    def plotTabChanged(self, evt):
-        #print(f'updated ttnb tab:{self.index(self.select())}')
+    def set_labels(self, metrics):
+        self.currentTab.set_labels(metrics)
+        
+    def set_plot_scale(self, x_scale, y_scale):
+        #self.get_current_tab().set_plot_scale(x_scale, y_scale)
+        self.currentTab.set_plot_scale(x_scale, y_scale)
+
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        #self.get_current_tab().set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+        self.currentTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+
+    def update_currentTab(self):
         if self.currentTab:
             self.currentTab.hide()
         self.currentTab = self.nametowidget(self.select())
         self.currentTab.expose()
+        
+    def change_tab(self, name):
+        tabNames = [self.tab(i, option='text') for i in self.tabs()]
+        self.select(tabNames.index(name))
+        self.update_currentTab()
+        
+    def plotTabChanged(self, evt):
+        #print(f'updated ttnb tab:{self.index(self.select())}')
+        self.update_currentTab()
 
     def updateAllTabStatus(self):
         for tabName in self.tabs():
@@ -136,8 +151,14 @@ class LevelContainerTab(HideableTab):
     def change_tab(self, name):
         self.plot_note.change_tab(name)
 
-    def set_plot_scale(self, scale):
-        self.plot_note.set_plot_scale(scale)
+    def set_labels(self, metrics):
+        self.plot_note.set_labels(metrics)
+
+    def set_plot_scale(self, x_scale, y_scale):
+        self.plot_note.set_plot_scale(x_scale, y_scale)
+
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        self.plot_note.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
         
     def getPausables(self):
         return [self.levelData] if self.levelData else []
@@ -372,6 +393,7 @@ class AnalyzerGui(tk.Frame):
     def setLoadedData(self, loadedData):
         self.loadedData = loadedData
         self.oneviewTab.setLoadedData(loadedData) 
+        self.guide_tab.setLoadedData(loadedData) 
         for tab in self.allTabs:
             tab.setLoadedData(loadedData)
         # Update notebook to set the right exposed/hidden status to underlying gui states

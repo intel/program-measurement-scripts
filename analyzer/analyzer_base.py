@@ -105,6 +105,18 @@ class PlotAnalyzerData(AnalyzerData):
         self.y_axis = y_axis
         self.x_scale = 'linear'
         self.y_scale = 'linear'
+
+    def update_axes(self, x_scale, y_scale, x_axis, y_axis, update=True):
+        self.update_scale(x_scale, y_scale, update=False)
+        if y_axis: self.y_axis = "{}".format(y_axis)
+        if x_axis: self.x_axis = "{}".format(x_axis)
+        if update: self.updated_notify_observers()
+
+    def update_scale(self, x_scale, y_scale, update=True):
+        if x_scale: self.x_scale = x_scale
+        if y_scale: self.y_scale = y_scale
+        self.scale = self.x_scale + self.y_scale
+        if update: self.updated_notify_observers()
     
 class PlotTab(AnalyzerTab):
     class PlotUpdater:
@@ -177,6 +189,15 @@ class PlotTab(AnalyzerTab):
         
     def adjustText(self):
         self.plot.adjustText()
+    
+    def set_labels(self, metrics):
+        self.labelTab.set_labels(metrics)
+        
+    def set_plot_scale(self, x_scale, y_scale):
+        self.axesTab.set_plot_scale(x_scale, y_scale)
+    
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        self.axesTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
     
     def toggleLabels(self):
         alpha = 1
@@ -262,6 +283,7 @@ class PlotTab(AnalyzerTab):
         metrics.extend(self.analyzerData.common_columns_end)
         return metrics
 
+    # Delegate to axestab instead to mimic user action
     def update_axes(self, x_scale, y_scale, x_axis, y_axis):
         self.analyzerData.update_axes(x_scale, y_scale, x_axis, y_axis)
         #self.try_adjust_plot()
@@ -280,6 +302,17 @@ class PlotTab(AnalyzerTab):
         #self.variants = [self.data.loadedData.default_variant] #TODO: edit this out
         self.variants = []
         self.current_labels = []
+
+class GuiStateMonitoringTab(AnalyzerTab):
+    def __init__(self, parent, analyzerData):
+        super().__init__(parent, analyzerData)
+    # Override so not to monitor levelData
+    def setupLevelData(self, levelData):
+        pass
+
+    # Monitor gui state changes instead
+    def setupGuiState(self, guiState):
+        guiState.add_observer(self)
 
 class AxesTabData(AnalyzerData):
     def __init__(self, loadedData, level):
@@ -302,6 +335,8 @@ class AxesTabData(AnalyzerData):
 class AxesTab(AnalyzerTab):
     DUMMY_AXES = ['Choose X Axis Metric', 'Choose Y Axis Metric']
     DUMMY_SCALES = ['Choose X Axis Scale', 'Choose Y Axis Scale']
+    X_IDX = 0
+    Y_IDX = 1
     @staticmethod
     def all_metric_menu(parent, var, group=False):
         menubutton = tk.Menubutton(parent, textvariable=var, indicatoron=True,
@@ -381,10 +416,6 @@ class AxesTab(AnalyzerTab):
     def scaleChanged(self, idx):
         self.analyzerData.setScale(idx, self.scales[idx].get())
 
-    # Override so not to monitor levelData
-    def setupLevelData(self, levelData):
-        pass
-
     def setupAnalyzerData(self, analyzerData):
         self.setAxes(analyzerData.getAxes())
         self.setScales(analyzerData.getScales())
@@ -407,24 +438,53 @@ class AxesTab(AnalyzerTab):
         self.scale_menus[1].grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
         self.update.grid(row=3, column=0, padx=5, sticky=tk.NW)
     
+    # Function call to force this tab to set to the provided value and trigger GUI updates
+    # This mimics user choose the setting and press the Update button.
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        if x_axis: self.axes[self.X_IDX].set(x_axis)
+        if y_axis: self.axes[self.Y_IDX].set(y_axis)
+        self.set_plot_scale(x_scale, y_scale)
+
+    def set_plot_scale(self, x_scale, y_scale):
+        if x_scale: self.scales[self.X_IDX].set(x_scale)
+        if y_scale: self.scales[self.Y_IDX].set(y_scale)
+        self.update_axes()
+    
     def update_axes(self):
         x_axis = None
         y_axis = None
         x_scale = ''
         y_scale = ''
         # Get user selected metrics
-        if self.axes[0].get() not in AxesTab.DUMMY_AXES:
-            x_axis = self.axes[0].get()
-        if self.axes[1].get() not in AxesTab.DUMMY_AXES:
-            y_axis = self.axes[1].get()
+        if self.axes[self.X_IDX].get() not in AxesTab.DUMMY_AXES:
+            x_axis = self.axes[self.X_IDX].get()
+        if self.axes[self.Y_IDX].get() not in AxesTab.DUMMY_AXES:
+            y_axis = self.axes[self.Y_IDX].get()
         # Get user selected scales
-        if self.scales[0].get() not in AxesTab.DUMMY_SCALES:
-            x_scale = self.scales[0].get().lower()
-        if self.scales[1].get() not in AxesTab.DUMMY_SCALES:
-            y_scale = self.scales[1].get().lower()
+        if self.scales[self.X_IDX].get() not in AxesTab.DUMMY_SCALES:
+            x_scale = self.scales[self.X_IDX].get().lower()
+        if self.scales[self.Y_IDX].get() not in AxesTab.DUMMY_SCALES:
+            y_scale = self.scales[self.Y_IDX].get().lower()
         # Set user selected metrics/scales to the analyzerData if at least one changed
         if x_scale or y_scale or x_axis or y_axis:
             self.tab.update_axes(x_scale, y_scale, x_axis, y_axis)
+
+    # Override so not to monitor levelData
+    def setupLevelData(self, levelData):
+        pass
+
+    def setupAnalyzerData(self, analyzerData):
+        super().setupAnalyzerData(analyzerData)
+        analyzerData.add_observer(self)
+
+    def setupGuiState(self, guiState):
+        pass
+
+    def notify(self, data):
+        pass
+        # if self.current_metrics != self.guiState.labels:
+        #     self.resetMetrics()
+        #     if self.guiState.labels: self.setMetrics(self.guiState.labels)
 
 class LabelTabData(AnalyzerData):
     def __init__(self, loadedData, level):
@@ -438,7 +498,7 @@ class LabelTabData(AnalyzerData):
         return self.metrics
        
 
-class LabelTab(AnalyzerTab):
+class LabelTab(GuiStateMonitoringTab):
     DUMMY_METRICS = ['Metric 1', 'Metric 2', 'Metric 3']
     def __init__(self, parent):
         super().__init__(parent, LabelTabData)
@@ -462,14 +522,6 @@ class LabelTab(AnalyzerTab):
     @property
     def current_metrics(self):
         return [metric.get() for metric in self.metrics if metric.get() not in LabelTab.DUMMY_METRICS]
-
-    # Override so not to monitor levelData
-    def setupLevelData(self, levelData):
-        pass        
-
-    # Monitor gui state changes instead
-    def setupGuiState(self, guiState):
-        guiState.add_observer(self)
 
     def setupAnalyzerData(self, analyzerData):
         self.setMetrics(analyzerData.getMetrics())
@@ -496,6 +548,12 @@ class LabelTab(AnalyzerTab):
 
     def reset(self):
         self.guiState.reset_labels()
+
+    # This method mimic user select the metrics and press Update button
+    def set_labels(self, metrics):
+        self.resetMetrics()
+        self.setMetrics(metrics)
+        self.updateLabels()
 
     def updateLabels(self):
         new_metrics = [metric for metric in self.current_metrics if metric in self.df.columns.tolist()]

@@ -621,6 +621,17 @@ class GuideTab(tk.Frame):
         # prevButton = tk.Button(self.buttonFrame, text="Previous", command=self.fsm.previous)
         # prevButton.grid(column=0, row=2, sticky=tk.NW, pady=2)
 
+    class FsmResetter:
+        def __init__(self, fsm):
+            self.fsm = fsm
+
+        def notify(self, observable):
+            self.fsm.reset_state()
+            
+            
+    def setLoadedData(self, loadedData):
+        loadedData.add_observer(GuideTab.FsmResetter(self.fsm))
+     
     def create_fsm_buttons(self):
         self.button_map = dict()
         # get_all_transitions() return two arrays transition and transition name

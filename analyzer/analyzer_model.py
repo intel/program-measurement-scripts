@@ -449,7 +449,7 @@ class LoadedData(Observable):
         # Add diagnostic variables from analyticsDf
         #self.common_columns_end = [RATE_INST_GI_P_S, TIMESTAMP, 'Color']
 
-        self.notify_observers()
+        self.updated_notify_observers()
 
 
     @staticmethod
@@ -885,13 +885,6 @@ class AnalyzerData(PausableObserable):
         print(f"{self.name} Notified from ", loadedData)
         self.updated_notify_observers()
 
-    def update_axes(self, x_scale, y_scale, x_axis, y_axis):
-        if x_scale: self.x_scale = x_scale
-        if y_scale: self.y_scale = y_scale
-        self.scale = self.x_scale + self.y_scale
-        if y_axis: self.y_axis = "{}".format(y_axis)
-        if x_axis: self.x_axis = "{}".format(x_axis)
-        self.updated_notify_observers()
         
     def merge_metrics(self, df, metrics):
         self.levelData.merge_metrics(df, metrics)

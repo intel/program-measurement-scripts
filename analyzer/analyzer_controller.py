@@ -73,9 +73,17 @@ class AnalyzerController:
         names = (df[NAME] + df[TIMESTAMP].astype(str)).tolist()
         self.loadedData.levelData[level].guiState.removePoints(names)
 
-    def set_plot_scale(self, x_scale='linear', y_scale='linear'):
-        scale = x_scale + y_scale
-        self.gui.codeletTab.set_plot_scale(scale)
+    def set_plot_scale(self, x_scale, y_scale):
+        #scale = x_scale + y_scale
+        self.gui.codeletTab.set_plot_scale(x_scale, y_scale)
+
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        self.gui.codeletTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+
+    def set_labels(self, metrics):
+        self.gui.codeletTab.set_labels(metrics)
+        #self.loadedData.levelData[level].guiState.setLabels(metrics)
+
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
     # def A_filter(self, relate, metric, threshold, level):
