@@ -38,7 +38,7 @@ class FSM(Observable):
                 {'trigger':'showMemLevel', 'source':'TimeSummary', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'showSCurve', 'source':'MemLevelAdded', 'dest':'SCurve', 'after':'SCurve'},
                 {'trigger':'showUCurve', 'source':'SCurve', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
+                {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'before':'leavingUCurve', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'showMaxArithIntensity', 'source':'L1ArithIntensityPlot', 'dest':'MaxArithIntensityPlot', 'after':'MaxArithIntensityPlot'},
 
                 # {'trigger':'showSCurve', 'source':'BeginAnalysis', 'dest':'SCurve', 'after':'SCurve'},
@@ -53,7 +53,7 @@ class FSM(Observable):
                 # {'trigger':'previous', 'source':'SIDOResults', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'MaxArithIntensityPlot', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'previous', 'source':'L1ArithIntensityPlot', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'after':'SCurve'},
+                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'before':'leavingUCurve', 'after':'SCurve'},
                 {'trigger':'previous', 'source':'SCurve', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'previous', 'source':'MemLevelAdded', 'before':'returnFromMemLevelAdded', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'previous', 'source':'TimeSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
@@ -179,7 +179,13 @@ class FSM(Observable):
     def UCurve(self):
         print("In UCurve")
         # Auto-select plot
-        self.control.change_codelet_tab('S-Curve')
+        self.control.load_url("file:///C:/Users/cwong29/Intel Corporation/Cape Project - Documents/Cape GUI Data/data_source/demo-may-2021/U-curve-mockup.html")
+        self.control.maximizeOneview()
+        self.updated_notify_observers()
+
+    def leavingUCurve(self):
+        print("Leaving UCurve")
+        self.control.minimizeOneview()
         self.updated_notify_observers()
 
     def L1ArithIntensityPlot(self):
