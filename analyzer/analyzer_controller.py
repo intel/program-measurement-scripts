@@ -66,9 +66,13 @@ class AnalyzerController:
         self.gui.display_work(work_name, work_function)
 
     # Auto-change to specific tab
-    def change_codelet_tab(self, name):
-        self.gui.codeletTab.change_tab(name)
+    def change_level_tab(self, name):
+        self.gui.change_level_tab(name)
+
+    def change_current_level_plot_tab(self, name):
+        self.gui.change_current_level_plot_tab(name)
         #self.gui.codeletTab.plot_note.select(idx)
+
     def maximizeOneview(self):
         self.gui.maximizeOneview()
 
@@ -86,15 +90,16 @@ class AnalyzerController:
         names = (df[NAME] + df[TIMESTAMP].astype(str)).tolist()
         self.loadedData.levelData[level].guiState.removePoints(names)
 
+    # Following few functions applies to current tab (level and plot)
     def set_plot_scale(self, x_scale, y_scale):
         #scale = x_scale + y_scale
-        self.gui.codeletTab.set_plot_scale(x_scale, y_scale)
+        self.gui.set_plot_scale(x_scale, y_scale)
 
     def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
-        self.gui.codeletTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+        self.gui.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
 
     def set_labels(self, metrics):
-        self.gui.codeletTab.set_labels(metrics)
+        self.gui.set_labels(metrics)
         #self.loadedData.levelData[level].guiState.setLabels(metrics)
 
 

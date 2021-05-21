@@ -122,20 +122,20 @@ class FSM(Observable):
     def BeginAnalysis(self):
         print("In BeginAnslysis")
         # Auto-select plot
-        self.control.change_codelet_tab('Summary')
+        self.control.change_current_level_plot_tab('Summary')
         self.updated_notify_observers()
 
     def CoverageSummary(self):
         print("In CoverageSummary")
         # Auto-select plot
-        self.control.change_codelet_tab('Summary')
+        self.control.change_current_level_plot_tab('Summary')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.COVERAGE_PCT, x_scale='linear', y_scale='linear')
         self.updated_notify_observers()
 
     def TimeSummary(self):
         print("In TimeSummary")
         # Auto-select plot
-        self.control.change_codelet_tab('Summary')
+        self.control.change_current_level_plot_tab('Summary')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.TIME_LOOP_S, x_scale='linear', y_scale='log')
         self.updated_notify_observers()
 
@@ -152,13 +152,13 @@ class FSM(Observable):
     def SIDOResults(self):
         print("In sidoAnalysis")
         # Auto-select plot
-        self.control.change_codelet_tab('SI Plot')
+        self.control.change_current_level_plot_tab('SI Plot')
         self.updated_notify_observers()
 
     def SWBiasResults(self):
         print("In SWBiasResults")
         # Auto-select plot
-        self.control.change_codelet_tab('SWbias')
+        self.control.change_current_level_plot_tab('SWbias')
         self.updated_notify_observers()
 
     def Oneview(self):
@@ -170,7 +170,7 @@ class FSM(Observable):
     def SCurve(self):
         print("In SCurve")
         # Auto-select plot
-        self.control.change_codelet_tab('S-Curve')
+        self.control.change_current_level_plot_tab('S-Curve')
         self.updated_notify_observers()
 
     def UCurve(self):
@@ -188,14 +188,14 @@ class FSM(Observable):
     def L1ArithIntensityPlot(self):
         print("In L1ArithIntensityPlot")
         # Auto-select plot
-        self.control.change_codelet_tab('QPlot')
+        self.control.change_current_level_plot_tab('QPlot')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.CAP_L1_GB_P_S, x_scale=None, y_scale=None)
         self.updated_notify_observers()
 
     def MaxArithIntensityPlot(self):
         print("In MaxArithIntensityPlot")
         # Auto-select plot
-        self.control.change_codelet_tab('QPlot')
+        self.control.change_current_level_plot_tab('QPlot')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.CAP_MEMMAX_GB_P_S, x_scale=None, y_scale=None)
         self.updated_notify_observers()
 

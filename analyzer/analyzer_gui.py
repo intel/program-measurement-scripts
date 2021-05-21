@@ -54,9 +54,10 @@ class TabTrackingNB(ttk.Notebook):
                 return tab_name
 
     def get_current_tab(self):
-        name = self.tab(self.select(), 'text')
-        tab_name = self.get_tab_name(name)
-        return self.children[tab_name]
+        return self.currentTab
+        # name = self.tab(self.select(), 'text')
+        # tab_name = self.get_tab_name(name)
+        # return self.children[tab_name]
         
     def set_labels(self, metrics):
         self.currentTab.set_labels(metrics)
@@ -504,6 +505,20 @@ class AnalyzerGui(tk.Frame):
         infoPw.add(self.level_plot_note, stretch='always')
         return infoPw
 
+    def change_level_tab(self, name):
+        self.level_plot_note.change_tab(name)
+
+    def change_current_level_plot_tab(self, name):
+        self.level_plot_note.get_current_tab().change_tab(name)
+
+    def set_labels(self, metrics):
+        self.level_plot_note.set_labels(metrics)
+
+    def set_plot_scale(self, x_scale, y_scale):
+        self.level_plot_note.set_plot_scale(x_scale, y_scale)
+
+    def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
+        self.level_plot_note.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
 
 def on_closing(root):
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
