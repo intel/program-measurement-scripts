@@ -605,7 +605,7 @@ class GuideTab(tk.Frame):
         # State GUI
         self.canvas = tk.Canvas(self, width=1200, height=380)
         self.canvas.pack(side=tk.LEFT, anchor=tk.NW)
-        self.fsm = FSM(self)
+        self.fsm = FSM()
         self.fsm.add_observer(self)
 
         self.buttonFrame = tk.Frame(self)
@@ -630,7 +630,8 @@ class GuideTab(tk.Frame):
             
             
     def setLoadedData(self, loadedData):
-        loadedData.add_observer(GuideTab.FsmResetter(self.fsm))
+        #loadedData.add_observer(GuideTab.FsmResetter(self.fsm))
+        pass
      
     def create_fsm_buttons(self):
         self.button_map = dict()

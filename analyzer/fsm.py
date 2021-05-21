@@ -24,9 +24,8 @@ self.control.set_plot_scale(x_scale='linear', y_scale='log')
 """
 
 class FSM(Observable):
-    def __init__(self, parent):
+    def __init__(self):
         super().__init__()
-        self.parent = parent
         self.control = None
         self.file = os.path.join(expanduser('~'), 'AppData', 'Roaming', 'Cape', 'my_state_diagram.png')
 

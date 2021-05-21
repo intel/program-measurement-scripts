@@ -15,6 +15,19 @@ class AnalyzerController:
         self.setLoadedData(loadedData)
         self.gui.setControl(self)
 
+        
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't save gui as they are GUI components
+        if 'gui' in state:
+            del state['gui']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Restore observers to []
+        self.gui = []
+
     # NOTE: This will also be the starting point of setting up the notification mechanism
     def setLoadedData(self, loadedData):
         self.loadedData = loadedData
