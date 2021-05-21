@@ -286,6 +286,8 @@ class MetaData(CapeData):
             return pd.DataFrame(columns=KEY_METRICS + self.output_args())
         data = pd.read_csv(self.filename)
         df = pd.merge(left=df, right=data, on=KEY_METRICS, how='left')
+        # Use reindex function to add extra columns if needed
+        df = df.reindex(columns=df.columns.tolist() + self.output_args())
         return df 
 
 class MergeDataFrameData(CapeData):

@@ -175,7 +175,7 @@ def calculate_time(out_row, in_row, iterations_per_rep, use_cpi):
         time = getter(in_row, 'CPU_CLK_UNHALTED_REF_TSC') / getter(in_row, 'decan_experimental_configuration.num_core')
     time_s = time * iterations_per_rep/(getter(in_row, 'cpu.nominal_frequency', 'decan_experimental_configuration.frequency') * 1e3)
     out_row[TIME_LOOP_S] = time_s
-    out_row[RECIP_TIME_LOOP_MHZ] = (1 / time_s) / 1e6 
+    out_row[RECIP_TIME_LOOP_MHZ] = (1 / time_s) / 1e6 if time_s != 0 else np.nan
     return out_row[TIME_LOOP_S]
 
 def print_time_formula(formula_file):
@@ -290,7 +290,10 @@ def calculate_data_rates(out_row, in_row, iterations_per_rep, time_per_rep):
     except:
         # This is just estimation an load if fetching 8B (64 bit)
         warnings.warn("No CQA L1 metrics, use LS instruction rate instead.")
-        out_row[RATE_L1_GB_P_S]  = out_row['Load+Store Rate (GI/S)'] * 8
+        try:
+            out_row[RATE_L1_GB_P_S]  = out_row['Load+Store Rate (GI/S)'] * 8
+        except:
+            out_row[RATE_L1_GB_P_S]  = np.nan
 
     
     try:
@@ -339,7 +342,8 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
     if skip_energy:
         return
     def calculate_from_counter(counter, alt_counter):
-        energy = getter(in_row, counter, alt_counter, default=None)
+        #energy = getter(in_row, counter, alt_counter, default=None)
+        energy = getter(in_row, counter, alt_counter, default=np.nan)
         return (energy * getter(in_row, 'energy.unit') * iterations_per_rep)
 
     def calculate_total_pkg_energy():
@@ -349,7 +353,7 @@ def calculate_energy(out_row, in_row, iterations_per_rep, time, num_ops, ops_per
 
     def calculate_derived_metrics(kind, energy):
         out_row[MN.energy(kind)] = energy
-        out_row[MN.power(kind)] = energy / time
+        out_row[MN.power(kind)] = energy / time if time != 0 else np.nan
         calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec)
 
     # Can extend to report PP0, PP1 but ignore for now.
@@ -369,11 +373,11 @@ def calculate_speculation_ratios(out_row, in_row):
     try:
         out_row[BRANCHES_MISP_PCT] = 100 * getter(in_row, 'BR_MISP_RETIRED_ALL_BRANCHES') / getter(in_row, 'BR_INST_RETIRED_ALL_BRANCHES')
     except:
-        pass
+        out_row[BRANCHES_MISP_PCT] = np.nan
     try:
         out_row[EXE_PER_RET_UOPS] = getter(in_row, 'UOPS_EXECUTED_CORE', 'UOPS_EXECUTED_THREAD') / getter(in_row, 'UOPS_RETIRED_ALL')
     except:
-        return
+        out_row[EXE_PER_RET_UOPS] = np.nan
 
 def calculate_lfb_histogram(out_row, row, enable_lfb):
     if not enable_lfb:

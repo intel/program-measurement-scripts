@@ -407,9 +407,18 @@ def find_vector_ext(op_counts):
     return vector_ext_str(out)
 
 def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
-    out_row[MetricName.epo(kind)] = energy / num_ops
-    out_row[MetricName.rpe(kind)] = ops_per_sec / energy if energy != 0 else math.nan
-    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy if energy != 0 else math.nan
+    try:
+        out_row[MetricName.epo(kind)] = energy / num_ops
+    except:
+        out_row[MetricName.epo(kind)] = math.nan
+    try:
+        out_row[MetricName.rpe(kind)] = ops_per_sec / energy 
+    except:
+        out_row[MetricName.rpe(kind)] = math.nan
+    try:
+        out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    except:
+        out_row[MetricName.rope(kind)] = math.nan
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
