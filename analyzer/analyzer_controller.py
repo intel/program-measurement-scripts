@@ -102,6 +102,10 @@ class AnalyzerController:
         self.gui.set_labels(metrics)
         #self.loadedData.levelData[level].guiState.setLabels(metrics)
 
+    def adjust_text(self):
+        self.gui.adjust_text()
+        
+
 
     #TODO: Possibly unhighlight any other highlighted points or show all points to begin with
     # def A_filter(self, relate, metric, threshold, level):

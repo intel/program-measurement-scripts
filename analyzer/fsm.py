@@ -137,6 +137,7 @@ class FSM(Observable):
         # Auto-select plot
         self.control.change_current_level_plot_tab('Summary')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.TIME_LOOP_S, x_scale='linear', y_scale='log')
+        self.control.adjust_text()
         self.updated_notify_observers()
 
     def returnFromMemLevelAdded(self):
@@ -171,6 +172,7 @@ class FSM(Observable):
         print("In SCurve")
         # Auto-select plot
         self.control.change_current_level_plot_tab('S-Curve')
+        self.control.adjust_text()
         self.updated_notify_observers()
 
     def UCurve(self):
@@ -190,6 +192,7 @@ class FSM(Observable):
         # Auto-select plot
         self.control.change_current_level_plot_tab('QPlot')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.CAP_L1_GB_P_S, x_scale=None, y_scale=None)
+        self.control.adjust_text()
         self.updated_notify_observers()
 
     def MaxArithIntensityPlot(self):
@@ -197,6 +200,7 @@ class FSM(Observable):
         # Auto-select plot
         self.control.change_current_level_plot_tab('QPlot')
         self.control.set_plot_axes(x_axis=None, y_axis=MN.CAP_MEMMAX_GB_P_S, x_scale=None, y_scale=None)
+        self.control.adjust_text()
         self.updated_notify_observers()
 
     def setControl(self, control):

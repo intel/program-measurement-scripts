@@ -198,6 +198,9 @@ class PlotTab(AnalyzerTab):
     
     def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
         self.axesTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+    # This call is from outside (e.g. controller)
+    def adjust_text(self):
+        self.adjustText()
     
     def toggleLabels(self):
         alpha = 1

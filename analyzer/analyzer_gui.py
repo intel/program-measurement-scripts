@@ -70,6 +70,9 @@ class TabTrackingNB(ttk.Notebook):
         #self.get_current_tab().set_plot_axes(x_scale, y_scale, x_axis, y_axis)
         self.currentTab.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
 
+    def adjust_text(self):
+        self.currentTab.adjust_text()
+
     def update_currentTab(self):
         if self.currentTab:
             self.currentTab.hide()
@@ -160,6 +163,10 @@ class LevelContainerTab(HideableTab):
 
     def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
         self.plot_note.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+
+    def adjust_text(self):
+        self.plot_note.adjust_text()
+        
         
     def getPausables(self):
         return [self.levelData] if self.levelData else []
@@ -519,6 +526,9 @@ class AnalyzerGui(tk.Frame):
 
     def set_plot_axes(self, x_scale, y_scale, x_axis, y_axis):
         self.level_plot_note.set_plot_axes(x_scale, y_scale, x_axis, y_axis)
+
+    def adjust_text(self):
+        self.level_plot_note.adjust_text()
 
 def on_closing(root):
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
