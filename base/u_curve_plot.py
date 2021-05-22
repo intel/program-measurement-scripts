@@ -44,6 +44,7 @@ unitSpeedupRank = (leRank + geRank)/2
 combinedDf['URank'] = combinedDf['URank'] - unitSpeedupRank
 
 combinedDf[MN.NAME]=combinedDf[MN.NAME].str.replace('LinAlg: ','').str.replace('.c_de','').str.replace('-extern-assign-','-').str.replace('I1a','')
+combinedDf[MN.NAME]=combinedDf[MN.NAME].str.replace('M1abc-9','MO1abc-9').str.replace('M1abc-unrjam','M1abc')
 
 
 #plt.stem(combinedDf['URank'], combinedDf['uspeedup_uiuc_intel'])
