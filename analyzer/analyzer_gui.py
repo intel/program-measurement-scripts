@@ -144,7 +144,7 @@ class LevelContainerTab(HideableTab):
         self.plot_note.pack(side = tk.TOP, expand=True)
         self.data_note.pack(side = tk.BOTTOM, expand=True)
         plotPw.add(self.plot_note, stretch='always')
-        plotPw.add(self.data_note, stretch='always')
+        plotPw.add(self.data_note, stretch='always', height='5c')
         plotPw.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.levelData = None
 
@@ -326,7 +326,7 @@ class AnalyzerGui(tk.Frame):
         self.global_note.add(self.guide_tab, text='Guide')
 
         self.global_note.pack(side = tk.BOTTOM, fill=tk.BOTH, expand=True)
-        self.pw.add(self.global_note, stretch='never')
+        self.pw.add(self.global_note, stretch='never', height='6.35c')
 
         self.pw.pack(fill=tk.BOTH, expand=True)
         self.pw.configure(sashrelief=tk.RAISED)
@@ -548,7 +548,7 @@ if __name__ == '__main__':
     # Set opening window to portion of user's screen wxh
     width  = root.winfo_screenwidth()
     height = root.winfo_screenheight()
-    root.geometry('%sx%s' % (int(width/1.2), int(height/1.2)))
+    root.geometry('%sx%s' % (int(width/1.1), int(height/1.1)))
     #root.geometry(f'{width}x{height}')
 
     # The AnalyzerGui is global so that the data source panel can access it
