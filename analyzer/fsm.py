@@ -38,7 +38,8 @@ class FSM(Observable):
                 {'trigger':'showRankOrder', 'source':'MemLevelAdded', 'dest':'RankOrderPlot', 'after':'RankOrderPlot'},
                 {'trigger':'showSCurve', 'source':'RankOrderPlot', 'dest':'SCurve', 'after':'SCurve'},
                 {'trigger':'showUCurve', 'source':'SCurve', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'before':'leavingHtml', 'after':'L1ArithIntensityPlot'},
+                {'trigger':'back2RankOrder', 'source':'UCurve', 'dest':'RankOrderReplot', 'before':'leavingHtml', 'after':'RankOrderReplot'},
+                {'trigger':'showL1ArithIntensity', 'source':'RankOrderReplot', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'showMaxArithIntensity', 'source':'L1ArithIntensityPlot', 'dest':'MaxArithIntensityPlot', 'after':'MaxArithIntensityPlot'},
 
                 # {'trigger':'showRankOrder', 'source':'BeginAnalysis', 'dest':'RankOrderPlot', 'after':'RankOrderPlot'},
@@ -52,9 +53,10 @@ class FSM(Observable):
                 # {'trigger':'previous', 'source':'SWBiasResults', 'dest':'SIDOResults', 'after':'SIDOResults'},
                 # {'trigger':'previous', 'source':'SIDOResults', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'MaxArithIntensityPlot', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
-                {'trigger':'previous', 'source':'L1ArithIntensityPlot', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'previous', 'source':'SCurve', 'dest':'RankOrderPlot', 'before':'leavingHtml', 'after':'RankOrderPlot'},
+                {'trigger':'previous', 'source':'L1ArithIntensityPlot', 'dest':'RankOrderReplot', 'after':'RankOrderReplot'},
+                {'trigger':'previous', 'source':'RankOrderReplot', 'dest':'UCurve', 'after':'UCurve'},
                 {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'after':'SCurve'},
+                {'trigger':'previous', 'source':'SCurve', 'dest':'RankOrderPlot', 'before':'leavingHtml', 'after':'RankOrderPlot'},
                 {'trigger':'previous', 'source':'RankOrderPlot', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'previous', 'source':'MemLevelAdded', 'before':'returnFromMemLevelAdded', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'previous', 'source':'TimeSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
@@ -70,6 +72,7 @@ class FSM(Observable):
                                   'showRankOrder': 'Show Rank Order (showRankOrder)', 
                                   'showSCurve': 'Show S-Curve (showSCurve)', 
                                   'showUCurve': 'Show U-Curve (showUCurve)', 
+                                  'back2RankOrder': 'Show Rank Order again (back2RankOrder)', 
                                   'showL1ArithIntensity': 'Show L1 Arithmetic Intensity (showL1ArithIntensity)', 
                                   'showMaxArithIntensity': 'Show Max Arithmetic Intensity (showMaxArithIntensity)', 
                                   'sidoAnalysis': 'SIDO Analysis (sidoAnalysis)', 
@@ -173,6 +176,13 @@ class FSM(Observable):
 
     def RankOrderPlot(self):
         print("In RankOrderPlot")
+        # Auto-select plot
+        self.control.change_current_level_plot_tab('Rank Order')
+        self.control.adjust_text()
+        self.updated_notify_observers()
+
+    def RankOrderReplot(self):
+        print("In RankOrderReplot")
         # Auto-select plot
         self.control.change_current_level_plot_tab('Rank Order')
         self.control.adjust_text()
