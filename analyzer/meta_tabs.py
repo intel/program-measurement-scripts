@@ -626,12 +626,13 @@ class GuideTab(tk.Frame):
             self.fsm = fsm
 
         def notify(self, observable):
+            # not to reset state (for demo or is right behavior in general - to explore)
+            return
             self.fsm.reset_state()
             
             
     def setLoadedData(self, loadedData):
-        #loadedData.add_observer(GuideTab.FsmResetter(self.fsm))
-        pass
+        loadedData.add_observer(GuideTab.FsmResetter(self.fsm))
      
     def create_fsm_buttons(self):
         self.button_map = dict()
