@@ -127,8 +127,8 @@ class LevelContainerTab(HideableTab):
         self.addPlotTab(SIPlotTab(self.plot_note, container), name='SI Plot')
         self.addPlotTab(CustomTab(self.plot_note, container), name='Custom')
         # self.addPlotTab(self.3dTab, name='3D')
-        # self.addPlotTab(self.scurveTab, name='S-Curve (Bins)')
-        self.addPlotTab(ScurveAllTab(self.plot_note, container), name='S-Curve')
+        # self.addPlotTab(self.scurveTab, name='Rank Order (Bins)')
+        self.addPlotTab(ScurveAllTab(self.plot_note, container), name='Rank Order')
         self.addPlotTab(SWbiasTab(self.plot_note, container), name='SWbias')
         # Create Per Level Tabs Underneath Plot Notebook
         self.data_note = TabTrackingNB(plotPw)

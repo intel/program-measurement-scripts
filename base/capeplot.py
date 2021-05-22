@@ -475,7 +475,7 @@ class CapePlot:
         self.plot_adjustable(scale)
 
     def get_names(self):
-        # This is subclassed by S-Curve to return the ordered encoded names
+        # This is subclassed by Rank Order to return the ordered encoded names
         return self.guiState.get_encoded_names(self.df).tolist()
 
         

@@ -23,7 +23,7 @@ class ScurveAllData(PlotAnalyzerData):
     #     print("Scurve_allData Notified from ", loadedData)
     #     super().notify(loadedData, update, variants, mappings)
     #     # Generate Plot 
-    #     # plot = ScurveAllPlot(self.capacityDataItems, self.loadedData, level, 'ORIG', 'test', scale, 'S-Curve All', no_plot=False, gui=True, 
+    #     # plot = ScurveAllPlot(self.capacityDataItems, self.loadedData, level, 'ORIG', 'test', scale, 'Rank Order All', no_plot=False, gui=True, 
     #     #                      x_axis=x_axis, y_axis=y_axis, 
     #     #                      mappings=self.mappings, short_names_path=self.gui.loadedData.short_names_path)
     #     # plot.compute_and_plot()
@@ -49,6 +49,6 @@ class ScurveAllTab(PlotTab):
 
     def mk_plot(self):
         return ScurveAllPlot()
-        # return ScurveAllPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'S-Curve All', no_plot=False, gui=True, 
+        # return ScurveAllPlot(self.analyzerData.capacityDataItems, self.analyzerData.levelData, self.analyzerData.level, 'ORIG', 'test', self.analyzerData.scale, 'Rank Order All', no_plot=False, gui=True, 
         #                      x_axis=self.analyzerData.x_axis, y_axis=self.analyzerData.y_axis, 
         #                      mappings=self.mappings, short_names_path=self.analyzerData.short_names_path)

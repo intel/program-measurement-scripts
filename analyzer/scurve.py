@@ -22,7 +22,7 @@ class ScurveData(PlotAnalyzerData):
     #     print("ScurveData Notified from ", loadedData)
     #     super().notify(loadedData, update, variants, mappings)
     #     # Generate Plot 
-    #     scurve_df, self.fig, self.plotData = scurve_plot(self.df.copy(deep=True), 'test', scale, 'S-Curve', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
+    #     scurve_df, self.fig, self.plotData = scurve_plot(self.df.copy(deep=True), 'test', scale, 'Rank Order', False, gui=True, x_axis=x_axis, y_axis=y_axis, \
     #             mappings=self.mappings, variants=self.variants, short_names_path=self.gui.loadedData.short_names_path)
     #     self.notify_observers()
 

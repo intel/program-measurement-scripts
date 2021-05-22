@@ -642,7 +642,7 @@ class GuideTab(tk.Frame):
         # self.previous_button = self.mk_button(text='Previous', command=self.fsm.previous)
         # self.abeg_1a_button = self.mk_button(text='Application Coverage (CoverageSummary)', command=self.fsm.appCoverage)
         # self.abeg_1b_button = self.mk_button(text='Library Time (TimeSummary)', command=self.fsm.libTime)
-        # self.abeg_2a_button = self.mk_button(text='Show S-Curve (showSCurve)', command=self.fsm.showSCurve)
+        # self.abeg_2a_button = self.mk_button(text='Show Rank Order (showRankOrder)', command=self.fsm.showRankOrder)
         # self.abeg_2b_button = self.mk_button(text='Show U-Curve (showUCurve)', command=self.fsm.showUCurve)
         # self.abeg_3_button = self.mk_button(text='Show Arithmetic Intensity (showArithIntensity)', command=self.fsm.showArithIntensity)
         # self.sido_analysis_button = self.mk_button(text='SIDO Analysis (sidoAnalysis)', command=self.fsm.sidoAnalysis)

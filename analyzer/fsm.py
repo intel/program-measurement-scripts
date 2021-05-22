@@ -35,12 +35,13 @@ class FSM(Observable):
                 {'trigger':'appCoverage', 'source':'BeginAnalysis', 'dest':'CoverageSummary', 'after':'CoverageSummary'},
                 {'trigger':'libTime', 'source':'BeginAnalysis', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'showMemLevel', 'source':'TimeSummary', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
-                {'trigger':'showSCurve', 'source':'MemLevelAdded', 'dest':'SCurve', 'after':'SCurve'},
+                {'trigger':'showRankOrder', 'source':'MemLevelAdded', 'dest':'RankOrderPlot', 'after':'RankOrderPlot'},
+                {'trigger':'showSCurve', 'source':'RankOrderPlot', 'dest':'SCurve', 'after':'SCurve'},
                 {'trigger':'showUCurve', 'source':'SCurve', 'dest':'UCurve', 'after':'UCurve'},
                 {'trigger':'showL1ArithIntensity', 'source':'UCurve', 'dest':'L1ArithIntensityPlot', 'before':'leavingHtml', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'showMaxArithIntensity', 'source':'L1ArithIntensityPlot', 'dest':'MaxArithIntensityPlot', 'after':'MaxArithIntensityPlot'},
 
-                # {'trigger':'showSCurve', 'source':'BeginAnalysis', 'dest':'SCurve', 'after':'SCurve'},
+                # {'trigger':'showRankOrder', 'source':'BeginAnalysis', 'dest':'RankOrderPlot', 'after':'RankOrderPlot'},
                 # {'trigger':'showUCurve', 'source':'BeginAnalysis', 'dest':'UCurve', 'after':'UCurve'},
                 # {'trigger':'showArithIntensity', 'source':'BeginAnalysis', 'dest':'ArithIntensityPlot', 'after':'ArithIntensityPlot'},
                 # {'trigger':'sidoAnalysis', 'source':'BeginAnalysis', 'dest':'SIDOResults', 'after':'SIDOResults'},
@@ -52,8 +53,9 @@ class FSM(Observable):
                 # {'trigger':'previous', 'source':'SIDOResults', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'MaxArithIntensityPlot', 'dest':'L1ArithIntensityPlot', 'after':'L1ArithIntensityPlot'},
                 {'trigger':'previous', 'source':'L1ArithIntensityPlot', 'dest':'UCurve', 'after':'UCurve'},
-                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'before':'leavingHtml', 'after':'SCurve'},
-                {'trigger':'previous', 'source':'SCurve', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
+                {'trigger':'previous', 'source':'SCurve', 'dest':'RankOrderPlot', 'before':'leavingHtml', 'after':'RankOrderPlot'},
+                {'trigger':'previous', 'source':'UCurve', 'dest':'SCurve', 'after':'SCurve'},
+                {'trigger':'previous', 'source':'RankOrderPlot', 'dest':'MemLevelAdded', 'after':'MemLevelAdded'},
                 {'trigger':'previous', 'source':'MemLevelAdded', 'before':'returnFromMemLevelAdded', 'dest':'TimeSummary', 'after':'TimeSummary'},
                 {'trigger':'previous', 'source':'TimeSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
                 {'trigger':'previous', 'source':'CoverageSummary', 'dest':'BeginAnalysis', 'after':'BeginAnalysis'},
@@ -65,6 +67,7 @@ class FSM(Observable):
                                   'appCoverage': 'Application Coverage (CoverageSummary)', 
                                   'libTime': 'Library Time (TimeSummary)', 
                                   'showMemLevel': 'Add Memory Hierachy Level to label (showMemLevel)', 
+                                  'showRankOrder': 'Show Rank Order (showRankOrder)', 
                                   'showSCurve': 'Show S-Curve (showSCurve)', 
                                   'showUCurve': 'Show U-Curve (showUCurve)', 
                                   'showL1ArithIntensity': 'Show L1 Arithmetic Intensity (showL1ArithIntensity)', 
@@ -73,7 +76,7 @@ class FSM(Observable):
                                   'swbiasReco': 'SWBias Recommendations (swbiasReco)', 
                                   'showOneview': 'Show Oneview (showOneview)'
                                   }
-        #states = ['INIT', 'Setup', 'BeginAnalysis', 'CoverageSummary', 'TimeSummary', 'SCurve', 'UCurve', 'ArithIntensityPlot',
+        #states = ['INIT', 'Setup', 'BeginAnalysis', 'CoverageSummary', 'TimeSummary', 'RankOrderPlot', 'UCurve', 'ArithIntensityPlot',
         #          ]
         # Collect all the states from source and dest and after for transitons
         states = self.sorted([trans[node] for trans in self.transitions for node in ['source', 'dest', 'after']])
@@ -168,11 +171,18 @@ class FSM(Observable):
         self.updated_notify_observers()
         
 
+    def RankOrderPlot(self):
+        print("In RankOrderPlot")
+        # Auto-select plot
+        self.control.change_current_level_plot_tab('Rank Order')
+        self.control.adjust_text()
+        self.updated_notify_observers()
+
     def SCurve(self):
         print("In SCurve")
         # Auto-select plot
-        self.control.change_current_level_plot_tab('S-Curve')
-        self.control.adjust_text()
+        self.control.load_url("file:///C:/Users/cwong29/Intel Corporation/Cape Project - Documents/Cape GUI Data/data_source/demo-may-2021/S-curve-mockup.html")
+        self.control.maximizeOneview()
         self.updated_notify_observers()
 
     def UCurve(self):
