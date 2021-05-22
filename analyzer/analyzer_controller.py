@@ -32,12 +32,16 @@ class AnalyzerController:
     def setLoadedData(self, loadedData):
         self.loadedData = loadedData
         self.gui.setLoadedData(self.loadedData)
+
+    def setLoadedDataNotifyAll(self, input_file):
+        self.setLoadedData(pickle.load(input_file))
+        self.loadedData.updated_notify_observers()
+        self.loadedData.updated_all_levels_notify_observers()
+        
         
     def loadState(self, input_path):
         with open(os.path.join(input_path, 'loadedData.pkl'), 'rb') as input_file:
-            self.setLoadedData(pickle.load(input_file))
-            self.loadedData.updated_notify_observers()
-            self.loadedData.updated_all_levels_notify_observers()
+            self.wait_for_work('Loading Analysis results', lambda: self.setLoadedDataNotifyAll(input_file))
 
     def saveState(self, output_path):
         with open(os.path.join(output_path, 'loadedData.pkl'), 'wb') as data_file:
