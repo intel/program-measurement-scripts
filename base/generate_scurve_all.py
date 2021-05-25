@@ -36,20 +36,18 @@ class ScurveAllPlot(CapePlot):
         mytext = self.mk_labels()
         # Created a rank order by sorting the values and using their new index as the x-axis
         temp_df = pd.DataFrame()
-        temp_df['x-metric'] = xs.tolist()
-        temp_df['y-metric'] = ys.tolist()
+        temp_df['y-metric'] = ys
         temp_df['label'] = mytext
         # Need to add the key metrics so we can label/color the sorted points
         temp_df[NAME] = self.df[NAME]
         temp_df[TIMESTAMP] = self.df[TIMESTAMP]
-        temp_df = temp_df.sort_values(by=['x-metric'])
-        mytexts = np.array(temp_df['label'].tolist())
-        ys = np.array(temp_df['y-metric'].tolist())
-        xs = np.array([i for i in range(len(ys))])
+        temp_df = temp_df.sort_values(by=['y-metric'])
+        temp_df['x-metric'] = [i for i in range(len(ys))]
+        mytexts = temp_df['label']
         self.ordered_key_metrics = temp_df[[NAME, TIMESTAMP]]
-        if x_axis: x_axis = 'Rank Order (' + x_axis + ')'
-        else: x_axis = 'Rank Order (' + self.default_x_axis + ')'
-        super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
+        x_axis = x_axis if x_axis else self.default_x_axis
+        x_axis = 'Rank Order (' + x_axis + ')'
+        super().plot_data(title, filename, temp_df['x-metric'], temp_df['y-metric'], mytexts, scale, df, \
             x_axis, y_axis, mappings)
 
     def get_names(self):
