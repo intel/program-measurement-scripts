@@ -262,10 +262,10 @@ class OneviewTab(tk.Frame):
         self.browser1 = BrowserFrame(self.window)
         self.window.add(self.browser1, stretch='always')
         self.addRefresh()
-        current_tab = gui.main_note.select()
-        gui.main_note.select(0)
+        # current_tab = gui.main_note.select()
+        # gui.main_note.select(0)
         self.update()
-        gui.main_note.select(current_tab)
+        # gui.main_note.select(current_tab)
         self.browser1.change_browser(url=self.urls[0])
 
     def loadSecondPage(self):
@@ -275,10 +275,10 @@ class OneviewTab(tk.Frame):
         self.window.add(self.browser1, stretch='always')
         self.window.add(self.browser2, stretch='always')
         self.addRefresh()
-        current_tab = gui.main_note.select()
-        gui.main_note.select(0)
+        # current_tab = gui.main_note.select()
+        # gui.main_note.select(0)
         self.update()
-        gui.main_note.select(current_tab)
+        # gui.main_note.select(current_tab)
         self.browser1.change_browser(url=self.urls[0])
         self.browser2.change_browser(url=self.urls[1])
 
