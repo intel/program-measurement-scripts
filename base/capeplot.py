@@ -457,8 +457,7 @@ class CapePlot:
     def update_contours(self):
         pass
 
-    @classmethod
-    def get_min_max(cls, xs, ys):
+    def get_min_max(self, xs, ys):
         finiteXs = xs[np.isfinite(xs)]
         finiteYs = ys[np.isfinite(ys)]
         xmax=max(finiteXs, default=1)*1.2

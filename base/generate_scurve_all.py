@@ -43,15 +43,20 @@ class ScurveAllPlot(CapePlot):
         temp_df[TIMESTAMP] = self.df[TIMESTAMP]
         temp_df = temp_df.sort_values(by=['y-metric'])
         temp_df['x-metric'] = [i for i in range(len(ys))]
-        mytexts = temp_df['label']
         self.ordered_key_metrics = temp_df[[NAME, TIMESTAMP]]
         x_axis = x_axis if x_axis else self.default_x_axis
         x_axis = 'Rank Order (' + x_axis + ')'
-        super().plot_data(title, filename, temp_df['x-metric'], temp_df['y-metric'], mytexts, scale, df, \
-            x_axis, y_axis, mappings)
+        #nonNullMask=~temp_df['y-metric'].isnull()
+        super().plot_data(title, filename, temp_df['x-metric'], temp_df['y-metric'], 
+                          temp_df['label'], scale, df, x_axis, y_axis, mappings)
 
     def get_names(self):
         return self.guiState.get_encoded_names(self.df.sort_values(by=[self.x_axis])).tolist()
+
+    def get_min_max(self, xs, ys):
+        x_largestNonNull = xs[~ys.isnull()].max()
+        xmin, xmax, ymin, ymax = super().get_min_max(xs, ys)
+        return xmin, min(xmax, x_largestNonNull), ymin, ymax
 
     def mk_mappings(self, mappings, df, x_axis, y_axis, xmax, ymax):
         # Mappings implementation not ready yet for s-curve
