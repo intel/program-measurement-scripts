@@ -41,7 +41,7 @@ class ScurveAllPlot(CapePlot):
         # Need to add the key metrics so we can label/color the sorted points
         temp_df[NAME] = self.df[NAME]
         temp_df[TIMESTAMP] = self.df[TIMESTAMP]
-        temp_df = temp_df.sort_values(by=['y-metric'])
+        temp_df = temp_df.sort_values(by=['y-metric'], ignore_index=True)
         temp_df['x-metric'] = [i for i in range(len(ys))]
         self.ordered_key_metrics = temp_df[[NAME, TIMESTAMP]]
         x_axis = x_axis if x_axis else self.default_x_axis
