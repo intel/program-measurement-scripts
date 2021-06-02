@@ -74,7 +74,7 @@ exe = EXE(pyz,
           name="Cape",
           strip=False,
           upx=False,
-          console=False)
+          console=True)
 
 #COLLECT(exe,
 #        a.binaries,

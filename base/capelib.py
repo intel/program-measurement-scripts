@@ -2,15 +2,55 @@ import re
 import math
 from collections import namedtuple
 import pandas as pd
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
 
 # Common routines needed for Cape tool chain
 
-Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
-    'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
+class Vecinfo:
+    def __init__(self, SUM=0, SC=0, XMM=0, YMM=0, ZMM=0, FMA=0, DIV=0, SQRT=0, RSQRT=0, RCP=0, CVT=0, PACK=0):
+        self.SUM = SUM
+        self.SC = SC
+        self.XMM = XMM
+        self.YMM = YMM
+        self.ZMM = ZMM
+        self.FMA = FMA
+        self.DIV = DIV
+        self.SQRT = SQRT
+        self.RSQRT = RSQRT
+        self.RCP = RCP
+        self.CVT = CVT
+        self.PACK = PACK
+
+    def __add__(self, other):
+        return Vecinfo(SUM = self.SUM + other.SUM, SC = self.SC + other.SC, XMM = self.XMM + other.XMM, 
+        YMM = self.YMM + other.YMM, ZMM = self.ZMM + other.ZMM, FMA = self.FMA + other.FMA, \
+        DIV = self.DIV + other.DIV, SQRT = self.SQRT + other.SQRT, RSQRT = self.RSQRT + other.RSQRT, \
+        RCP = self.RCP + other.RCP, CVT = self.CVT + other.CVT, PACK = self.PACK + other.PACK)
+
+    @classmethod
+    def from_dict(cls, dict):
+        created = cls()
+        for key, value in dict.items():
+            if key in vars(created):
+                setattr(created, key, value)
+            else:
+                raise AttributeError('Attempt to set invalid attribute \'{}\''.format(key))
+        return created
+
+    def __str__(self):
+        return str(vars(self))
+
+    
+
+# Vecinfo = namedtuple('Vecinfo', ['SUM','SC','XMM','YMM','ZMM', 'FMA', \
+#     'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT'])
+# # Allows defaults values 
+# # See: https://stackoverflow.com/questions/11351032/named-tuple-and-default-values-for-optional-keyword-arguments
+# Vecinfo.__new__.__defaults__ = (0,)*len(Vecinfo._fields)
+
 
 # This function should be called instead of individual calls of
 # add_one_mem_max_level_columns() to ensure consistent thresholds being computed
@@ -53,11 +93,11 @@ def nan2zero(v):
 # For CQA metrics
 def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     vec_ops = all_ops = vec_insts = all_insts = fma_ops = fma_insts = 0
-    itypes = ['FMA', 'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT']
+    itypes = ['FMA', 'DIV', 'SQRT', 'RSQRT', 'RCP', 'CVT', 'PACK']
     ops_dict = {itype : 0 for itype in itypes}
     inst_dict = {itype : 0 for itype in itypes}
 
-    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
+    def calculate_rate_and_counts(op_rate_name, op_count_name, inst_rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
@@ -68,7 +108,13 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             nonlocal ops_dict
             nonlocal inst_dict
             cnts_per_iter, inst_cnts_per_iter = calculate_counts_per_iter(in_row)
-            out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            op_count_per_rep = (cnts_per_iter.SUM * iterations_per_rep) / 1E9 
+
+            if op_count_name:
+                out_row[op_count_name] =  op_count_per_rep
+                
+            out_row[op_rate_name] =  op_count_per_rep / time
+            if inst_rate_name: out_row[inst_rate_name] = (inst_cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
                 vec_ops += nan2zero(cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
@@ -84,11 +130,12 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, False)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, COUNT_FP_GFLOP, None, calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, None, None, calculate_iops_counts_per_iter, True)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
-    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
-    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, calculate_memops_counts_per_iter, True)
+    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, None, None, calculate_cvtops_counts_per_iter, True)
+    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, None, None, calculate_packops_counts_per_iter, True)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, None, RATE_LDST_GI_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
     out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0
@@ -105,8 +152,9 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             # Just set to CQA value for now.  (Pending check with Emmanuel)
             out_row[COUNT_INSTS_VEC_PCT] = cqa_vec_ratio
     except:
-        pass
-    out_row[COUNT_VEC_TYPE_OPS_PCT]=find_vector_ext(flop_cnts_per_iter, iop_cnts_per_iter)
+        pass 
+    out_row[COUNT_VEC_TYPE_OPS_PCT] = find_vector_ext (flop_cnts_per_iter + iop_cnts_per_iter 
+         + memop_cnts_per_iter + cvt_cnts_per_iter + pack_cnts_per_iter)
 
 
 def calculate_flops_counts_per_iter(in_row):
@@ -174,11 +222,65 @@ def calculate_flops_counts_per_iter(in_row):
             # Multiple to get count for all cores
             results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) \
                 for ops in [flops, flops_sc, flops_xmm, flops_ymm, flops_zmm, flops_fma, flops_div, flops_sqrt, flops_rsqrt, flops_rcp]]
-        return Vecinfo(*results, 0.0)
+        return Vecinfo(*results)
 
     flops_counts = calculate_flops_counts_with_weights(in_row, 0.5, 1, 2, 4, 8, 2)
     insts_counts = calculate_flops_counts_with_weights(in_row, 1, 1, 1, 1, 1, 1)
     return flops_counts, insts_counts
+
+# Calculate instruction and operation counts per iteration
+# opc_table is a table with Units in Bytes
+# Example of opc_table:
+#  opc_table = [ 
+#     { 'Inst':'DQ2PS', 'SC': None, 'XMM':    16, 'YMM':    32, 'ZMM':   64},
+#     ...
+#     { 'Inst':'SS2SI', 'SC':    4, 'XMM':  None, 'YMM':  None, 'ZMM': None}
+#     ]
+# TODO: If this function works well, unify with other instruction counting.
+def calculate_ops_counts_per_iter(in_row, opc_table, op_type):
+    opc_df = pd.DataFrame(opc_table)
+    # Convert from bytes to DP (64-bit = 8B)
+    opc_df[['SC','XMM', 'YMM', 'ZMM']]=opc_df[['SC', 'XMM', 'YMM', 'ZMM']]/8
+    # Get a prefix of cvt instructions to match with in_row columns
+    cvt_col_prefixes = tuple(["Nb_insn_{}".format(inst) for inst in opc_df.Inst])
+    # Now we got the column names for cvt operations
+    cvt_col_names = [col for col in in_row.keys() if col.startswith(cvt_col_prefixes)]
+    opcount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
+    icount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
+    for cvt_col_name in cvt_col_names:
+        matchobj = re.search(r'Nb_insn_(.+?)_(.MM)$', cvt_col_name)
+        if matchobj:
+            inst = matchobj.group(1)
+            regtype = matchobj.group(2)
+        else:
+            # match again to get rid of Nb_insn_
+            matchobj = re.search(r'Nb_insn_(.+?)$', cvt_col_name)
+            inst = matchobj.group(1)
+            regtype = 'SC'
+        insts = in_row[cvt_col_name]
+        ops = insts * opc_df.loc[opc_df.Inst == inst, regtype].values[0]
+        opcount[regtype] += ops
+        opcount['SUM'] += ops
+        icount[regtype] += insts
+        icount['SUM'] += insts
+    icount[op_type] = icount['SUM']
+    opcount[op_type] = opcount['SUM']
+    return Vecinfo.from_dict(opcount), Vecinfo.from_dict(icount)
+
+def calculate_packops_counts_per_iter(in_row):
+    # Units in bytes
+    opc_table = [
+        { 'Inst':'INSERT/EXTRACT',  'SC': 4,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'COMPRESS/EXPAND', 'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'MMX_to/from',     'SC': 8,    'XMM': None, 'YMM': None, 'ZMM': None},
+        { 'Inst':'BLEND/MERGE',     'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'SHUFFLE/PERM',    'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'BROADCAST',       'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'GATHER/SCATTER',  'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'MASKMOV/MOV2M',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+        { 'Inst':'Other_packing',   'SC': None, 'XMM':   16, 'YMM':   32, 'ZMM':   64},
+    ]
+    return calculate_ops_counts_per_iter(in_row, opc_table, 'PACK')
 
 def calculate_cvtops_counts_per_iter(in_row):
     # Units in Bytes
@@ -205,36 +307,7 @@ def calculate_cvtops_counts_per_iter(in_row):
         { 'Inst':'SI2SD', 'SC':    8, 'XMM':  None, 'YMM':  None, 'ZMM': None},
         { 'Inst':'SS2SI', 'SC':    4, 'XMM':  None, 'YMM':  None, 'ZMM': None}
         ]
-    opc_df = pd.DataFrame(opc_table)
-    # Convert from bytes to DP (64-bit = 8B)
-    opc_df[['SC','XMM', 'YMM', 'ZMM']]=opc_df[['SC', 'XMM', 'YMM', 'ZMM']]/8
-    # Get a prefix of cvt instructions to match with in_row columns
-    cvt_col_prefixes = tuple(["Nb_insn_{}".format(inst) for inst in opc_df.Inst])
-    # Now we got the column names for cvt operations
-    cvt_col_names = [col for col in in_row.keys() if col.startswith(cvt_col_prefixes)]
-    opcount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
-    icount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
-    for cvt_col_name in cvt_col_names:
-        matchobj = re.search(r'Nb_insn_(.+?)_(.MM)$', cvt_col_name)
-        if matchobj:
-            inst = matchobj.group(1)
-            regtype = matchobj.group(2)
-        else:
-            # match again to get rid of Nb_insn_
-            matchobj = re.search(r'Nb_insn_(.+?)$', cvt_col_name)
-            inst = matchobj.group(1)
-            regtype = 'SC'
-        insts = in_row[cvt_col_name]
-        ops = insts * opc_df.loc[opc_df.Inst == inst, regtype].values[0]
-        opcount[regtype] += ops
-        opcount['SUM'] += ops
-        icount[regtype] += insts
-        icount['SUM'] += insts
-        
-    return Vecinfo(opcount['SUM'], opcount['SC'], opcount['XMM'], opcount['YMM'], opcount['ZMM'], 
-                   0, 0, 0, 0, 0, opcount['SUM']), \
-                       Vecinfo(icount['SUM'], icount['SC'], icount['XMM'], icount['YMM'], icount['ZMM'], 
-                               0, 0, 0, 0, 0, icount['SUM'])
+    return calculate_ops_counts_per_iter(in_row, opc_table, 'CVT')
 
 def calculate_iops_counts_per_iter(in_row):
     def calculate_iops_counts_with_weights(in_row, w_sc, w_vec_xmm, w_vec_ymm, w_vec_zmm, w_sad, w_fma):
@@ -260,6 +333,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops_ymm += calculate_iops(w_vec_ymm, 'Nb_INT_logic_insn_{}_YMM', itypes)
         iops_zmm += calculate_iops(w_vec_zmm, 'Nb_INT_logic_insn_{}_ZMM', itypes)    
         # try to add the TEST, ANDN, FMA and SAD counts (they have not scalar count)
+        # TODO: Need to check why ANDN and TEST instructions are included in FMA counting.
         iops_fma_xmm = w_vec_xmm * (getter(in_row, 'Nb_INT_logic_insn_ANDN_XMM') + getter(in_row, 'Nb_INT_logic_insn_TEST_XMM')
                                  + w_fma * getter(in_row, 'Nb_INT_arith_insn_FMA_XMM'))
         iops_xmm += iops_fma_xmm
@@ -284,7 +358,7 @@ def calculate_iops_counts_per_iter(in_row):
         iops = iops_sc + iops_xmm + iops_ymm + iops_zmm
         results = [(ops * getter(in_row, 'decan_experimental_configuration.num_core')) \
             for ops in [iops ,iops_sc, iops_xmm, iops_ymm, iops_zmm, iops_fma, 0, 0, 0, 0]]
-        return Vecinfo(*results, 0.0)
+        return Vecinfo(*results)
 
     iops_counts = calculate_iops_counts_with_weights(in_row, w_sc=0.5, w_vec_xmm=2, w_vec_ymm=4, w_vec_zmm=8, w_sad=5, w_fma=2)
     insts_counts = calculate_iops_counts_with_weights(in_row, w_sc=1, w_vec_xmm=1, w_vec_ymm=1, w_vec_zmm=1, w_sad=1, w_fma=1)    
@@ -322,44 +396,58 @@ def calculate_memops_counts_per_iter(in_row):
 def vector_ext_str(type2percent):
     return ";".join("%s=%.1f%%" % (x, y * 100) for x, y in type2percent if not (y is None or y < 0.001 or (x == "SC" and y != 1)))
     
-def find_vector_ext(flop_counts, iop_counts):
-    if iop_counts is None:
-        iop_counts = Vecinfo(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    if flop_counts is None:
-        flop_counts = Vecinfo(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+def find_vector_ext(op_counts):
+    if op_counts is None:
+        op_counts = Vecinfo()
         
     out = zip([ "SC", "XMM", "YMM", "ZMM" ],
-              [ (getattr(flop_counts, metric) + getattr(iop_counts, metric)) / (flop_counts.SUM + iop_counts.SUM) \
-                  if flop_counts.SUM or iop_counts.SUM else None \
+              [ getattr(op_counts, metric) / (op_counts.SUM) \
+                  if op_counts.SUM  else None \
                       for metric in ["SC", "XMM", "YMM", "ZMM"] ])
     return vector_ext_str(out)
 
 def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
-    out_row[MetricName.epo(kind)] = energy / num_ops
-    out_row[MetricName.rpe(kind)] = ops_per_sec / energy
-    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    try:
+        out_row[MetricName.epo(kind)] = energy / num_ops
+    except:
+        out_row[MetricName.epo(kind)] = math.nan
+    try:
+        out_row[MetricName.rpe(kind)] = ops_per_sec / energy 
+    except:
+        out_row[MetricName.rpe(kind)] = math.nan
+    try:
+        out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    except:
+        out_row[MetricName.rope(kind)] = math.nan
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
     default_ = kwargs.pop('default', 0)
+    result = None
     for arg in argv:
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            # should use None test because 0 is valid number and considered False in Python.
-            return type_(in_row[arg] if in_row[arg] is not None else default_)
+            result = in_row[arg] if result is None or pd.isna(result) else result
+    if result is not None:
+        return type_(default_ if pd.isna(result) else result)
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):
-    keyColumns=[NAME, TIMESTAMP, VARIANT]
+    # keyColumns=[NAME, TIMESTAMP, VARIANT]
     timeColumns=[TIME_LOOP_S, TIME_APP_S]
     rateColumns=[RATE_FP_GFLOP_P_S]
-    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    # perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    perf_df = output_rows[KEY_METRICS + timeColumns + rateColumns]
 
-    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
-                              right_on=keyColumns, how='left')
-    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
-                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    # new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
+    #                           right_on=keyColumns, how='left')
+    # new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
+    #                           right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+                              right_on=KEY_METRICS, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+                              right_on=KEY_METRICS, suffixes=('_before', '_after'), how='left')
     for timeColumn in timeColumns: 
         new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
             new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
@@ -370,3 +458,28 @@ def compute_speedup(output_rows, mapping_df):
     retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
     retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
     return new_mapping_df[retainColumns]
+
+    
+def clear_dataframe(df):
+    df.drop(columns=df.columns, inplace=True)
+    df.drop(df.index, inplace=True)
+
+def replace_dataframe_content(to_df, from_df):
+    clear_dataframe(to_df)
+    for col in from_df.columns:
+        to_df[col] = from_df[col]
+
+def import_dataframe_columns(to_df, from_df, cols):
+    merged = pd.merge(left=to_df, right=from_df[KEY_METRICS+list(cols)], on=KEY_METRICS, how='left')      
+    merged = merged.set_index(to_df.index)
+    assert to_df[MetricName.NAME].equals(merged[MetricName.NAME])
+    assert to_df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+    for col in cols:
+        if col + "_y" in merged.columns and col + "_x" in merged.columns:
+            # _y is incoming df data so use it and fill in _x (original) if missing
+            merged[col] = merged[col + "_y"].fillna(merged[col + "_x"])
+        to_df[col] = merged[col]
+    
+def append_dataframe_rows(df, append_df):
+    merged = df.append(append_df, ignore_index=True)
+    replace_dataframe_content(df, merged)
