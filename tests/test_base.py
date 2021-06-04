@@ -6,6 +6,7 @@ import os
 #sys.path.insert(0, 'c:\\Users\\cwong29\\OneDrive - Intel Corporation\\working\\Development\\Cape Analyzer\\master\\cape-experiment-scripts\\base')
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'base'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'analyzer'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'si_exp'))
 
 import unittest
 import pandas as pd
@@ -17,6 +18,7 @@ from metric_names import NonMetricName
 from generate_SI import NODE_UNIT_DICT
 from generate_SI import SiData
 from capeplot import CapacityData
+from test_automation import do_sat_analysis as do_sat_analysis_test_automation
 
 class TestGenerateSi(unittest.TestCase):
     def test_demo_may2021_row_norm(self):
@@ -77,6 +79,17 @@ class TestSiAnalysis(unittest.TestCase):
         self.assertTrue(cur_df[set(new_columns)-{'Normalized_Tier'}].equals(output_df[set(new_columns)-{'Normalized_Tier'}]))
         # Somehow the normalized Tier has rounding difference.
         self.assertTrue(np.isclose(cur_df['Normalized_Tier'], output_df['Normalized_Tier']).all())
+
+    def test_automation_standalone (self):
+        root = os.path.join(os.path.dirname(__file__), 'data', 'sat_analysis')
+        with open(os.path.join(root, 'test_automation-mainDataFrame.pkl'), 'rb') as infile: 
+            input_mainDataFrame = pickle.load(infile)
+        with open(os.path.join(root, 'test_automation-TestSetDF.pkl'), 'rb') as infile: 
+            input_TestSetDF = pickle.load(infile)
+        with open(os.path.join(root, 'test_automation-results.pkl'), 'rb') as infile: 
+            expected_results = pickle.load(infile)
+        results = do_sat_analysis_test_automation(input_mainDataFrame, input_TestSetDF)
+        self.assertTrue(results.equals(expected_results))
 
 
     def test_repeated_calls_df (self):
