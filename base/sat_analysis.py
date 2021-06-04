@@ -3,22 +3,24 @@ import sys
 sys.path.append('.\test_SI')
 #from test_SI import compute_and_plot
 #from test_SI import test_and_plot_orig
+from metric_names import MetricName
+from metric_names import NonMetricName
+from sw_bias import compute_sw_bias
 import openpyxl
 import openpyxl.chart
 import pandas as pd
 import numpy as np  
 import sys
-import re
 import importlib
+import re
 from pathlib import Path
-from metric_names import NonMetricName, MetricName, KEY_METRICS
+from metric_names import KEY_METRICS
 from generate_SI import compute_only
 from generate_SI import BASIC_NODE_SET
 from generate_SI import NODE_UNIT_DICT
 from generate_SI import SiData
 from capeplot import CapacityData
 from capeplot import NodeWithUnitData
-from sw_bias import compute_sw_bias
 import os
 # GUI import
 from utils import resource_path as gui_resource_path
@@ -123,6 +125,10 @@ result_df = pd.DataFrame(columns=column_names)
 ################################################################################
 # setting up excelsheet to color
 ################################################################################
+def load_workbook(tier_book_path):
+   if os.path.exists(tier_book_path):
+      return openpyxl.load_workbook(tier_book_path)
+   return  openpyxl.Workbook()
 
 ################################################################################
 # Coloring
