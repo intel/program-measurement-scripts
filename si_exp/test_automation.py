@@ -16,9 +16,6 @@ import re
 from pathlib import Path
 from os import path
 
-# csv to read should be first argument
-csvToRead = sys.argv[1]
-csvTestSet = sys.argv[2]
 # percent within max in column for color
 # TODO unused at the moment
 satThreshold = 0.10
@@ -764,9 +761,13 @@ def do_sat_analysis(satSetDF,testSetDF):
        stats_df.to_csv('statistcs.csv', mode='a', header=False, index=False)
     else :
        stats_df.to_csv('statistcs.csv', mode='w', header=True, index=False)
+    return result_df
 
 
 def main(argv):
+    # csv to read should be first argument
+    csvToRead = sys.argv[1]
+    csvTestSet = sys.argv[2]
     inputfile = []
     global satThreshold
     global cuSatThreshold
@@ -802,7 +803,7 @@ def main(argv):
     mainDataFrame[MetricName.RATE_FP_GFLOP_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)/8)
     if RUN_SI:
       #do_sat_analysis(mainDataFrame, TestSetDF[mask])
-      do_sat_analysis(mainDataFrame, TestSetDF)
+      results = do_sat_analysis(mainDataFrame, TestSetDF)
     if PRINT_ALL_CLUSTERS:
       find_all_clusters(mainDataFrame)
 

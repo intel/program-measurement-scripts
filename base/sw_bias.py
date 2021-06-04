@@ -9,8 +9,6 @@ def remove_prefix(str, prefix):
 
 # rhs conversion function
 def find_rhs_ops(val):
-   if 'None' in str(val):
-      return 0
    if val <=1:
       rhs_node = 1
    else:
@@ -57,8 +55,6 @@ def find_inst_set_factor(val):
 #If array utilization is less that 0.5 accounted to neg bias
 def find_clu_factor(clu_score):
    clu_str = str(clu_score)
-   if 'None' in clu_str:
-      return 0
     # Find the last element in the clu-score value
    clu_str = clu_str.replace(']', '')
    clu_str = clu_str.replace('[', '')
@@ -93,6 +89,7 @@ def find_recurrence_factor(val):
       rf = 1
    else:
       rf = 0
+   #print ("The recurrence string is : ", val, "returns value = ", rf)
    return rf
 
 def get_short_name(name):
@@ -154,10 +151,22 @@ def compute_sw_bias(mainDataFrame):
     if 'Nd_RHS' not in mainDataFrame.columns:
         mainDataFrame.insert(addAfterColumn, "Nd_RHS", ( mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)))
 
+    sw_bias_df['ShortName'] =  mainDataFrame['ShortName'].apply(get_short_name)
+    sw_bias_df['Nd_CNVT_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_CVT_PCT].apply(find_cnvt_ops_factor)
+    sw_bias_df['Nd_VEC_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_vec_ops)
+    sw_bias_df['Nd_DIV_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_DIV_PCT].apply(find_div_ops)
+    sw_bias_df['Nd_FMA_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_FMA_PCT].apply(find_fma_ops)
+    sw_bias_df['Nd_ISA_EXT_TYPE'] =  mainDataFrame[MetricName.COUNT_VEC_TYPE_OPS_PCT].apply(find_inst_set_factor)
+
+    sw_bias_df['Nd_clu_score'] =  mainDataFrame[MetricName.SRC_CLU_SCORE].apply(find_clu_factor)
+    sw_bias_df['Nd_Recurrence'] =  mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)
+    sw_bias_df['Nd_RHS'] =  mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)
+
     sw_bias_df['Neg_SW_Bias'] =  mainDataFrame['Neg_SW_Bias']
     sw_bias_df['Pos_SW_Bias'] =  mainDataFrame['Pos_SW_Bias']
     sw_bias_df['Net_SW_Bias'] =  mainDataFrame['Net_SW_Bias']
 
+    return sw_bias_df
 
 
 def main(argv):
