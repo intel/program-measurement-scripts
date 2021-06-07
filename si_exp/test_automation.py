@@ -14,7 +14,10 @@ import sys
 import importlib
 import re
 from pathlib import Path
-from os import path
+from generate_SI import compute_only
+from generate_SI import BASIC_NODE_SET
+from capeplot import CapacityData
+import os
 
 # percent within max in column for color
 # TODO unused at the moment
@@ -34,13 +37,14 @@ RUN_SI = True
 RUN_SW_BIAS = False
 
 CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
-CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE', MetricName.STALL_LB_PCT:'LB', MetricName.STALL_SB_PCT:'SB', MetricName.STALL_LM_PCT:'LM', MetricName.STALL_RS_PCT:'RS'}
+CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
 
 # No Frontend
 #CU_NODE_SET={'%lb', '%sb', '%lm', '%rs'}
 #CU_NODE_DICT={'%lb':'LB', '%sb':'SB', '%lm':'LM', '%rs':'RS'}
 
-BASIC_NODE_LIST=['L1', 'L2', 'L3', 'FLOP', 'VR', 'RAM']
+#BASIC_NODE_LIST=['L1', 'L2', 'L3', 'FLOP', 'VR', 'RAM']
+BASIC_NODE_LIST=list(BASIC_NODE_SET)
 
 # memory traffic
 trafficToCheck = [ MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S ]
@@ -83,7 +87,7 @@ result_df = pd.DataFrame(columns=column_names)
 # setting up excelsheet to color
 ################################################################################
 def load_workbook(tier_book_path):
-   if path.exists(tier_book_path):
+   if os.path.exists(tier_book_path):
       return openpyxl.load_workbook(tier_book_path)
    return  openpyxl.Workbook()
 
@@ -509,11 +513,13 @@ def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
         norm = "row"
         title = "SI"
         target_df = pd.DataFrame()
-        compute_and_plot('XFORM', swbias_cluster_df, outputfile, norm, title, chosen_node_set, target_df)
+        #compute_and_plot('XFORM', swbias_cluster_df, outputfile, norm, title, chosen_node_set, target_df)
+        my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(swbias_cluster_df, norm, testDF, chosen_node_set)
         peer_dfs = [swbias_cluster_df,test_swBias_df]
         final_df = concat_ordered_columns(peer_dfs)
         final_df.to_csv(outputfile, index = False, header=True)
-        bias_result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+        #bias_result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+        bias_result = True
         s_length = swbias_cluster_df['Saturation'].max() - swbias_cluster_df['Saturation'].min()
         i_length = swbias_cluster_df['Intensity'].max() - swbias_cluster_df['Intensity'].min()
         box_length = '{' + str(round(s_length, 2)) + ' , ' + str(round(i_length, 2)) + '}'
@@ -606,12 +612,24 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
             title = "SI"
             target_df = pd.DataFrame()
             #print ("calling SI Compute with nodes :", chosen_node_set)
-            compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
+            #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
+            satTrafficString = ", ".join(map(str, satTrafficList))
+
+            testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
+            testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
+            testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
+            peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
+            peer_codelet_df[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(peer_codelet_df)
+            peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
+            my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF, chosen_node_set)
+            cluster_name = str(codelet_tier) + ' ' + satTrafficString
+            my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
             peer_dfs = [peer_codelet_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
             sw_bias_df = compute_sw_bias(final_df)
             final_df = pd.merge(final_df, sw_bias_df)
-            result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+            #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
+            result = True
 
             #print ("Saturation of : ", short_name, " : ", final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Saturation'].item())
  
@@ -718,6 +736,9 @@ def find_all_clusters(satSetDF):
 
 def do_sat_analysis(satSetDF,testSetDF):
     short_name=''
+    nodes_without_units = {'LB', 'CU', 'VR', 'FLOP', 'L1', 'FE', 'RS', 'L2', 'L3', 'LM', 'SB', 'RAM'}
+    CapacityData(satSetDF).set_chosen_node_set(nodes_without_units).compute()
+    CapacityData(testSetDF).set_chosen_node_set(nodes_without_units).compute()
     # Creating an empty Dataframe with column names only
     #print("Empty Dataframe ", dfObj, sep='\n')
     global satThreshold;
