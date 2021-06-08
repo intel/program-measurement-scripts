@@ -1,8 +1,8 @@
 from openpyxl.utils.dataframe import dataframe_to_rows
 import sys
 sys.path.append('.\test_SI')
-from test_SI import compute_and_plot
-from test_SI import test_and_plot_orig
+#from test_SI import compute_and_plot
+#from test_SI import test_and_plot_orig
 from metric_names import MetricName
 from metric_names import NonMetricName
 from sw_bias import compute_sw_bias
@@ -162,7 +162,7 @@ def findMaxInColumnsToColor(data, main_traffic, cu_traffic):
   #for row in rowsToCheck:
   # columnIndex = data.columns.get_loc("SIMD_MEM_Intensity")
   #  if data.iloc[row, columnIndex] > 3:
-  #    coloured_maxOfColumn["SIMD_MEM_Intensity"].append(row);
+  #    coloured_maxOfColumn["SIMD_MEM_Intensity"].append(row)
 
 # Find max in traffic columns + perfcent columns, save to maxDict
 def findUniqueTiers(data, satList, tier):
@@ -325,9 +325,9 @@ def createSubcluster(data, subSatList, short_name):
         for column in subNodeTrafficToCheck:
           columnIndex = data.columns.get_loc(column)
           # init list of blocks to color 
-          num = (data.iloc[row, columnIndex])/100
-          if num <= 0.5:
-              maxOfColumn[column].append(row);
+          num = data.iloc[row, columnIndex]
+          if num <= 50:
+              maxOfColumn[column].append(row)
   else:
       for row in rowsToCheck:
         #print (row)
@@ -336,8 +336,8 @@ def createSubcluster(data, subSatList, short_name):
           # init list of blocks to color 
           columnIndex = data.columns.get_loc(column)
           num = data.iloc[row, columnIndex]
-          if num >= 0.5:
-              maxOfColumn[column].append(row);
+          if num >= 50:
+              maxOfColumn[column].append(row)
     #end columnfor
   #end rowfor
   codelet_list = maxOfColumn[column]
@@ -553,7 +553,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier):
     #full_df.to_csv(short_name + '_debug.csv', index = False, header=True)
 
     satTrafficList = []
-    codelet_tier = codelet_tier + 1;
+    codelet_tier = codelet_tier + 1
     #satThreshold = satThreshold*codelet_tier
     satThreshold = 0.1*codelet_tier
     max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)

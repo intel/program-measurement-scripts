@@ -13,7 +13,7 @@ import pandas as pd
 from generate_SI import compute_only
 #from sat_analysis import find_clusters
 from sat_analysis import do_sat_analysis
-from sat_analysis import SatAnalysisData
+from analyzer_model import SatAnalysisData
 from metric_names import NonMetricName
 from generate_SI import NODE_UNIT_DICT
 from generate_SI import SiData
