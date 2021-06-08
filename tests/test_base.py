@@ -70,6 +70,7 @@ class TestSiAnalysis(unittest.TestCase):
         start = time.time()
         SatAnalysisData(cur_df).set_chosen_node_set(chosen_node_set).compute()
         end = time.time()
+        # Before tuning, elapased times are : 83.6sec , 92.7sec, 80.9s, 78.4s, 79.1s
         print(f'Elapsed Time = {end-start} sec')
         new_columns = {'Nd_ISA_EXT_TYPE', 'Nd_RHS', 'SiSatNodes', 'Neg_SW_Bias', 'Nd_Recurrence', 
                        'Pos_SW_Bias', 'Nd_clu_score', 'Nd_CNVT_OPS', 'Nd_FMA_OPS', 'Nd_VEC_OPS', 
