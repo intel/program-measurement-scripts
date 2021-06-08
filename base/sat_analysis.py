@@ -565,6 +565,17 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
     global no_cluster
     global satThreshold
 
+    norm = "row"
+    title = "SI"
+    max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
+    mem_traffic_threshold = 0.1 * max_mem_traffic.item()
+    tstcdlt_TrafficToCheck = []
+    tstcdlt_TrafficToCheck.append(MetricName.RATE_FP_GFLOP_P_S)
+    for column in memTrafficToCheck:
+      columnIndex = testDF.columns.get_loc(column)
+      val = testDF.iloc[0, columnIndex]
+      if (val > mem_traffic_threshold):
+        tstcdlt_TrafficToCheck.append(column)
     while True:
       peer_cdlt_count = 0
       dfs = [satSetDF,testDF]
@@ -575,15 +586,6 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
       codelet_tier = codelet_tier + 1
       #satThreshold = satThreshold*codelet_tier
       satThreshold = 0.1*codelet_tier
-      max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
-      mem_traffic_threshold = 0.1 * max_mem_traffic.item()
-      tstcdlt_TrafficToCheck = []
-      tstcdlt_TrafficToCheck.append(MetricName.RATE_FP_GFLOP_P_S)
-      for column in memTrafficToCheck:
-        columnIndex = testDF.columns.get_loc(column)
-        val = testDF.iloc[0, columnIndex]
-        if (val > mem_traffic_threshold):
-            tstcdlt_TrafficToCheck.append(column)
       check_codlet_in_this_tier = checkCodeletTier(full_df, short_name, tstcdlt_TrafficToCheck, percentsToCheck, satTrafficList)
 
       # Print the tiering process : For debug only
@@ -604,22 +606,9 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
           #satSetDF.to_csv(short_name+'_tier_report.csv', index = True, header=True)
           peer_codelet_df = findPeerCodelets(satSetDF, trafficToCheck, percentsToCheck, satTrafficList, short_name)
           peer_cdlt_count = peer_codelet_df.shape[0]
-          sat_rng_string = ''
-          sat_node_string = ''
-          for i, elem in enumerate(satTrafficList):
-              if i:
-                  sat_rng_string += "], "
-              sat_rng_string += elem
-              sat_rng_string += ": ["
-              sat_rng_string += str(peer_codelet_df[elem].max())
-              sat_rng_string += "  "
-              sat_rng_string += str(peer_codelet_df[elem].min())
-              sat_rng_string += "] "
 
-          for i, elem in enumerate(satTrafficList):
-              if i:
-                sat_node_string += " , "
-              sat_node_string += elem
+          sat_rng_string = ', '.join([f'{elem}: [{peer_codelet_df[elem].max()}  {peer_codelet_df[elem].min()}]' for elem in satTrafficList])
+          sat_node_string = " , ".join(satTrafficList)
 
           if peer_cdlt_count >= 3:
               for elem in satTrafficList:
@@ -627,8 +616,6 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
                       #print (CU_NODE_DICT[elem])
                       chosen_node_set.add(CU_NODE_DICT[elem])
               outputfile = short_name + 'Tier_'+str(codelet_tier) + "_SI.csv"
-              norm = "row"
-              title = "SI"
               target_df = pd.DataFrame()
               #print ("calling SI Compute with nodes :", chosen_node_set)
               #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
@@ -683,49 +670,30 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
                   print (short_name, "Passed the SI Test =>")
                   si_passed +=1
                   findUniqueTiers(peer_codelet_df, satTrafficList, codelet_tier)
-                  result_df = result_df.append({'ShortName' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
-                    'Tier' : str(codelet_tier), 'Sat_Node' : sat_node_string, 'Sat_Range' : sat_rng_string, 'SI_Result' : 'Outside Box',
-                    'Box_Length' : box_length,
-                    'Box_Ratio' : box_ratio,
-                    'Variant' : codelet_variant,
-                    #'Set' : codelet_set,
-                    'GFlops' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, MetricName.RATE_FP_GFLOP_P_S].item(), 2),
-                    'Saturation' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Saturation'].item(), 2),
-                    'Intensity' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Intensity'].item(), 2),
-                    'SW_bias' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Net_SW_Bias'].item(), 2),
-                    'neg_bias[CNVT,DIV,clu_score,Rec,RHS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Neg_SW_bias_Vec'].item(),
-                    'pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Pos_SW_bias_Vec'].item(),
-                    'SW_bias_Result' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'SI_Result'].item(),
-                    'SW_bias_box_length' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Length'].item(),
-                    'SW_bias_box_ratio' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Ratio'].item(),
-                    'SW_bias_CLS_CDLTS' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'peer_codelet_cnt'].item()},
-                  ignore_index = True) 
-                  if DO_SUB_CLUSTERING:
-                    sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
-                    print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
               else:
                   print (short_name, "Failed the SI Test =>")
                   si_failed +=1
-                  if DO_SUB_CLUSTERING:
-                    sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
-                    print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
-                  result_df = result_df.append({'ShortName' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
-                              'Tier' : str(codelet_tier), 'Sat_Node' : sat_node_string, 'Sat_Range' : sat_rng_string, 'SI_Result' : 'Inside Box',
-                              'Box_Length' : box_length,
-                              'Box_Ratio' : box_ratio,
-                              'Variant' : codelet_variant,
-                              # 'Set' : codelet_set,
-                              'GFlops' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, MetricName.RATE_FP_GFLOP_P_S].item(), 2),
-                              'Saturation' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Saturation'].item(), 2),
-                              'Intensity' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Intensity'].item(), 2),
-                              'SW_bias' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Net_SW_Bias'].item(), 2),
-                              'neg_bias[CNVT,DIV,clu_score,Rec,RHS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Neg_SW_bias_Vec'].item(),
-                              'pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Pos_SW_bias_Vec'].item(),
-                              'SW_bias_Result' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'SI_Result'].item(),
-                              'SW_bias_box_length' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Length'].item(),
-                              'SW_bias_box_ratio' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Ratio'].item(),
-                              'SW_bias_CLS_CDLTS' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'peer_codelet_cnt'].item()},
-                  ignore_index = True)
+              if DO_SUB_CLUSTERING:
+                sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
+                print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
+              result_df = result_df.append({'ShortName' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
+                                            'Tier' : str(codelet_tier), 'Sat_Node' : sat_node_string, 'Sat_Range' : sat_rng_string, 
+                                            'SI_Result' : 'Outside Box' if result else 'Inside Box',
+                                            'Box_Length' : box_length,
+                                            'Box_Ratio' : box_ratio,
+                                            'Variant' : codelet_variant,
+                                            # 'Set' : codelet_set,
+                                            'GFlops' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, MetricName.RATE_FP_GFLOP_P_S].item(), 2),
+                                            'Saturation' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Saturation'].item(), 2),
+                                            'Intensity' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Intensity'].item(), 2),
+                                            'SW_bias' : round(final_df.loc[final_df[MetricName.SHORT_NAME] == short_name, 'Net_SW_Bias'].item(), 2),
+                                            'neg_bias[CNVT,DIV,clu_score,Rec,RHS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Neg_SW_bias_Vec'].item(),
+                                            'pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Pos_SW_bias_Vec'].item(),
+                                            'SW_bias_Result' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'SI_Result'].item(),
+                                            'SW_bias_box_length' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Length'].item(),
+                                            'SW_bias_box_ratio' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'Box_Ratio'].item(),
+                                            'SW_bias_CLS_CDLTS' : bias_res_df.loc[bias_res_df[MetricName.SHORT_NAME] == short_name, 'peer_codelet_cnt'].item()},
+                                           ignore_index = True)
 
               if DO_DEBUG_LOGS:
                 final_df.to_csv(short_name+'_report.csv', index = True, header=True)
