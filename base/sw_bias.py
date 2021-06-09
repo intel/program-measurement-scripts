@@ -152,19 +152,9 @@ def compute_sw_bias(mainDataFrame):
         mainDataFrame.insert(addAfterColumn, "Nd_RHS", ( mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)))
 
     sw_bias_df['ShortName'] =  mainDataFrame['ShortName'].apply(get_short_name)
-    sw_bias_df['Nd_CNVT_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_CVT_PCT].apply(find_cnvt_ops_factor)
-    sw_bias_df['Nd_VEC_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_VEC_PCT].apply(find_vec_ops)
-    sw_bias_df['Nd_DIV_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_DIV_PCT].apply(find_div_ops)
-    sw_bias_df['Nd_FMA_OPS'] =  mainDataFrame[MetricName.COUNT_OPS_FMA_PCT].apply(find_fma_ops)
-    sw_bias_df['Nd_ISA_EXT_TYPE'] =  mainDataFrame[MetricName.COUNT_VEC_TYPE_OPS_PCT].apply(find_inst_set_factor)
-
-    sw_bias_df['Nd_clu_score'] =  mainDataFrame[MetricName.SRC_CLU_SCORE].apply(find_clu_factor)
-    sw_bias_df['Nd_Recurrence'] =  mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)
-    sw_bias_df['Nd_RHS'] =  mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)
-
-    sw_bias_df['Neg_SW_Bias'] =  mainDataFrame['Neg_SW_Bias']
-    sw_bias_df['Pos_SW_Bias'] =  mainDataFrame['Pos_SW_Bias']
-    sw_bias_df['Net_SW_Bias'] =  mainDataFrame['Net_SW_Bias']
+    columns_to_copy = [ 'Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 
+                       'Nd_Recurrence', 'Nd_RHS', 'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias' ]
+    sw_bias_df[columns_to_copy] = mainDataFrame[columns_to_copy]
 
     return sw_bias_df
 
