@@ -419,7 +419,6 @@ def concat_ordered_columns(frames):
     return final_df[columns_ordered]
 
 def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList):
-    global result_df
     global si_passed
     global si_failed
     global no_cluster
@@ -447,7 +446,7 @@ def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTraf
             title = "SI"
             target_df = pd.DataFrame()
             #print ("calling SI Compute with nodes :", chosen_node_set)
-            sw_bias_df = compute_sw_bias(sub_cluster_df)
+            #sw_bias_df = compute_sw_bias(sub_cluster_df)
             compute_and_plot('XFORM', sub_cluster_df, outputfile, norm, title, chosen_node_set, target_df)
             peer_dfs = [sub_cluster_df,testDF]
             final_df = concat_ordered_columns(peer_dfs)
@@ -508,16 +507,17 @@ def find_swbias_cluster(satSetDF, testDF, swbias_threshold):
          return satSetDF[~mask]
 
 def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
-    sw_bias_df = compute_sw_bias(peer_codelet_df)
-    peer_codelet_swBias_df = pd.merge(peer_codelet_df, sw_bias_df)
-    sw_bias_df = compute_sw_bias(testDF)
-     # get SW bias Vector
-    neg_bias_vec =[sw_bias_df['Nd_CNVT_OPS'].item(), sw_bias_df['Nd_DIV_OPS'].item(), sw_bias_df['Nd_clu_score'].item(),
-                   sw_bias_df['Nd_Recurrence'].item(), sw_bias_df['Nd_RHS'].item()] 
-    pos_bias_vec =[sw_bias_df['Nd_VEC_OPS'].item(), sw_bias_df['Nd_ISA_EXT_TYPE'].item(), sw_bias_df['Nd_FMA_OPS'].item()]
+    #sw_bias_df = compute_sw_bias(peer_codelet_df)
+    #peer_codelet_swBias_df = pd.merge(peer_codelet_df, sw_bias_df)
 
-    test_swBias_df = pd.merge(testDF, sw_bias_df)
-    swbias_cluster_df = find_swbias_cluster(peer_codelet_swBias_df, test_swBias_df, 0)
+    # sw_bias_df = compute_sw_bias(testDF)
+     # get SW bias Vector
+    neg_bias_vec =[testDF['Nd_CNVT_OPS'].item(), testDF['Nd_DIV_OPS'].item(), testDF['Nd_clu_score'].item(),
+                   testDF['Nd_Recurrence'].item(), testDF['Nd_RHS'].item()] 
+    pos_bias_vec =[testDF['Nd_VEC_OPS'].item(), testDF['Nd_ISA_EXT_TYPE'].item(), testDF['Nd_FMA_OPS'].item()]
+
+    # test_swBias_df = pd.merge(testDF, sw_bias_df)
+    swbias_cluster_df = find_swbias_cluster(peer_codelet_df, testDF, 0)
     cdlt_count = swbias_cluster_df.shape[0]
     chosen_node_set = set(BASIC_NODE_LIST)
     short_name = str(testDF.iloc[0][MetricName.SHORT_NAME])
@@ -532,7 +532,7 @@ def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
         target_df = pd.DataFrame()
         #compute_and_plot('XFORM', swbias_cluster_df, outputfile, norm, title, chosen_node_set, target_df)
         my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(swbias_cluster_df, norm, testDF, chosen_node_set)
-        peer_dfs = [swbias_cluster_df,test_swBias_df]
+        peer_dfs = [swbias_cluster_df,testDF]
         final_df = concat_ordered_columns(peer_dfs)
         final_df.to_csv(outputfile, index = False, header=True)
         #bias_result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
@@ -558,6 +558,7 @@ def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
         result_df = pd.DataFrame({MetricName.SHORT_NAME : short_name, 'peer_codelet_cnt' : 0,'SI_Result' : 'No Cluster',
         'Box_Length' : 0, 'Box_Ratio' : 0, 'Neg_SW_bias_Vec' : str(neg_bias_vec), 'Pos_SW_bias_Vec' : str(pos_bias_vec)}, index=[0])
     return result_df
+
 def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_test_codelets):
     global result_df
     global si_passed
@@ -590,16 +591,7 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
 
       # Print the tiering process : For debug only
       if PRINT_COLOURED_TIERS:
-        tier_book_path = short_name + "_tier.xlsx"
-        tier_book = load_workbook(tier_book_path);
-        highlightSheet = tier_book.create_sheet(short_name + "_" + str(codelet_tier), 0)
-        sheet_title = short_name + "_" + str(codelet_tier) + "_" + "Highlights"
-        # import all rows into xlsx package
-        for r in dataframe_to_rows(full_df, index=False, header=True):
-            highlightSheet.append(r)
-        findMaxInColumnsToColor(full_df, trafficToCheck, percentsToCheck)
-        colorMaxInColumn(full_df, coloured_maxOfColumn, opBlue, highlightSheet)
-        tier_book.save(tier_book_path)
+        print_coloured_tiers(short_name, codelet_tier, full_df)
       # Moved this out of if check so else part also have chosen_node_set defined.
       chosen_node_set = set(BASIC_NODE_LIST)
       if check_codlet_in_this_tier == True:
@@ -611,12 +603,13 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
           sat_node_string = " , ".join(satTrafficList)
 
           if peer_cdlt_count >= 3:
-              for elem in satTrafficList:
-                  if elem in CU_NODE_SET:
-                      #print (CU_NODE_DICT[elem])
-                      chosen_node_set.add(CU_NODE_DICT[elem])
-              outputfile = short_name + 'Tier_'+str(codelet_tier) + "_SI.csv"
-              target_df = pd.DataFrame()
+              chosen_node_set = chosen_node_set | {CU_NODE_DICT[n] for n in set(satTrafficList) & CU_NODE_SET} 
+              #for elem in satTrafficList:
+              #    if elem in CU_NODE_SET:
+              #        #print (CU_NODE_DICT[elem])
+              #        chosen_node_set.add(CU_NODE_DICT[elem])
+              #outputfile = short_name + 'Tier_'+str(codelet_tier) + "_SI.csv"
+              #target_df = pd.DataFrame()
               #print ("calling SI Compute with nodes :", chosen_node_set)
               #compute_and_plot('XFORM', peer_codelet_df, outputfile, norm, title, chosen_node_set, target_df)
               satTrafficString = ", ".join(map(str, satTrafficList))
@@ -628,22 +621,22 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
               peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
               peer_codelet_df[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(peer_codelet_df)
               peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
-              if RUN_SW_BIAS:
-                  compute_sw_bias(peer_codelet_df)
-                  compute_sw_bias(testDF)
+              # if RUN_SW_BIAS:
+              #     compute_sw_bias(peer_codelet_df)
+              #     compute_sw_bias(testDF)
               my_cluster_df, my_cluster_and_test_df, my_test_df = compute_only(peer_codelet_df, norm, testDF, chosen_node_set)
               s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
               peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
               my_test_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
-              if RUN_SW_BIAS:
-                  compute_sw_bias(my_test_df)
-                  compute_sw_bias(my_cluster_df)
+              # if RUN_SW_BIAS:
+              #     compute_sw_bias(my_test_df)
+              #     compute_sw_bias(my_cluster_df)
               all_test_codelets = all_test_codelets.append(my_test_df[NEEDED_TEST_DF_COLUMNS])
               my_cluster_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
               peer_dfs = [peer_codelet_df,testDF]
               final_df = concat_ordered_columns(peer_dfs)
-              sw_bias_df = compute_sw_bias(final_df)
-              final_df = pd.merge(final_df, sw_bias_df)
+              #sw_bias_df = compute_sw_bias(final_df)
+              #final_df = pd.merge(final_df, sw_bias_df)
               if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
                   all_clusters = all_clusters.append(my_cluster_df[NEEDED_CLUSTER_DF_COLUMNS])
               #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
@@ -701,17 +694,17 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
               # empty tuple more friendly to group by operations
               testDF[NonMetricName.SI_CLUSTER_NAME] = ''
               testDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testDF)
-              if RUN_SW_BIAS:
-                compute_sw_bias(testDF)
+              #if RUN_SW_BIAS:
+              #  compute_sw_bias(testDF)
               testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
               testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
               all_test_codelets = all_test_codelets.append(testDF[NEEDED_TEST_DF_COLUMNS])
               print (short_name, "No Cluster for the SI Test =>")
-              sw_bias_df = compute_sw_bias(testDF)
+              # sw_bias_df = compute_sw_bias(testDF)
               # get SW bias Vector
-              neg_bias_vec =[sw_bias_df['Nd_CNVT_OPS'].item(), sw_bias_df['Nd_DIV_OPS'].item(), sw_bias_df['Nd_clu_score'].item(),
-                            sw_bias_df['Nd_Recurrence'].item(), sw_bias_df['Nd_RHS'].item()] 
-              pos_bias_vec =[sw_bias_df['Nd_VEC_OPS'].item(), sw_bias_df['Nd_ISA_EXT_TYPE'].item(), sw_bias_df['Nd_FMA_OPS'].item()]
+              neg_bias_vec =[testDF['Nd_CNVT_OPS'].item(), testDF['Nd_DIV_OPS'].item(), testDF['Nd_clu_score'].item(),
+                            testDF['Nd_Recurrence'].item(), testDF['Nd_RHS'].item()] 
+              pos_bias_vec =[testDF['Nd_VEC_OPS'].item(), testDF['Nd_ISA_EXT_TYPE'].item(), testDF['Nd_FMA_OPS'].item()]
               no_cluster+=1
               findUniqueTiers(peer_codelet_df, satTrafficList, codelet_tier)
               result_df = result_df.append({'ShortName' : short_name, 'peer_codelet_cnt' : peer_cdlt_count,
@@ -722,13 +715,13 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
                           'pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]' : pos_bias_vec}, 
                           #testDF.loc[testDF[MetricName.SHORT_NAME] == short_name, 'Net_SW_Bias'].item()},
               ignore_index = True) 
+          break  # Done
       else:
           next_tier_df = findNextTierInColumns(satSetDF, trafficToCheck, percentsToCheck)
           #print ("next tier codelet count : ", next_tier_df.shape[0])
           if next_tier_df.shape[0] > 5 :
               #all_clusters, all_test_codelets = find_cluster(next_tier_df, testDF, short_name, codelet_tier, all_clusters, all_test_codelets)
               satSetDF = next_tier_df
-              continue
           else :
               # empty tuple more friendly to group by operations
               testDF[NonMetricName.SI_CLUSTER_NAME] = ''
@@ -741,8 +734,20 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
                                             'GFlops' : round(testDF.loc[testDF[MetricName.SHORT_NAME] == short_name, MetricName.RATE_FP_GFLOP_P_S].item(), 2),
                                             'SW_bias' : 0 }, #testDF.loc[testDF[MetricName.SHORT_NAME] == short_name, 'Net_SW_Bias'].item()},
                   ignore_index = True) 
-      break
+              break #Done
     return all_clusters, all_test_codelets
+
+def print_coloured_tiers(short_name, codelet_tier, full_df):
+    tier_book_path = short_name + "_tier.xlsx"
+    tier_book = load_workbook(tier_book_path);
+    highlightSheet = tier_book.create_sheet(short_name + "_" + str(codelet_tier), 0)
+    sheet_title = short_name + "_" + str(codelet_tier) + "_" + "Highlights"
+        # import all rows into xlsx package
+    for r in dataframe_to_rows(full_df, index=False, header=True):
+        highlightSheet.append(r)
+    findMaxInColumnsToColor(full_df, trafficToCheck, percentsToCheck)
+    colorMaxInColumn(full_df, coloured_maxOfColumn, opBlue, highlightSheet)
+    tier_book.save(tier_book_path)
 
 def find_all_clusters(satSetDF):
     global satThreshold;
@@ -775,6 +780,10 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     capsToRetain = [MetricName.capWUnit(n) for n in chosen_node_set]+[MetricName.CAP_ALLMAX_GB_P_S]
     #cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))+capsToRetain
     cols = set(satSetDF.columns) | set(KEY_METRICS) | set(capsToRetain)
+
+    compute_sw_bias(satSetDF)
+    compute_sw_bias(testSetDF)
+    cols = set(testSetDF.columns) | cols
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
         testDF = pd.DataFrame(columns=cols)
