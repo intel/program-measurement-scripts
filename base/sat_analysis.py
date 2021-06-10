@@ -396,6 +396,10 @@ def createSubcluster(data, subSatList, short_name):
 
 # Find max in traffic columns + perfcent columns, save to maxDict
 def findNextTierInColumns(data, traffic, cu_traffic):
+  thresholds = compute_node_thresholds(data, traffic, cu_traffic)
+  any_sat_mask = (data[traffic+cu_traffic] > thresholds[traffic+cu_traffic]).any(axis=1)
+  return data[~any_sat_mask]
+
   # get rows that we need to check
   rowsToCheck = data.index.tolist()
   target_df = pd.DataFrame(columns=data.columns.tolist())
