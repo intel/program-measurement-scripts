@@ -71,9 +71,11 @@ class TestSiAnalysis(unittest.TestCase):
         SatAnalysisData(cur_df).set_chosen_node_set(chosen_node_set).compute()
         end = time.time()
         # Before tuning, elapased times are : 
-        #       83.6s, 92.7s, 80.9s, 78.4s,    79.1s : median= 80.9s
+        #       83.6s, 92.7s, 80.9s, 78.4s,    79.1s : median = 80.9s
         # After removing redundant swbias calculation
-        #       56.6s, 61.7s, 61.6s, 64.376s,  61.4s : median= 61.6s
+        #       56.6s, 61.7s, 61.6s, 64.376s,  61.4s : median = 61.6s
+        # AFter simplifying tiering calls
+        #       6.4s,  9.1s,  7.9s,  8.9s,     9.1s  : median = 8.9s
         print(f'Elapsed Time = {end-start} sec')
         new_columns = {'Nd_ISA_EXT_TYPE', 'Nd_RHS', 'SiSatNodes', 'Neg_SW_Bias', 'Nd_Recurrence', 
                        'Pos_SW_Bias', 'Nd_clu_score', 'Nd_CNVT_OPS', 'Nd_FMA_OPS', 'Nd_VEC_OPS', 
