@@ -245,7 +245,7 @@ def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF):
   satSetDF = satdata
   thresholds = compute_node_thresholds(satSetDF, traffic, cu_traffic)
   results = testDF[traffic+cu_traffic] > thresholds
-  sat_strings = results.apply(lambda x:results.columns[x].to_list(), axis=1)
+  sat_strings = results.apply(lambda x: results.columns[x].to_list(), axis=1)
   # Assume 1 row for now, work on vectorization later
   codelet_in_this_tier = results.any(axis=1) 
   return codelet_in_this_tier.item(), sat_strings.item()
@@ -595,15 +595,16 @@ def find_cluster(satSetDF, testDF, short_name, codelet_tier, all_clusters, all_t
 
     norm = "row"
     title = "SI"
-    max_mem_traffic = testDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
-    mem_traffic_threshold = 0.1 * max_mem_traffic.item()
-    tstcdlt_TrafficToCheck = []
-    tstcdlt_TrafficToCheck.append(MetricName.RATE_FP_GFLOP_P_S)
-    for column in memTrafficToCheck:
-      columnIndex = testDF.columns.get_loc(column)
-      val = testDF.iloc[0, columnIndex]
-      if (val > mem_traffic_threshold):
-        tstcdlt_TrafficToCheck.append(column)
+
+    # mem_traffic_threshold = 0.1 * max_mem_traffic.item()
+    # tstcdlt_TrafficToCheck = []
+    # for column in memTrafficToCheck:
+    #   columnIndex = testDF.columns.get_loc(column)
+    #   val = testDF.iloc[0, columnIndex]
+    #   if (val > mem_traffic_threshold):
+    #     tstcdlt_TrafficToCheck.append(column)
+    # vectorize later
+    tstcdlt_TrafficToCheck = testDF['tstcdlt_TrafficToCheck'].item() 
 
     # Default values will be overriden when cluster is found
     chosen_node_set = set(BASIC_NODE_LIST)
@@ -790,6 +791,12 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
 
     compute_sw_bias(satSetDF)
     compute_sw_bias(testSetDF)
+
+    max_mem_traffic = testSetDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
+    mem_traffic_threshold = 0.1 * max_mem_traffic
+    check_traffic_mask = testSetDF[memTrafficToCheck].gt(mem_traffic_threshold, axis=0)
+    testSetDF.loc[:,'tstcdlt_TrafficToCheck'] = check_traffic_mask.apply(
+      lambda x: check_traffic_mask.columns[x].to_list() + [MetricName.RATE_FP_GFLOP_P_S], axis=1)
     cols = set(testSetDF.columns) | cols
     for i, row in testSetDF.iterrows():
         l_df = satSetDF
