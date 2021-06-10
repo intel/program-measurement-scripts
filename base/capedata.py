@@ -128,7 +128,7 @@ class CapeData(ABC):
 
         result_df = self.try_read_cache(cache_filename_prefix)
         if result_df is None:
-            copy_df = self.df[KEY_METRICS + [n for n in inputs if n not in KEY_METRICS]] 
+            copy_df = self.df[KEY_METRICS + [n for n in inputs if n not in KEY_METRICS]].copy() 
             result_df = self.compute_impl(copy_df)
             result_df = result_df[KEY_METRICS + [n for n in outputs if n not in KEY_METRICS]]
             self.try_write_cache(result_df, cache_filename_prefix)
