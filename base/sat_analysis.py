@@ -233,14 +233,17 @@ def findUniqueTiers(data, satList, tier):
 
 # init target dataframe dictionary
 tagetFrames = {}
+def compute_node_thresholds(satSetDF, traffic, cu_traffic):
+  trafficThresholds = satSetDF[traffic].max() * (1-satThreshold)
+  cuThresholds = satSetDF[cu_traffic].max()
+  cuThresholds[cuThresholds >= 50] = cuThresholds[cuThresholds >= 50] * (1-cuSatThreshold)
+  return pd.concat([trafficThresholds , cuThresholds], axis=0)
+  
 # Find max in traffic columns + perfcent columns, save to maxDict
 def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF):
   # Comment out following line to explore not to include testDF in satdata
   satSetDF = satdata
-  trafficThresholds = satSetDF[traffic].max() * (1-satThreshold)
-  cuThresholds = satSetDF[cu_traffic].max()
-  cuThresholds[cuThresholds >= 50] = cuThresholds[cuThresholds >= 50] * (1-cuSatThreshold)
-  thresholds = pd.concat([trafficThresholds , cuThresholds], axis=0)
+  thresholds = compute_node_thresholds(satSetDF, traffic, cu_traffic)
   results = testDF[traffic+cu_traffic] > thresholds
   sat_strings = results.apply(lambda x:results.columns[x].to_list(), axis=1)
   # Assume 1 row for now, work on vectorization later
@@ -279,14 +282,22 @@ def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF):
 
 # Find max in traffic columns + perfcent columns, save to maxDict
 def findPeerCodelets(data, cu_traffic, satList):
+  traffic = set(ALL_NODE_LIST) - set(cu_traffic)
+  thresholds = compute_node_thresholds(data, traffic, cu_traffic)
+  # To Remove the codelets that saturates nodes not in satList
+  NodesNotInSatList = set(ALL_NODE_LIST) - set(satList)
+  # Exclude rows if they saturate *any* nodes in NodesNotInSatList
+  target_df = data[~(data[NodesNotInSatList]>thresholds[NodesNotInSatList]).any(axis=1)]
+  # Keep rows if they saturate *all* nodes in satList.  
+  # Also reset index to decopule from original data index.
+  return target_df[(target_df[satList]>thresholds[satList]).all(axis=1)].reset_index(drop=True)
+
   # get rows that we need to check
   initDict(maxOfColumn, satList)
   rowsToCheck = data.index.tolist()
   target_df = pd.DataFrame(columns=data.columns.tolist())
   # csv_string = short_name + '_peer_codelet.csv'
 
-  # To Remove the codelets that saturates nodes not in satList
-  NodesNotInSatList = set(ALL_NODE_LIST) - set(satList)
   rowsToCheckForSaturation = []
   for row in rowsToCheck:
     codelet_in_non_sat_grp = False
