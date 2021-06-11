@@ -696,14 +696,9 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         result = True
  
         s_length = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
-        i_length = peer_codelet_df['Intensity'].max() - peer_codelet_df['Intensity'].min()
-        testDF['Box_Length'] = '{' + str(round(s_length, 2)) + ' , ' + str(round(i_length, 2)) + '}'
         peer_codelet_df['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
         print(peer_codelet_df['Norm_Tier'])
 
-        s_ratio = peer_codelet_df['Saturation'].max() / peer_codelet_df['Saturation'].min()
-        i_ratio = peer_codelet_df['Intensity'].max() / peer_codelet_df['Intensity'].min()
-        testDF['Box_Ratio'] = '{' + str(round(s_ratio, 2)) + ' , ' + str(round(i_ratio, 2)) + '}'
         # Do SW_BIAS Clustering anyways
         # To update after basic clustering get settled.
 
@@ -726,12 +721,6 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
           final_df = concat_ordered_columns(peer_dfs)
           final_df.to_csv(short_name+'_report.csv', index = True, header=True)
         testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
-        # testDF['Saturation'] = round(testDF['Saturation'].item(), 2)
-        # testDF['Intensity'] = round(testDF['Intensity'].item(), 2)
-        # testDF['SW_bias_Result'] = bias_res_df['SI_Result'].item()
-        # testDF['SW_bias_box_length'] = bias_res_df['Box_Length'].item()
-        # testDF['SW_bias_box_ratio'] = bias_res_df['Box_Ratio'].item()
-        # testDF['SW_bias_CLS_CDLTS'] = bias_res_df['peer_codelet_cnt'].item()
       else:
         # empty tuple more friendly to group by operations
         testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
@@ -739,7 +728,6 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         print (short_name, "No Cluster for the SI Test =>")
         # get SW bias Vector
         no_cluster+=1
-        #findUniqueTiers(satTrafficList, codelet_tier)
       testDF['Tier'] = str(codelet_tier)
       testDF['Sat_Node'] = sat_node_string
 
@@ -830,8 +818,8 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt',
                                   'Tier', 'Sat_Node', 'Sat_Range', 
                                   'SI_Result',
-                                  'Box_Length',
-                                  'Box_Ratio',
+                                  #'Box_Length',
+                                  #'Box_Ratio',
                                   'Variant',
                                   # 'Set' : codelet_set, 
                                   #'GFlops' : round(testDF[MetricName.RATE_FP_GFLOP_P_S].item(), 2),
@@ -844,6 +832,20 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
                                   # 'SW_bias_box_ratio',
                                   # 'SW_bias_CLS_CDLTS'
                                   ]]
+    # Compute min and max for S and I for each cluster 
+    cluster_groups=all_clusters[[NonMetricName.SI_CLUSTER_NAME, 'Intensity', 'Saturation']].groupby(
+      NonMetricName.SI_CLUSTER_NAME).agg({'Intensity': ['min', 'max'], 'Saturation': ['min', 'max']})
+    cluster_groups['s_length']=cluster_groups.apply(lambda x:round(x['Saturation']['max']-x['Saturation']['min'],2), axis=1)
+    cluster_groups['i_length']=cluster_groups.apply(lambda x:round(x['Intensity']['max']-x['Intensity']['min'],2), axis=1)
+    cluster_groups['s_ratio']=cluster_groups.apply(lambda x:round(x['Saturation']['max']/x['Saturation']['min'],2), axis=1)
+    cluster_groups['i_ratio']=cluster_groups.apply(lambda x:round(x['Intensity']['max']/x['Intensity']['min'],2), axis=1)
+    #cluster_groups['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
+    cluster_groups=cluster_groups[['s_length', 'i_length', 's_ratio', 'i_ratio']].astype(str)
+    cluster_groups['Box_Length'] = '{' + cluster_groups['s_length'] + ' , ' + cluster_groups['i_length'] + '}'
+    cluster_groups['Box_Ratio'] = '{' + cluster_groups['s_ratio'] + ' , ' + cluster_groups['i_ratio'] + '}'
+    # Flattern the groupped df
+    cluster_groups = cluster_groups.stack()[['Box_Length', 'Box_Ratio']]
+    all_test_codelets=pd.merge(left=all_test_codelets, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
     all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
     result_df['GFlops']=round(all_test_codelets[MetricName.RATE_FP_GFLOP_P_S], 2)
     result_df['Saturation'] = round(all_test_codelets['Saturation'], 2)
