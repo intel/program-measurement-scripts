@@ -640,16 +640,6 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
     # vectorize later
     tstcdlt_TrafficToCheck = testDF['tstcdlt_TrafficToCheck'].item() 
 
-    testDF['Box_Length'] = None
-    testDF['Box_Ratio'] = None 
-    testDF['SI_Result'] = 'No Cluster'
-    testDF['Intensity'] = None
-    testDF['Saturation'] = None
-    testDF['SW_bias'] = 0
-    testDF['SW_bias_Result'] = None
-    testDF['SW_bias_box_length'] = None
-    testDF['SW_bias_box_ratio'] = None
-    testDF['SW_bias_CLS_CDLTS'] = None
     # Default values will be overriden when cluster is found
     while len(satSetDF) > 5:
       peer_cdlt_count = 0
@@ -700,9 +690,8 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
         peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
         testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
-        peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
         if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
-          all_clusters = all_clusters.append(peer_codelet_df[NEEDED_CLUSTER_DF_COLUMNS])
+          all_clusters = all_clusters.append(peer_codelet_df)
         #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
         result = True
  
@@ -716,15 +705,16 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         i_ratio = peer_codelet_df['Intensity'].max() / peer_codelet_df['Intensity'].min()
         testDF['Box_Ratio'] = '{' + str(round(s_ratio, 2)) + ' , ' + str(round(i_ratio, 2)) + '}'
         # Do SW_BIAS Clustering anyways
+        # To update after basic clustering get settled.
 
-        bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
+        #bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
         #if (s_length > 1.5 or i_length > 1.5):
         #    bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
         # codelet_set = testDF['Set'].item()
         if result == True :
           print (short_name, "Passed the SI Test =>")
           si_passed +=1
-          findUniqueTiers(satTrafficList, codelet_tier)
+          #findUniqueTiers(satTrafficList, codelet_tier)
         else:
           print (short_name, "Failed the SI Test =>")
           si_failed +=1
@@ -736,12 +726,12 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
           final_df = concat_ordered_columns(peer_dfs)
           final_df.to_csv(short_name+'_report.csv', index = True, header=True)
         testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
-        testDF['Saturation'] = round(testDF['Saturation'].item(), 2)
-        testDF['Intensity'] = round(testDF['Intensity'].item(), 2)
-        testDF['SW_bias_Result'] = bias_res_df['SI_Result'].item()
-        testDF['SW_bias_box_length'] = bias_res_df['Box_Length'].item()
-        testDF['SW_bias_box_ratio'] = bias_res_df['Box_Ratio'].item()
-        testDF['SW_bias_CLS_CDLTS'] = bias_res_df['peer_codelet_cnt'].item()
+        # testDF['Saturation'] = round(testDF['Saturation'].item(), 2)
+        # testDF['Intensity'] = round(testDF['Intensity'].item(), 2)
+        # testDF['SW_bias_Result'] = bias_res_df['SI_Result'].item()
+        # testDF['SW_bias_box_length'] = bias_res_df['Box_Length'].item()
+        # testDF['SW_bias_box_ratio'] = bias_res_df['Box_Ratio'].item()
+        # testDF['SW_bias_CLS_CDLTS'] = bias_res_df['peer_codelet_cnt'].item()
       else:
         # empty tuple more friendly to group by operations
         testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
@@ -749,10 +739,9 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         print (short_name, "No Cluster for the SI Test =>")
         # get SW bias Vector
         no_cluster+=1
-        findUniqueTiers(satTrafficList, codelet_tier)
+        #findUniqueTiers(satTrafficList, codelet_tier)
       testDF['Tier'] = str(codelet_tier)
       testDF['Sat_Node'] = sat_node_string
-      testDF['SW_bias'] = round(testDF['Net_SW_Bias'].item(), 2)
 
     else:
       # empty tuple more friendly to group by operations
@@ -760,8 +749,6 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
       no_cluster+=1
 
       testDF['Tier'] = 'LastTier_'+str(codelet_tier)
-      testDF['Sat_Node'] = None
-      testDF['Sat_Range'] = None
       
     testDF['peer_codelet_cnt'] = peer_cdlt_count
     return all_clusters
@@ -824,17 +811,16 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     copiedTestSetDF = testSetDF.copy()
     copiedTestSetDF[MetricName.SHORT_NAME]='test-'+copiedTestSetDF[MetricName.SHORT_NAME]
     copiedTestSetDF = copiedTestSetDF.astype({MetricName.TIMESTAMP: 'int64'})
+    copiedTestSetDF['SI_Result'] = 'No Cluster'
+    copiedTestSetDF[['Box_Length', 'Box_Ratio', 'Intensity', 'Saturation', 'Sat_Node', 'Sat_Range',
+                     'SW_bias', 'SW_bias_Result', 'SW_bias_box_length', 'SW_bias_box_ratio', 'SW_bias_CLS_CDLTS']] = None
 
     cols = set(testSetDF.columns) | cols
     all_clusters = pd.DataFrame(columns = NEEDED_CLUSTER_DF_COLUMNS)
     all_test_codelets = pd.DataFrame(columns = NEEDED_TEST_DF_COLUMNS)
     for i, row in copiedTestSetDF.iterrows():
         testDF = pd.DataFrame(columns=cols)
-        #short_name = row[MetricName.SHORT_NAME]
-        #short_name = 'test-' + short_name
-        #row[MetricName.SHORT_NAME] = short_name
         testDF = testDF.append(row, ignore_index=False)[cols]
-        #testDF = testDF.astype({MetricName.TIMESTAMP: 'int64'})
         codelet_tested += 1
 		    #find the saturation clusters
         all_clusters = find_cluster(satSetDF, testDF, 0, all_clusters)
@@ -849,16 +835,20 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
                                   'Variant',
                                   # 'Set' : codelet_set, 
                                   #'GFlops' : round(testDF[MetricName.RATE_FP_GFLOP_P_S].item(), 2),
-                                  'Saturation',
-                                  'Intensity',
-                                  'SW_bias',
+                                  #'Saturation',
+                                  #'Intensity'
                                   #'neg_bias[CNVT,DIV,clu_score,Rec,RHS]' : neg_bias_vec,
                                   #'pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]' : pos_bias_vec,
-                                  'SW_bias_Result',
-                                  'SW_bias_box_length',
-                                  'SW_bias_box_ratio',
-                                  'SW_bias_CLS_CDLTS']]
+                                  # 'SW_bias_Result',
+                                  # 'SW_bias_box_length',
+                                  # 'SW_bias_box_ratio',
+                                  # 'SW_bias_CLS_CDLTS'
+                                  ]]
+    all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
     result_df['GFlops']=round(all_test_codelets[MetricName.RATE_FP_GFLOP_P_S], 2)
+    result_df['Saturation'] = round(all_test_codelets['Saturation'], 2)
+    result_df['Intensity'] = round(all_test_codelets['Intensity'], 2)
+
     result_df['neg_bias[CNVT,DIV,clu_score,Rec,RHS]']=all_test_codelets[['Nd_CNVT_OPS', 'Nd_DIV_OPS', 'Nd_clu_score', 
                                                                          'Nd_Recurrence', 'Nd_RHS']].values.tolist()
     result_df['pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]'] =all_test_codelets[['Nd_VEC_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_FMA_OPS']].values.tolist()
@@ -867,8 +857,8 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     print ("Total No. of codelets outside SI box: ", si_passed)
     print ("Total No. of codelets inside SI box: ", si_failed)
     print ("Total No. of codelets without Cluster : ", no_cluster)
-    print ("Total No. of Tiers : ", len(unique_tiers))
-    print ("Total No. of unique clusters : ", len(unique_sat_node_clusters))
+    print ("Total No. of Tiers : ", len(result_df['Tier'].unique()))
+    print ("Total No. of unique clusters : ", len(result_df['Sat_Node'].unique()))
     stat_data = [{'Mem Threshold' : satThreshold, 'CU Threshold' : cuSatThreshold,
             'Codelets Tested' : codelet_tested, 'Passed' : si_passed, 'Failed' : si_failed,
             'No Cluster' : no_cluster, 'Tier Count' : len(unique_tiers), 'Cluster Count' : len(unique_sat_node_clusters)}]
