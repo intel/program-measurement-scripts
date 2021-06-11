@@ -682,22 +682,30 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         testDF[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(testDF)
         testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
         cluster_name = str(codelet_tier) + ' ' + satTrafficString
+
         peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
         peer_codelet_df[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(peer_codelet_df)
         peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
 
         peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(peer_codelet_df, norm, testDF, updated_chosen_node_set)
-        s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
-        peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
-        testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
+        # s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
+        # peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
+        # testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        
+        s_range = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
+        peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        
+
         if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
           all_clusters = all_clusters.append(peer_codelet_df)
         #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
         result = True
  
-        s_length = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
-        peer_codelet_df['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
-        print(peer_codelet_df['Norm_Tier'])
+        # Duplicated calculation of normalized tier
+        #s_length = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
+        #peer_codelet_df['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
+        #print(peer_codelet_df['Norm_Tier'])
 
         # Do SW_BIAS Clustering anyways
         # To update after basic clustering get settled.
