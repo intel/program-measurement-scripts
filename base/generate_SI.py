@@ -215,7 +215,9 @@ class SiData(NodeWithUnitData):
         df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(ns))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
         csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GW_P_S] / csum
+        cmax = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
+        #df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GW_P_S] / csum
+        df['Intensity']=node_cnt*cmax / csum
 
         #node_cnt = len(chosen_node_set)
         #csum=df[list(map(lambda n: "C_{}".format(n), chosen_node_set))].sum(axis=1)

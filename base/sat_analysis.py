@@ -692,12 +692,14 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         # peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
         # testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
         
-        s_range = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
-        peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
-        testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        #s_range = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
+        #peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        #testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
+        #print(cluster_name)
+        #print(codelet_tier + ((testDF['Saturation'].item() - peer_codelet_df['Saturation'].min())/s_range), s_range, peer_codelet_df['Saturation'].min(), testDF['Saturation'].item())
         
 
-        if all_clusters.empty or cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME].values:
+        if cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME]:
           all_clusters = all_clusters.append(peer_codelet_df)
         #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
         result = True
@@ -728,7 +730,7 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
           peer_dfs = [peer_codelet_df,testDF]
           final_df = concat_ordered_columns(peer_dfs)
           final_df.to_csv(short_name+'_report.csv', index = True, header=True)
-        testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
+        #testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
       else:
         # empty tuple more friendly to group by operations
         testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
@@ -825,7 +827,7 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     all_test_codelets = all_test_codelets.reset_index(drop=True)
     result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt',
                                   'Tier', 'Sat_Node', 'Sat_Range', 
-                                  'SI_Result',
+                                  #'SI_Result',
                                   #'Box_Length',
                                   #'Box_Ratio',
                                   'Variant',
@@ -843,18 +845,35 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     # Compute min and max for S and I for each cluster 
     cluster_groups=all_clusters[[NonMetricName.SI_CLUSTER_NAME, 'Intensity', 'Saturation']].groupby(
       NonMetricName.SI_CLUSTER_NAME).agg({'Intensity': ['min', 'max'], 'Saturation': ['min', 'max']})
-    cluster_groups['s_length']=cluster_groups.apply(lambda x:round(x['Saturation']['max']-x['Saturation']['min'],2), axis=1)
-    cluster_groups['i_length']=cluster_groups.apply(lambda x:round(x['Intensity']['max']-x['Intensity']['min'],2), axis=1)
-    cluster_groups['s_ratio']=cluster_groups.apply(lambda x:round(x['Saturation']['max']/x['Saturation']['min'],2), axis=1)
-    cluster_groups['i_ratio']=cluster_groups.apply(lambda x:round(x['Intensity']['max']/x['Intensity']['min'],2), axis=1)
+    # Flattern the columns
+    cluster_groups.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_groups.columns.values]
+    cluster_groups['s_length']=round(cluster_groups['Saturation_max']-cluster_groups['Saturation_min'],2)
+    cluster_groups['i_length']=round(cluster_groups['Intensity_max']-cluster_groups['Intensity_min'],2)
+    cluster_groups['s_ratio']=round(cluster_groups['Saturation_max']/cluster_groups['Saturation_min'],2)
+    cluster_groups['i_ratio']=round(cluster_groups['Intensity_max']/cluster_groups['Intensity_min'],2)
+
     #cluster_groups['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
-    cluster_groups=cluster_groups[['s_length', 'i_length', 's_ratio', 'i_ratio']].astype(str)
-    cluster_groups['Box_Length'] = '{' + cluster_groups['s_length'] + ' , ' + cluster_groups['i_length'] + '}'
-    cluster_groups['Box_Ratio'] = '{' + cluster_groups['s_ratio'] + ' , ' + cluster_groups['i_ratio'] + '}'
+    cluster_groups['Box_Length'] = '{' + cluster_groups['s_length'].astype(str) + ' , ' + cluster_groups['i_length'].astype(str) + '}'
+    cluster_groups['Box_Ratio'] = '{' + cluster_groups['s_ratio'].astype(str) + ' , ' + cluster_groups['i_ratio'].astype(str) + '}'
     # Flattern the groupped df
-    cluster_groups = cluster_groups.stack()[['Box_Length', 'Box_Ratio']]
+    #cluster_groups = cluster_groups.stack()[['Box_Length', 'Box_Ratio']]
     all_test_codelets=pd.merge(left=all_test_codelets, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
     all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
+    all_test_codelets[NonMetricName.SI_TIER_NORMALIZED] = all_test_codelets[NonMetricName.SI_SAT_TIER] + \
+      (all_test_codelets['Saturation']-all_test_codelets['Saturation_min'])/all_test_codelets['s_length']
+    noSatMask = all_test_codelets['Saturation'].isna()
+    all_test_codelets.loc[noSatMask,'SI_Result'] = 'No Cluster'
+    inBoxMask = (all_test_codelets['Saturation'] >= all_test_codelets['Saturation_min']) & \
+      (all_test_codelets['Saturation'] <= all_test_codelets['Saturation_max']) & \
+        (all_test_codelets['Intensity'] >= all_test_codelets['Intensity_min']) & \
+          (all_test_codelets['Intensity'] <= all_test_codelets['Intensity_max'])
+    all_test_codelets.loc[~noSatMask & inBoxMask, 'SI_Result']='Inside Box'
+    all_test_codelets.loc[~noSatMask & ~inBoxMask, 'SI_Result']='Outside Box'
+
+    # Also compute normalized tier for training codelets.  
+    all_clusters=pd.merge(left=all_clusters, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
+    all_clusters[NonMetricName.SI_TIER_NORMALIZED] = all_clusters[NonMetricName.SI_SAT_TIER] + \
+      (all_clusters['Saturation']-all_clusters['Saturation_min'])/all_clusters['s_length']
     result_df['GFlops']=round(all_test_codelets[MetricName.RATE_FP_GFLOP_P_S], 2)
     result_df['Saturation'] = round(all_test_codelets['Saturation'], 2)
     result_df['Intensity'] = round(all_test_codelets['Intensity'], 2)
