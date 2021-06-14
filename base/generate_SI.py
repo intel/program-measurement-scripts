@@ -11,6 +11,7 @@ import copy
 from capeplot import CapacityPlot
 from capeplot import CapePlot, CapePlotColor
 from capeplot import NodeWithUnitData
+from capelib import import_dataframe_columns
 
 import matplotlib.pyplot as plt
 from matplotlib import style
@@ -116,24 +117,26 @@ class SiData(NodeWithUnitData):
 
     def compute_impl(self, df):
         cluster_df = self.cluster_df
+        cluster_df['is_cluster'] = True
         cur_run_df = df
-        self.compute_CSI(cluster_df)
+        cur_run_df['is_cluster'] = False
+        #self.compute_CSI(cluster_df)
         #cluster_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup
 
         cluster_df[TIMESTAMP]=0
         cluster_df[TIME_APP_S]=0.0
         cluster_df[COVERAGE_PCT]=0.0
         cluster_df['Color'] = ""
-        column_list = cluster_df.columns
 
         cluster_and_cur_run_df = self.concat_ordered_columns([cluster_df,cur_run_df])
 
         # Compute Capacity, Saturation and intensity again for all the runs (cluster + current runs).
         self.compute_CSI(cluster_and_cur_run_df)
+        import_dataframe_columns(cluster_df, cluster_and_cur_run_df, sorted(set(cluster_and_cur_run_df.columns)-set(cluster_df.columns)))
 
         self.cluster_and_cur_run_df = cluster_and_cur_run_df
         # Select the rows corresponding to cur_run_df for plotting
-        df = cluster_and_cur_run_df.tail(len(cur_run_df))
+        df = cluster_and_cur_run_df[cluster_and_cur_run_df['is_cluster'] == False]
 
         #cluster_and_cur_run_df['Speedup']=1.0  # TODO: should update script to pick a base list as 'before' to compute speedup    
         self.Ns = len(self.chosen_node_set)
@@ -187,22 +190,32 @@ class SiData(NodeWithUnitData):
         # Remove brackets and then use the splitted node + unit to get the enum
         return MetricName.stallPct(INV_NODE_UNIT_DICT[nodeWithUnit])
 
+
     def compute_saturation(self, df, chosen_node_set):
         listOfCapacityColumns = self.capacities(chosen_node_set)
+        def max_clusters_only(x):
+            return x[x['is_cluster'] == True].max()
         #nodeMax=df[listOfCapacityColumns].max(axis=0)
         # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
         # The transform() will send the max values back to the original dataframe
-        newNodeMax = df[listOfCapacityColumns+[NonMetricName.SI_CLUSTER_NAME]].groupby(by=[NonMetricName.SI_CLUSTER_NAME]).transform(max)
+        cluster_mask = df['is_cluster']==True
+        newNodeMax = df[listOfCapacityColumns+[NonMetricName.SI_CLUSTER_NAME, 'is_cluster']] \
+            .groupby(by=[NonMetricName.SI_CLUSTER_NAME]).apply(lambda x: max_clusters_only(x[['is_cluster']+listOfCapacityColumns]))
         #nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
-        newNodeMax = newNodeMax.applymap(lambda x: x if x > 1.00 else 100.00)
+        newNodeMax[listOfCapacityColumns] = newNodeMax[listOfCapacityColumns].applymap(lambda x: x if x > 0.01 else 1.00)
+        working=pd.merge(left=df, right=newNodeMax, on=[NonMetricName.SI_CLUSTER_NAME], suffixes=('','_max'))
         print ("<=====compute_saturation======>")
-        for node in chosen_node_set - REAL_BUFFER_NODE_SET:
+        #for node in chosen_node_set - REAL_BUFFER_NODE_SET:
+        for node in chosen_node_set:
             #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-            df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
-        # For control unit node, use raw % stalls as rel_sat 
-        for node in chosen_node_set & REAL_BUFFER_NODE_SET:
-            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-            df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
+            #df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
+            working[f'RelSat_{node}']=(working[self.capacity(node)] / working[f'{self.capacity(node)}_max']).clip(upper=1.0)
+        # # For control unit node, use raw % stalls as rel_sat 
+        # for node in chosen_node_set & REAL_BUFFER_NODE_SET:
+        #     #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+        #     df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
+        import_dataframe_columns(df, working, [f'RelSat_{n}' for n in chosen_node_set])
+
         df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
         df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
         #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)

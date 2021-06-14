@@ -1,3 +1,4 @@
+from capedata import MergeShortNameData
 from openpyxl.utils.dataframe import dataframe_to_rows
 import sys
 sys.path.append('.\test_SI')
@@ -796,12 +797,29 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     compute_sw_bias(satSetDF)
     compute_sw_bias(testSetDF)
 
-    max_mem_traffic = testSetDF[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)
+    mem_traffic = [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
+    max_mem_traffic = testSetDF[mem_traffic].max(axis=1)
     mem_traffic_threshold = 0.1 * max_mem_traffic
     check_traffic_mask = testSetDF[memTrafficToCheck].gt(mem_traffic_threshold, axis=0)
     testSetDF.loc[:,'tstcdlt_TrafficToCheck'] = check_traffic_mask.apply(
       lambda x: check_traffic_mask.columns[x].to_list() + [MetricName.RATE_FP_GFLOP_P_S], axis=1)
 
+    satSetDF['Tier'] = None 
+    tier = 0
+    tiering_metrics = mem_traffic + [MetricName.RATE_FP_GFLOP_P_S] + percentsToCheck
+    tiering_table = pd.DataFrame(columns=['Tier']+tiering_metrics)
+    # naMask is True for items not tiered yet so need to be considered
+    naMask = satSetDF['Tier'].isna()
+    while len(satSetDF[naMask])>0:
+      tier = tier + 1
+      thresholds = compute_node_thresholds(satSetDF[naMask], mem_traffic+[MetricName.RATE_FP_GFLOP_P_S], percentsToCheck)
+      thresholds['Tier'] = tier
+      passMask = (satSetDF[tiering_metrics] > thresholds[tiering_metrics]).any(axis=1)
+      satSetDF.loc[naMask & passMask, 'Tier'] = tier
+      tiering_table = tiering_table.append(thresholds, ignore_index=True)
+      naMask = satSetDF['Tier'].isna()
+    # Simple counting of codelets in each tier
+    tiering_table['Training Set Count']=tiering_table.Tier.map(satSetDF.Tier.value_counts())
     # Default values will be overriden when cluster is found
     testSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
     testSetDF[NonMetricName.SI_SAT_NODES] = [set(BASIC_NODE_LIST)]*len(testSetDF)
