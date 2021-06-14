@@ -191,25 +191,51 @@ class SiData(NodeWithUnitData):
         return MetricName.stallPct(INV_NODE_UNIT_DICT[nodeWithUnit])
 
 
-    def compute_saturation(self, df, chosen_node_set):
+    def compute_saturation_old(self, df, chosen_node_set):
         listOfCapacityColumns = self.capacities(chosen_node_set)
+        #nodeMax=df[listOfCapacityColumns].max(axis=0)
+        # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
+        # The transform() will send the max values back to the original dataframe
+        newNodeMax = df[listOfCapacityColumns+[NonMetricName.SI_CLUSTER_NAME]].groupby(by=[NonMetricName.SI_CLUSTER_NAME]).transform(max)
+        #nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
+        newNodeMax = newNodeMax.applymap(lambda x: x if x > 1.00 else 100.00)
+        print ("<=====compute_saturation======>")
+        for node in chosen_node_set - REAL_BUFFER_NODE_SET:
+            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+            df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
+        # For control unit node, use raw % stalls as rel_sat 
+        for node in chosen_node_set & REAL_BUFFER_NODE_SET:
+            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
+            df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
+        df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
+        df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
+        #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
+        # Per defined by Dave, codelets with no cluster will have Saturation being undefined, so set them to nan
+        df.loc[df[NonMetricName.SI_CLUSTER_NAME] == '', 'Saturation']=np.nan
+        df.drop('SatSats', axis=1, inplace=True)
+
+    def compute_saturation(self, df, chosen_node_set):
+        listOfCapacityColumns = self.capacities(chosen_node_set - REAL_BUFFER_NODE_SET)
+        listOfPctColumns = self.stallPcts(chosen_node_set & REAL_BUFFER_NODE_SET)
+        listOfColumns = listOfCapacityColumns+listOfPctColumns
         def max_clusters_only(x):
             return x[x['is_cluster'] == True].max()
         #nodeMax=df[listOfCapacityColumns].max(axis=0)
         # Below will compute the groupped capacity max based on SI_CLUSTER_NAME
         # The transform() will send the max values back to the original dataframe
         cluster_mask = df['is_cluster']==True
-        newNodeMax = df[listOfCapacityColumns+[NonMetricName.SI_CLUSTER_NAME, 'is_cluster']] \
-            .groupby(by=[NonMetricName.SI_CLUSTER_NAME]).apply(lambda x: max_clusters_only(x[['is_cluster']+listOfCapacityColumns]))
+        newNodeMax = df[listOfColumns+[NonMetricName.SI_CLUSTER_NAME, 'is_cluster']] \
+            .groupby(by=[NonMetricName.SI_CLUSTER_NAME]).apply(lambda x: max_clusters_only(x[['is_cluster']+listOfColumns]))
         #nodeMax =  nodeMax.apply(lambda x: x if x >= 1.00 else 100.00 )
-        newNodeMax[listOfCapacityColumns] = newNodeMax[listOfCapacityColumns].applymap(lambda x: x if x > 0.01 else 1.00)
+        #newNodeMax[listOfCapacityColumns] = newNodeMax[listOfCapacityColumns].applymap(lambda x: x if x > 0.01 else 1.00)
+        newNodeMax[listOfCapacityColumns] = newNodeMax[listOfCapacityColumns].applymap(lambda x: x if x > 1 else 100)
+        newNodeMax[listOfPctColumns] = newNodeMax[listOfPctColumns].applymap(lambda x: x if x > 0.01 else 1)
         working=pd.merge(left=df, right=newNodeMax, on=[NonMetricName.SI_CLUSTER_NAME], suffixes=('','_max'))
         print ("<=====compute_saturation======>")
         #for node in chosen_node_set - REAL_BUFFER_NODE_SET:
         for node in chosen_node_set:
-            #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
-            #df['RelSat_{}'.format(node)]=df[self.capacity(node)] / newNodeMax[self.capacity(node)]
-            working[f'RelSat_{node}']=(working[self.capacity(node)] / working[f'{self.capacity(node)}_max']).clip(upper=1.0)
+            metric_name = self.stallPct(node) if node in REAL_BUFFER_NODE_SET else self.capacity(node)
+            working[f'RelSat_{node}']=(working[metric_name] / working[f'{metric_name}_max']).clip(upper=1.0)
         # # For control unit node, use raw % stalls as rel_sat 
         # for node in chosen_node_set & REAL_BUFFER_NODE_SET:
         #     #df['RelSat_{}'.format(node)]=df['C_{}'.format(node)] / nodeMax['C_{}'.format(node)]
