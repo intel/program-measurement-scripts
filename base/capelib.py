@@ -483,3 +483,10 @@ def import_dataframe_columns(to_df, from_df, cols):
 def append_dataframe_rows(df, append_df):
     merged = df.append(append_df, ignore_index=True)
     replace_dataframe_content(df, merged)
+
+
+# pandas version <1.2 does not support crossjoin so here is a simple implementation.
+def crossjoin(df1, df2):
+    df1['_tmp'] = 1
+    df2['_tmp'] = 1
+    return pd.merge(df1, df2, on='_tmp').drop('_tmp', axis=1)
