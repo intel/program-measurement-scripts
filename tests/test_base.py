@@ -78,6 +78,8 @@ class TestSiAnalysis(unittest.TestCase):
         #       6.4s,  9.1s,  7.9s,  8.9s,     9.1s  : median = 8.9s
         # More code vectorized
         #       5.0s,  4.4s,  4.5s,  4.7s,     4.8s  : median = 4.7s
+        # Moved SI calculation out (vectorized)
+        #       3.1s,  2.5s,  2.5s,  2.4s,     2.6s  : median = 2.6s
         print(f'Elapsed Time = {end-start} sec')
         new_columns = {'Nd_ISA_EXT_TYPE', 'Nd_RHS', 'SiSatNodes', 'Neg_SW_Bias', 'Nd_Recurrence', 
                        'Pos_SW_Bias', 'Nd_clu_score', 'Nd_CNVT_OPS', 'Nd_FMA_OPS', 'Nd_VEC_OPS', 

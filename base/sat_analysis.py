@@ -242,7 +242,7 @@ def compute_node_thresholds(satSetDF, traffic, cu_traffic):
 # Find max in traffic columns + perfcent columns, save to maxDict
 def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF):
   # Comment out following line to explore not to include testDF in satdata
-  satSetDF = satdata
+  #satSetDF = satdata
   thresholds = compute_node_thresholds(satSetDF, traffic, cu_traffic)
   results = testDF[traffic+cu_traffic] > thresholds
   sat_strings = results.apply(lambda x: results.columns[x].to_list(), axis=1)
@@ -472,8 +472,8 @@ def concat_ordered_columns(frames):
     return final_df[columns_ordered]
 
 def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList):
-    global si_passed
-    global si_failed
+    # global si_passed
+    # global si_failed
     global no_cluster
     sub_cls_df = pd.DataFrame()
     chosen_node_set = set(BASIC_NODE_LIST)
@@ -622,8 +622,8 @@ def testSI(target_df, testDF):
         return True
 
 def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
-    global si_passed
-    global si_failed
+    # global si_passed
+    # global si_failed
     global no_cluster
     global satThreshold
 
@@ -687,8 +687,11 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
         peer_codelet_df[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(peer_codelet_df)
         peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
+        my_peer_codelet_df = peer_codelet_df.iloc[:-1,:]
 
-        peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(peer_codelet_df, norm, testDF, updated_chosen_node_set)
+        #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, updated_chosen_node_set)
+        #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, 
+        #                                                                  set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET})
         # s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
         # peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
         # testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
@@ -700,10 +703,10 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         #print(codelet_tier + ((testDF['Saturation'].item() - peer_codelet_df['Saturation'].min())/s_range), s_range, peer_codelet_df['Saturation'].min(), testDF['Saturation'].item())
         
 
-        if cluster_name not in all_clusters[NonMetricName.SI_CLUSTER_NAME]:
-          all_clusters = all_clusters.append(peer_codelet_df)
+        if cluster_name not in set(all_clusters[NonMetricName.SI_CLUSTER_NAME]):
+          all_clusters = all_clusters.append(my_peer_codelet_df)
         #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
-        result = True
+        #result = True
  
         # Duplicated calculation of normalized tier
         #s_length = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
@@ -717,20 +720,20 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         #if (s_length > 1.5 or i_length > 1.5):
         #    bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
         # codelet_set = testDF['Set'].item()
-        if result == True :
-          print (short_name, "Passed the SI Test =>")
-          si_passed +=1
-          #findUniqueTiers(satTrafficList, codelet_tier)
-        else:
-          print (short_name, "Failed the SI Test =>")
-          si_failed +=1
-        if DO_SUB_CLUSTERING:
-          sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
-          print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
-        if DO_DEBUG_LOGS:
-          peer_dfs = [peer_codelet_df,testDF]
-          final_df = concat_ordered_columns(peer_dfs)
-          final_df.to_csv(short_name+'_report.csv', index = True, header=True)
+        # if result == True :
+        #   print (short_name, "Passed the SI Test =>")
+        #   si_passed +=1
+        #   #findUniqueTiers(satTrafficList, codelet_tier)
+        # else:
+        #   print (short_name, "Failed the SI Test =>")
+        #   si_failed +=1
+        # if DO_SUB_CLUSTERING:
+        #   sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
+        #   print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
+        # if DO_DEBUG_LOGS:
+        #   peer_dfs = [peer_codelet_df,testDF]
+        #   final_df = concat_ordered_columns(peer_dfs)
+        #   final_df.to_csv(short_name+'_report.csv', index = True, header=True)
         #testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
       else:
         # empty tuple more friendly to group by operations
@@ -843,6 +846,13 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
         all_test_codelets = all_test_codelets.append(testDF)
 
     all_test_codelets = all_test_codelets.reset_index(drop=True)
+    norm = "row"
+    #all_clusters, my_cluster_and_test_df, testDF = compute_only(all_clusters, norm, testDF, updated_chosen_node_set)
+    clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != '']
+    all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
+                                                      set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET})
+    added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
+    all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
     result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt',
                                   'Tier', 'Sat_Node', 'Sat_Range', 
                                   #'SI_Result',
@@ -878,7 +888,7 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     all_test_codelets=pd.merge(left=all_test_codelets, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
     all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
     all_test_codelets[NonMetricName.SI_TIER_NORMALIZED] = all_test_codelets[NonMetricName.SI_SAT_TIER] + \
-      (all_test_codelets['Saturation']-all_test_codelets['Saturation_min'])/all_test_codelets['s_length']
+      (all_test_codelets['Saturation']-all_test_codelets['Saturation_min']).clip(lower=0)/all_test_codelets['s_length']
     noSatMask = all_test_codelets['Saturation'].isna()
     all_test_codelets.loc[noSatMask,'SI_Result'] = 'No Cluster'
     inBoxMask = (all_test_codelets['Saturation'] >= all_test_codelets['Saturation_min']) & \
@@ -887,6 +897,9 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
           (all_test_codelets['Intensity'] <= all_test_codelets['Intensity_max'])
     all_test_codelets.loc[~noSatMask & inBoxMask, 'SI_Result']='Inside Box'
     all_test_codelets.loc[~noSatMask & ~inBoxMask, 'SI_Result']='Outside Box'
+    pass_counts = all_test_codelets['SI_Result'].value_counts().reindex(['Inside Box', 'Outside Box'], fill_value=0)
+    si_passed = pass_counts['Inside Box']
+    si_failed = pass_counts['Outside Box']
 
     # Also compute normalized tier for training codelets.  
     all_clusters=pd.merge(left=all_clusters, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
