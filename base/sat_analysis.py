@@ -21,6 +21,7 @@ from generate_SI import BASIC_NODE_SET
 from generate_SI import ALL_NODE_SET
 from generate_SI import SiData
 from capeplot import CapacityData
+from capelib import crossjoin
 import os
 # GUI import
 
@@ -236,7 +237,10 @@ tagetFrames = {}
 def compute_node_thresholds(satSetDF, traffic, cu_traffic):
   trafficThresholds = satSetDF[traffic].max() * (1-satThreshold)
   cuThresholds = satSetDF[cu_traffic].max()
-  cuThresholds[cuThresholds >= 50] = cuThresholds[cuThresholds >= 50] * (1-cuSatThreshold)
+  cuSmallMask = cuThresholds < 50
+  cuThresholds[cuSmallMask] = np.nan
+  cuThresholds[~cuSmallMask] = cuThresholds[~cuSmallMask] * (1-cuSatThreshold)
+  # For threshold lower than 50, set it to infinity so no codelets can saturate.
   return pd.concat([trafficThresholds , cuThresholds], axis=0)
   
 # Find max in traffic columns + perfcent columns, save to maxDict
@@ -252,7 +256,7 @@ def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF):
 
 def checkTierFindPeerCodelets(satdata, traffic, cu_traffic, satSetDF, testDF):
   # Comment out following line to explore not to include testDF in satdata
-  satSetDF = satdata
+  #satSetDF = satdata
   # Following line added to make sure we have all thresholds needed
   all_traffic = set(ALL_NODE_LIST) - set(cu_traffic)
   thresholds = compute_node_thresholds(satSetDF, all_traffic, cu_traffic)
@@ -674,7 +678,7 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
       testDF['Sat_Range'] = ', '.join([f'{elem}: [{peer_codelet_df[elem].max()}  {peer_codelet_df[elem].min()}]' for elem in satTrafficList])
       sat_node_string = " , ".join(satTrafficList)
 
-      if peer_cdlt_count >= 3: 
+      if peer_cdlt_count >= 2: 
         
         updated_chosen_node_set = set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(satTrafficList) & CU_NODE_SET} 
         satTrafficString = ", ".join(map(str, satTrafficList))
@@ -687,7 +691,8 @@ def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
         peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
         peer_codelet_df[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(peer_codelet_df)
         peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
-        my_peer_codelet_df = peer_codelet_df.iloc[:-1,:]
+        #my_peer_codelet_df = peer_codelet_df.iloc[:-1,:]
+        my_peer_codelet_df = peer_codelet_df
 
         #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, updated_chosen_node_set)
         #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, 
@@ -833,6 +838,9 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False
     copiedTestSetDF['SI_Result'] = 'No Cluster'
     copiedTestSetDF[['Box_Length', 'Box_Ratio', 'Intensity', 'Saturation', 'Sat_Node', 'Sat_Range',
                      'SW_bias', 'SW_bias_Result', 'SW_bias_box_length', 'SW_bias_box_ratio', 'SW_bias_CLS_CDLTS']] = None
+
+    # Do a cross join so each test codelet will be associated to (the same) tiering table to find tierin parallel (table lookup)
+    test_and_tiering = crossjoin(copiedTestSetDF, tiering_table)
 
     cols = set(testSetDF.columns) | cols
     all_clusters = pd.DataFrame(columns = NEEDED_CLUSTER_DF_COLUMNS)
