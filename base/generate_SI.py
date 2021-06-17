@@ -110,7 +110,9 @@ class SiData(NodeWithUnitData):
 
     # Return (expected inputs, expected outputs)
     def input_output_args(self):
-        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GW_P_S] + \
+        # input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, MetricName.CAP_ALLMAX_GW_P_S] + \
+        #     self.capacities(self.chosen_node_set)+self.stallPcts(self.chosen_node_set & REAL_BUFFER_NODE_SET)
+        input_args = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES ] + \
             self.capacities(self.chosen_node_set)+self.stallPcts(self.chosen_node_set & REAL_BUFFER_NODE_SET)
         output_args = ['Saturation', 'Intensity', 'SI']
         return input_args, output_args
