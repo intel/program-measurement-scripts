@@ -486,7 +486,7 @@ def append_dataframe_rows(df, append_df):
 
 
 # pandas version <1.2 does not support crossjoin so here is a simple implementation.
-def crossjoin(df1, df2):
+def crossjoin(df1, df2, suffixes=("_x", "_y")):
     df1['_tmp'] = 1
     df2['_tmp'] = 1
-    return pd.merge(df1, df2, on='_tmp').drop('_tmp', axis=1)
+    return pd.merge(df1, df2, on='_tmp', suffixes=suffixes).drop('_tmp', axis=1)
