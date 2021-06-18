@@ -150,10 +150,12 @@ def compute_sw_bias(mainDataFrame):
         mainDataFrame.insert(addAfterColumn, "Nd_Recurrence", ( mainDataFrame[MetricName.SRC_RECURRENCE_B].apply(find_recurrence_factor)))
     if 'Nd_RHS' not in mainDataFrame.columns:
         mainDataFrame.insert(addAfterColumn, "Nd_RHS", ( mainDataFrame[MetricName.SRC_RHS_OP_COUNT].apply(find_rhs_ops)))
+    if 'SW_bias' not in mainDataFrame.columns:
+        mainDataFrame['SW_bias'] = round(mainDataFrame['Net_SW_Bias'], 2)
 
     sw_bias_df['ShortName'] =  mainDataFrame['ShortName'].apply(get_short_name)
     columns_to_copy = [ 'Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 
-                       'Nd_Recurrence', 'Nd_RHS', 'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias' ]
+                       'Nd_Recurrence', 'Nd_RHS', 'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', 'SW_bias' ]
     sw_bias_df[columns_to_copy] = mainDataFrame[columns_to_copy]
 
     return sw_bias_df

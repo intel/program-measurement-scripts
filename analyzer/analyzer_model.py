@@ -15,7 +15,7 @@ from capeplot import CapacityData, CapeData, CapePlotColor
 from metric_names import ALL_METRICS, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
 from metric_names import MetricName as MN
 from metric_names import NonMetricName as NMN
-from sat_analysis import do_sat_analysis, ALL_NODE_LIST, SW_BIAS_IP, OUTPUT_COLUMNS as SAT_OUTPUT_COLUMNS
+from sat_analysis import do_sat_analysis, SatAnalysisSettings, ALL_NODE_LIST, SW_BIAS_IP, OUTPUT_COLUMNS as SAT_OUTPUT_COLUMNS
 from generate_SI import SiData
 from pathlib import Path
 from capeplot import CapePlot
@@ -34,7 +34,8 @@ class SatAnalysisData(NodeWithUnitData):
     # Read the optimal data file
     optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
     optimal_data_df = pd.read_csv(optimal_data_path)
-    self.cluster_df, si_df, _ = do_sat_analysis(optimal_data_df, df, self.chosen_node_set)
+    self.cluster_df, si_df, _ = do_sat_analysis(optimal_data_df, df, 
+                                                self.chosen_node_set, SatAnalysisSettings(compute_stats=False))
     si_df[NMN.SI_TIER_NORMALIZED] = si_df[NMN.SI_TIER_NORMALIZED].astype(float)
     return si_df
 
