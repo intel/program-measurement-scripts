@@ -40,6 +40,7 @@ class SatAnalysisSettings:
   BASIC_OUTPUTS = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] 
   CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
   CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
+  BASIC_NODE_LIST=list(BASIC_NODE_SET)
 
   def __init__(self, cuSatThreshold = 0.25, satThreshold = 0.1, disable=False, 
                cu_traffic = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT], 
@@ -90,7 +91,6 @@ RUN_SI = True
 
 # This has to be identical to BASIC_NODE_SET in generate_SI
 #BASIC_NODE_LIST=['L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]']
-BASIC_NODE_LIST=list(BASIC_NODE_SET)
 
 #ALL_NODE_LIST =  [ "register_simd_rate_gb/s", "flop_rate_gflop/s", "l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s",
 #                   "%sb", "%lm", "%rs", "%lb"]
@@ -155,8 +155,8 @@ def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
   tiers_sat_nodes_mask.loc[tiered_mask, 'Tier'] = tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_TIER].astype(str)
   tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=''
   tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
-  tiers_sat_nodes_mask[NonMetricName.SI_SAT_NODES]=[set(BASIC_NODE_LIST)]*len(tiers_sat_nodes_mask) 
-  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(BASIC_NODE_LIST) | {settings.CU_NODE_DICT[n] for n in set(x['satTrafficList']) & settings.CU_NODE_SET}, axis=1)
+  tiers_sat_nodes_mask[NonMetricName.SI_SAT_NODES]=[set(settings.BASIC_NODE_LIST)]*len(tiers_sat_nodes_mask) 
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(settings.BASIC_NODE_LIST) | {settings.CU_NODE_DICT[n] for n in set(x['satTrafficList']) & settings.CU_NODE_SET}, axis=1)
 
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
@@ -200,7 +200,7 @@ def compute_si_based_metrics(settings, all_test_codelets, optimal_data_df):
   # all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
   #                                                   set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(settings.ALL_NODE_LIST)})
   all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
-                                                    (set(BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set)
+                                                    (set(settings.BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set)
 
   added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
   all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
@@ -473,11 +473,11 @@ def concat_ordered_columns(frames):
 
 # Follow function left here for reference only.   If we want to implement this, should put it in 
 # the tiering process and also in vectorized form.
-def do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList):
+def do_sub_clustering(settings, peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList):
     # global si_passed
     # global si_failed
     sub_cls_df = pd.DataFrame()
-    chosen_node_set = set(BASIC_NODE_LIST)
+    chosen_node_set = set(settings.BASIC_NODE_LIST)
     node_chck =  any(elem in satTrafficList  for elem in subNodeTrafficToCheck)
     if not node_chck :
         sub_nodes = []
@@ -573,7 +573,7 @@ def do_swbias_clustering(settings, peer_codelet_df, testDF, satTrafficList):
     # test_swBias_df = pd.merge(testDF, sw_bias_df)
     swbias_cluster_df = find_swbias_cluster(peer_codelet_df, testDF, 0)
     cdlt_count = swbias_cluster_df.shape[0]
-    chosen_node_set = set(BASIC_NODE_LIST)
+    chosen_node_set = set(settings.BASIC_NODE_LIST)
     short_name = str(testDF.iloc[0][MetricName.SHORT_NAME])
     if cdlt_count >= 3:
         for elem in satTrafficList:
