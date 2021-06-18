@@ -15,7 +15,7 @@ from capeplot import CapacityData, CapeData, CapePlotColor
 from metric_names import ALL_METRICS, KEY_METRICS, NAME_FILE_METRICS, SHORT_NAME_METRICS
 from metric_names import MetricName as MN
 from metric_names import NonMetricName as NMN
-from sat_analysis import do_sat_analysis, SatAnalysisSettings, ALL_NODE_LIST, SW_BIAS_IP, OUTPUT_COLUMNS as SAT_OUTPUT_COLUMNS
+from sat_analysis import do_sat_analysis, SatAnalysisSettings 
 from generate_SI import SiData
 from pathlib import Path
 from capeplot import CapePlot
@@ -29,20 +29,26 @@ from utils import resource_path as gui_resource_path
 class SatAnalysisData(NodeWithUnitData):
   def __init__(self, df):
     super().__init__(df, NODE_UNIT_DICT) 
+    self.sat_settings = SatAnalysisSettings(compute_stats=False)
 
   def compute_impl(self, df):
     # Read the optimal data file
     optimal_data_path = gui_resource_path(os.path.join('clusters', 'LORE-Optimal.csv'))
     optimal_data_df = pd.read_csv(optimal_data_path)
-    self.cluster_df, si_df, _ = do_sat_analysis(optimal_data_df, df, 
-                                                self.chosen_node_set, SatAnalysisSettings(compute_stats=False))
+    self.cluster_df, si_df, _ = do_sat_analysis(optimal_data_df, df, self.sat_settings)
     si_df[NMN.SI_TIER_NORMALIZED] = si_df[NMN.SI_TIER_NORMALIZED].astype(float)
     return si_df
 
+  def set_chosen_node_set(self, chosen_node_set):
+      super().set_chosen_node_set(chosen_node_set)
+      self.sat_settings.set_chosen_node_set(self.chosen_node_set)
+      return self
+
   # Return (expected inputs, expected outputs)
   def input_output_args(self):
-    input_args = SiData.capacities(self.chosen_node_set)+[MN.SHORT_NAME]+ALL_NODE_LIST+[MN.CAP_ALLMAX_GB_P_S] + SW_BIAS_IP
-    output_args = SAT_OUTPUT_COLUMNS
+    #input_args = SiData.capacities(self.chosen_node_set)+[MN.SHORT_NAME]+ALL_NODE_LIST+[MN.CAP_ALLMAX_GB_P_S] + SW_BIAS_IP
+    input_args = self.sat_settings.input_columns()
+    output_args = self.sat_settings.output_columns()
     return input_args, output_args
 
 

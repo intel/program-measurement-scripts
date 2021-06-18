@@ -153,7 +153,9 @@ def compute_sw_bias(mainDataFrame):
     if 'SW_bias' not in mainDataFrame.columns:
         mainDataFrame['SW_bias'] = round(mainDataFrame['Net_SW_Bias'], 2)
 
-    sw_bias_df['ShortName'] =  mainDataFrame['ShortName'].apply(get_short_name)
+    if MetricName.SHORT_NAME in mainDataFrame.columns:
+        sw_bias_df[MetricName.SHORT_NAME] =  mainDataFrame[MetricName.SHORT_NAME].apply(get_short_name)
+
     columns_to_copy = [ 'Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 
                        'Nd_Recurrence', 'Nd_RHS', 'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', 'SW_bias' ]
     sw_bias_df[columns_to_copy] = mainDataFrame[columns_to_copy]

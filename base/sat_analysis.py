@@ -26,21 +26,55 @@ import os
 # GUI import
 
 class SatAnalysisSettings:
+  SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
+                MetricName.COUNT_OPS_CVT_PCT, MetricName.COUNT_OPS_DIV_PCT,
+                MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_RECURRENCE_B, MetricName.SRC_CLU_SCORE]
+  SW_BIAS_COLUMNS = ['Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 'Nd_Recurrence' , 'Nd_RHS',
+                     'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', NonMetricName.SI_TIER_NORMALIZED]
+  ALL_CU_NODES = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+  SELECTED_CU_NODES = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
+  MEM_NODES = [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
+  FP_REG_NODES = [MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_REG_SIMD_GB_P_S]
+  ALL_NODE_LIST =  MEM_NODES + FP_REG_NODES + [MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
+  BASIC_INPUTS =  ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+  BASIC_OUTPUTS = [NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] 
+  CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
+  CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
+
   def __init__(self, cuSatThreshold = 0.25, satThreshold = 0.1, disable=False, 
                cu_traffic = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT], 
-               compute_stats = True, uniform_gap = False):
+               compute_stats = True, uniform_gap = False, run_sw_bias=True, chosen_node_set=ALL_NODE_SET):
     self.cuSatThreshold = cuSatThreshold
     self.satThreshold = satThreshold
     self.disable = disable
     self.percentsToCheck = cu_traffic
     self.compute_stats = compute_stats
     self.compute_stats = True
-    self.fp_reg_rate_metrics = [MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_REG_SIMD_GB_P_S]
-    self.mem_traffic = [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
+    self.fp_reg_rate_metrics = self.FP_REG_NODES
+    self.mem_traffic = self.MEM_NODES
     self.non_cu_tiering_metrics = self.fp_reg_rate_metrics + self.mem_traffic
     self.non_traffic_tiering_metrics = self.fp_reg_rate_metrics + self.percentsToCheck
     self.tiering_metrics = self.mem_traffic + self.non_traffic_tiering_metrics
     self.uniform_gap = uniform_gap
+    self.run_sw_bias = run_sw_bias
+    self.chosen_node_set = chosen_node_set
+
+  def set_chosen_node_set(self, chosen_node_set):
+    self.chosen_node_set = chosen_node_set
+
+  def input_columns(self):
+    inputs =  self.BASIC_INPUTS + SiData.capacities(self.chosen_node_set)
+    if self.run_sw_bias:
+      inputs = inputs + self.SW_BIAS_IP
+    return inputs
+
+  def output_columns(self):
+    outputs = self.BASIC_OUTPUTS
+    if self.run_sw_bias:
+      outputs = outputs + self.SW_BIAS_COLUMNS
+    return outputs
+      
+    
 
 # percent within max in column for color
 # TODO unused at the moment
@@ -52,10 +86,7 @@ DO_DEBUG_LOGS = False
 PRINT_ALL_CLUSTERS = False
 PRINT_COLOURED_TIERS = False
 RUN_SI = True
-RUN_SW_BIAS = True
 
-CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
-CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
 
 # This has to be identical to BASIC_NODE_SET in generate_SI
 #BASIC_NODE_LIST=['L1 [GB/s]', 'L2 [GB/s]', 'L3 [GB/s]', 'FLOP [GFlop/s]', 'VR [GB/s]', 'RAM [GB/s]']
@@ -63,25 +94,15 @@ BASIC_NODE_LIST=list(BASIC_NODE_SET)
 
 #ALL_NODE_LIST =  [ "register_simd_rate_gb/s", "flop_rate_gflop/s", "l1_rate_gb/s", "l2_rate_gb/s", "l3_rate_gb/s", "ram_rate_gb/s",
 #                   "%sb", "%lm", "%rs", "%lb"]
-ALL_NODE_LIST =  [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S, MetricName.RATE_REG_SIMD_GB_P_S, MetricName.RATE_FP_GFLOP_P_S,
-                            MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 
 # arith
-#percentsToCheck = ["register_simd_rate_gb/s", "%ops[vec]", "%inst[vec]", "%prf", "%sb", "%rs", "%lb", "%rob", "%lm", "%frontend" ]
-#percentsToCheck = [ "%sb", "%lm", "%frontend" , "%rs", "%lb"]
-cuTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT]
 subNodeTrafficToCheck = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
 
-SW_BIAS_COLUMNS = ['Nd_CNVT_OPS', 'Nd_VEC_OPS', 'Nd_DIV_OPS', 'Nd_FMA_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_clu_score', 'Nd_Recurrence' , 'Nd_RHS',
-                  'Neg_SW_Bias', 'Pos_SW_Bias', 'Net_SW_Bias', NonMetricName.SI_TIER_NORMALIZED]
-SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
-              MetricName.COUNT_OPS_CVT_PCT, MetricName.COUNT_OPS_DIV_PCT,
-              MetricName.SRC_RHS_OP_COUNT, MetricName.SRC_RECURRENCE_B, MetricName.SRC_CLU_SCORE]
-OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] + SW_BIAS_COLUMNS
-NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
-if RUN_SW_BIAS:
-  NEEDED_CLUSTER_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS + SW_BIAS_IP
-NEEDED_TEST_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS
+# OUTPUT_COLUMNS=[NonMetricName.SI_CLUSTER_NAME, NonMetricName.SI_SAT_NODES, NonMetricName.SI_SAT_TIER] + SW_BIAS_COLUMNS
+# NEEDED_CLUSTER_DF_COLUMNS = KEY_METRICS+ OUTPUT_COLUMNS + ALL_NODE_LIST + [MetricName.STALL_FE_PCT, MetricName.STALL_RS_PCT]
+# if RUN_SW_BIAS:
+#   NEEDED_CLUSTER_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS + SW_BIAS_IP
+# NEEDED_TEST_DF_COLUMNS = NEEDED_CLUSTER_DF_COLUMNS
 
 
 # Commented out the following global variables as it looks like something we can compute locally using Pandas operations.
@@ -124,7 +145,7 @@ def compute_node_thresholds(settings, satSetDF, traffic, cu_traffic, uniform_gap
   return pd.concat([trafficThresholds , cuThresholds], axis=0)
   
 
-def compute_cluster_names(tiers_sat_nodes_mask, sat_nodes):
+def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
   tiered_mask = ~tiers_sat_nodes_mask['Tier'].isna()
   sat_nodes_only=tiers_sat_nodes_mask.loc[tiered_mask, sat_nodes]
   tiers_sat_nodes_mask['satTrafficList']=[[]]*len(tiers_sat_nodes_mask)
@@ -135,12 +156,13 @@ def compute_cluster_names(tiers_sat_nodes_mask, sat_nodes):
   tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=''
   tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
   tiers_sat_nodes_mask[NonMetricName.SI_SAT_NODES]=[set(BASIC_NODE_LIST)]*len(tiers_sat_nodes_mask) 
-  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(x['satTrafficList']) & CU_NODE_SET}, axis=1)
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(BASIC_NODE_LIST) | {settings.CU_NODE_DICT[n] for n in set(x['satTrafficList']) & settings.CU_NODE_SET}, axis=1)
 
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, settings=SatAnalysisSettings()):
+def do_sat_analysis(optimal_data_df, testSetDF, settings=SatAnalysisSettings()):
+    chosen_node_set = settings.chosen_node_set
     nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
     CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute()
 
@@ -170,13 +192,15 @@ def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, settings=SatAna
 
 def compute_si_based_metrics(settings, all_test_codelets, optimal_data_df):
   peer_mask = optimal_data_df[NonMetricName.SI_CLUSTER_NAME].isin(set(all_test_codelets[NonMetricName.SI_CLUSTER_NAME].to_list())-set({''}))
-  all_clusters = optimal_data_df[peer_mask]
+  all_clusters = optimal_data_df[peer_mask].copy()
 
   #all_clusters, my_cluster_and_test_df, testDF = compute_only(all_clusters, norm, testDF, updated_chosen_node_set)
   norm = "row"
-  clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != '']
+  clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != ''].copy()
+  # all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
+  #                                                   set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(settings.ALL_NODE_LIST)})
   all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
-                                                    set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(ALL_NODE_LIST)})
+                                                    (set(BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set)
 
   added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
   all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
@@ -212,8 +236,9 @@ def compute_stats(settings, all_test_codelets):
     return None
 
   #all['Variant'] = ''
-  result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt', 'Tier', 'Sat_Node', 'Sat_Range' ]]
+  result_df = all_test_codelets[['peer_codelet_cnt', 'Tier', 'Sat_Node', 'Sat_Range' ]].copy()
 
+  result_df[MetricName.SHORT_NAME] = all_test_codelets[MetricName.SHORT_NAME] if MetricName.SHORT_NAME in all_test_codelets.columns else all_test_codelets[MetricName.NAME]
   result_df['Variant'] = all_test_codelets['Variant'] if 'Variant' in all_test_codelets.columns else ''
 
   noSatMask = all_test_codelets['Saturation'].isna()
@@ -265,11 +290,14 @@ def lookup_testing_set(settings, testSetDF, tiering_table, cluster_info):
   mem_traffic = settings.mem_traffic
   non_traffic_tiering_metrics = settings.non_traffic_tiering_metrics
 
-  # Do a cross join so each test codelet will be associated to (the same) tiering table to find tierin parallel (table lookup)
+  # Do a cross join to form a big table to associate each test codelet to each row of the tiering table.
+  # This allows us to compare the tiering metrics of all test codelets with all tiers in the tiering table in parallel (i.e. table lookup)
   test_and_tiering = crossjoin(testSetDF, tiering_table, suffixes=("", "_threshold"))
   # Compare against thresholds.  Need to copy out and rename to matching columns to be able to do the big compare operation.
   tiering_threshold_names = [n+"_threshold" for n in tiering_metrics]
   tiering_thresholds = test_and_tiering[tiering_threshold_names]
+  # Renamed the '*_threshold' to original node name so we can do the ">" comparison between two dataframe.
+  # Pandas will match the node by column name automatically.
   tiering_thresholds = tiering_thresholds.rename(columns=dict(zip(tiering_threshold_names, tiering_metrics)))
   tiering_sat_checks = test_and_tiering[tiering_metrics] > tiering_thresholds
 
@@ -289,7 +317,7 @@ def lookup_testing_set(settings, testSetDF, tiering_table, cluster_info):
   # Join back to get the rows with right tiers only
   test_and_sats = pd.concat([test_and_tiering[KEY_METRICS+['Tier']],traffic_sat_checks, non_traffic_sat_checks], axis=1)
   test_and_sats = pd.merge(left=test_and_sats, right=tiers.to_frame('Tier'), on=KEY_METRICS+['Tier'], how='right')
-  compute_cluster_names(test_and_sats, list(traffic_sat_checks.columns)+list(non_traffic_sat_checks.columns))
+  compute_cluster_names(settings, test_and_sats, list(traffic_sat_checks.columns)+list(non_traffic_sat_checks.columns))
 
   # With cluster name, we can merge with cluster_info to get training info associated
   # Note that both test df and cluster info has 'Sat_Node', 'Tier' and 'SI_SAT_TIER' columns, below we join with both cluster name and sat node expecting them to be consistent 
@@ -341,7 +369,7 @@ def tier_training_set(settings, satSetDF, tiering_metrics):
 
     candidate_mask = satSetDF['Tier'].isna()
   all_nodes = set(sat_table)-set(KEY_METRICS+['Tier'])
-  compute_cluster_names(sat_table, all_nodes)
+  compute_cluster_names(settings, sat_table, all_nodes)
   # Since sat_table and satSetDF are in the same index order, so just assign the cluster name column directly
   columns_to_add = sorted(set(sat_table.columns)-set(satSetDF.columns))
   satSetDF[columns_to_add] = sat_table[columns_to_add]
@@ -367,10 +395,9 @@ def compute_cluster_info(satSetDF, all_nodes):
 
   # Simple counting of codelets in each cluster
   cluster_counts = satSetDF[NonMetricName.SI_CLUSTER_NAME].value_counts()
-  # Convert the counts to dataframe to join with cluster_info
+  # Convert the counts to dataframe to join with cluster_info and return
   cluster_counts = cluster_counts.to_frame('peer_codelet_cnt').reset_index().rename(columns={'index': NonMetricName.SI_CLUSTER_NAME})
-  cluster_info = pd.merge(left=cluster_info, right=cluster_counts, on=NonMetricName.SI_CLUSTER_NAME, how='left')
-  return cluster_info
+  return pd.merge(left=cluster_info, right=cluster_counts, on=NonMetricName.SI_CLUSTER_NAME, how='left')
 
     
 # Some leftover routines not removed but unused.
@@ -393,7 +420,7 @@ opGreen = openpyxl.styles.PatternFill(start_color="008000", end_color="008000", 
 opBlue = openpyxl.styles.PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")
 opPurple = openpyxl.styles.PatternFill(start_color="800080", end_color="800080", fill_type="solid")
 # Find max in traffic columns + perfcent columns, save to maxDict
-def createSubcluster(data, subSatList, short_name):
+def createSubcluster(settings, data, subSatList, short_name):
   # get rows that we need to check
   rowsToCheck = data.index.tolist()
   initDict(maxOfColumn, subNodeTrafficToCheck)
@@ -424,13 +451,13 @@ def createSubcluster(data, subSatList, short_name):
   #end rowfor
   codelet_list = maxOfColumn[column]
   if not subSatList:
-      for column in cuTrafficToCheck:
+      for column in settings.percentsToCheck:
           codelet_list = list(set(codelet_list) & set(maxOfColumn[column]))
       for row in codelet_list:
           target_df = target_df.append(data.iloc[row], ignore_index=True)
   else :
       codelet_list = maxOfColumn[subSatList[0]]
-      for column in cuTrafficToCheck and subSatList:
+      for column in settings.percentsToCheck and subSatList:
           codelet_list = list(set(codelet_list) & set(maxOfColumn[column]))
       for row in codelet_list:
           target_df = target_df.append(data.iloc[row], ignore_index=True)
@@ -533,7 +560,7 @@ def find_swbias_cluster(satSetDF, testDF, swbias_threshold):
     else:
          return satSetDF[~mask]
 
-def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
+def do_swbias_clustering(settings, peer_codelet_df, testDF, satTrafficList):
     #sw_bias_df = compute_sw_bias(peer_codelet_df)
     #peer_codelet_swBias_df = pd.merge(peer_codelet_df, sw_bias_df)
 
@@ -550,7 +577,7 @@ def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
     short_name = str(testDF.iloc[0][MetricName.SHORT_NAME])
     if cdlt_count >= 3:
         for elem in satTrafficList:
-            if elem in CU_NODE_SET:
+            if elem in settings.CU_NODE_SET:
                 #print (CU_NODE_DICT[elem])
                 chosen_node_set.add(CU_NODE_DICT[elem])
         outputfile = short_name + '_sw_bias_'+ "_SI.csv"
@@ -610,8 +637,9 @@ def main(argv):
     sys.setrecursionlimit(10**9) 
   # if 3 arg specified, assumes 3rd is threshold replacement
     #print("No of sys args : ", len(sys.argv))
+    chosen_node_set = ALL_NODE_SET
     settings = SatAnalysisSettings(satThreshold=float(satThreshold = sys.argv[3]), 
-                                   cuSatThreshold=float(sys.argv[4])) if len(sys.argv) >=5 else SatAnalysisSettings()
+                                   cuSatThreshold=float(sys.argv[4]), chosen_node_set=chosen_node_set) if len(sys.argv) >=5 else SatAnalysisSettings(chosen_node_set=chosen_node_set)
 
     print("Attempting to read", csvToRead)
 
@@ -638,9 +666,9 @@ def main(argv):
     mainDataFrame[MetricName.RATE_FP_GFLOP_P_S] / mainDataFrame[[MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]].max(axis=1)/8)
     if RUN_SI:
       #do_sat_analysis(mainDataFrame, TestSetDF[mask])
-      nodes_without_units = {n.split(" ")[0] for n in ALL_NODE_SET} 
+      nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
       CapacityData(TestSetDF).set_chosen_node_set(nodes_without_units).compute()
-      results = do_sat_analysis(mainDataFrame, TestSetDF, ALL_NODE_SET, settings)
+      results = do_sat_analysis(mainDataFrame, TestSetDF, settings)
     # if PRINT_ALL_CLUSTERS:
     #   find_all_clusters(mainDataFrame)
 
