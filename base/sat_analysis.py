@@ -177,7 +177,7 @@ def do_sat_analysis(optimal_data_df, testSetDF, settings=SatAnalysisSettings()):
     compute_sw_bias(testSetDF)
 
     # Do tiering of training set returning tiering table and cluster information.  Cluster info will also be added in place to optimal_data_df
-    tiering_table, cluster_info = tier_training_set(settings, optimal_data_df, settings.tiering_metrics)
+    tiering_table, cluster_info = tier_training_set(settings, optimal_data_df)
 
     all_test_codelets = lookup_testing_set(settings, testSetDF, tiering_table, cluster_info)
 
@@ -330,7 +330,8 @@ def lookup_testing_set(settings, testSetDF, tiering_table, cluster_info):
   # Merge back testSetDF for added columns
   return pd.merge(left=testSetDF, right=test_and_sats[KEY_METRICS+sorted(set(test_and_sats.columns) -set(testSetDF.columns))], on=KEY_METRICS)
 
-def tier_training_set(settings, satSetDF, tiering_metrics):
+def tier_training_set(settings, satSetDF):
+  tiering_metrics = settings.tiering_metrics
   mem_fp_reg_rate_metrics = settings.mem_traffic+settings.fp_reg_rate_metrics
 
   tiering_table = pd.DataFrame()
