@@ -120,120 +120,6 @@ opGreen = openpyxl.styles.PatternFill(start_color="008000", end_color="008000", 
 opBlue = openpyxl.styles.PatternFill(start_color="0000FF", end_color="0000FF", fill_type="solid")
 opPurple = openpyxl.styles.PatternFill(start_color="800080", end_color="800080", fill_type="solid")
 
-# loop through max columns, color them
-def colorMaxInColumn(data, columnDict, colorToUse, pyxlSheet):
-  for key in columnDict.keys():
-    columnIndex = data.columns.get_loc(key)
-    rowsToColor = columnDict[key]
-    # column + 1 because 1-index
-    excelColumn = openpyxl.utils.cell.get_column_letter(columnIndex + 1)
-    for row in rowsToColor:
-      # row + 2 needed because 0 indexed and first row is column names
-      excelRow = row + 2
-      cellCoord = excelColumn + str(excelRow)
-      activeCell = pyxlSheet[cellCoord]
-      # color this cell
-      activeCell.fill = opGreen
-
-# Find max in traffic columns + perfcent columns, save to maxDict
-def findMaxInColumnsToColor(data, main_traffic, cu_traffic):
-  # get rows that we need to check
-  rowsToCheck = data.index.tolist()
-  # initialize the dictionary to hold the rows
-  initDict(coloured_maxOfColumn, main_traffic)
-  initDict(coloured_maxOfColumn, cu_traffic)
-  # column loop setup
-  # for each column, find max in that column highlight within some threshold
-  # only wanted a few columns, but go ahead and do it for all of them anyways
-  for column in main_traffic:
-    # init list of blocks to color 
-    columnIndex = data.columns.get_loc(column)
-
-    maxValue = data[column].max()
-    threshold = maxValue * (1 - satThreshold)
-    #print("The threshold is : ", threshold, " column is : ", column)
-
-    for row in rowsToCheck:
-      num = data.iloc[row, columnIndex]
-
-      if num >= threshold:
-        coloured_maxOfColumn[column].append(row)
-  #endfor
-
-  # percent only colored if above certain threshold
-  for column in cu_traffic:
-    columnIndex = data.columns.get_loc(column)
-    maxValue = data[column].max()/100
-
-    # only bother if greater than .7
-    if maxValue >= 0.5:
-      threshold = maxValue * (1 - cuSatThreshold)
-
-      for row in rowsToCheck:
-        num = data.iloc[row, columnIndex]/100
-
-        if num >= threshold:
-          coloured_maxOfColumn[column].append(row)
-      #endfor
-  #endfor
-  #check SIMD intensity
-  #for row in rowsToCheck:
-  # columnIndex = data.columns.get_loc("SIMD_MEM_Intensity")
-  #  if data.iloc[row, columnIndex] > 3:
-  #    coloured_maxOfColumn["SIMD_MEM_Intensity"].append(row)
-
-# Find max in traffic columns + perfcent columns, save to maxDict
-def findUniqueTiers(satList, tier):
-  global unique_sat_node_clusters
-  global unique_tiers
-  #print ("Calling findUniqueTiers with : ", satList)
-  # get rows that we need to check
-  sat_string = ''
-  if MetricName.RATE_REG_SIMD_GB_P_S in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'vr+'
-  if MetricName.RATE_L1_GB_P_S in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'L1+'
-  if MetricName.RATE_L2_GB_P_S in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'L2+'
-  if MetricName.RATE_L3_GB_P_S in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'L3+'
-  if MetricName.RATE_RAM_GB_P_S in satList:
-      sat_string = sat_string + 'RAM+'
-
-  if MetricName.RATE_FP_GFLOP_P_S in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'FLOP+'
-  if MetricName.STALL_FE_PCT in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'FE+'
-  if MetricName.STALL_LM_PCT in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'LM+'
-  if MetricName.STALL_SB_PCT in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'SB+'
-  if MetricName.STALL_RS_PCT in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'RS+'
-  if MetricName.STALL_LB_PCT in satList:
-      sat_string = sat_string + 'tier_' + str(tier) + 'LB+'
-
-  if 'SIMD_MEM_Intensity' in satList:
-      sat_string = sat_string + 'VEC+'
-
-  if tier not in unique_tiers:
-      unique_tiers.append(tier)
-
-  if sat_string not in unique_sat_node_clusters:
-      unique_sat_node_clusters.append(sat_string)
-      #target_df = pd.DataFrame(columns=data.columns.tolist())
-      #target_df = target_df.append(data.iloc[row])
-      #tagetFrames[sat_string] = target_df
-  #print (unique_sat_node_clusters)
-  #print (unique_tiers)
-
-  # for nodes in unique_sat_node_clusters:
-  #   csv_string = nodes + '.csv'
-    #tagetFrames[nodes].to_csv(csv_string, index = False, header=True)
-# find unique tiers
-
-# init target dataframe dictionary
-tagetFrames = {}
 def compute_node_thresholds(satSetDF, traffic, cu_traffic, satThreshold, prev_gap):
   traffic_gap = None if prev_gap is None else prev_gap[0]
   cu_gap = None if prev_gap is None else prev_gap[1]
@@ -254,143 +140,264 @@ def compute_node_thresholds(satSetDF, traffic, cu_traffic, satThreshold, prev_ga
   return pd.concat([trafficThresholds , cuThresholds], axis=0), \
     [traffic_max - trafficThresholds , cu_max - cuThresholds]
   
-# Find max in traffic columns + perfcent columns, save to maxDict
-def checkCodeletTier(satdata, traffic, cu_traffic, satSetDF, testDF, satThreshold):
-  # Comment out following line to explore not to include testDF in satdata
-  #satSetDF = satdata
-  thresholds = compute_node_thresholds(satSetDF, traffic, cu_traffic, satThreshold)
-  results = testDF[traffic+cu_traffic] > thresholds
-  sat_strings = results.apply(lambda x: results.columns[x].to_list(), axis=1)
-  # Assume 1 row for now, work on vectorization later
-  codelet_in_this_tier = results.any(axis=1) 
-  return codelet_in_this_tier.item(), sat_strings.item()
-
-def checkTierFindPeerCodelets(satdata, traffic, cu_traffic, satSetDF, testDF, satThreshold):
-  # Comment out following line to explore not to include testDF in satdata
-  #satSetDF = satdata
-  # Following line added to make sure we have all thresholds needed
-  all_traffic = set(ALL_NODE_LIST) - set(cu_traffic)
-  thresholds = compute_node_thresholds(satSetDF, all_traffic, cu_traffic, satThreshold)
-  results = testDF[traffic+cu_traffic] > thresholds
-  satList = results.apply(lambda x: results.columns[x].to_list(), axis=1)
-  # Assume 1 row for now, work on vectorization later
-  codelet_in_this_tier = results.any(axis=1) 
-  if codelet_in_this_tier.item() == True:
-    satList = satList.item()
-    # To Remove the codelets that saturates nodes not in satList
-    NodesNotInSatList = set(ALL_NODE_LIST) - set(satList)
-    # Exclude rows if they saturate *any* nodes in NodesNotInSatList
-    target_df = satSetDF[~(satSetDF[NodesNotInSatList]>thresholds[NodesNotInSatList]).any(axis=1)]
-    # Keep rows if they saturate *all* nodes in satList.  
-    # Also reset index to decopule from original data index.
-    return target_df[(target_df[satList]>thresholds[satList]).all(axis=1)].reset_index(drop=True), satList
-  else:
-    return pd.DataFrame(columns = satSetDF.columns), []
 
 
 
-  return sat_strings.item()
 
-  # get rows that we need to check
-  codelet_in_this_tier = False
-  index = satdata.index
-  condition = satdata[MetricName.SHORT_NAME] == testCdltName
-  test_codelet_indx = index[condition]
-  row = test_codelet_indx[0]
-  #satdata.to_csv(testCdltName + '_debug.csv', index = False, header=True)
-  short_nameInx = satdata.columns.get_loc(MetricName.SHORT_NAME)
-  short_name = satdata.iloc[test_codelet_indx[0], short_nameInx]
-  for column in traffic:
-    # init list of blocks to color 
-    columnIndex = satdata.columns.get_loc(column)
-    maxValue = satdata[column].max()
-    threshold = maxValue * (1 - satThreshold)
-    num = satdata.iloc[row, columnIndex]
-    if num > threshold:
-      codelet_in_this_tier = True
-      sat_traffic.append(column)
-  for column in cu_traffic:
-    # init list of blocks to color 
-    columnIndex = satdata.columns.get_loc(column)
-    maxValue = satdata[column].max()/100
-    if maxValue >= 0.5:
-      threshold = maxValue * (1 - cuSatThreshold)
-      num = satdata.iloc[row, columnIndex]/100
-      if num > threshold:
-        codelet_in_this_tier = True
-        sat_traffic.append(column)
-  return codelet_in_this_tier
+# def find_all_clusters(satSetDF):
+#     #global satThreshold;
+#     print ("Memory Node Saturation Threshold : ", satThreshold)
+#     print ("Control Node Saturation Threshold : ", cuSatThreshold)
 
-# Find max in traffic columns + perfcent columns, save to maxDict
-def findPeerCodelets(data, cu_traffic, satList, satThreshold):
-  traffic = set(ALL_NODE_LIST) - set(cu_traffic)
-  thresholds = compute_node_thresholds(data, traffic, cu_traffic, satThreshold)
-  # To Remove the codelets that saturates nodes not in satList
-  NodesNotInSatList = set(ALL_NODE_LIST) - set(satList)
-  # Exclude rows if they saturate *any* nodes in NodesNotInSatList
-  target_df = data[~(data[NodesNotInSatList]>thresholds[NodesNotInSatList]).any(axis=1)]
-  # Keep rows if they saturate *all* nodes in satList.  
-  # Also reset index to decopule from original data index.
-  return target_df[(target_df[satList]>thresholds[satList]).all(axis=1)].reset_index(drop=True)
+def compute_cluster_names(tiers_sat_nodes_mask, sat_nodes):
+  tiered_mask = ~tiers_sat_nodes_mask['Tier'].isna()
+  sat_nodes_only=tiers_sat_nodes_mask.loc[tiered_mask, sat_nodes]
+  tiers_sat_nodes_mask['satTrafficList']=[[]]*len(tiers_sat_nodes_mask)
+  tiers_sat_nodes_mask.loc[tiered_mask, 'satTrafficList'] = sat_nodes_only.apply(lambda x: sorted(sat_nodes_only.columns[x]), axis=1)
+  tiers_sat_nodes_mask.loc[tiered_mask, 'Sat_Node'] = tiers_sat_nodes_mask[tiered_mask].apply(lambda x: ", ".join(x['satTrafficList']), axis=1)
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_TIER] = tiers_sat_nodes_mask.loc[tiered_mask,'Tier'].astype('int32')
+  tiers_sat_nodes_mask.loc[tiered_mask, 'Tier'] = tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_TIER].astype(str)
+  tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=''
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
+  tiers_sat_nodes_mask[NonMetricName.SI_SAT_NODES]=[set(BASIC_NODE_LIST)]*len(tiers_sat_nodes_mask) 
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(x['satTrafficList']) & CU_NODE_SET}, axis=1)
 
-  # get rows that we need to check
-  initDict(maxOfColumn, satList)
-  rowsToCheck = data.index.tolist()
-  target_df = pd.DataFrame(columns=data.columns.tolist())
-  # csv_string = short_name + '_peer_codelet.csv'
+# For each codelets in current_codelets_runs_df, find their cluster
+#   Store the name of the cluster to the SI_CLUSTER_NAME column
+#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
+def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False):
+    short_name=''
+    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+    CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute()
+    satSetDF = optimal_data_df
 
-  rowsToCheckForSaturation = []
-  for row in rowsToCheck:
-    codelet_in_non_sat_grp = False
-    for column in NodesNotInSatList:
-      # init list of blocks to color 
-      columnIndex = data.columns.get_loc(column)
-      maxValue = data[column].max()
-      if column in cu_traffic:
-          maxValue = maxValue/100
-          if maxValue >= 0.5:
-              threshold = maxValue * (1 - cuSatThreshold)
-              num = data.iloc[row, columnIndex]/100
-              if num > threshold:
-                 codelet_in_non_sat_grp = True
-      else:
-          threshold = maxValue * (1 - satThreshold)
-          num = data.iloc[row, columnIndex]
-          if num > threshold:
-            codelet_in_non_sat_grp = True
-    if codelet_in_non_sat_grp is False:
-      rowsToCheckForSaturation.append(row)
-    #end columnfor
-  #end rowfor
-  #print ("The sat Threshold in findPeerCodelets :", satThreshold)
-# Now find the codelets saturated.
-  for row in rowsToCheckForSaturation:
-    for column in satList:
-      # init list of blocks to color 
-      columnIndex = data.columns.get_loc(column)
-      maxValue = data[column].max()
-      if column in cu_traffic:
-          maxValue = maxValue/100
-          if maxValue >= 0.5:
-              threshold = maxValue * (1 - cuSatThreshold)
-              num = data.iloc[row, columnIndex]/100
-              if num > threshold:
-                 maxOfColumn[column].append(row)
-      else:
-          threshold = maxValue * (1 - satThreshold)
-          num = data.iloc[row, columnIndex]
-          if num > threshold:
-            maxOfColumn[column].append(row)
-    #end columnfor
-  #end rowfor
-  codelet_list = maxOfColumn[column]
-  for column in satList:
-      codelet_list = list(set(codelet_list) & set(maxOfColumn[column]))
-  for row in codelet_list:
-      target_df = target_df.append(data.iloc[row], ignore_index=True)
-  #target_df.to_csv(csv_string, index = False, header=True)
-  return target_df
+    # If SI Analysis is disabled
+    # Creating an empty Dataframe with column names only SI_SAT_NODES and SI_CLUSTER_NAME
+    if disable:
+      testSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
+      testSetDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testSetDF)
+      all_test_codelets = all_test_codelets.append(testSetDF)
+      return all_clusters, all_test_codelets
+    #global satThreshold
+    global cuSatThreshold
+    codelet_tested = 0
+    # Commented out following line because it is incorrect.  satThreshold is *not* a constant
+    # print ("Memory Node Saturation Threshold : ", satThreshold)
+    print ("Control Node Saturation Threshold : ", cuSatThreshold)
+    capsToRetain = [MetricName.capWUnit(n) for n in chosen_node_set]+[MetricName.CAP_ALLMAX_GB_P_S]
+    #cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))+capsToRetain
+    cols = set(satSetDF.columns) | set(KEY_METRICS) | set(capsToRetain)
 
+    compute_sw_bias(satSetDF)
+    compute_sw_bias(testSetDF)
+
+    mem_traffic = [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
+    max_mem_traffic = testSetDF[mem_traffic].max(axis=1)
+    mem_traffic_threshold = 0.1 * max_mem_traffic
+    check_traffic_mask = testSetDF[memTrafficToCheck].gt(mem_traffic_threshold, axis=0)
+    testSetDF.loc[:,'tstcdlt_TrafficToCheck'] = check_traffic_mask.apply(
+      lambda x: check_traffic_mask.columns[x].to_list() + [MetricName.RATE_FP_GFLOP_P_S], axis=1)
+
+    satSetDF['Tier'] = None 
+    tier = 0
+    non_traffic_tiering_metrics = [MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_REG_SIMD_GB_P_S] + percentsToCheck
+    tiering_metrics = mem_traffic + non_traffic_tiering_metrics
+    #tiering_table = pd.DataFrame(columns=['Tier']+tiering_metrics)
+    tiering_table = pd.DataFrame()
+    sat_table = satSetDF[KEY_METRICS].copy()
+    # naMask is True for items not tiered yet so need to be considered
+    candidate_mask = satSetDF['Tier'].isna()
+    gap = None
+    while candidate_mask.any():
+      curSatSetDF = satSetDF[candidate_mask]
+      tier = tier + 1
+      satThreshold = 0.1 * tier
+      thresholds, this_gap = compute_node_thresholds(curSatSetDF, 
+                                                     mem_traffic+[MetricName.RATE_FP_GFLOP_P_S, 
+                                                                  MetricName.RATE_REG_SIMD_GB_P_S], 
+                                                     percentsToCheck, satThreshold, gap)
+                 
+      # uncomment following line to try uniform gap
+      #gap = this_gap if gap is None else gap
+      thresholds['Tier'] = tier
+      tiering_table = tiering_table.append(thresholds, ignore_index=True)
+
+      sat_mask = (curSatSetDF[tiering_metrics] > thresholds[tiering_metrics])
+      # passMask records the rows in the candidate rows passing the saturation test
+      passMask = sat_mask.any(axis=1)
+      # update satSetDF in place.  To do this we get the mask to do the update
+      # First get a copy of current na mask reflecting this iteration's candidate rows.  
+      # The size of this mask is always the same as satSetDF.
+      mask_for_satSetDF = candidate_mask.copy()
+      # Among the rows with naMask==True, set the True/False value following the pass_mask, 
+      # Esseential this operation bring the saturation result back to the overall satSetDF mask,
+      # so satSetDF[mask] are the rows passing saturation test.
+      mask_for_satSetDF[candidate_mask]=passMask
+      satSetDF.loc[mask_for_satSetDF, 'Tier'] = tier
+
+      sat_table.loc[candidate_mask, 'Tier'] = tier
+      sat_table.loc[candidate_mask, sat_mask.columns] = sat_mask
+
+      candidate_mask = satSetDF['Tier'].isna()
+    all_nodes = set(sat_table)-set(KEY_METRICS+['Tier'])
+    compute_cluster_names(sat_table, all_nodes)
+    # Since sat_table and satSetDF are in the same index order, so just assign the cluster name column directly
+    satSetDF[[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'satTrafficList', NonMetricName.SI_SAT_TIER]] = \
+      sat_table[[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'satTrafficList', NonMetricName.SI_SAT_TIER]]
+
+    
+    # Now compute the Sat_Range.  Including 'Sat_Node' instead of satTrafficList because list cannob be used in groupby
+    # Also reset_index() to bring the cluster name and Sat_Node to column names.  Including Tier and SI_SAT_TIER assuming they are consistent with cluster name which is the primary key
+    cluster_info = satSetDF.groupby([NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'Tier', NonMetricName.SI_SAT_TIER]).agg({ n: ['min', 'max'] for n in all_nodes}).reset_index()
+    # TODO : fix types more cleanly
+    cluster_info[NonMetricName.SI_SAT_TIER]=cluster_info[NonMetricName.SI_SAT_TIER].astype('int32')
+    cluster_info['Tier']=cluster_info['Tier'].astype(str)
+    # Flattern the columns
+    cluster_info.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_info.columns.values]
+    cluster_info['Sat_Range'] = cluster_info.apply(lambda x: ', '.join([f"{elem}: [{x[elem+'_max']}  {x[elem+'_min']}]" for elem in x['Sat_Node'].split(', ')]), axis=1)
+
+    # Simple counting of codelets in each cluster
+    cluster_counts = satSetDF[NonMetricName.SI_CLUSTER_NAME].value_counts()
+    # Convert the counts to dataframe to join with cluster_info
+    cluster_counts = cluster_counts.to_frame('peer_codelet_cnt').reset_index().rename(columns={'index': NonMetricName.SI_CLUSTER_NAME})
+    cluster_info = pd.merge(left=cluster_info, right=cluster_counts, on=NonMetricName.SI_CLUSTER_NAME, how='left')
+
+    # Counting only for tiering
+    tiering_table['Training Set Count']=tiering_table.Tier.map(satSetDF.Tier.value_counts())
+    # Default values will be overriden when cluster is found
+
+    testSetDF[MetricName.TIMESTAMP] = testSetDF[MetricName.TIMESTAMP].astype({MetricName.TIMESTAMP: 'int64'})
+    testSetDF['Variant'] = ''
+    # copiedTestSetDF['SI_Result'] = 'No Cluster'
+    # copiedTestSetDF[['Box_Length', 'Box_Ratio', 'Intensity', 'Saturation', 'Sat_Node', 'Sat_Range',
+    #                  'SW_bias', 'SW_bias_Result', 'SW_bias_box_length', 'SW_bias_box_ratio', 'SW_bias_CLS_CDLTS']] = None
+
+    # Do a cross join so each test codelet will be associated to (the same) tiering table to find tierin parallel (table lookup)
+    test_and_tiering = crossjoin(testSetDF, tiering_table, suffixes=("", "_threshold"))
+    # Compare against thresholds.  Need to copy out and rename to matching columns to be able to do the big compare operation.
+    tiering_threshold_names = [n+"_threshold" for n in tiering_metrics]
+    tiering_thresholds = test_and_tiering[tiering_threshold_names]
+    tiering_thresholds = tiering_thresholds.rename(columns=dict(zip(tiering_threshold_names, tiering_metrics)))
+    tiering_sat_checks = test_and_tiering[tiering_metrics] > tiering_thresholds
+    # For traffic compute another mask to ignore small traffic
+    small_traffic_thresholds = 0.1 * test_and_tiering[mem_traffic].max(axis=1)
+    small_traffic_checks = test_and_tiering[mem_traffic].gt(small_traffic_thresholds, axis=0)
+
+    traffic_sat_checks = tiering_sat_checks[mem_traffic] & small_traffic_checks
+    traffic_sat_checks_any = traffic_sat_checks.any(axis=1)
+    non_traffic_sat_checks = tiering_sat_checks[non_traffic_tiering_metrics]
+    non_traffic_sat_checks_any = non_traffic_sat_checks.any(axis=1)
+    test_and_tiering['sat_check'] = traffic_sat_checks_any | non_traffic_sat_checks_any
+    tiers = test_and_tiering[KEY_METRICS+['Tier', 'sat_check']].groupby(KEY_METRICS).apply(lambda x: min(x.loc[x['sat_check'],'Tier'], default=np.nan))
+    # Join back to get the rows with right tiers only
+    test_and_sats = pd.concat([test_and_tiering[KEY_METRICS+['Tier']],traffic_sat_checks, non_traffic_sat_checks], axis=1)
+    test_and_sats = pd.merge(left=test_and_sats, right=tiers.to_frame('Tier'), on=KEY_METRICS+['Tier'], how='right')
+    compute_cluster_names(test_and_sats, list(traffic_sat_checks.columns)+list(non_traffic_sat_checks.columns))
+
+    # With cluster name, we can merge with cluster_info to get training info associated
+    # Note that both test df and cluster info has 'Sat_Node', 'Tier' and 'SI_SAT_TIER' columns, below we join with both cluster name and sat node expecting them to be consistent 
+    test_and_sats = pd.merge(left=test_and_sats, right=cluster_info, on=[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'Tier', NonMetricName.SI_SAT_TIER], how='left')
+    tiered_mask = ~test_and_sats['Tier'].isna()
+    test_and_sats.loc[tiered_mask, NonMetricName.SI_SAT_TIER]=test_and_sats.loc[tiered_mask, NonMetricName.SI_SAT_TIER].astype('int32')
+    test_and_sats.loc[tiered_mask,'Tier']=test_and_sats.loc[tiered_mask,'Tier'].astype(str)
+    # Set Cluster name to '' for tiny clusters
+    test_and_sats.loc[(test_and_sats['peer_codelet_cnt']<2) | (test_and_sats['peer_codelet_cnt'].isna()), NonMetricName.SI_CLUSTER_NAME] = ''
+    my_all_test_codelets = pd.merge(left=testSetDF, right=test_and_sats[KEY_METRICS+sorted(set(test_and_sats.columns) -set(testSetDF.columns))], on=KEY_METRICS)
+    peer_mask = satSetDF[NonMetricName.SI_CLUSTER_NAME].isin(set(my_all_test_codelets[NonMetricName.SI_CLUSTER_NAME].to_list())-set({''}))
+    my_all_clusters = satSetDF[peer_mask]
+    # TODO: clean up
+    my_all_clusters[NonMetricName.SI_SAT_NODES] = my_all_clusters['satTrafficList'].to_frame().apply(lambda x: set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(x['satTrafficList']) & CU_NODE_SET}, axis=1)
+    
+    test_and_tiering = pd.merge(left=test_and_tiering, right=tiers.to_frame('Tier'), on=KEY_METRICS+['Tier'], how='right')
+
+    copiedTestSetDF = testSetDF.copy()
+    copiedTestSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
+    copiedTestSetDF[NonMetricName.SI_SAT_NODES] = [set(BASIC_NODE_LIST)]*len(copiedTestSetDF)
+    copiedTestSetDF[MetricName.SHORT_NAME]='test-'+copiedTestSetDF[MetricName.SHORT_NAME]
+
+    norm = "row"
+    all_test_codelets = my_all_test_codelets
+    all_clusters = my_all_clusters
+
+
+    #all_clusters, my_cluster_and_test_df, testDF = compute_only(all_clusters, norm, testDF, updated_chosen_node_set)
+    clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != '']
+    all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
+                                                      set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(ALL_NODE_LIST)})
+    added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
+    all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
+    result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt', 'Tier', 'Sat_Node', 'Sat_Range', 'Variant' ]]
+    # Compute min and max for S and I for each cluster 
+    cluster_groups=all_clusters[[NonMetricName.SI_CLUSTER_NAME, 'Intensity', 'Saturation']].groupby(
+      NonMetricName.SI_CLUSTER_NAME).agg({'Intensity': ['min', 'max'], 'Saturation': ['min', 'max']})
+    # Flattern the columns
+    cluster_groups.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_groups.columns.values]
+    cluster_groups['s_length']=round(cluster_groups['Saturation_max']-cluster_groups['Saturation_min'],2)
+    cluster_groups['i_length']=round(cluster_groups['Intensity_max']-cluster_groups['Intensity_min'],2)
+    cluster_groups['s_ratio']=round(cluster_groups['Saturation_max']/cluster_groups['Saturation_min'],2)
+    cluster_groups['i_ratio']=round(cluster_groups['Intensity_max']/cluster_groups['Intensity_min'],2)
+
+    #cluster_groups['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
+    cluster_groups['Box_Length'] = '{' + cluster_groups['s_length'].astype(str) + ' , ' + cluster_groups['i_length'].astype(str) + '}'
+    cluster_groups['Box_Ratio'] = '{' + cluster_groups['s_ratio'].astype(str) + ' , ' + cluster_groups['i_ratio'].astype(str) + '}'
+    # Flattern the groupped df
+    #cluster_groups = cluster_groups.stack()[['Box_Length', 'Box_Ratio']]
+    all_test_codelets=pd.merge(left=all_test_codelets, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
+    all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
+    all_test_codelets[NonMetricName.SI_TIER_NORMALIZED] = all_test_codelets[NonMetricName.SI_SAT_TIER] + \
+      (all_test_codelets['Saturation']-all_test_codelets['Saturation_min']).clip(lower=0)/all_test_codelets['s_length']
+    noSatMask = all_test_codelets['Saturation'].isna()
+    all_test_codelets.loc[noSatMask,'SI_Result'] = 'No Cluster'
+    inBoxMask = (all_test_codelets['Saturation'] >= all_test_codelets['Saturation_min']) & \
+      (all_test_codelets['Saturation'] <= all_test_codelets['Saturation_max']) & \
+        (all_test_codelets['Intensity'] >= all_test_codelets['Intensity_min']) & \
+          (all_test_codelets['Intensity'] <= all_test_codelets['Intensity_max'])
+    all_test_codelets.loc[~noSatMask & inBoxMask, 'SI_Result']='Inside Box'
+    all_test_codelets.loc[~noSatMask & ~inBoxMask, 'SI_Result']='Outside Box'
+    pass_counts = all_test_codelets['SI_Result'].value_counts().reindex(['Inside Box', 'Outside Box'], fill_value=0)
+    si_passed = pass_counts['Inside Box']
+    si_failed = pass_counts['Outside Box']
+
+    # Also compute normalized tier for training codelets.  
+    all_clusters=pd.merge(left=all_clusters, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
+    all_clusters[NonMetricName.SI_TIER_NORMALIZED] = all_clusters[NonMetricName.SI_SAT_TIER] + \
+      (all_clusters['Saturation']-all_clusters['Saturation_min'])/all_clusters['s_length']
+    result_df['GFlops']=round(all_test_codelets[MetricName.RATE_FP_GFLOP_P_S], 2)
+    result_df['Saturation'] = round(all_test_codelets['Saturation'], 2)
+    result_df['Intensity'] = round(all_test_codelets['Intensity'], 2)
+
+    result_df['neg_bias[CNVT,DIV,clu_score,Rec,RHS]']=all_test_codelets[['Nd_CNVT_OPS', 'Nd_DIV_OPS', 'Nd_clu_score', 
+                                                                         'Nd_Recurrence', 'Nd_RHS']].values.tolist()
+    result_df['pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]'] =all_test_codelets[['Nd_VEC_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_FMA_OPS']].values.tolist()
+    result_df.to_csv('Result_report.csv', index = True, header=True)
+    print ("Total No. of codelets tested : ", codelet_tested)
+    print ("Total No. of codelets outside SI box: ", si_passed)
+    print ("Total No. of codelets inside SI box: ", si_failed)
+    print ("Total No. of codelets without Cluster : ", no_cluster)
+    print ("Total No. of Tiers : ", len(result_df['Tier'].unique()))
+    print ("Total No. of unique clusters : ", len(result_df['Sat_Node'].unique()))
+    stat_data = [{'Mem Threshold (incorrect)' : satThreshold, 'CU Threshold' : cuSatThreshold,
+            'Codelets Tested' : codelet_tested, 'Passed' : si_passed, 'Failed' : si_failed,
+            'No Cluster' : no_cluster, 'Tier Count' : len(unique_tiers), 'Cluster Count' : len(unique_sat_node_clusters)}]
+    stats_df = pd.DataFrame(stat_data)
+    my_file = Path("./statistcs.csv")
+    if my_file.is_file():
+       # file exists
+       stats_df.to_csv('statistcs.csv', mode='a', header=False, index=False)
+    else :
+       stats_df.to_csv('statistcs.csv', mode='w', header=True, index=False)
+
+    # filter out the unnecessary columns
+    all_clusters = all_clusters[NEEDED_CLUSTER_DF_COLUMNS]
+    # TODO: Fix inconsisent NEEDED CLUSTER and ALL NODE
+    all_test_codelets[list(set(NEEDED_CLUSTER_DF_COLUMNS)-set(all_test_codelets.columns))]=np.nan
+    all_test_codelets=all_test_codelets[NEEDED_CLUSTER_DF_COLUMNS]
+    # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
+    # return the global cluster and test codelets => to use for plotting
+    return all_clusters, all_test_codelets, result_df
+
+    
+# Some leftover routines not removed but unused.
 # Find max in traffic columns + perfcent columns, save to maxDict
 def createSubcluster(data, subSatList, short_name):
   # get rows that we need to check
@@ -435,49 +442,6 @@ def createSubcluster(data, subSatList, short_name):
           target_df = target_df.append(data.iloc[row], ignore_index=True)
   return target_df
 
-# Find max in traffic columns + perfcent columns, save to maxDict
-def findNextTierInColumns(data, traffic, cu_traffic, satThreshold):
-  thresholds = compute_node_thresholds(data, traffic, cu_traffic, satThreshold)
-  any_sat_mask = (data[traffic+cu_traffic] > thresholds[traffic+cu_traffic]).any(axis=1)
-  return data[~any_sat_mask]
-
-  # get rows that we need to check
-  rowsToCheck = data.index.tolist()
-  target_df = pd.DataFrame(columns=data.columns.tolist())
-  #csv_string = 'next_tier.csv'
-  for row in rowsToCheck:
-    row_add_to_next_tier = True
-    for column in traffic:
-      # init list of blocks to color 
-      columnIndex = data.columns.get_loc(column)
-      maxValue = data[column].max()
-      threshold = maxValue * (1 - satThreshold)
-      try:
-         num = data.iloc[row, columnIndex]
-      except:
-         print ("Cannot access row : ", row, "column : ", column)
-         print ("Rows to check : ", rowsToCheck)
-      if num > threshold:
-        row_add_to_next_tier = False
-    for column in cu_traffic:
-      # init list of blocks to color
-      # only bother if greater than .5
-      columnIndex = data.columns.get_loc(column)
-      maxValue = data[column].max()
-      if maxValue >= 50:
-          threshold = maxValue * (1 - cuSatThreshold)
-          try:
-             num = data.iloc[row, columnIndex]
-          except:
-             print ("Cannot access row : ", row, "column : ", column)
-          if num > threshold:
-             row_add_to_next_tier = False
-    if row_add_to_next_tier == True:
-      target_df = target_df.append(data.iloc[row], ignore_index=True)
-    #end columnfor
-  #end rowfor
-  #target_df.to_csv(csv_string, index = False, header=True)
-  return target_df
 
 def concat_ordered_columns(frames):
     columns_ordered = []
@@ -627,149 +591,7 @@ def do_swbias_clustering(peer_codelet_df, testDF, satTrafficList):
         'Box_Length' : 0, 'Box_Ratio' : 0, 'Neg_SW_bias_Vec' : str(neg_bias_vec), 'Pos_SW_bias_Vec' : str(pos_bias_vec)}, index=[0])
     return result_df
 
-def testSI(target_df, testDF):
-    orig_codelet_sat_val = testDF['Saturation'].item()
-    orig_codelet_int_val = testDF['Intensity'].item()
-    if ((orig_codelet_sat_val >= min(target_df['Saturation'])) and (orig_codelet_sat_val <= max(target_df['Saturation'])) and
-        (orig_codelet_int_val >= min(target_df['Intensity'])) and (orig_codelet_int_val <= max(target_df['Intensity']))) :
-        return False
-    else :
-        return True
 
-def find_cluster(satSetDF, testDF, codelet_tier, all_clusters):
-    # global si_passed
-    # global si_failed
-    global no_cluster
-    #global satThreshold
-
-    norm = "row"
-    title = "SI"
-    short_name = testDF[MetricName.SHORT_NAME].item()
-
-    # mem_traffic_threshold = 0.1 * max_mem_traffic.item()
-    # tstcdlt_TrafficToCheck = []
-    # for column in memTrafficToCheck:
-    #   columnIndex = testDF.columns.get_loc(column)
-    #   val = testDF.iloc[0, columnIndex]
-    #   if (val > mem_traffic_threshold):
-    #     tstcdlt_TrafficToCheck.append(column)
-    # vectorize later
-    tstcdlt_TrafficToCheck = testDF['tstcdlt_TrafficToCheck'].item() 
-
-    # Default values will be overriden when cluster is found
-    while len(satSetDF) > 5:
-      peer_cdlt_count = 0
-      dfs = [satSetDF,testDF]
-      full_df = concat_ordered_columns(dfs)
-      #full_df.to_csv(short_name + '_debug.csv', index = False, header=True)
-
-      codelet_tier = codelet_tier + 1
-      #satThreshold = satThreshold*codelet_tier
-      satThreshold = 0.1 * codelet_tier
-
-      peer_codelet_df, satTrafficList = checkTierFindPeerCodelets(full_df, tstcdlt_TrafficToCheck, 
-                                                   percentsToCheck, satSetDF, testDF, satThreshold)
-      # check_codlet_in_this_tier, satTrafficList = checkCodeletTier(full_df, tstcdlt_TrafficToCheck, 
-      #                                              percentsToCheck, satSetDF, testDF)
-
-      # Print the tiering process : For debug only
-      if PRINT_COLOURED_TIERS:
-        print_coloured_tiers(short_name, codelet_tier, full_df)
-      # Moved this out of if check so else part also have chosen_node_set defined.
-      peer_cdlt_count = len(peer_codelet_df)
-      if peer_cdlt_count > 0:
-          break  # Done
-
-      satSetDF = findNextTierInColumns(satSetDF, trafficToCheck, percentsToCheck, satThreshold)
-           
-    if peer_cdlt_count > 0:
-      #satSetDF.to_csv(short_name+'_tier_report.csv', index = True, header=True)
-      # #peer_codelet_df = findPeerCodelets(satSetDF, percentsToCheck, satTrafficList)
-
-      testDF['Sat_Range'] = ', '.join([f'{elem}: [{peer_codelet_df[elem].max()}  {peer_codelet_df[elem].min()}]' for elem in satTrafficList])
-      sat_node_string = ", ".join(satTrafficList)
-
-      if peer_cdlt_count >= 2: 
-        
-        updated_chosen_node_set = set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(satTrafficList) & CU_NODE_SET} 
-        satTrafficString = ", ".join(map(str, satTrafficList))
-
-        testDF[NonMetricName.SI_CLUSTER_NAME] = str(codelet_tier) + ' ' + satTrafficString
-        testDF[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(testDF)
-        testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
-        cluster_name = str(codelet_tier) + ' ' + satTrafficString
-
-        peer_codelet_df[NonMetricName.SI_CLUSTER_NAME] = cluster_name
-        peer_codelet_df[NonMetricName.SI_SAT_NODES] = [updated_chosen_node_set]*len(peer_codelet_df)
-        peer_codelet_df[NonMetricName.SI_SAT_TIER] = codelet_tier
-        #my_peer_codelet_df = peer_codelet_df.iloc[:-1,:]
-        my_peer_codelet_df = peer_codelet_df
-
-        #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, updated_chosen_node_set)
-        #my_peer_codelet_df, my_cluster_and_test_df, testDF = compute_only(my_peer_codelet_df, norm, testDF, 
-        #                                                                  set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET})
-        # s_range = my_cluster_and_test_df['Saturation'].max() - my_cluster_and_test_df['Saturation'].min()
-        # peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - my_cluster_and_test_df['Saturation'].min())/s_range)
-        # testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
-        
-        #s_range = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
-        #peer_codelet_df[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
-        #testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier + ((testDF['Saturation'] - peer_codelet_df['Saturation'].min())/s_range)
-        #print(cluster_name)
-        #print(codelet_tier + ((testDF['Saturation'].item() - peer_codelet_df['Saturation'].min())/s_range), s_range, peer_codelet_df['Saturation'].min(), testDF['Saturation'].item())
-        
-
-        if cluster_name not in set(all_clusters[NonMetricName.SI_CLUSTER_NAME]):
-          all_clusters = all_clusters.append(my_peer_codelet_df)
-        #result = test_and_plot_orig('ORIG', final_df, outputfile, norm, title, chosen_node_set, target_df, short_name)
-        #result = True
- 
-        # Duplicated calculation of normalized tier
-        #s_length = peer_codelet_df['Saturation'].max() - peer_codelet_df['Saturation'].min()
-        #peer_codelet_df['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
-        #print(peer_codelet_df['Norm_Tier'])
-
-        # Do SW_BIAS Clustering anyways
-        # To update after basic clustering get settled.
-
-        #bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
-        #if (s_length > 1.5 or i_length > 1.5):
-        #    bias_res_df = do_swbias_clustering(peer_codelet_df,testDF, satTrafficList)
-        # codelet_set = testDF['Set'].item()
-        # if result == True :
-        #   print (short_name, "Passed the SI Test =>")
-        #   si_passed +=1
-        #   #findUniqueTiers(satTrafficList, codelet_tier)
-        # else:
-        #   print (short_name, "Failed the SI Test =>")
-        #   si_failed +=1
-        # if DO_SUB_CLUSTERING:
-        #   sub_df = do_sub_clustering(peer_codelet_df, testDF, short_name, codelet_tier, satTrafficList)
-        #   print ("The sub_node saturated : ", sub_df['Sat_Sub_Node'])
-        # if DO_DEBUG_LOGS:
-        #   peer_dfs = [peer_codelet_df,testDF]
-        #   final_df = concat_ordered_columns(peer_dfs)
-        #   final_df.to_csv(short_name+'_report.csv', index = True, header=True)
-        #testDF['SI_Result'] = 'Outside Box' if result else 'Inside Box'
-      else:
-        # empty tuple more friendly to group by operations
-        testDF[NonMetricName.SI_TIER_NORMALIZED] = codelet_tier
-        testDF[NonMetricName.SI_SAT_TIER] = codelet_tier
-        print (short_name, "No Cluster for the SI Test =>")
-        # get SW bias Vector
-        no_cluster+=1
-      testDF['Tier'] = str(codelet_tier)
-      testDF['Sat_Node'] = sat_node_string
-
-    else:
-      # empty tuple more friendly to group by operations
-      print (short_name, "Last Tier: No Cluster for the SI Test =>")
-      no_cluster+=1
-
-      testDF['Tier'] = 'LastTier_'+str(codelet_tier)
-      
-    testDF['peer_codelet_cnt'] = peer_cdlt_count
-    return all_clusters
 
 def print_coloured_tiers(short_name, codelet_tier, full_df):
     tier_book_path = short_name + "_tier.xlsx"
@@ -782,263 +604,6 @@ def print_coloured_tiers(short_name, codelet_tier, full_df):
     findMaxInColumnsToColor(full_df, trafficToCheck, percentsToCheck)
     colorMaxInColumn(full_df, coloured_maxOfColumn, opBlue, highlightSheet)
     tier_book.save(tier_book_path)
-
-# def find_all_clusters(satSetDF):
-#     #global satThreshold;
-#     print ("Memory Node Saturation Threshold : ", satThreshold)
-#     print ("Control Node Saturation Threshold : ", cuSatThreshold)
-
-def compute_cluster_names(tiers_sat_nodes_mask, sat_nodes):
-  sat_nodes_only=tiers_sat_nodes_mask[sat_nodes]
-  tiers_sat_nodes_mask['satTrafficList']=sat_nodes_only.apply(lambda x: sorted(sat_nodes_only.columns[x]), axis=1)
-  tiers_sat_nodes_mask['Sat_Node']=tiers_sat_nodes_mask.apply(lambda x: ", ".join(x['satTrafficList']), axis=1)
-  tiers_sat_nodes_mask[NonMetricName.SI_SAT_TIER] = tiers_sat_nodes_mask['Tier'].astype('int32')
-  tiers_sat_nodes_mask['Tier'] = tiers_sat_nodes_mask[NonMetricName.SI_SAT_TIER].astype(str)
-  tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask.apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
-
-# For each codelets in current_codelets_runs_df, find their cluster
-#   Store the name of the cluster to the SI_CLUSTER_NAME column
-#   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
-def do_sat_analysis(optimal_data_df, testSetDF, chosen_node_set, disable = False):
-    short_name=''
-    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
-    CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute()
-    satSetDF = optimal_data_df
-
-    # If SI Analysis is disabled
-    # Creating an empty Dataframe with column names only SI_SAT_NODES and SI_CLUSTER_NAME
-    if disable:
-      testSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
-      testSetDF[NonMetricName.SI_SAT_NODES] = [chosen_node_set]*len(testSetDF)
-      all_test_codelets = all_test_codelets.append(testSetDF)
-      return all_clusters, all_test_codelets
-    #global satThreshold
-    global cuSatThreshold
-    codelet_tested = 0
-    # Commented out following line because it is incorrect.  satThreshold is *not* a constant
-    # print ("Memory Node Saturation Threshold : ", satThreshold)
-    print ("Control Node Saturation Threshold : ", cuSatThreshold)
-    capsToRetain = [MetricName.capWUnit(n) for n in chosen_node_set]+[MetricName.CAP_ALLMAX_GB_P_S]
-    #cols = satSetDF.columns.tolist() + list(set(KEY_METRICS) - set(satSetDF.columns.tolist()))+capsToRetain
-    cols = set(satSetDF.columns) | set(KEY_METRICS) | set(capsToRetain)
-
-    compute_sw_bias(satSetDF)
-    compute_sw_bias(testSetDF)
-
-    mem_traffic = [MetricName.RATE_L1_GB_P_S, MetricName.RATE_L2_GB_P_S, MetricName.RATE_L3_GB_P_S, MetricName.RATE_RAM_GB_P_S]
-    max_mem_traffic = testSetDF[mem_traffic].max(axis=1)
-    mem_traffic_threshold = 0.1 * max_mem_traffic
-    check_traffic_mask = testSetDF[memTrafficToCheck].gt(mem_traffic_threshold, axis=0)
-    testSetDF.loc[:,'tstcdlt_TrafficToCheck'] = check_traffic_mask.apply(
-      lambda x: check_traffic_mask.columns[x].to_list() + [MetricName.RATE_FP_GFLOP_P_S], axis=1)
-
-    satSetDF['Tier'] = None 
-    tier = 0
-    non_traffic_tiering_metrics = [MetricName.RATE_FP_GFLOP_P_S, MetricName.RATE_REG_SIMD_GB_P_S] + percentsToCheck
-    tiering_metrics = mem_traffic + non_traffic_tiering_metrics
-    #tiering_table = pd.DataFrame(columns=['Tier']+tiering_metrics)
-    tiering_table = pd.DataFrame()
-    sat_table = satSetDF[KEY_METRICS].copy()
-    # naMask is True for items not tiered yet so need to be considered
-    candidate_mask = satSetDF['Tier'].isna()
-    gap = None
-    while candidate_mask.any():
-      curSatSetDF = satSetDF[candidate_mask]
-      tier = tier + 1
-      satThreshold = 0.1 * tier
-      thresholds, this_gap = compute_node_thresholds(curSatSetDF, 
-                                                     mem_traffic+[MetricName.RATE_FP_GFLOP_P_S, 
-                                                                  MetricName.RATE_REG_SIMD_GB_P_S], 
-                                                     percentsToCheck, satThreshold, gap)
-                 
-      # uncomment following line to try uniform gap
-      #gap = this_gap if gap is None else gap
-      thresholds['Tier'] = tier
-      tiering_table = tiering_table.append(thresholds, ignore_index=True)
-
-      sat_mask = (curSatSetDF[tiering_metrics] > thresholds[tiering_metrics])
-      # passMask records the rows in the candidate rows passing the saturation test
-      passMask = sat_mask.any(axis=1)
-      # update satSetDF in place.  To do this we get the mask to do the update
-      # First get a copy of current na mask reflecting this iteration's candidate rows.  
-      # The size of this mask is always the same as satSetDF.
-      mask_for_satSetDF = candidate_mask.copy()
-      # Among the rows with naMask==True, set the True/False value following the pass_mask, 
-      # Esseential this operation bring the saturation result back to the overall satSetDF mask,
-      # so satSetDF[mask] are the rows passing saturation test.
-      mask_for_satSetDF[candidate_mask]=passMask
-      satSetDF.loc[mask_for_satSetDF, 'Tier'] = tier
-
-      sat_table.loc[candidate_mask, 'Tier'] = tier
-      sat_table.loc[candidate_mask, sat_mask.columns] = sat_mask
-
-      candidate_mask = satSetDF['Tier'].isna()
-    all_nodes = set(sat_table)-set(KEY_METRICS+['Tier'])
-    compute_cluster_names(sat_table, all_nodes)
-    # Since sat_table and satSetDF are in the same index order, so just assign the cluster name column directly
-    satSetDF[[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'satTrafficList', NonMetricName.SI_SAT_TIER]] = \
-      sat_table[[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'satTrafficList', NonMetricName.SI_SAT_TIER]]
-
-    
-    # Now compute the Sat_Range.  Including 'Sat_Node' instead of satTrafficList because list cannob be used in groupby
-    # Also reset_index() to bring the cluster name and Sat_Node to column names.  Including Tier and SI_SAT_TIER assuming they are consistent with cluster name which is the primary key
-    cluster_info = satSetDF.groupby([NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'Tier', NonMetricName.SI_SAT_TIER]).agg({ n: ['min', 'max'] for n in all_nodes}).reset_index()
-    # TODO : fix types more cleanly
-    cluster_info[NonMetricName.SI_SAT_TIER]=cluster_info[NonMetricName.SI_SAT_TIER].astype('int32')
-    cluster_info['Tier']=cluster_info['Tier'].astype(str)
-    # Flattern the columns
-    cluster_info.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_info.columns.values]
-    cluster_info['Sat_Range'] = cluster_info.apply(lambda x: ', '.join([f"{elem}: [{x[elem+'_max']}  {x[elem+'_min']}]" for elem in x['Sat_Node'].split(', ')]), axis=1)
-
-    # Simple counting of codelets in each cluster
-    cluster_counts = satSetDF[NonMetricName.SI_CLUSTER_NAME].value_counts()
-    # Convert the counts to dataframe to join with cluster_info
-    cluster_counts = cluster_counts.to_frame('peer_codelet_cnt').reset_index().rename(columns={'index': NonMetricName.SI_CLUSTER_NAME})
-    cluster_info = pd.merge(left=cluster_info, right=cluster_counts, on=NonMetricName.SI_CLUSTER_NAME, how='left')
-
-    # Counting only for tiering
-    tiering_table['Training Set Count']=tiering_table.Tier.map(satSetDF.Tier.value_counts())
-    # Default values will be overriden when cluster is found
-
-    testSetDF[MetricName.TIMESTAMP] = testSetDF[MetricName.TIMESTAMP].astype({MetricName.TIMESTAMP: 'int64'})
-    testSetDF['Variant'] = ''
-    # copiedTestSetDF['SI_Result'] = 'No Cluster'
-    # copiedTestSetDF[['Box_Length', 'Box_Ratio', 'Intensity', 'Saturation', 'Sat_Node', 'Sat_Range',
-    #                  'SW_bias', 'SW_bias_Result', 'SW_bias_box_length', 'SW_bias_box_ratio', 'SW_bias_CLS_CDLTS']] = None
-
-    # Do a cross join so each test codelet will be associated to (the same) tiering table to find tierin parallel (table lookup)
-    test_and_tiering = crossjoin(testSetDF, tiering_table, suffixes=("", "_threshold"))
-    # Compare against thresholds.  Need to copy out and rename to matching columns to be able to do the big compare operation.
-    tiering_threshold_names = [n+"_threshold" for n in tiering_metrics]
-    tiering_thresholds = test_and_tiering[tiering_threshold_names]
-    tiering_thresholds = tiering_thresholds.rename(columns=dict(zip(tiering_threshold_names, tiering_metrics)))
-    tiering_sat_checks = test_and_tiering[tiering_metrics] > tiering_thresholds
-    # For traffic compute another mask to ignore small traffic
-    small_traffic_thresholds = 0.1 * test_and_tiering[mem_traffic].max(axis=1)
-    small_traffic_checks = test_and_tiering[mem_traffic].gt(small_traffic_thresholds, axis=0)
-
-    traffic_sat_checks = tiering_sat_checks[mem_traffic] & small_traffic_checks
-    traffic_sat_checks_any = traffic_sat_checks.any(axis=1)
-    non_traffic_sat_checks = tiering_sat_checks[non_traffic_tiering_metrics]
-    non_traffic_sat_checks_any = non_traffic_sat_checks.any(axis=1)
-    test_and_tiering['sat_check'] = traffic_sat_checks_any | non_traffic_sat_checks_any
-    tiers = test_and_tiering[KEY_METRICS+['Tier', 'sat_check']].groupby(KEY_METRICS).apply(lambda x: min(x.loc[x['sat_check'],'Tier']))
-    # Join back to get the rows with right tiers only
-    test_and_sats = pd.concat([test_and_tiering[KEY_METRICS+['Tier']],traffic_sat_checks, non_traffic_sat_checks], axis=1)
-    test_and_sats = pd.merge(left=test_and_sats, right=tiers.to_frame('Tier'), on=KEY_METRICS+['Tier'], how='right')
-    compute_cluster_names(test_and_sats, list(traffic_sat_checks.columns)+list(non_traffic_sat_checks.columns))
-
-    # With cluster name, we can merge with cluster_info to get training info associated
-    # Note that both test df and cluster info has 'Sat_Node', 'Tier' and 'SI_SAT_TIER' columns, below we join with both cluster name and sat node expecting them to be consistent 
-    test_and_sats = pd.merge(left=test_and_sats, right=cluster_info, on=[NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'Tier', NonMetricName.SI_SAT_TIER], how='left')
-    test_and_sats[NonMetricName.SI_SAT_TIER]=test_and_sats[NonMetricName.SI_SAT_TIER].astype('int32')
-    test_and_sats['Tier']=test_and_sats['Tier'].astype(str)
-    # Set Cluster name to '' for tiny clusters
-    test_and_sats.loc[test_and_sats['peer_codelet_cnt']<2, NonMetricName.SI_CLUSTER_NAME] = ''
-    test_and_sats[NonMetricName.SI_SAT_NODES]=test_and_sats.apply(lambda x: set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(x['satTrafficList']) & CU_NODE_SET}, axis=1)
-    my_all_test_codelets = pd.merge(left=testSetDF, right=test_and_sats[KEY_METRICS+sorted(set(test_and_sats.columns) -set(testSetDF.columns))], on=KEY_METRICS)
-    peer_mask = satSetDF[NonMetricName.SI_CLUSTER_NAME].isin(set(my_all_test_codelets[NonMetricName.SI_CLUSTER_NAME].to_list())-set({''}))
-    my_all_clusters = satSetDF[peer_mask]
-    # TODO: clean up
-    my_all_clusters[NonMetricName.SI_SAT_NODES] = my_all_clusters.apply(lambda x: set(BASIC_NODE_LIST) | {CU_NODE_DICT[n] for n in set(x['satTrafficList']) & CU_NODE_SET}, axis=1)
-    
-    test_and_tiering = pd.merge(left=test_and_tiering, right=tiers.to_frame('Tier'), on=KEY_METRICS+['Tier'], how='right')
-
-    copiedTestSetDF = testSetDF.copy()
-    copiedTestSetDF[NonMetricName.SI_CLUSTER_NAME] = ''
-    copiedTestSetDF[NonMetricName.SI_SAT_NODES] = [set(BASIC_NODE_LIST)]*len(copiedTestSetDF)
-    copiedTestSetDF[MetricName.SHORT_NAME]='test-'+copiedTestSetDF[MetricName.SHORT_NAME]
-
-    # cols = set(copiedTestSetDF.columns) | cols
-    # all_clusters = pd.DataFrame(columns = NEEDED_CLUSTER_DF_COLUMNS)
-    # all_test_codelets = pd.DataFrame(columns = NEEDED_TEST_DF_COLUMNS)
-    # for i, row in copiedTestSetDF.iterrows():
-    #     testDF = pd.DataFrame(columns=cols)
-    #     testDF = testDF.append(row, ignore_index=False)[cols]
-    #     codelet_tested += 1
-		#     #find the saturation clusters
-    #     all_clusters = find_cluster(satSetDF, testDF, 0, all_clusters)
-    #     all_test_codelets = all_test_codelets.append(testDF)
-
-    #all_test_codelets = all_test_codelets.reset_index(drop=True)
-    norm = "row"
-    all_test_codelets = my_all_test_codelets
-    all_clusters = my_all_clusters
-    #all_clusters, my_cluster_and_test_df, testDF = compute_only(all_clusters, norm, testDF, updated_chosen_node_set)
-    clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != '']
-    all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
-                                                      set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(ALL_NODE_LIST)})
-    added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
-    all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
-    result_df = all_test_codelets[[MetricName.SHORT_NAME, 'peer_codelet_cnt', 'Tier', 'Sat_Node', 'Sat_Range', 'Variant' ]]
-    # Compute min and max for S and I for each cluster 
-    cluster_groups=all_clusters[[NonMetricName.SI_CLUSTER_NAME, 'Intensity', 'Saturation']].groupby(
-      NonMetricName.SI_CLUSTER_NAME).agg({'Intensity': ['min', 'max'], 'Saturation': ['min', 'max']})
-    # Flattern the columns
-    cluster_groups.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_groups.columns.values]
-    cluster_groups['s_length']=round(cluster_groups['Saturation_max']-cluster_groups['Saturation_min'],2)
-    cluster_groups['i_length']=round(cluster_groups['Intensity_max']-cluster_groups['Intensity_min'],2)
-    cluster_groups['s_ratio']=round(cluster_groups['Saturation_max']/cluster_groups['Saturation_min'],2)
-    cluster_groups['i_ratio']=round(cluster_groups['Intensity_max']/cluster_groups['Intensity_min'],2)
-
-    #cluster_groups['Norm_Tier'] = codelet_tier + ((peer_codelet_df['Saturation'] - peer_codelet_df['Saturation'].min())/s_length)
-    cluster_groups['Box_Length'] = '{' + cluster_groups['s_length'].astype(str) + ' , ' + cluster_groups['i_length'].astype(str) + '}'
-    cluster_groups['Box_Ratio'] = '{' + cluster_groups['s_ratio'].astype(str) + ' , ' + cluster_groups['i_ratio'].astype(str) + '}'
-    # Flattern the groupped df
-    #cluster_groups = cluster_groups.stack()[['Box_Length', 'Box_Ratio']]
-    all_test_codelets=pd.merge(left=all_test_codelets, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
-    all_test_codelets['SW_bias'] = round(all_test_codelets['Net_SW_Bias'], 2)
-    all_test_codelets[NonMetricName.SI_TIER_NORMALIZED] = all_test_codelets[NonMetricName.SI_SAT_TIER] + \
-      (all_test_codelets['Saturation']-all_test_codelets['Saturation_min']).clip(lower=0)/all_test_codelets['s_length']
-    noSatMask = all_test_codelets['Saturation'].isna()
-    all_test_codelets.loc[noSatMask,'SI_Result'] = 'No Cluster'
-    inBoxMask = (all_test_codelets['Saturation'] >= all_test_codelets['Saturation_min']) & \
-      (all_test_codelets['Saturation'] <= all_test_codelets['Saturation_max']) & \
-        (all_test_codelets['Intensity'] >= all_test_codelets['Intensity_min']) & \
-          (all_test_codelets['Intensity'] <= all_test_codelets['Intensity_max'])
-    all_test_codelets.loc[~noSatMask & inBoxMask, 'SI_Result']='Inside Box'
-    all_test_codelets.loc[~noSatMask & ~inBoxMask, 'SI_Result']='Outside Box'
-    pass_counts = all_test_codelets['SI_Result'].value_counts().reindex(['Inside Box', 'Outside Box'], fill_value=0)
-    si_passed = pass_counts['Inside Box']
-    si_failed = pass_counts['Outside Box']
-
-    # Also compute normalized tier for training codelets.  
-    all_clusters=pd.merge(left=all_clusters, right=cluster_groups, on=[NonMetricName.SI_CLUSTER_NAME], how='outer')
-    all_clusters[NonMetricName.SI_TIER_NORMALIZED] = all_clusters[NonMetricName.SI_SAT_TIER] + \
-      (all_clusters['Saturation']-all_clusters['Saturation_min'])/all_clusters['s_length']
-    result_df['GFlops']=round(all_test_codelets[MetricName.RATE_FP_GFLOP_P_S], 2)
-    result_df['Saturation'] = round(all_test_codelets['Saturation'], 2)
-    result_df['Intensity'] = round(all_test_codelets['Intensity'], 2)
-
-    result_df['neg_bias[CNVT,DIV,clu_score,Rec,RHS]']=all_test_codelets[['Nd_CNVT_OPS', 'Nd_DIV_OPS', 'Nd_clu_score', 
-                                                                         'Nd_Recurrence', 'Nd_RHS']].values.tolist()
-    result_df['pos_bias[VEC_OPS,ISA_EXT,FMA_OPS]'] =all_test_codelets[['Nd_VEC_OPS', 'Nd_ISA_EXT_TYPE', 'Nd_FMA_OPS']].values.tolist()
-    result_df.to_csv('Result_report.csv', index = True, header=True)
-    print ("Total No. of codelets tested : ", codelet_tested)
-    print ("Total No. of codelets outside SI box: ", si_passed)
-    print ("Total No. of codelets inside SI box: ", si_failed)
-    print ("Total No. of codelets without Cluster : ", no_cluster)
-    print ("Total No. of Tiers : ", len(result_df['Tier'].unique()))
-    print ("Total No. of unique clusters : ", len(result_df['Sat_Node'].unique()))
-    stat_data = [{'Mem Threshold (incorrect)' : satThreshold, 'CU Threshold' : cuSatThreshold,
-            'Codelets Tested' : codelet_tested, 'Passed' : si_passed, 'Failed' : si_failed,
-            'No Cluster' : no_cluster, 'Tier Count' : len(unique_tiers), 'Cluster Count' : len(unique_sat_node_clusters)}]
-    stats_df = pd.DataFrame(stat_data)
-    my_file = Path("./statistcs.csv")
-    if my_file.is_file():
-       # file exists
-       stats_df.to_csv('statistcs.csv', mode='a', header=False, index=False)
-    else :
-       stats_df.to_csv('statistcs.csv', mode='w', header=True, index=False)
-
-    # filter out the unnecessary columns
-    all_clusters = all_clusters[NEEDED_CLUSTER_DF_COLUMNS]
-    # TODO: Fix inconsisent NEEDED CLUSTER and ALL NODE
-    all_test_codelets[list(set(NEEDED_CLUSTER_DF_COLUMNS)-set(all_test_codelets.columns))]=np.nan
-    all_test_codelets=all_test_codelets[NEEDED_CLUSTER_DF_COLUMNS]
-    # GUI will be able to get individual cluster data frame by using the mask all_clusters[NonMetric_Name.SI_CLUSTER_NAME] == 'FE_tier1'
-    # return the global cluster and test codelets => to use for plotting
-    return all_clusters, all_test_codelets, result_df
 
 
 def main(argv):
@@ -1083,8 +648,8 @@ def main(argv):
       nodes_without_units = {n.split(" ")[0] for n in ALL_NODE_SET} 
       CapacityData(TestSetDF).set_chosen_node_set(nodes_without_units).compute()
       results = do_sat_analysis(mainDataFrame, TestSetDF, ALL_NODE_SET)
-    if PRINT_ALL_CLUSTERS:
-      find_all_clusters(mainDataFrame)
+    # if PRINT_ALL_CLUSTERS:
+    #   find_all_clusters(mainDataFrame)
 
 
 if __name__ == "__main__":
