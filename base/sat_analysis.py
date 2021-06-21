@@ -150,8 +150,11 @@ def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
   sat_nodes_only=tiers_sat_nodes_mask.loc[tiered_mask, sat_nodes]
   tiers_sat_nodes_mask['satTrafficList']=[[]]*len(tiers_sat_nodes_mask)
   tiers_sat_nodes_mask.loc[tiered_mask, 'satTrafficList'] = sat_nodes_only.apply(lambda x: sorted(sat_nodes_only.columns[x]), axis=1)
+  tiers_sat_nodes_mask['Sat_Node']=['']*len(tiers_sat_nodes_mask)
   tiers_sat_nodes_mask.loc[tiered_mask, 'Sat_Node'] = tiers_sat_nodes_mask[tiered_mask].apply(lambda x: ", ".join(x['satTrafficList']), axis=1)
+  tiers_sat_nodes_mask[NonMetricName.SI_SAT_TIER] = [-1]*len(tiers_sat_nodes_mask)
   tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_TIER] = tiers_sat_nodes_mask.loc[tiered_mask,'Tier'].astype('int32')
+  tiers_sat_nodes_mask['Tier']=['']*len(tiers_sat_nodes_mask)
   tiers_sat_nodes_mask.loc[tiered_mask, 'Tier'] = tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_TIER].astype(str)
   tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=''
   tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
