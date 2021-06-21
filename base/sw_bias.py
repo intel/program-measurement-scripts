@@ -9,7 +9,7 @@ def remove_prefix(str, prefix):
 
 # rhs conversion function
 def find_rhs_ops(val):
-   if val <=1:
+   if val is not None and val <=1:
       rhs_node = 1
    else:
       rhs_node = 0
@@ -54,6 +54,8 @@ def find_inst_set_factor(val):
 # The array efficiency of inner-most loop is considered
 #If array utilization is less that 0.5 accounted to neg bias
 def find_clu_factor(clu_score):
+   if clu_score is None:
+      return 0
    clu_str = str(clu_score)
     # Find the last element in the clu-score value
    clu_str = clu_str.replace(']', '')
