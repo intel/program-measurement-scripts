@@ -156,6 +156,7 @@ class SiData(NodeWithUnitData):
 
     def compute_CSI(self, df_to_update):
         if len(df_to_update) == 0:
+            df_to_update[['Saturation', 'Intensity', 'SI']] = np.nan
             return  # Nothing to do for empty data
         # If SiSatNodes columns not exist.  Fill in default values here
         if not NonMetricName.SI_SAT_NODES in df_to_update.columns: 
