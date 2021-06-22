@@ -23,7 +23,7 @@ from generate_SI import SiData
 from capeplot import CapacityData
 from capelib import crossjoin
 import os
-# GUI import
+from argparse import ArgumentParser
 
 class SatAnalysisSettings:
   SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
@@ -41,8 +41,10 @@ class SatAnalysisSettings:
   CU_NODE_SET={MetricName.STALL_FE_PCT, MetricName.STALL_LB_PCT, MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_RS_PCT}
   CU_NODE_DICT={MetricName.STALL_FE_PCT:'FE [GW/s]', MetricName.STALL_LB_PCT:'LB [GW/s]', MetricName.STALL_SB_PCT:'SB [GW/s]', MetricName.STALL_LM_PCT:'LM [GW/s]', MetricName.STALL_RS_PCT:'RS [GW/s]'}
   BASIC_NODE_LIST=list(BASIC_NODE_SET)
+  CU_SAT_THRESHOLD_DEFAULT = 0.25
+  SAT_THRESHOLD_DEFAULT = 0.1
 
-  def __init__(self, cuSatThreshold = 0.25, satThreshold = 0.1, disable=False, 
+  def __init__(self, cuSatThreshold = CU_SAT_THRESHOLD_DEFAULT, satThreshold = SAT_THRESHOLD_DEFAULT, disable=False, 
                cu_traffic = [ MetricName.STALL_SB_PCT, MetricName.STALL_LM_PCT, MetricName.STALL_LB_PCT], 
                compute_stats = True, uniform_gap = False, run_sw_bias=True, chosen_node_set=ALL_NODE_SET):
     self.cuSatThreshold = cuSatThreshold
@@ -145,6 +147,9 @@ def compute_node_thresholds(settings, satSetDF, traffic, cu_traffic, uniform_gap
   return pd.concat([trafficThresholds , cuThresholds], axis=0)
   
 
+def satTrafficListToSiSatNodes(settings, df):
+  return df.apply(lambda x: set(settings.BASIC_NODE_LIST) | {settings.CU_NODE_DICT[n] for n in set(x['satTrafficList']) & settings.CU_NODE_SET}, axis=1)
+  
 def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
   tiered_mask = ~tiers_sat_nodes_mask['Tier'].isna()
   sat_nodes_only=tiers_sat_nodes_mask.loc[tiered_mask, sat_nodes]
@@ -159,7 +164,7 @@ def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
   tiers_sat_nodes_mask[NonMetricName.SI_CLUSTER_NAME]=''
   tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_CLUSTER_NAME]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: f"{x['Tier']} {x['Sat_Node']}", axis=1)
   tiers_sat_nodes_mask[NonMetricName.SI_SAT_NODES]=[set(settings.BASIC_NODE_LIST)]*len(tiers_sat_nodes_mask) 
-  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=tiers_sat_nodes_mask[tiered_mask].apply(lambda x: set(settings.BASIC_NODE_LIST) | {settings.CU_NODE_DICT[n] for n in set(x['satTrafficList']) & settings.CU_NODE_SET}, axis=1)
+  tiers_sat_nodes_mask.loc[tiered_mask, NonMetricName.SI_SAT_NODES]=satTrafficListToSiSatNodes(settings, tiers_sat_nodes_mask[tiered_mask])
 
 # For each codelets in current_codelets_runs_df, find their cluster
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
@@ -372,6 +377,8 @@ def tier_training_set(settings, satSetDF):
     sat_table.loc[mask_for_satSetDF, sat_mask.columns] = sat_mask
 
     candidate_mask = satSetDF['Tier'].isna()
+  satSetDF[NonMetricName.SI_SAT_TIER] = satSetDF['Tier'] .astype(int)
+  tiering_table[NonMetricName.SI_SAT_TIER] = tiering_table['Tier'] .astype(int)
   all_nodes = set(sat_table)-set(KEY_METRICS+['Tier'])
   compute_cluster_names(settings, sat_table, all_nodes)
   # Since sat_table and satSetDF are in the same index order, so just assign the cluster name column directly
@@ -391,7 +398,7 @@ def compute_cluster_info(satSetDF, all_nodes):
   # Also reset_index() to bring the cluster name and Sat_Node to column names.  Including Tier and SI_SAT_TIER assuming they are consistent with cluster name which is the primary key
   cluster_info = satSetDF.groupby([NonMetricName.SI_CLUSTER_NAME, 'Sat_Node', 'Tier', NonMetricName.SI_SAT_TIER]).agg({ n: ['min', 'max'] for n in all_nodes}).reset_index()
   # TODO : fix types more cleanly
-  cluster_info[NonMetricName.SI_SAT_TIER]=cluster_info[NonMetricName.SI_SAT_TIER].astype('int32')
+  cluster_info[NonMetricName.SI_SAT_TIER]=cluster_info[NonMetricName.SI_SAT_TIER].astype(int)
   cluster_info['Tier']=cluster_info['Tier'].astype(str)
   # Flattern the columns
   cluster_info.columns=[' '.join(col).strip().replace(' ','_') for col in cluster_info.columns.values]
@@ -633,17 +640,56 @@ def print_coloured_tiers(settings, short_name, codelet_tier, full_df):
     tier_book.save(tier_book_path)
 
 
-def main(argv):
+def tiering_only(args):
+    NUM_POINTS=3
+    SMALL = np.finfo(float).eps
+    training_set_csv = args.training_csv_file
+    chosen_node_set = ALL_NODE_SET
+    settings = SatAnalysisSettings(satThreshold=float(args.sat_threshold), cuSatThreshold=float(args.cu_sat_threshold), chosen_node_set=chosen_node_set) 
+    optimal_data_df = pd.read_csv(training_set_csv)
+    tiering_table, cluster_info = tier_training_set(settings, optimal_data_df)
+    cluster_with_tier_thresholds = pd.merge(left=cluster_info, 
+                                            right=tiering_table.rename(columns=dict(zip(settings.tiering_metrics, [m+'_threshold' for m in settings.tiering_metrics]))), 
+                                            on=[NonMetricName.SI_SAT_TIER])
+    cluster_with_tier_thresholds['satTrafficList'] = cluster_with_tier_thresholds['Sat_Node'].str.split(', ')
+    cluster_with_tier_thresholds[NonMetricName.SI_SAT_NODES]=satTrafficListToSiSatNodes(settings, cluster_with_tier_thresholds)
+    cluster_with_tier_thresholds['nonSatTrafficList'] = cluster_with_tier_thresholds.apply(lambda x: [n for n in settings.tiering_metrics if n not in x['satTrafficList']], axis=1)
+    cluster_with_tier_thresholds['sat_lb'] = cluster_with_tier_thresholds.apply(lambda x: {n:x[n+'_threshold'] for n in x['satTrafficList']}, axis=1)
+    cluster_with_tier_thresholds['sat_ub'] = cluster_with_tier_thresholds.apply(lambda x: {n:x[n+'_max'] for n in x['satTrafficList']}, axis=1)
+    cluster_with_tier_thresholds['nonsat_lb'] = cluster_with_tier_thresholds.apply(lambda x: {n:0 for n in x['nonSatTrafficList']}, axis=1)
+    cluster_with_tier_thresholds['nonsat_ub'] = cluster_with_tier_thresholds.apply(lambda x: {n:x[n+'_threshold'] for n in x['nonSatTrafficList']}, axis=1)
+    cluster_with_tier_thresholds['lb'] = cluster_with_tier_thresholds.apply(lambda x: {**x['sat_lb'], **x['nonsat_lb']}, axis=1)
+    cluster_with_tier_thresholds['ub'] = cluster_with_tier_thresholds.apply(lambda x: {**x['sat_lb'], **x['nonsat_ub']}, axis=1)
+    cluster_with_tier_thresholds['range'] = cluster_with_tier_thresholds.apply(lambda x: {n: sorted(pd.unique(np.linspace(x['lb'][n]+SMALL, x['ub'][n], NUM_POINTS))) for n in settings.tiering_metrics}, axis=1)
+    # See: https://stackoverflow.com/questions/38231591/split-explode-a-column-of-dictionaries-into-separate-columns-with-pandas
+    # Using json_normalize to expand the dictionary to multiple columns
+    cluster_with_tier_thresholds = pd.concat([cluster_with_tier_thresholds, pd.json_normalize(cluster_with_tier_thresholds['range'])], axis=1)
+    # For each metric expanding from the list to real rows so metric of [1,2,3] will be expanded into 3 rows with 1, 2 and 3 as metric value while keeping the rest the same
+    # See: https://stackoverflow.com/questions/12680754/split-explode-pandas-dataframe-string-entry-to-separate-rows
+    for m in settings.tiering_metrics:
+      cluster_with_tier_thresholds = cluster_with_tier_thresholds.explode(m)
+      
+    plot_data = cluster_with_tier_thresholds.reset_index(drop=True)
+    # Currently these metrics seems to be unused but set to zero for capacity calculation
+    plot_data[[MetricName.STALL_RS_PCT, MetricName.STALL_FE_PCT]] = 0
+    plot_data[MetricName.NAME] = 'plot-data'
+    plot_data[MetricName.TIMESTAMP] = list(range(0, len(plot_data)))
+
+    chosen_node_set = ALL_NODE_SET
+    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+    CapacityData(plot_data).set_chosen_node_set(nodes_without_units).compute()
+    pass
+
+def full_analysis(args):
     # csv to read should be first argument
-    csvToRead = sys.argv[1]
-    csvTestSet = sys.argv[2]
-    inputfile = []
-    sys.setrecursionlimit(10**9) 
+    csvToRead = args.training_csv_file
+    csvTestSet = args.test_csv_file
+    #inputfile = []
+    #sys.setrecursionlimit(10**9) 
   # if 3 arg specified, assumes 3rd is threshold replacement
     #print("No of sys args : ", len(sys.argv))
     chosen_node_set = ALL_NODE_SET
-    settings = SatAnalysisSettings(satThreshold=float(satThreshold = sys.argv[3]), 
-                                   cuSatThreshold=float(sys.argv[4]), chosen_node_set=chosen_node_set) if len(sys.argv) >=5 else SatAnalysisSettings(chosen_node_set=chosen_node_set)
+    settings = SatAnalysisSettings(satThreshold=float(args.sat_threshold), cuSatThreshold=float(args.cu_sat_threshold), chosen_node_set=chosen_node_set) 
 
     print("Attempting to read", csvToRead)
 
@@ -678,5 +724,16 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser(description='Sat Analysis: compute cluster, S and I for test codelets.')
+    parser.add_argument('-m', nargs='?', help='the training (modeling) set csv file', required=True, dest='training_csv_file')
+    parser.add_argument('-t', nargs='?', help='the test set csv file(s)', required=False, dest='test_csv_file')
+    parser.add_argument('--tiering-only', action='store_true', help='Only perform tiering', dest='tiering_only')
+    parser.add_argument('--cu-sat-threshold', nargs='?', help='CU saturation threshold (0-1)', dest='cu_sat_threshold', default=SatAnalysisSettings.CU_SAT_THRESHOLD_DEFAULT)
+    parser.add_argument('--sat-threshold', nargs='?', help='non-CU saturation threshold (0-1)', dest='sat_threshold', default=SatAnalysisSettings.SAT_THRESHOLD_DEFAULT)
+    args = parser.parse_args()
     # csv to read should be first argument
-    main(sys.argv[1:])
+    #main(sys.argv[1:])
+    if args.tiering_only:
+      tiering_only(args)
+    else:
+      full_analysis(args) 
