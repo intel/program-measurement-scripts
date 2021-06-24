@@ -16,14 +16,15 @@ import importlib
 import re
 from pathlib import Path
 from metric_names import KEY_METRICS
-from generate_SI import compute_only
+from generate_SI import compute_only, mk_data as mk_si_data
 from generate_SI import BASIC_NODE_SET
 from generate_SI import ALL_NODE_SET
-from generate_SI import SiData
+from generate_SI import SiData, StaticSiPlot
 from capeplot import CapacityData
 from capelib import crossjoin
 import os
 from argparse import ArgumentParser
+import gc
 
 class SatAnalysisSettings:
   SW_BIAS_IP = [MetricName.COUNT_OPS_VEC_PCT, MetricName.COUNT_VEC_TYPE_OPS_PCT, MetricName.COUNT_OPS_FMA_PCT,
@@ -170,9 +171,7 @@ def compute_cluster_names(settings, tiers_sat_nodes_mask, sat_nodes):
 #   Store the name of the cluster to the SI_CLUSTER_NAME column
 #   Also return the a data frame containing by appending all dataframe of the clusters annotated with their names
 def do_sat_analysis(optimal_data_df, testSetDF, settings=SatAnalysisSettings()):
-    chosen_node_set = settings.chosen_node_set
-    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
-    CapacityData(optimal_data_df).set_chosen_node_set(nodes_without_units).compute()
+    compute_capacities(settings, optimal_data_df)
 
     # If SI Analysis is disabled
     # Creating an empty Dataframe with column names only SI_SAT_NODES and SI_CLUSTER_NAME
@@ -198,17 +197,28 @@ def do_sat_analysis(optimal_data_df, testSetDF, settings=SatAnalysisSettings()):
 
     return all_clusters, all_test_codelets, result_df
 
-def compute_si_based_metrics(settings, all_test_codelets, optimal_data_df):
+def get_chosen_node_set(settings):
+  return (set(settings.BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set
+  
+def compute_si(settings, all_clusters, clustered_test_df):
+  norm = "row"
+  return compute_only(all_clusters, norm, clustered_test_df, get_chosen_node_set(settings))
+
+def make_si_data(settings, all_clusters, clustered_test_df):
+  norm = "row"
+  return mk_si_data(all_clusters, norm, clustered_test_df, get_chosen_node_set(settings))
+  
+def get_relevant_codelets(optimal_data_df, all_test_codelets):
   peer_mask = optimal_data_df[NonMetricName.SI_CLUSTER_NAME].isin(set(all_test_codelets[NonMetricName.SI_CLUSTER_NAME].to_list())-set({''}))
   all_clusters = optimal_data_df[peer_mask].copy()
-
-  #all_clusters, my_cluster_and_test_df, testDF = compute_only(all_clusters, norm, testDF, updated_chosen_node_set)
-  norm = "row"
   clustered_test_df = all_test_codelets[all_test_codelets[NonMetricName.SI_CLUSTER_NAME] != ''].copy()
+  return all_clusters, clustered_test_df
+  
+def compute_si_based_metrics(settings, all_test_codelets, optimal_data_df):
+  all_clusters, clustered_test_df = get_relevant_codelets(optimal_data_df, all_test_codelets)
   # all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
   #                                                   set(BASIC_NODE_LIST) |  {CU_NODE_DICT[n] for n in CU_NODE_SET & set(settings.ALL_NODE_LIST)})
-  all_clusters, _, clustered_test_df = compute_only(all_clusters, norm, clustered_test_df, 
-                                                    (set(settings.BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set)
+  all_clusters, _, clustered_test_df = compute_si(settings, all_clusters, clustered_test_df)
 
   added_columns = set(clustered_test_df.columns)-set(all_test_codelets.columns)
   all_test_codelets = pd.merge(left=all_test_codelets, right=clustered_test_df[KEY_METRICS+sorted(added_columns)], on=KEY_METRICS, how='outer')
@@ -640,14 +650,26 @@ def print_coloured_tiers(settings, short_name, codelet_tier, full_df):
     tier_book.save(tier_book_path)
 
 
+def compute_capacities(settings, df):
+    #chosen_node_set = ALL_NODE_SET
+    chosen_node_set = settings.chosen_node_set
+    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+    CapacityData(df).set_chosen_node_set(nodes_without_units).compute()
+
 def tiering_only(args):
-    NUM_POINTS=3
-    SMALL = np.finfo(float).eps
+    NUM_POINTS=2
+    SMALL = np.finfo(float).eps * 100
+    SMALL = 0.001
     training_set_csv = args.training_csv_file
     chosen_node_set = ALL_NODE_SET
     settings = SatAnalysisSettings(satThreshold=float(args.sat_threshold), cuSatThreshold=float(args.cu_sat_threshold), chosen_node_set=chosen_node_set) 
     optimal_data_df = pd.read_csv(training_set_csv)
+
+    compute_capacities(settings, optimal_data_df)
+
     tiering_table, cluster_info = tier_training_set(settings, optimal_data_df)
+    min_peer_mask = (cluster_info['peer_codelet_cnt']>=2)
+    cluster_info = cluster_info[min_peer_mask]
     cluster_with_tier_thresholds = pd.merge(left=cluster_info, 
                                             right=tiering_table.rename(columns=dict(zip(settings.tiering_metrics, [m+'_threshold' for m in settings.tiering_metrics]))), 
                                             on=[NonMetricName.SI_SAT_TIER])
@@ -659,7 +681,7 @@ def tiering_only(args):
     cluster_with_tier_thresholds['nonsat_lb'] = cluster_with_tier_thresholds.apply(lambda x: {n:0 for n in x['nonSatTrafficList']}, axis=1)
     cluster_with_tier_thresholds['nonsat_ub'] = cluster_with_tier_thresholds.apply(lambda x: {n:x[n+'_threshold'] for n in x['nonSatTrafficList']}, axis=1)
     cluster_with_tier_thresholds['lb'] = cluster_with_tier_thresholds.apply(lambda x: {**x['sat_lb'], **x['nonsat_lb']}, axis=1)
-    cluster_with_tier_thresholds['ub'] = cluster_with_tier_thresholds.apply(lambda x: {**x['sat_lb'], **x['nonsat_ub']}, axis=1)
+    cluster_with_tier_thresholds['ub'] = cluster_with_tier_thresholds.apply(lambda x: {**x['sat_ub'], **x['nonsat_ub']}, axis=1)
     cluster_with_tier_thresholds['range'] = cluster_with_tier_thresholds.apply(lambda x: {n: sorted(pd.unique(np.linspace(x['lb'][n]+SMALL, x['ub'][n], NUM_POINTS))) for n in settings.tiering_metrics}, axis=1)
     # See: https://stackoverflow.com/questions/38231591/split-explode-a-column-of-dictionaries-into-separate-columns-with-pandas
     # Using json_normalize to expand the dictionary to multiple columns
@@ -671,14 +693,44 @@ def tiering_only(args):
       
     plot_data = cluster_with_tier_thresholds.reset_index(drop=True)
     # Currently these metrics seems to be unused but set to zero for capacity calculation
-    plot_data[[MetricName.STALL_RS_PCT, MetricName.STALL_FE_PCT]] = 0
     plot_data[MetricName.NAME] = 'plot-data'
     plot_data[MetricName.TIMESTAMP] = list(range(0, len(plot_data)))
 
-    chosen_node_set = ALL_NODE_SET
-    nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
-    CapacityData(plot_data).set_chosen_node_set(nodes_without_units).compute()
+    plot_data1=plot_data[KEY_METRICS+settings.tiering_metrics].copy()
+    plot_data1[[MetricName.STALL_RS_PCT, MetricName.STALL_FE_PCT]] = 0
+    compute_capacities(settings, plot_data1)
+
+    plot_data1 = lookup_testing_set(settings, plot_data1, tiering_table, cluster_info)
+    plot_data1 = plot_data1[plot_data1[NonMetricName.SI_CLUSTER_NAME] != '']
+    foo=pd.merge(left=plot_data[KEY_METRICS+['SiClusterName']], right=plot_data1[KEY_METRICS+['SiClusterName']], on=KEY_METRICS)
+    #no_mask=(foo['SiClusterName_x'] != foo['SiClusterName_y'])
+    #no_mask = (foo['SiClusterName_y'] == '')
+    #bar=pd.DataFrame([plot_data1.loc[no_mask,KEY_METRICS+['SiClusterName']+settings.tiering_metrics].iloc[0,:]])
+    #all_bar = lookup_testing_set(settings, bar, tiering_table, cluster_info)
+
+    # chosen_node_set = ALL_NODE_SET
+    # nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
+    # CapacityData(plot_data).set_chosen_node_set(nodes_without_units).compute()
+    all_clusters, plot_data1 = get_relevant_codelets(optimal_data_df, plot_data1)
+    all_clusters, _, clustered_test_df = compute_si(settings, all_clusters, plot_data1)
+    all_clusters['is_cluster'] = True
+    clustered_test_df['is_cluster'] = False
+    combined = pd.concat([all_clusters, clustered_test_df], axis=0)
+    combined[MetricName.SHORT_NAME] = ''
+    combined.groupby(NonMetricName.SI_CLUSTER_NAME).apply(lambda x: 
+      plot_si(settings, x[x['is_cluster']], x[~x['is_cluster']], training_set_csv, 
+              os.path.join('c:/temp', f'{x.name}.png'.replace(', ', ';').replace('/', '_').replace(' ', '-'))))
     pass
+
+def plot_si(settings, cluster_df, test_df, training_csv_filename, outfile):
+    print(f'Plotting graph to: {outfile}')
+    siData = make_si_data(settings, cluster_df, test_df)
+    siPlot = StaticSiPlot(siData, training_csv_filename, outfile)
+    siPlot.skip_adjustText()
+    siPlot.hide_labels()
+    #siPlot.set_labels([MetricName.RATE_FP_GFLOP_P_S, 'SI'])
+    siPlot.compute_and_plot()
+
 
 def full_analysis(args):
     # csv to read should be first argument
