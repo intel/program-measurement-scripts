@@ -22,6 +22,7 @@ from capedata import CapeData
 globals().update(MetricName.__members__)
 from capelib import add_mem_max_level_columns
 from metric_names import KEY_METRICS
+from abc import ABC, abstractmethod
 import hashlib
 
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
@@ -292,12 +293,15 @@ class CapePlot:
         self.fig, self.ax = plt.subplots()
         self.ax.clear()
         self.footnoteText = None
-        self.plotData = PlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, title=None, 
-                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self, 
-                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None, names=None)
+        self.init_plotData()
         self._setAttrs(data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
             default_y_axis, default_x_axis, filtering, mappings, short_names_path)
 
+    def init_plotData(self):
+        self.plotData = DynamicPlotData(df=None, xs=None, ys=None, mytexts=None, ax=None, title=None, 
+                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self,
+                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None, names=None)
+    
     def _setAttrs(self, data, levelData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
         default_y_axis, default_x_axis, filtering, mappings, short_names_path):
         # Data is a list of data
@@ -473,10 +477,16 @@ class CapePlot:
         # TODO: Need to update to handle color legend update
         self.plot_adjustable(scale)
 
+    def get_encoded_names(self, df):
+        return self.guiState.get_encoded_names(df)
+
     def get_names(self):
         # This is subclassed by Rank Order to return the ordered encoded names
-        return self.guiState.get_encoded_names(self.df).tolist()
+        return self.get_encoded_names(self.df).tolist()
 
+        
+    def get_source_title(self):
+        return self.levelData.source_title
         
     # Set filename to [] for GUI output
     def plot_data(self, title, filename, xs, ys, mytexts, scale, df, x_axis, y_axis, mappings=pd.DataFrame()):
@@ -504,25 +514,30 @@ class CapePlot:
         # Add footnote with datafile and timestamp
         #plt.figtext(0, 0.005, self.levelData.source_title, horizontalalignment='left')
         if self.footnoteText: self.footnoteText.remove()
-        self.footnoteText = self.fig.text(0, 0.005, self.levelData.source_title, horizontalalignment='left')
+        self.footnoteText = self.fig.text(0, 0.005, self.get_source_title(), horizontalalignment='left')
 
         ax.set(xlabel=x_axis, ylabel=y_axis)
-        names = self.get_names()
+        self.finish_plot(df, xs, ys, mytexts, ax, title, labels, markers, name_mapping, mymappings, scale)
 
-        #self.fig.set_tight_layout(True)
 
-        self.plotData.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
-            name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
-            self.variant, names)
 
-        # Plot rest of the plot (which can be adjusted later)
-        self.plot_adjustable(scale)
 
         # try: 
         #     self.fig.tight_layout()
         #     self.fig.set_tight_layout(True)
         # #    self.fig.canvas.draw()
         # except: print("self.fig.tight_layout() failed")
+
+    
+    # More basic updates to plot
+    def finish_plot(self, df, xs, ys, mytexts, ax, title, labels, markers, name_mapping, mymappings, scale):
+        names = self.get_names()
+        #self.fig.set_tight_layout(True)
+        self.plotData.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
+            name_mapping, mymappings, self.guiState, self, self.xmax, self.ymax, self.xmin, self.ymin, 
+            self.variant, names)
+        # Plot rest of the plot (which can be adjusted later)
+        self.plot_adjustable(scale)
 
     def plot_adjustable(self, scale):
         # Set specified axis scales
@@ -561,17 +576,20 @@ class CapePlot:
         texts = [self.ax.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
+    def get_visible_df(self):
+        hidden_mask = self.guiState.get_hidden_mask(self.df)
+        return self.df[~hidden_mask]
+
     def mk_legend(self):
         ax = self.ax
         patches = []
-        hidden_mask = self.guiState.get_hidden_mask(self.df)
-        visible_df = self.df[~hidden_mask]
-        visible_df['encoded_name'] = visible_df[NAME] + visible_df[TIMESTAMP].astype(str)
+        visible_df = self.get_visible_df()
+        visible_df['encoded_name'] = self.get_encoded_names(visible_df)
         for label in self.color_map['Label'].unique():
             if label:
                 mask = self.color_map['Label'] == label
                 masked_df = self.color_map[mask]
-                masked_df['encoded_name'] = masked_df[NAME] + masked_df[TIMESTAMP].astype(str)
+                masked_df['encoded_name'] = self.get_encoded_names(masked_df)
                 exists = masked_df['encoded_name'].isin(visible_df['encoded_name'])
                 if sum(exists):
                     patch = mpatches.Patch(label=label, color=self.color_map.loc[self.color_map['Label']==label]['Color'].iloc[0])
@@ -675,14 +693,11 @@ class CapePlot:
     def unhighlightPoints(self):
         self.plotData.unhighlightPoints()
         
-class PlotData():
+class BasePlotData(ABC):
     def __init__(self, df, xs, ys, mytexts, ax, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
         self.setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
                       name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names)
-        self.canvas = None
-        self.adjusted = False
-        self.adjusting = False
 
     def setAttrs(self, df, xs, ys, mytexts, ax, title, labels, markers, 
                  name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
@@ -719,31 +734,33 @@ class PlotData():
         if hasattr(self, 'canvas') and self.canvas is not None:
             self.thread_safe_canvas_draw()
 
-    @property
-    def control(self):
-        return None if self.plot is None else self.plot.control
+    @abstractmethod
+    def is_marker_hidden(self, name):
+        return NotImplemented
 
     def updateMarkers(self):
         # Hide/Show the markers, labels, and arrows
         for name in self.names:
             alpha = 1
-            if self.guiState.isHidden(name): alpha = 0
+            if self.is_marker_hidden(name): alpha = 0
             self.name_marker[name].set_alpha(alpha)
-            self.name_text[name].set_alpha(self.guiState.labelVisbility(name))
+            self.name_text[name].set_alpha(self.get_label_alpha(name))
             # Unhighlight/highlight and select points
             self.unhighlight(self.name_marker[name])
-            if name in self.guiState.selected: self.select(self.name_marker[name])
-            if name in self.guiState.highlighted: self.highlight(self.name_marker[name])
+            if self.is_selected(name): self.select(self.name_marker[name])
+            if self.is_highlighted(name): self.highlight(self.name_marker[name])
             # Need to first set all mappings to visible, then remove hidden ones to avoid hiding then showing
             if name in self.name_mapping: 
                 for arrow in self.name_mapping[name]: arrow.set_alpha(1)
         for name in self.name_mapping:
-            if self.guiState.isHidden(name): 
+            if self.is_marker_hidden(name): 
                 for arrow in self.name_mapping[name]: arrow.set_alpha(0)
 
     def updateLabels(self):
         # Update labels on plot
-        current_metrics = self.guiState.labels
+        current_metrics = self.get_labels()
+        cur_df = self.get_df()
+        encoded_names = self.plot.get_encoded_names(cur_df)
         for i, text in enumerate(self.texts):
             label = self.orig_mytext[i][:-1]
             codeletName = self.names[i]
@@ -751,8 +768,7 @@ class PlotData():
                 # Update label menu with currently selected metric
                 # self.tab.labelTab.metrics[metric_index].set(metric)
                 # Append to end of label
-                encoded_names = self.guiState.get_encoded_names(self.guiState.levelData.df)
-                value = self.guiState.levelData.df.loc[encoded_names==codeletName][metric].iloc[0]
+                value = cur_df.loc[encoded_names==codeletName][metric].iloc[0]
                 if isinstance(value, int) or isinstance(value, float):
                     label += ', ' + str(round(value, 2))
                 else:
@@ -767,15 +783,23 @@ class PlotData():
         newTitle += ')'
         self.legend.get_title().set_text(newTitle)
 
-    def setLabelAlphas(self, alpha):
-        self.guiState.setLabelAlphas(self.names, alpha)
-        self.checkAdjusted()
+    def tidy_plot(self):
+        # Could have done this outside as well
+        # TODO: may merge PlotData with CapePlot
+        self.canvas.figure.tight_layout()
+        self.thread_safe_canvas_draw()
 
-    def showPoints(self):
-        self.guiState.showPoints(self.names)
+    @abstractmethod
+    def thread_safe_canvas_draw(self):
+        pass
 
-    def unhighlightPoints(self):
-        self.guiState.unhighlightPoints(self.names)
+    @abstractmethod
+    def get_df(self):
+        return NotImplemented
+
+    def setLims(self):
+        self.cur_xlim = self.ax.get_xlim()
+        self.cur_ylim = self.ax.get_ylim()
 
     def highlight(self, marker):
         text = self.marker_text[marker]
@@ -797,6 +821,69 @@ class PlotData():
         marker.set_markeredgecolor('k')
         marker.set_markeredgewidth(0.5)
         marker.set_markersize(7.0)
+
+    def set_font_size(self, size):
+        labels = self.texts
+        for label in labels:
+            label.set_fontsize(size)
+
+    def getTimestamp(self, marker):
+        return self.marker_timestamps[marker]
+
+class DynamicPlotData(BasePlotData):
+    def __init__(self, df, xs, ys, mytexts, ax, title, labels, markers, 
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
+        super().__init__(df, xs, ys, mytexts, ax, title, labels, markers, 
+                         name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names)
+        self.canvas = None
+        self.adjusted = False
+        self.adjusting = False
+
+    def setAttrs(self, df, xs, ys, mytexts, ax, title, labels, markers, 
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
+        super().setAttrs(df, xs, ys, mytexts, ax, title, labels, markers, 
+                      name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names)
+        if hasattr(self, 'guiState') and self.guiState is not None:
+            self.guiState.rm_observer(self)
+        self.guiState = guiState
+        #self.guiState.add_observer(self)
+        if hasattr(self, 'canvas') and self.canvas is not None:
+            self.thread_safe_canvas_draw()
+
+    @property
+    def control(self):
+        return None if self.plot is None else self.plot.control
+
+    def is_marker_hidden(self, name):
+        return self.guiState.isHidden(name)
+
+    def get_label_alpha(self, name):
+        return self.guiState.labelVisbility(name)
+
+    def is_selected(self, name):
+        return name in self.guiState.selected
+        
+    def is_highlighted(self, name):
+        return name in self.guiState.highlighted
+         
+
+    def get_labels(self):
+        return self.guiState.labels
+        
+    def get_df(self):
+        return self.guiState.levelData.df
+
+
+    def setLabelAlphas(self, alpha):
+        self.guiState.setLabelAlphas(self.names, alpha)
+        self.checkAdjusted()
+
+    def showPoints(self):
+        self.guiState.showPoints(self.names)
+
+    def unhighlightPoints(self):
+        self.guiState.unhighlightPoints(self.names)
+
 
     # Return encoded names of data points selected by the event
     def getSelected(self, event):
@@ -847,8 +934,6 @@ class PlotData():
     def thread_safe_canvas_draw(self):
         self.canvas.get_tk_widget().after(0, self.canvas.draw)
 
-    
-        
     # control is the controller object in Analyzer_controller which provides the method to run long running job displaying status
     def adjustText(self):
         if not self.adjusting: 
@@ -863,11 +948,6 @@ class PlotData():
                 else: 
                     threading.Thread(target=self.thread_adjustText, name='adjustText Thread').start()
 
-    def tidy_plot(self):
-        # Could have done this outside as well
-        # TODO: may merge PlotData with CapePlot
-        self.canvas.figure.tight_layout()
-        self.thread_safe_canvas_draw()
 
     def onDraw(self, event):
         if self.adjusted and (self.cur_xlim != self.ax.get_xlim() or self.cur_ylim != self.ax.get_ylim()) and \
@@ -878,14 +958,7 @@ class PlotData():
             print("Ondraw adjusting")
             self.adjustText()
 
-    def set_font_size(self, size):
-        labels = self.texts
-        for label in labels:
-            label.set_fontsize(size)
 
-    def setLims(self):
-        self.cur_xlim = self.ax.get_xlim()
-        self.cur_ylim = self.ax.get_ylim()
 
     def setHomeLims(self):
         self.home_xlim = self.cur_xlim = self.ax.get_xlim()
@@ -944,12 +1017,51 @@ class PlotData():
         self.toolbar.update()
     
 
-    def getName(self, marker):
-        return self.marker_realname[marker]
 
-    def getTimestamp(self, marker):
-        return self.marker_timestamps[marker]
+class StaticPlotData(BasePlotData):
+    def __init__(self, df, xs, ys, mytexts, ax, title, labels, markers, 
+                 name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names):
+        super().__init__(df, xs, ys, mytexts, ax, title, labels, markers, 
+                         name_mapping, mymappings, guiState, plot, xmax, ymax, xmin, ymin, variant, names)
+        self.show_label = True
+        self.do_adjustText = True
+        self.df = df
+        self.labels = [MetricName.RATE_FP_GFLOP_P_S]
 
+    def get_df(self):
+        return self.df
+
+    def hide_labels(self):
+        self.show_label = False
+
+    def set_labels(self, labels):
+        self.labels = labels
+
+    def skip_adjustText(self):
+        self.do_adjustText = False
+
+    def get_labels(self):
+        return self.labels
+
+    # Do nothing for basic plots
+    def thread_safe_canvas_draw(self):
+        pass
+    
+    def is_marker_hidden(self, name):
+        return False
+
+    def get_label_alpha(self, name):
+        return 1 if self.show_label else 0
+
+    def is_selected(self, name):
+        return False
+        
+    def is_highlighted(self, name):
+        return False
+
+    def adjustText(self):
+        if self.do_adjustText:
+            self.thread_adjustText()
 # Plot with capacity computation
 class CapacityPlot(CapePlot):
     def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, \
