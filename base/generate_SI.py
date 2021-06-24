@@ -8,8 +8,8 @@ import numpy as np
 import warnings
 import datetime
 import copy
-from capeplot import CapacityPlot
-from capeplot import CapePlot, CapePlotColor
+from capeplot import StaticPlotData
+from capeplot import CapePlot, CapePlotColor 
 from capeplot import NodeWithUnitData
 from capelib import import_dataframe_columns
 
@@ -22,6 +22,7 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from metric_names import MetricName
 from metric_names import NonMetricName
+from metric_names import KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -104,7 +105,7 @@ class SiData(NodeWithUnitData):
         columns_ordered = []
         for frame in frames:
             columns_ordered.extend(x for x in frame.columns if x not in columns_ordered)
-        final_df = pd.concat(frames)
+        final_df = pd.concat(frames, ignore_index=True)
         # final_df[TIMESTAMP] = final_df[TIMESTAMP].fillna(0).astype(int)
         return final_df[columns_ordered]
 
@@ -245,8 +246,10 @@ class SiData(NodeWithUnitData):
         #     df['RelSat_{}'.format(node)]=df[self.stallPct(node)] / df[self.stallPct(node)].max() 
         import_dataframe_columns(df, working, [f'RelSat_{n}' for n in chosen_node_set])
 
-        df['SatSats']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: list(map(lambda n: "RelSat_{}".format(n), ns)))
-        df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
+        # Make SatSats tuples so it can be used for groupby
+        df['SatSats'] = df[NonMetricName.SI_SAT_NODES].apply(lambda ns: tuple(map(lambda n: "RelSat_{}".format(n), ns)))
+        df['Saturation'] = df.groupby('SatSats').apply(lambda x: x[list(x.name)].sum(axis=1).to_frame('Saturation'))
+        #df['Saturation'] = df.apply(lambda x: x[x['SatSats']].sum(), axis=1)
         #df['Saturation']=df[list(map(lambda n: "RelSat_{}".format(n), chosen_node_set))].sum(axis=1)
         # Per defined by Dave, codelets with no cluster will have Saturation being undefined, so set them to nan
         df.loc[df[NonMetricName.SI_CLUSTER_NAME] == '', 'Saturation']=np.nan
@@ -254,10 +257,13 @@ class SiData(NodeWithUnitData):
 
 
     def compute_intensity(self, df, chosen_node_set):
-        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: self.capacities(ns))
+        df['SatCaps']=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: tuple(self.capacities(ns)))
         node_cnt=df[NonMetricName.SI_SAT_NODES].apply(lambda ns: len(ns))
-        csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
-        cmax = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
+        group_by_satcaps = df.groupby('SatCaps')
+        csum = group_by_satcaps.apply(lambda x: x[list(x.name)].sum(axis=1).to_frame('csum')).squeeze()
+        cmax = group_by_satcaps.apply(lambda x: x[list(x.name)].max(axis=1).to_frame('cmax')).squeeze()
+        #csum = df.apply(lambda x: x[x['SatCaps']].sum(), axis=1)
+        #cmax = df.apply(lambda x: x[x['SatCaps']].max(), axis=1)
         #df['Intensity']=node_cnt*df[MetricName.CAP_ALLMAX_GW_P_S] / csum
         df['Intensity']=node_cnt*cmax / csum
 
@@ -326,9 +332,9 @@ class SiPlot(CapePlot):
     def cur_run_df(self):
         return self.df
 
-    @property
-    def Ns(self):
-        return max([data.Ns for data in self.data], default=0)
+    # @property
+    # def Ns(self):
+    #     return max([data.Ns for data in self.data], default=0)
     
     # Getter of cluster_df, delegate to self.data
     @property
@@ -347,10 +353,11 @@ class SiPlot(CapePlot):
 
     def mk_labels(self):
         l_df = self.df
-        orig_codelet_index = l_df[SHORT_NAME]
+        #orig_codelet_index = l_df[SHORT_NAME]
         # orig_codelet_variant = l_df[VARIANT]
         # orig_codelet_memlevel = l_df[MEM_LEVEL]
-        mytext= [str('({0})'.format( orig_codelet_index[i] ))  for i in range(len(orig_codelet_index))]
+        #mytext= [str('({0})'.format( orig_codelet_index[i] ))  for i in range(len(orig_codelet_index))]
+        mytext = l_df[SHORT_NAME].map('({0})'.format).tolist()
         return mytext
 
 
@@ -417,7 +424,7 @@ class SiPlot(CapePlot):
         maxx=max(max_xs, maxx)
         maxy=max(max_ys, maxy)
 
-        Ns = self.Ns
+        #Ns = self.Ns
         ax = self.ax
         #ns = [1,2,(Ns-1), Ns, (Ns+1),(Ns+2)]
         ns = range(2, 12, 2)
@@ -449,10 +456,13 @@ class SiPlot(CapePlot):
                 ax.add_patch(rect)
         self.set_rect_visibility()
 
+    def is_cluster_hidden(self, cluster):
+        hidden_mask = self.guiState.get_hidden_mask(self.df)
+        return cluster not in self.df[~hidden_mask][NonMetricName.SI_CLUSTER_NAME].tolist()
+    
     def set_rect_visibility(self):
         for cluster in self.cluster_rects:
-            hidden_mask = self.guiState.get_hidden_mask(self.df)
-            if cluster not in self.df[~hidden_mask][NonMetricName.SI_CLUSTER_NAME].tolist():
+            if self.is_cluster_hidden(cluster):
                 self.cluster_rects[cluster].set_alpha(0)
             else:
                 self.cluster_rects[cluster].set_alpha(1)
@@ -465,6 +475,66 @@ class SiPlot(CapePlot):
         self.set_rect_visibility()
 
 # For node using derived metrics (e.g. FE), make sure the depended metrics are computed
+
+
+# TODO: more refactoring to generalize for other plots
+class StaticSiPlot(SiPlot):
+    def __init__(self, sidata, source_title, outfile):
+        self.sidata = sidata
+        super().__init__(None)
+        self.source_title = source_title
+        self.outfile = outfile
+        self._color_map = self.df[KEY_METRICS].copy()
+        self._color_map['Label'] = ''
+        self._color_map['Color'] = [CapePlotColor.DEFAULT_COLOR] *len(self._color_map)
+
+
+    def init_plotData(self):
+        self.plotData = StaticPlotData(df=self.df, xs=None, ys=None, mytexts=None, ax=None, title=None, 
+                                 labels=None, markers=None, name_mapping=None, mymappings=None, guiState=None, plot=self, 
+                                 xmax=None, ymax=None, xmin=None, ymin=None, variant=None, names=None)
+
+    @property
+    def df(self):
+        return self.sidata.df
+    @property
+    def cluster_df(self):
+        return self.sidata.cluster_df
+
+    def hide_labels(self):
+        self.plotData.hide_labels()
+
+    def set_labels(self, labels):
+        self.plotData.set_labels(labels)
+
+    def skip_adjustText(self):
+        self.plotData.skip_adjustText()
+
+    @property
+    def color_map(self):
+        return self._color_map
+
+    def is_cluster_hidden(self, cluster):
+        return False
+
+    def get_visible_df(self):
+        return self.df
+
+    @property
+    def mapping(self): 
+        return pd.DataFrame()
+
+    def get_source_title(self):
+        return self.source_title
+
+    def get_encoded_names(self, df):
+        return df[MetricName.NAME] + df[MetricName.TIMESTAMP].astype(str)
+
+    def finish_plot(self, df, xs, ys, mytexts, ax, title, labels, markers, name_mapping, mymappings, scale):
+        super().finish_plot(df, xs, ys, mytexts, ax, title, labels, markers, name_mapping, mymappings, scale)
+        self.adjustText()
+        self.fig.tight_layout()
+        self.fig.savefig(self.outfile)
 
 
 def parse_ip_df(cluster_df, outputfile, norm, title, chosen_node_set, cur_run_df, variants, filtering=False, filter_data=None, mappings=pd.DataFrame(), scale='linear', short_names_path=''):
