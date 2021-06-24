@@ -489,4 +489,7 @@ def append_dataframe_rows(df, append_df):
 def crossjoin(df1, df2, suffixes=("_x", "_y")):
     df1['_tmp'] = 1
     df2['_tmp'] = 1
-    return pd.merge(df1, df2, on='_tmp', suffixes=suffixes).drop('_tmp', axis=1)
+    join_results = pd.merge(df1, df2, on='_tmp', suffixes=suffixes).drop('_tmp', axis=1)
+    df1.drop('_tmp', inplace=True, axis=1)
+    df2.drop('_tmp', inplace=True, axis=1)
+    return join_results
