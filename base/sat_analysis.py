@@ -657,7 +657,7 @@ def compute_capacities(settings, df):
     CapacityData(df).set_chosen_node_set(nodes_without_units).compute()
 
 def tiering_only(args):
-    NUM_POINTS=2
+    NUM_POINTS=3
     SMALL = np.finfo(float).eps * 100
     SMALL = 0.001
     training_set_csv = args.training_csv_file
@@ -702,7 +702,7 @@ def tiering_only(args):
 
     plot_data1 = lookup_testing_set(settings, plot_data1, tiering_table, cluster_info)
     plot_data1 = plot_data1[plot_data1[NonMetricName.SI_CLUSTER_NAME] != '']
-    foo=pd.merge(left=plot_data[KEY_METRICS+['SiClusterName']], right=plot_data1[KEY_METRICS+['SiClusterName']], on=KEY_METRICS)
+    #foo=pd.merge(left=plot_data[KEY_METRICS+['SiClusterName']], right=plot_data1[KEY_METRICS+['SiClusterName']], on=KEY_METRICS)
     #no_mask=(foo['SiClusterName_x'] != foo['SiClusterName_y'])
     #no_mask = (foo['SiClusterName_y'] == '')
     #bar=pd.DataFrame([plot_data1.loc[no_mask,KEY_METRICS+['SiClusterName']+settings.tiering_metrics].iloc[0,:]])
@@ -715,8 +715,18 @@ def tiering_only(args):
     all_clusters, _, clustered_test_df = compute_si(settings, all_clusters, plot_data1)
     all_clusters['is_cluster'] = True
     clustered_test_df['is_cluster'] = False
+
     combined = pd.concat([all_clusters, clustered_test_df], axis=0)
     combined[MetricName.SHORT_NAME] = ''
+    # Free up some memory before plotting
+    del cluster_with_tier_thresholds
+    del plot_data
+    del plot_data1
+    del all_clusters
+    del clustered_test_df
+    gc.collect()
+    print("Generate SI plots")
+
     combined.groupby(NonMetricName.SI_CLUSTER_NAME).apply(lambda x: 
       plot_si(settings, x[x['is_cluster']], x[~x['is_cluster']], training_set_csv, 
               os.path.join('c:/temp', f'{x.name}.png'.replace(', ', ';').replace('/', '_').replace(' ', '-'))))
