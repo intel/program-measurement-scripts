@@ -7,9 +7,9 @@ ARG LOCAL_GID
 
 USER root
 
-RUN groupadd -g $LOCAL_GID realappuser && \
-           useradd -m -d /home/realappuser -s /bin/bash -u $LOCAL_UID -g realappuser -G sudo realappuser
+RUN groupadd -g $LOCAL_GID runner && \
+           useradd -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G sudo runner
 
-RUN echo "realappuser:realappuser" | chpasswd
-USER realappuser
-WORKDIR /home/realappuser
+RUN echo "runner:runner" | chpasswd
+USER runner
+WORKDIR /home/runner
