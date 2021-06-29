@@ -8,15 +8,54 @@ from xlsxgen import XlsxGenerator
 class Observable:
     def __init__(self):
         self.observers = []
-    def add_observers(self, observer):
-        self.observers.append(observer)
+        self.updated = False
+        
+    def set_updated(self):
+        self.updated = True
+        
+    def add_observer(self, observer):
+        assert (observer is not None)
+        if observer not in self.observers:
+            self.observers.append(observer)
+
+    def rm_observer(self, observer):
+        assert (observer is not None)
+        if observer in self.observers:
+            self.observers.remove(observer)
+
     def notify_observers(self):
+        if not self.updated:
+            return
+
         for observer in self.observers:
             observer.notify(self)
+        # Reset updated
+        self.updated = False
+
+    # Updated and also notify observers
+    def updated_notify_observers(self):
+        self.set_updated()
+        self.notify_observers()
+
+    # def notify_plot_observers(self):
+    #     for observer in self.observers:
+    #         observer.plot_notify(self)
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Don't save observers as they are GUI components
+        #del state['observers']
+        if 'observers' in state:
+            state['observers'] = [o for o in state['observers'] if not isinstance(o, tk.Widget)]
+        return state
+    
+    # def __setstate__(self, state):
+    #     self.__dict__.update(state)
+    #     # Restore observers to []
+    #     self.observers = []
             
 class Observer:
     def __init__(self, observable):
-        observable.add_observers(self)
+        observable.add_observer(self)
         
     def notify(self, observable):
         print("Notified from ", observable)
@@ -39,13 +78,15 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def exportCSV(df):
-        export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+    export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.csv')
+    if export_file_path:
         df.drop(columns=['Color']).to_csv(export_file_path, index=False, header=True)
-    
+   
 def exportXlsx(df):
     export_file_path = tk.filedialog.asksaveasfilename(defaultextension='.xlsx')
     # To be moved to constructor later (after refactoring?)
-    xlsxgen = XlsxGenerator()
-    xlsxgen.set_header("single")
-    xlsxgen.set_scheme("general")
-    xlsxgen.from_dataframe("data", df, export_file_path)
+    if export_file_path:
+        xlsxgen = XlsxGenerator()
+        xlsxgen.set_header("single")
+        xlsxgen.set_scheme("general")
+        xlsxgen.from_dataframe("data", df, export_file_path)

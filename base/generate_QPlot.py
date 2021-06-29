@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
-from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
+from capeplot import CapacityData
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -26,11 +26,10 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class QPlot(CapacityPlot):
-	def __init__(self, variant, df, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, 
-              source_order=None, mappings=pd.DataFrame(), short_names_path=''): 
-		super().__init__(chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
-                   default_y_axis='C_max [GB/s]',  mappings=mappings, short_names_path=short_names_path)
-		self.source_order = source_order
+	def __init__(self, data=None, loadedData=None, level=None, variant=None, outputfile_prefix=None, scale=None, title=None, no_plot=None, gui=False, x_axis=None, y_axis=None, 
+              mappings=pd.DataFrame(), short_names_path=''): 
+		super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+                   default_y_axis=MetricName.CAP_MEMMAX_GB_P_S,  mappings=mappings, short_names_path=short_names_path)
 
 	def mk_labels(self):
 		df = self.df
@@ -38,19 +37,23 @@ class QPlot(CapacityPlot):
 			indices = df[SHORT_NAME]
 		except:
 			indices = df[NAME]
-		memlevel = df[MEM_LEVEL]
-		mytext = [str('({0}, {1})'.format(indices[i], memlevel[i])) for i in range(len(indices))]
+		# memlevel = df[MEM_LEVEL]
+		mytext = [str('({0})'.format(indices[i])) for i in range(len(indices))]
 		return mytext
 
 	def mk_label_key(self):
-		return "(name, memlevel)"
+		return "(name)"
 
 	def mk_plot_title(self, title, variant, scale):
-		chosen_node_set = self.chosen_node_set
-		return "{} : N = {}{}, \nvariant={}, scale={}".format(title, len(chosen_node_set), str(sorted(list(chosen_node_set))), variant, scale)
+		new_title = ""
+		if title: new_title += "{} : ".format(title)
+		if self.chosen_node_set: new_title += "N = {}{}, \n".format(len(self.chosen_node_set), str(sorted(list(self.chosen_node_set))))
+		if variant: new_title += "variant={}, ".format(variant)
+		if scale: new_title += "scale={}".format(scale)
+		return new_title
 
-	def draw_contours(self, xmax, ymax, color_labels):
-		ns = [1,2,4,8,16,32]
+	def draw_contours(self, xmax, ymax):
+		ns = [1,2,4,8,16,32,64]
 		ax = self.ax
 
 		npoints=40
@@ -67,26 +70,26 @@ def parse_ip(inputfile,outputfile, scale, title, chosen_node_set, no_plot, gui=F
 	df = pd.read_csv(input_data_source)
 	return parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis)
 
-def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+def parse_ip_df(df, outputfile, scale, title, chosen_node_set, no_plot, variants, gui=False, x_axis=None, y_axis=None, mappings=pd.DataFrame(), short_names_path=''):
 	# Normalize the column names
-	if not mappings.empty:
-		mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-		'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
 		
 	df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-	df_XFORM, fig_XFORM, textData_XFORM = None, None, None
-	#df_XFORM, fig_XFORM, textData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
+	df_XFORM, fig_XFORM, plotData_XFORM = None, None, None
+	#df_XFORM, fig_XFORM, plotData_XFORM = compute_and_plot('XFORM', df[~mask], outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings)
 
-	#df_ORIG, fig_ORIG, textData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
+	#df_ORIG, fig_ORIG, plotData_ORIG = compute_and_plot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	## Return dataframe and figure for GUI
-	#return (df_XFORM, fig_XFORM, textData_XFORM, df_ORIG, fig_ORIG, textData_ORIG)
+	#return (df_XFORM, fig_XFORM, plotData_XFORM, df_ORIG, fig_ORIG, plotData_ORIG)
 
 	#for variant, group in grouped:
 	#	compute_and_plot(variant, group, outputfile)
 
-	plot = QPlot('ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui, x_axis, y_axis, source_order, mappings, short_names_path)
+	data = CapacityData(df)
+	data.set_chosen_node_set(chosen_node_set) 
+	data.compute()
+	plot = QPlot(data, 'ORIG', outputfile, scale, title, no_plot, gui, x_axis, y_axis, mappings, short_names_path)
 	plot.compute_and_plot()
-	return (df_XFORM, fig_XFORM, textData_XFORM, plot.df, plot.fig, plot.plotData)
+	return (df_XFORM, fig_XFORM, plotData_XFORM, plot.df, plot.fig, plot.plotData)
 
 
 

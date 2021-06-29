@@ -2,7 +2,7 @@ import re
 import math
 from collections import namedtuple
 import pandas as pd
-from metric_names import MetricName
+from metric_names import MetricName, KEY_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MetricName.__members__)
@@ -97,7 +97,7 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
     ops_dict = {itype : 0 for itype in itypes}
     inst_dict = {itype : 0 for itype in itypes}
 
-    def calculate_rate_and_counts(rate_name, calculate_counts_per_iter, add_global_count):
+    def calculate_rate_and_counts(op_rate_name, op_count_name, inst_rate_name, calculate_counts_per_iter, add_global_count):
         try:
             nonlocal all_ops
             nonlocal all_insts
@@ -108,7 +108,13 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
             nonlocal ops_dict
             nonlocal inst_dict
             cnts_per_iter, inst_cnts_per_iter = calculate_counts_per_iter(in_row)
-            out_row[rate_name] = (cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
+            op_count_per_rep = (cnts_per_iter.SUM * iterations_per_rep) / 1E9 
+
+            if op_count_name:
+                out_row[op_count_name] =  op_count_per_rep
+                
+            out_row[op_rate_name] =  op_count_per_rep / time
+            if inst_rate_name: out_row[inst_rate_name] = (inst_cnts_per_iter.SUM * iterations_per_rep) / (1E9 * time)
 
             if add_global_count:
                 vec_ops += nan2zero(cnts_per_iter.XMM + cnts_per_iter.YMM + cnts_per_iter.ZMM)
@@ -124,12 +130,12 @@ def calculate_all_rate_and_counts(out_row, in_row, iterations_per_rep, time):
         except:
             return None, None
 
-    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, calculate_flops_counts_per_iter, True)
-    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, calculate_iops_counts_per_iter, True)
+    flop_cnts_per_iter, fl_inst_cnts_per_iter = calculate_rate_and_counts(RATE_FP_GFLOP_P_S, COUNT_FP_GFLOP, None, calculate_flops_counts_per_iter, True)
+    iop_cnts_per_iter, i_inst_cnts_per_iter = calculate_rate_and_counts(RATE_INT_GIOP_P_S, None, None, calculate_iops_counts_per_iter, True)
     # Note: enabled global count so CVT insts will be contributing to total inst/op count in evaulating %Inst, %Vec metrics
-    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, calculate_cvtops_counts_per_iter, True)
-    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, calculate_packops_counts_per_iter, True)
-    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, calculate_memops_counts_per_iter, True)
+    cvt_cnts_per_iter, cvt_inst_cnts_per_iter = calculate_rate_and_counts(RATE_CVT_GCVTOP_P_S, None, None, calculate_cvtops_counts_per_iter, True)
+    pack_cnts_per_iter, pack_inst_cnts_per_iter = calculate_rate_and_counts(RATE_PACK_GPACKOP_P_S, None, None, calculate_packops_counts_per_iter, True)
+    memop_cnts_per_iter, mem_inst_cnts_per_iter = calculate_rate_and_counts(RATE_MEM_GMEMOP_P_S, None, RATE_LDST_GI_P_S, calculate_memops_counts_per_iter, True)
 
     out_row[COUNT_OPS_VEC_PCT] = 100 * vec_ops / all_ops if all_ops else 0
     out_row[COUNT_INSTS_VEC_PCT] = 100 * vec_insts / all_insts if all_insts else 0
@@ -401,31 +407,47 @@ def find_vector_ext(op_counts):
     return vector_ext_str(out)
 
 def calculate_energy_derived_metrics(out_row, kind, energy, num_ops, ops_per_sec):
-    out_row[MetricName.epo(kind)] = energy / num_ops
-    out_row[MetricName.rpe(kind)] = ops_per_sec / energy
-    out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    try:
+        out_row[MetricName.epo(kind)] = energy / num_ops
+    except:
+        out_row[MetricName.epo(kind)] = math.nan
+    try:
+        out_row[MetricName.rpe(kind)] = ops_per_sec / energy 
+    except:
+        out_row[MetricName.rpe(kind)] = math.nan
+    try:
+        out_row[MetricName.rope(kind)] = (ops_per_sec * num_ops) / energy
+    except:
+        out_row[MetricName.rope(kind)] = math.nan
 
 def getter(in_row, *argv, **kwargs):
     type_ = kwargs.pop('type', float)
     default_ = kwargs.pop('default', 0)
+    result = None
     for arg in argv:
         if (arg.startswith('Nb_insn') and arg not in in_row):
             arg = 'Nb_FP_insn' + arg[7:]
         if (arg in in_row):
-            # should use None test because 0 is valid number and considered False in Python.
-            return type_(in_row[arg] if in_row[arg] is not None else default_)
+            result = in_row[arg] if result is None or pd.isna(result) else result
+    if result is not None:
+        return type_(default_ if pd.isna(result) else result)
     raise IndexError(', '.join(map(str, argv)))
 
 def compute_speedup(output_rows, mapping_df):
-    keyColumns=[NAME, TIMESTAMP, VARIANT]
+    # keyColumns=[NAME, TIMESTAMP, VARIANT]
     timeColumns=[TIME_LOOP_S, TIME_APP_S]
     rateColumns=[RATE_FP_GFLOP_P_S]
-    perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    # perf_df = output_rows[keyColumns + timeColumns + rateColumns]
+    perf_df = output_rows[KEY_METRICS + timeColumns + rateColumns]
 
-    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
-                              right_on=keyColumns, how='left')
-    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
-                              right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    # new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp', 'Before Variant'], 
+    #                           right_on=keyColumns, how='left')
+    # new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp', 'After Variant'], 
+    #                           right_on=keyColumns, suffixes=('_before', '_after'), how='left')
+    new_mapping_df = pd.merge(mapping_df, perf_df, left_on=['Before Name', 'Before Timestamp'], 
+                              right_on=KEY_METRICS, how='left')
+    new_mapping_df = pd.merge(new_mapping_df, perf_df, left_on=['After Name', 'After Timestamp'], 
+                              right_on=KEY_METRICS, suffixes=('_before', '_after'), how='left')
     for timeColumn in timeColumns: 
         new_mapping_df['Speedup[{}]'.format(timeColumn)] = \
             new_mapping_df['{}_before'.format(timeColumn)] / new_mapping_df['{}_after'.format(timeColumn)]
@@ -436,3 +458,38 @@ def compute_speedup(output_rows, mapping_df):
     retainColumns = filter(lambda a: not a.endswith('_after'), new_mapping_df.columns)
     retainColumns = filter(lambda a: not a.endswith('_before'), list(retainColumns))
     return new_mapping_df[retainColumns]
+
+    
+def clear_dataframe(df):
+    df.drop(columns=df.columns, inplace=True)
+    df.drop(df.index, inplace=True)
+
+def replace_dataframe_content(to_df, from_df):
+    clear_dataframe(to_df)
+    for col in from_df.columns:
+        to_df[col] = from_df[col]
+
+def import_dataframe_columns(to_df, from_df, cols):
+    merged = pd.merge(left=to_df, right=from_df[KEY_METRICS+list(cols)], on=KEY_METRICS, how='left')      
+    merged = merged.set_index(to_df.index)
+    assert to_df[MetricName.NAME].equals(merged[MetricName.NAME])
+    assert to_df[MetricName.TIMESTAMP].astype('int64').equals(merged[MetricName.TIMESTAMP].astype('int64'))
+    for col in cols:
+        if col + "_y" in merged.columns and col + "_x" in merged.columns:
+            # _y is incoming df data so use it and fill in _x (original) if missing
+            merged[col] = merged[col + "_y"].fillna(merged[col + "_x"])
+        to_df[col] = merged[col]
+    
+def append_dataframe_rows(df, append_df):
+    merged = df.append(append_df, ignore_index=True)
+    replace_dataframe_content(df, merged)
+
+
+# pandas version <1.2 does not support crossjoin so here is a simple implementation.
+def crossjoin(df1, df2, suffixes=("_x", "_y")):
+    df1['_tmp'] = 1
+    df2['_tmp'] = 1
+    join_results = pd.merge(df1, df2, on='_tmp', suffixes=suffixes).drop('_tmp', axis=1)
+    df1.drop('_tmp', inplace=True, axis=1)
+    df2.drop('_tmp', inplace=True, axis=1)
+    return join_results

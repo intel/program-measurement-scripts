@@ -8,9 +8,9 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
 from mpl_toolkits.mplot3d import Axes3D
-from adjustText import adjust_text
 import copy
 from capeplot import CapacityPlot
+from capeplot import CapacityData
 from metric_names import MetricName
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
@@ -19,22 +19,22 @@ globals().update(MetricName.__members__)
 warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class Plot3d(CapacityPlot):
-    def __init__(self, variant, df, outputfile_prefix, scale, title, chosen_node_set, no_plot, gui=False, x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame(), short_names_path=''):
-        super().__init__(chosen_node_set, variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
+    def __init__(self, data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame(), short_names_path=''):
+        super().__init__(data, loadedData, level, variant, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
                          default_y_axis=COVERAGE_PCT.value, mappings=mappings, short_names_path=short_names_path)
         self.z_axis = z_axis
-        self.default_z_axis = 'C_FLOP [GFlop/s]'
+        self.default_z_axis = MetricName.CAP_FP_GFLOP_P_S
+        self.mappings = mappings
 
     def compute_and_plot(self):
-        self.compute_extra()
         variant = self.variant
         outputfile_prefix = self.outputfile_prefix
         scale = self.scale
         title = self.title
         no_plot = self.no_plot
         gui = self.gui
-        x_axis = self.x_axis
-        y_axis = self.y_axis
+        x_axis = self._x_axis
+        y_axis = self._y_axis
         z_axis = self.z_axis
         mappings = self.mappings
         short_names_path = self.short_names_path
@@ -43,13 +43,11 @@ class Plot3d(CapacityPlot):
         if self.df.empty:
             return # Nothing to do
 
-        if self.filtering:
-            self.df = self.filter_data_points(self.df)
+        # if self.filtering:
+        #     self.df = self.filter_data_points(self.df)
 
         df = self.df
 
-        # Used to create a legend of file names to color for multiple plots
-        color_labels = self.compute_color_labels(df, short_names_path)
         if no_plot:
             return 
 
@@ -74,10 +72,10 @@ class Plot3d(CapacityPlot):
             outputfile = '{}-{}-{}-{}.png'.format (outputfile_prefix, variant, scale, today)
 
         self.plot_data(self.mk_plot_title(title, variant, scale), outputfile, xs, ys, zs, mytext, 
-                       scale, df, color_labels=color_labels, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings)
-        self.df = df
+                       scale, df, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings)
+        #self.df = df
 
-    def plot_data(self, title, filename, xs, ys, zs, mytexts, scale, df, color_labels=None, \
+    def plot_data(self, title, filename, xs, ys, zs, mytexts, scale, df, \
         x_axis=None, y_axis=None, z_axis=None, mappings=pd.DataFrame()):
         # DATA = tuple(zip(xs, ys))
 
@@ -106,7 +104,7 @@ class Plot3d(CapacityPlot):
         self.ax.set_title(title, pad=40)
 
         # Legend
-        legend = self.mk_legend(color_labels)
+        legend = self.mk_legend()
 
         # Arrows between multiple runs
         # name_mapping, mymappings = self.mk_mappings(mappings, df, x_axis, y_axis, xmax, ymax)
@@ -206,14 +204,13 @@ class Plot3d(CapacityPlot):
 def plot_3d(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, z_axis=None, \
     mappings=pd.DataFrame(), short_names_path=''):
     chosen_node_set = set(['L1 [GB/s]','L2 [GB/s]','L3 [GB/s]','RAM [GB/s]','FLOP [GFlop/s]'])
-    if not mappings.empty:
-        mappings.rename(columns={'Before Name':'before_name', 'Before Timestamp':'before_timestamp#', \
-        'After Name':'after_name', 'After Timestamp':'after_timestamp#'}, inplace=True)
-    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+    df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
-    df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-    plot = Plot3d(
-        'ORIG', df, outputfile, scale, title, chosen_node_set, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings, short_names_path=short_names_path)
+    data = CapacityData(df)
+    data.set_chosen_node_set(chosen_node_set)
+    data.compute()
+    plot = Plot3d(data, 
+        'ORIG', outputfile, scale, title, chosen_node_set, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, z_axis=z_axis, mappings=mappings, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
 

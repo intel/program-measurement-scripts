@@ -7,10 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import ConnectionPatch
 from matplotlib import style
-from adjustText import adjust_text
 import copy
 from capeplot import CapePlot
-from capeplot import CapeData
 from metric_names import MetricName
 from statistics import median
 import math
@@ -23,25 +21,27 @@ warnings.simplefilter("ignore")  # Ignore deprecation of withdash.
 
 class ScurvePlot(CapePlot):
     def __init__(self, variant, df, outputfile_prefix, scale, title, no_plot, gui=False, x_axis=None, y_axis=None, 
-                 source_order=None, mappings=pd.DataFrame(), short_names_path=''):
+                 mappings=pd.DataFrame(), short_names_path=''):
         super().__init__(variant, df, outputfile_prefix, scale, title, no_plot, gui, x_axis, y_axis, 
-                         default_y_axis='C_FLOP [GFlop/s]', mappings=mappings, short_names_path=short_names_path)
+                         default_y_axis=MetricName.CAP_FP_GFLOP_P_S, mappings=mappings, short_names_path=short_names_path)
     
-    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, color_labels, \
+    def plot_data(self, title, filename, xs, ys, mytexts, scale, df, \
         x_axis=None, y_axis=None, mappings=pd.DataFrame()):
         # Scurve doesn't support mappings and x_axis is always 'Rank'
         x_axis = 'Rank'
         mappings = pd.DataFrame()
+        # Get median value of data
+        self.median = median(ys.tolist())
         # Get scurve points and labels to plot
         self.scurve = Scurve(ys.tolist())
         # Convert to array data type so masked access is possible
         xs = np.array(self.scurve.x_vals)
         ys = np.array(self.scurve.y_vals)
         mytexts = np.array(self.scurve.labels)
-        super().plot_data(title, filename, xs, ys, mytexts, scale, df, color_labels, \
+        super().plot_data(title, filename, xs, ys, mytexts, scale, df, \
             x_axis, y_axis, mappings)
 
-    def plot_markers_and_labels(self, df, xs, ys, mytexts, color_labels):
+    def plot_markers_and_labels(self, df, xs, ys, mytexts):
         ax = self.ax
         markers = []
         df.reset_index(drop=True, inplace=True)
@@ -49,22 +49,29 @@ class ScurvePlot(CapePlot):
             markers.extend(ax.plot(x, y, marker='o', color='blue', 
                                    label=label, linestyle='', alpha=1))
 
-        texts = [plt.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
+        texts = [self.ax.text(x, y, mytext, alpha=1) for x, y, mytext in zip(xs, ys, mytexts)]
         return texts, markers
 
+    def draw_contours(self, xmax, ymax):
+        self.ax.axhline(y=self.median)
+
 def scurve_plot(df, outputfile, scale, title, no_plot, variants, gui=False, x_axis=None, y_axis=None, \
-    source_order=None, mappings=pd.DataFrame(), short_names_path=''):
-    df['C_FLOP [GFlop/s]'] = df[RATE_FP_GFLOP_P_S]
+    mappings=pd.DataFrame(), short_names_path=''):
+    df[MetricName.CAP_FP_GFLOP_P_S] = df[RATE_FP_GFLOP_P_S]
     # Only show selected variants, default is 'ORIG'
     df = df.loc[df[VARIANT].isin(variants)].reset_index(drop=True)
-    plot = ScurvePlot('ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, source_order=source_order, mappings=mappings, short_names_path=short_names_path)
+    plot = ScurvePlot('ORIG', df, outputfile, scale, title, no_plot, gui=gui, x_axis=x_axis, y_axis=y_axis, mappings=mappings, short_names_path=short_names_path)
     plot.compute_and_plot()
     return (plot.df, plot.fig, plot.plotData)
 
 class Scurve:
     @staticmethod
     def get_bin(value, bin_width, fn=round):
-        return fn(value / bin_width) * bin_width
+        try:
+            val = fn(value / bin_width) * bin_width
+        except:
+            val = 0
+        return val
  
     def __init__(self, data, bin_width=0.5):
         min_, max_, median_ = min(data), max(data), median(data)
