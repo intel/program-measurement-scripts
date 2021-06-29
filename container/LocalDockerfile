@@ -1,0 +1,15 @@
+FROM registry.gitlab.com/davidwong/cape-experiment-scripts:latest
+
+LABEL description="Local CapeScripts" 
+
+ARG LOCAL_UID
+ARG LOCAL_GID
+
+USER root
+
+RUN groupadd -g $LOCAL_GID realappuser && \
+           useradd -m -d /home/realappuser -s /bin/bash -u $LOCAL_UID -g realappuser -G sudo realappuser
+
+RUN echo "realappuser:realappuser" | chpasswd
+USER realappuser
+WORKDIR /home/realappuser
