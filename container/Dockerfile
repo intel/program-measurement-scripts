@@ -23,7 +23,20 @@ RUN apt-get update && apt-get install -y \
  sudo \
  # Need pkg-config to csvkit
  pkg-config \
+ # Used in const.sh in Capescripts
+ locales \
+ # Used in Capescripts
+ bc \
+ time \
  python3-pip 
+
+RUN apt-get install -y cpufrequtils
+RUN chmod u+s /usr/bin/cpufreq-set
+ 
+
+ # Used in const.sh
+RUN locale-gen en_US.utf8
+RUN update-locale
 
 RUN python3 -m pip install sympy
 RUN python3 -m pip install csvkit
