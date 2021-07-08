@@ -991,7 +991,7 @@ class DynamicPlotData(BasePlotData):
                     self.checkAdjusted() 
                 elif action == 'Toggle Label': 
                     alpha = not self.name_text[name].get_alpha()
-                    self.guiState.setLabel(name, alpha)
+                    self.guiState.setLabelAlpha(name, alpha)
 
     def setupFrames(self, fig, canvasFrame, chartButtonFrame):
         # # NavigationToolbar2Tk can only be created if there isn't anything in the grid
