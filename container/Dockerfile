@@ -3,6 +3,8 @@ FROM ubuntu:20.04
 
 LABEL description="Container for use with CapeScripts" 
 
+#ENV http_proxy http://proxy-chain.intel.com:911
+#ENV https_proxy http://proxy-chain.intel.com:912
 
 # install build dependencies 
 RUN apt-get update && apt-get install -y g++ rsync zip openssh-server make \
@@ -19,9 +21,29 @@ RUN apt-get update && apt-get install -y \
 # More basic utilities
  vim \
  sudo \
+ # Need pkg-config to csvkit
+ pkg-config \
+ # Used in const.sh in Capescripts
+ locales \
+ # Used in Capescripts
+ bc \
+ time \
  python3-pip 
 
+RUN apt-get install -y cpufrequtils
+RUN chmod u+s /usr/bin/cpufreq-set
+ 
+
+ # Used in const.sh
+RUN locale-gen en_US.utf8
+RUN update-locale
+
 RUN python3 -m pip install sympy
+RUN python3 -m pip install csvkit
+RUN python3 -m pip install openpyxl
+RUN python3 -m pip install et_xmlfile
+RUN python3 -m pip install pandas
+
 
 # configure SSH for communication with Visual Studio 
 RUN mkdir -p /var/run/sshd
@@ -37,6 +59,8 @@ ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
 RUN groupadd -g 8088 appuser && \
    useradd -m -d /home/appuser -s /bin/bash -u 8088 -g appuser -G sudo appuser
+
+RUN echo "appuser:appuser" | chpasswd
 
 USER appuser
 WORKDIR /home/appuser
