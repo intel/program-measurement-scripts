@@ -1,6 +1,6 @@
 0. Installation and setup of Docker 
   A.  Install Docker
-  B.  Add user to docker group
+  B.  Add user to docker group (e.g. usermod -a -G docker <username>)
 
 1 Some pre-steps to take before checking out the packages:
   A.  Ensure various packages are installed
