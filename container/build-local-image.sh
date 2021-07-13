@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Ensure user logged in
+
+docker login registry.gitlab.com
 # Fetch latest image
 docker pull registry.gitlab.com/davidwong/cape-experiment-scripts:latest
 
