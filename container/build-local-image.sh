@@ -2,6 +2,7 @@
 
 # Ensure user logged in
 
+echo "Logging into registry.gitlab.com... (it may ask for gitlab.com password if not done before)"
 docker login registry.gitlab.com
 # Fetch latest image
 docker pull registry.gitlab.com/davidwong/cape-experiment-scripts:latest
