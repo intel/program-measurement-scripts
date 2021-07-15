@@ -7,8 +7,8 @@ ARG LOCAL_GID
 
 USER root
 
-RUN groupadd -g $LOCAL_GID runner && \
-           useradd -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G sudo runner
+RUN groupadd -g $LOCAL_GID runner 
+RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G sudo runner
 
 RUN echo "runner:runner" | chpasswd
 USER runner
