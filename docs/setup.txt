@@ -50,15 +50,15 @@ containing both the experiment script and codelets as follows:
 • nr-codelets
 
 2 Checkout/initialization steps
-  E.  Checkout Cape-Experiment-Script
+  A.  Checkout Cape-Experiment-Script
     • cd <home>
     • git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
 
-  F.  Checkout NR-codelets
+  B.  Checkout NR-codelets
     • cd <home>
     • git clone git@gitlab.com:davidwong/nr-codelets.git
 
-  G.  Initialize scripts.
+  C.  Initialize scripts.
     • cd <home>/cape-experiment-scripts
     • ./setup.sh
 
