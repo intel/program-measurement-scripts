@@ -2,6 +2,7 @@
   A.  Install Docker
   B.  Add user to docker group (e.g. usermod -a -G docker <username>)
   C.  Update container/LocalDockerfile to install extra package for local container
+    • Make sure http_proxy and https_proxy variables are set correctly if behind VPN
 
 
 1 Some pre-steps to take before checking out the packages:
