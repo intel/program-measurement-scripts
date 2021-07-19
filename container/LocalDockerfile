@@ -14,6 +14,9 @@ RUN groupadd -g $LOCAL_GID runner
 RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G sudo runner
 
 RUN echo "runner:runner" | chpasswd
+
+RUN chown -R runner /share/* && chgrp -R runner /share/*
+
 USER runner
 WORKDIR /home/runner
 ENV USER=runner
