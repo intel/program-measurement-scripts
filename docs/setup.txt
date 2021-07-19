@@ -1,18 +1,12 @@
 0. Installation and setup of Docker 
   A.  Install Docker
   B.  Add user to docker group (e.g. usermod -a -G docker <username>)
-  C.  Login to gitlab (e.g. docker login registry.gitlab.com
+  C.  Update container/LocalDockerfile to install extra package for local container
+
 
 1 Some pre-steps to take before checking out the packages:
-  A.  Ensure various packages are installed
-    o sudo apt-get install bc cpufrequtils time numactl
-    o sudo apt-get install python-dev python-pip python-setuptools build-essential
-    o sudo -E pip install csvkit
-        o Make sure at least version 1.0.3 is used (e.g. csvjson --version should return 1.0.3)
-  B.  Ensure cpufreq-set has SETUID set
-    o sudo chmod u+s `which cpufreq-set`
-    o Ensure OS can fix CPU frequencies via userspace power governor (see below)
-  C.  Install EMON package (with API support) to /opt/intel/sep. 
+  A.  Ensure OS can fix CPU frequencies via userspace power governor (see below)
+  B.  Install EMON package (with API support) to /opt/intel/sep. 
       (The script does look for /opt/intel/sep, so make sure the package is 
       installed there. You can use a softlink to point to the real 
       location if desired.)
@@ -24,21 +18,11 @@
     • Later as a regular user to run the script, you need to do the following 
       command to load the enviromental variables to run it:
         • source /opt/intel/sep/sep_var.sh
-  D.  Install Intel C/C++/Fortran compilers and source the corresponding 
+  C.  Install Intel C/C++/Fortran compilers and source the corresponding 
       variable setting scripts so the compilers are in your PATH.
-  E.  Some Python modules need to be installed
-    • sudo -E python3.6 -m pip install openpyxl
-    • sudo -E python3.6 -m pip install et_xmlfile
-    • sudo -E python3.6 -m pip install pandas
-  F.  Make sure Python 3.6 (or newer) is used as the default Python3.  For 
-      example, the following commands make version 3.6 as default with an 
-      existing version 3.5 being installed as well.
-    • sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 1
-    • sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2
-  
 
 Note that 
-• For B, there are two ways to enable OS to manage CPU frequencies
+• For A, there are two ways to enable OS to manage CPU frequencies
     1) Change the BIOS of the system so that P-States will be managed by OS. 
        The exact menu choice is machine dependent.
     2) If 1) does not work, disable the intel_pstate driver by adding 
@@ -48,7 +32,7 @@ Note that
   whether userspace governor is in the list. g.g.
   cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
   conservative ondemand userspace powersave performance
-• For C (EMON installation), the step assumed you created a user group to 
+• For B (EMON installation), the step assumed you created a user group to 
   run EMON and you add those who want to run EMON to this group. 
   (It does not have to be called “emon-user-group”.)
 • For many of our previous experiments, we turn off hyperthreading.  
@@ -74,9 +58,9 @@ containing both the experiment script and codelets as follows:
     • cd <home>
     • git clone git@gitlab.com:davidwong/nr-codelets.git
 
-  G.  Build probe
-    • cd <home>/cape-experiment-scripts/utils/codeletProbe
-    • make
+  G.  Initialize scripts.
+    • cd <home>/cape-experiment-scripts
+    • ./setup.sh
 
 3 Test steps
 Now you should be ready to start running the experiments.  There are many 
