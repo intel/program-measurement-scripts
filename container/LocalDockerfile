@@ -6,6 +6,9 @@ ARG LOCAL_UID
 ARG LOCAL_GID
 
 USER root
+# Install more packages for experiments/local needs
+# Uncomment follow line and add more packages
+#RUN apt-get install -y libssl-dev
 
 RUN groupadd -g $LOCAL_GID runner 
 RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G sudo runner
