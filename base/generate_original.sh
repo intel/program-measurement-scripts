@@ -14,14 +14,14 @@ codelet_name="$2"
 build_folder=$( readlink -f "$3" )
 curr_compiler="$4"
 
-echo mkdir "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
-mkdir "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER" &> /dev/null
+cls_res_folder="$codelet_folder/$CLS_RES_FOLDER"
+mkdir "$cls_res_folder/$BINARIES_FOLDER" &> /dev/null
 
 build_codelet ${codelet_folder} ${codelet_name} ${build_folder} ${curr_compiler}
 
 # The contract of this function is: In all cases, $codelet_name is under ${build_folder}
 
-cp ${build_folder}/"$codelet_name" "$codelet_folder/$CLS_RES_FOLDER/$BINARIES_FOLDER"
+cp ${build_folder}/"$codelet_name" "$cls_res_folder/$BINARIES_FOLDER"
 res=$?
 if [[ "$res" != "0" ]]; then
 	echo "ERROR! Copy of binary to binary folder failed"
