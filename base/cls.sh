@@ -188,6 +188,7 @@ echo "Reading codelet.conf"
 codelet_name=$( grep "label name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
 
 function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+src_function_name=$function_name
 if [[ "$function_name" == "codelet" ]]; then
 	function_name="$function_name"_
 fi
@@ -242,7 +243,6 @@ echo $nominal_freq_kHz > "$codelet_folder/$CLS_RES_FOLDER/nominal_freq_kHz"
 
 echo "------------------------------------------------------------"
 echo "Compiling the codelet..."
-echo $CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder} ${curr_compiler}
 $CLS_FOLDER/generate_original.sh $codelet_folder $codelet_name ${build_folder} ${curr_compiler}
 res=$?
 if [[ "$res" != "0" ]]; then
@@ -251,6 +251,11 @@ if [[ "$res" != "0" ]]; then
 fi
 echo "Contents of build folder:"
 ls $build_folder
+
+# run the analytics script and generate an analytics file
+analytics_file="${codelet_folder}/${CLS_RES_FOLDER}/${codelet_name}_analytics.csv"
+echo $CLS_FOLDER/generate_analytics.sh ${codelet_folder} ${src_function_name} $analytics_file
+$CLS_FOLDER/generate_analytics.sh ${codelet_folder} ${src_function_name} $analytics_file
 
 # codelet.o if exist will be stored under cls_res_folder
 # program executable file is at ${build_folder}/${codelet_name}
