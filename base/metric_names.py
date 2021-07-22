@@ -193,8 +193,8 @@ class MetricName(CapeEnum):
 
     # Analytic metrics including Source level metrics and general metrics
 
-    SRC_RHS_OP_COUNT = "Src[Exp[RhsOpCount]]"
-    SRC_INIT_ONLY_B = "Src[Exp[InitOnly]]"
+    SRC_RHS_OP_COUNT = "Src[Expr[RhsOpCount]]"
+    SRC_INIT_ONLY_B = "Src[Expr[InitOnly]]"
     SRC_RECURRENCE_B = "Src[Expr[Recurrence]]"
     SRC_SCALAR_REDUCTION_B = "Src[Expr[ScalarReduction]]"
     SRC_CLU_SCORE = "Src[Expr[CluScore]]"
