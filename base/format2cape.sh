@@ -114,6 +114,11 @@ combine_csv() {
 	done
 }
 
+# run the analytics script and generate an analytics file
+#code_path="$codelet_folder/$code_name"
+#analytics_file="${cls_res_folder}/${codelet_name}_analytics.csv"
+#$CLS_FOLDER/generate_analytics.sh $code_path $analytics_file
+
 tmprep=$(mktemp -d --tmpdir=$cur_dir tmp.XXXXXXXXXX)
 
 counter_nv_files=$(find $cls_res_folder -name ${COUNTER_FNAME}'.csv')
@@ -203,6 +208,7 @@ fi
 # format is pretty much:
 #   <same repeated machine/filler info> <per run setting obtained from run_info> <counters> <stan data>
 # Collect all csv files skipping non-existing files
+#all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv ${analytics_file} 2>/dev/null)
 all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv 2>/dev/null)
 paste -d${DELIM} $all_csv_files > $cape_file
 
