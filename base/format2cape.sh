@@ -165,6 +165,9 @@ echo "$runinfo_values" >> $tmprep/runinfo.csv
 stan_infiles=$(echo "$runinfo" | sed 's|.*/variant_\([^/]*\)/.*|'$cls_res_folder/binaries/${codelet_name}'_\1.stan_full.csv|g')
 combine_csv "$stan_infiles" $tmprep/stan.csv
 
+analytics_infiles=$cls_res_folder/${codelet_name}_analytics.csv
+combine_csv "$analytics_infiles" $tmprep/analytics.csv
+
 if [ -f $tmprep/stan.csv ]; then
 	# Below only fix the first line which is the header
 	#stan_names=$(echo $stan_names |sed "s/[ :-]/_/g"|sed "s/_\+/_/g"|sed "s/\[/(/g"|sed "s/\]/)/g") # Also converted various naming of stan metrics to follow final format
@@ -209,7 +212,7 @@ fi
 #   <same repeated machine/filler info> <per run setting obtained from run_info> <counters> <stan data>
 # Collect all csv files skipping non-existing files
 #all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv ${analytics_file} 2>/dev/null)
-all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv 2>/dev/null)
+all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv $tmprep/analytics.csv 2>/dev/null)
 paste -d${DELIM} $all_csv_files > $cape_file
 
 echo Deleting TMPDIR $tmprep
