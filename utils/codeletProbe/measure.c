@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include "hook.h"
+#include "measure.h"
 
 
 // Define rdtscll for x86_64 arch
