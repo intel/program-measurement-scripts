@@ -210,10 +210,10 @@ run() {
 
 
 	#prefix="/nfs/fx/home/cwong29/working/NR-scripts"
-	prefix=$(readlink -f ../../..)
+	prefix=$(readlink -f ../..)
 	#ubmkprefix="${prefix}/nr-codelets/bws/nr_ubmks"
 	ubmkprefix="${prefix}/nr-codelets/bws"
-	nr_prefix="${prefix}/nr-codelets/numerical_recipes"
+	nr_prefix="${prefix}/nr-codelets/numerical_recipes/C"
 	saeed_prefix="${prefix}/intel_codelets"
 	andy_prefix="${prefix}/andy_codelets/invitro"
 	galois_prefix="${prefix}/galois_codelets"
@@ -2152,7 +2152,8 @@ run() {
 	# )
 
 	run_codelets=(
-		balanc_3_de
+		#balanc_3_de
+		balanc_3.c_de
 		#    balanc_3_sVS_de
 		#   elmhes_10_de
 		#    elmhes_10_sVS_de
@@ -2523,7 +2524,7 @@ run() {
 
 	#runLoop "${runId}" "$variants" "$memory_loads" "$frequencies"  "$num_cores" "$prefetchers" "RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0"
 	# Could be shorten by exporting the variables instead
-	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=0,MEM_HIT=0,TLB=0,LSD=0" runLoop
+	runId="${runId}" variants="$variants" memory_loads="$memory_loads" frequencies="$frequencies"  num_cores="$num_cores" prefetchers="$prefetchers" counter_list_override="RESOURCE=0,SQ=0,SQ_HISTOGRAM=0,LFB_HISTOGRAM=0,TOPDOWN=0,LFB=0,MEM_ROWBUFF=0,MEM_TRAFFIC=1,MEM_HIT=0,TLB=0,LSD=0" runLoop
 
 
 
