@@ -1,9 +1,10 @@
 #!/bin/bash
 
 source $CLS_FOLDER/const.sh
-if [ -f /opt/intel/sep/sep_vars.sh ]; then
-	source /opt/intel/sep/sep_vars.sh > /dev/null
-fi
+#if [ -f /opt/intel/sep/sep_vars.sh ]; then
+#	source /opt/intel/sep/sep_vars.sh > /dev/null
+#fi
+source /opt/intel/sep_eng/sep_vars.sh emon_api > /dev/null
 
 
 if [[ "$nb_args" != "12" ]]
@@ -285,7 +286,7 @@ then
 					evlist=($(tail -q -n  +2 ${core_evfiles[$ei]} ${uncore_evfiles[$ei]} |tr -d '\r'))
 					#		echo EVLIST is ${evlist[*]}
 					#		evlist=($(tail -n +2 ${evfile} |tr -d '\r'))
-					if [[ -f /opt/intel/sep/config/emon_api/emon_api_config_file.xml ]]; then
+					if [[ -f /opt/intel/sep_eng/config/emon_api/emon_api_config_file.xml ]]; then
 						# output beginning of emon config file
 						cat <<- EOFBEGIN > emon_api_config_file
 						<?xml version="1.0"?>
@@ -294,14 +295,15 @@ then
 						EOFBEGIN
 						# add events to emon config file
 						for newev in ${evlist[*]}; do
-							echo "        <event>$newev</event>" >> emon_api_config_file
+							echo "        <emon_event>$newev</emon_event>" >> emon_api_config_file
 						done
 						# output the end of the emon config file
 						cat <<- EOFEND >> emon_api_config_file
-						  <duration>99999999999</duration>
+						  <duration>0.1</duration>
 						  <start_paused>0</start_paused>
 						  <output_file>emon_api.out</output_file>
 						  <print_system_time>0</print_system_time>
+						  <additional_options>-experimental</additional_options>
 						  </emon_config>
 						</root>
 						EOFEND
