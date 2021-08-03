@@ -30,11 +30,11 @@ rm -f $output_path
 
 # validate we're operating with a supported file extension
 code_name="$(basename $code_file | tr '[:upper:]' '[:lower:]')" 
-if [[ "$code_name" != *c ]] && [[ "$code_name" != *cc ]] && [[ "$code_name" != *cpp ]]; then
-	exit 0
-fi
+#if [[ "$code_name" != *c ]] && [[ "$code_name" != *cc ]] && [[ "$code_name" != *cpp ]]; then
+#	exit 0
+#fi
 
-if [[ ! -f $code_path ]]; then
+if [[ ! -f $code_file ]]; then
     exit 0
 fi
 
@@ -46,5 +46,6 @@ if [[ -f "$unitool_path/batch_run.py" ]]; then
     # unitool may be limited to running under its own path
     cd $unitool_path
     # it outputs a csv to stdout, that we redirect to the output path
-    ./batch_run.py $code_file > $output_path
+    unset LD_LIBRARY_PATH
+    python3 batch_run.py --rhs $code_file > $output_path
 fi
