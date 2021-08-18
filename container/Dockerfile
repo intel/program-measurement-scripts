@@ -76,6 +76,7 @@ USER builder
 ENV USER=builder
 COPY --chown=builder rose-utils/ /share/rose-utils
 COPY --chown=builder ice-locus-dev/ /share/ice-locus-dev
+COPY --chown=builder pocc-1.1/ /share/pocc-1.1
 
 WORKDIR /share/rose-utils
 RUN ./build.sh
@@ -96,3 +97,17 @@ RUN wget https://scm.cri.ensmp.fr/svn/nlpmake/trunk/makes/setup_pips.sh \
    && chmod +x setup_pips.sh \
    && ./gen_svn_servers.sh \
    && ./setup_pips.sh --dynamic --light --pyconf=python3-config
+
+
+# Setting up following https://bitbucket.org/thiagotei/uiuc-compiler-opts/wiki/Home
+USER root
+# Need to install gcc-4.9 
+# See https://askubuntu.com/questions/1235819/ubuntu-20-04-gcc-version-lower-than-gcc-7
+RUN echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list && echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
+RUN apt update && apt-get install -y gcc-4.9 g++-4.9 uuid-dev libswitch-perl
+
+USER builder
+ENV CC=gcc-4.9
+ENV CXX=g++-4.9
+WORKDIR /share/pocc-1.1
+RUN ./install.sh && cd analyzers/candl && patch -p1 -i ../../pocc-1.1-candl-0.6.2.patch && make install

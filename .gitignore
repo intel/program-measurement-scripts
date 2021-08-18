@@ -28,3 +28,4 @@ statistcs.csv
 /si_exp/*.png
 /si_exp/test-*.csv
 /tests/run_dir/*
+/container/pocc*

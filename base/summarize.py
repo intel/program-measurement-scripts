@@ -29,6 +29,7 @@ from metric_names import MetricName as MN
 from metric_names import KEY_METRICS
 from metric_names import SUMMARY_METRICS
 from metric_names import ANALYTICS_METRICS
+from metric_names import SRC_METRICS
 # Importing the MetricName enums to global variable space
 # See: http://www.qtrac.eu/pyenum.html
 globals().update(MN.__members__)
@@ -407,6 +408,10 @@ def calculate_array_efficiency(out_rows, in_rows):
     except:
         pass
 
+def calculate_analytics(out_rows, in_rows):
+    for metric in sorted(set(in_rows.columns) & set(SRC_METRICS)):
+        out_rows[metric] = in_rows[metric]
+
 def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
     # Note: need to use .values to be more robust and not index dependent
@@ -576,6 +581,7 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
+    calculate_analytics(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
     # Retain rows with non-empty performance measurments (provided by TIME_LOOP_S")
