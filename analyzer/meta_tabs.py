@@ -33,19 +33,21 @@ class ShortNameTab(AnalyzerTab):
         table_button_frame.grid(row=4, column=1)
         self.update_button = tk.Button(table_button_frame, text="Update", command=lambda: self.updateLabels())
         self.cluster_color_button = tk.Button(table_button_frame, text="Color by Cluster", command=lambda: self.colorClusters())
+        self.metric_alpha_button = tk.Button(table_button_frame, text="Heatmap by Metrics", command=lambda: self.heatmapByMetric())
         self.export_button = tk.Button(table_button_frame, text="Export", command=lambda: self.exportCSV(self.table))
         self.find_replace_button = tk.Button(table_button_frame, text="Find & Replace ShortName", command=lambda: self.findAndReplace())
         self.table.show()
         self.update_button.grid(row=0, column=0)
         self.cluster_color_button.grid(row=0, column=1)
-        self.export_button.grid(row=0, column=2)
-        self.find_replace_button.grid(row=0, column=3)
+        self.metric_alpha_button.grid(row=0, column=2)
+        self.export_button.grid(row=0, column=3)
+        self.find_replace_button.grid(row=0, column=4)
 
     def notify(self, data):
         columns = [NAME, SHORT_NAME, TIMESTAMP, VARIANT]
         df = self.analyzerData.df[columns] if not self.analyzerData.df.empty else pd.DataFrame(columns=columns)
         color_map = self.analyzerData.levelData.guiState.get_color_map()
-        self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label']], on=KEY_METRICS, how='left')
+        self.table.model.df = pd.merge(left=df, right=color_map[KEY_METRICS + ['Label', 'Alphas']], on=KEY_METRICS, how='left')
         self.table.redraw()
 
     def assignColors(self, df):
@@ -89,6 +91,31 @@ class ShortNameTab(AnalyzerTab):
             return
         self.table.model.df['ShortName']=self.table.model.df['ShortName'].str.replace(find, replace)
         self.table.redraw()
+
+    class MetricSelectionDialog(tk.simpledialog.Dialog):
+        DUMMY_STR = 'Choose Metric'
+        def __init__(self, parent):
+            # Tkinter dialog somehow execute the full flow in constructor call 
+            # so needs to initialize self.chosen_metric here
+            self.chosen_metric = None
+            super().__init__(parent, title="Select Metric for Heatmap")
+
+        def body(self, master):
+            self.metric_selected = tk.StringVar(value=self.DUMMY_STR)
+            self.metric_menu = AxesTab.all_metric_menu(master, self.metric_selected)
+            self.metric_menu.grid(row=0, column=0, padx=10, pady=10)
+            #self.metric_menu.grid(row=0, column=1, sticky=tk.N)
+
+        def apply(self):
+            chosen_metric = self.metric_selected.get()
+            if chosen_metric != self.DUMMY_STR:
+                self.chosen_metric = chosen_metric
+        
+    def heatmapByMetric(self):
+        chosen_metric = ShortNameTab.MetricSelectionDialog(self).chosen_metric
+        print(chosen_metric)
+        # TODO: Should follow colorClusters() method to update the 'Alphas' column
+        # as well as doing the model-view-controller approach to update plot.
 
     # Merge user input labels with current mappings and replot
     def updateLabels(self):
