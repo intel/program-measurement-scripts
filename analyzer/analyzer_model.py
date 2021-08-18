@@ -146,6 +146,7 @@ class LoadedData(Observable):
             initial_color_map = self.df[KEY_METRICS]
             initial_color_map['Color'] = None
             initial_color_map['Label'] = ''
+            initial_color_map['Alphas'] = ''
             self.guiState.set_color_map(initial_color_map, notify=False)
             self.updated_notify_observers()
             
