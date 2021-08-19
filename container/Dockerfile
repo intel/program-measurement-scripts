@@ -7,40 +7,47 @@ LABEL description="Container for use with CapeScripts"
 #ENV https_proxy http://proxy-chain.intel.com:912
 
 # install build dependencies 
-RUN apt-get update && apt-get install -y g++ rsync zip openssh-server make \
- software-properties-common
+
+# Need to install gcc-4.9 
+# See https://askubuntu.com/questions/1235819/ubuntu-20-04-gcc-version-lower-than-gcc-7
+RUN echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list && echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
+
+RUN apt-get update && apt-get install --no-install-recommends -y make \
+ software-properties-common && \
+ add-apt-repository ppa:rosecompiler/rose-development && \
+ apt-get update && apt-get install --no-install-recommends -y g++ rsync zip openssh-server \
 # Following steps from ROSE website: https://github.com/rose-compiler/rose/wiki/Install-Using-apt-get
-RUN add-apt-repository ppa:rosecompiler/rose-development
-RUN apt-get update && apt-get install -y \
- rose \
+   rose \
  # Optional: Installs ROSE tools in addition to ROSE Core
- rose-tools \
+   rose-tools \
 # More utilities specified at https://gitlab.com/Wingpad/rose-utils
- default-jdk \
- git g++ wget \
+   default-jdk \
+   git g++ wget \
 # More basic utilities
- vim \
- sudo \
+   vim \
+   sudo \
  # Need pkg-config to csvkit
- pkg-config \
+   pkg-config \
  # Used in const.sh in Capescripts
- locales \
+   locales \
  # Used in Capescripts
- bc \
- time \
- python3-pip \
- cpufrequtils numactl
-
-RUN chmod u+s /usr/bin/cpufreq-set
-
+   bc \
+   time \
+   python3-pip \
+   cpufrequtils numactl \
 # For Locus
-RUN apt-get install -y lib32readline8 lib32readline-dev \
- cproto ctags build-essential libreadline-dev libncurses5-dev \
- libncursesw5-dev \
- subversion python-is-python3 \
- indent swig
+   lib32readline8 lib32readline-dev \
+   cproto ctags build-essential libreadline-dev libncurses5-dev \
+   libncursesw5-dev \
+   subversion python-is-python3 \
+   indent swig \
+   # for pocc, need to install gcc-4.9 
+   gcc-4.9 g++-4.9 uuid-dev libswitch-perl
  #tex4ht
  #texlive-latex-base texlive-latex-extra 
+
+
+RUN chmod u+s /usr/bin/cpufreq-set
  
 
  # Used in const.sh
@@ -72,6 +79,8 @@ RUN echo "builder:builder" | chpasswd
 
 RUN mkdir /share && chmod a+rwx /share && chmod +t /share
 
+
+COPY sep_eng/ /opt/intel/sep_eng
 USER builder
 ENV USER=builder
 COPY --chown=builder rose-utils/ /share/rose-utils
@@ -100,11 +109,6 @@ RUN wget https://scm.cri.ensmp.fr/svn/nlpmake/trunk/makes/setup_pips.sh \
 
 
 # Setting up following https://bitbucket.org/thiagotei/uiuc-compiler-opts/wiki/Home
-USER root
-# Need to install gcc-4.9 
-# See https://askubuntu.com/questions/1235819/ubuntu-20-04-gcc-version-lower-than-gcc-7
-RUN echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial main" >> /etc/apt/sources.list && echo "deb http://dk.archive.ubuntu.com/ubuntu/ xenial universe" >> /etc/apt/sources.list
-RUN apt update && apt-get install -y gcc-4.9 g++-4.9 uuid-dev libswitch-perl
 
 USER builder
 ENV CC=gcc-4.9
