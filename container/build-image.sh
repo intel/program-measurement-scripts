@@ -33,6 +33,16 @@ if [ ! -d pocc-1.1 ]; then
   curl -O https://bitbucket.org/thiagotei/uiuc-compiler-opts/raw/39556c88b86e6a7e727117183c93906ab89ffeb1/pocc-1.1-candl-0.6.2.patch
 fi
 
+# Below is done manually currently
+if [ ! -d sep_eng ]; then
+  mkdir sep_eng
+  cd sep_eng
+  curl -O 'https://intel-my.sharepoint.com/:u:/r/personal/avinash_srinivasa_intel_com/Documents/EMON_API/EMON_API_engg_lin.tar.bz2?web=0'
+  tar xvf EMON_API_engg_lin.tar.bz2
+  cd ..
+fi
+
+
 #docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --pull --rm -f "container\Dockerfile" -t capeexperimentscripts:latest "container"
 # Below assums proxy servers are needed to access the network
 #docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --pull --rm -f ".\Dockerfile" -t capeexperimentscripts:latest "."
