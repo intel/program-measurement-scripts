@@ -6,6 +6,7 @@ ARG LOCAL_UID
 ARG LOCAL_GID
 ARG LOCAL_GIDS
 ARG LOCAL_GNAMES
+ARG SEP_DIR
 
 # Use bash for more scripting features
 SHELL ["/bin/bash", "-c"]
@@ -14,6 +15,10 @@ USER root
 # Install more packages for experiments/local needs
 # Uncomment follow line and add more packages
 #RUN apt-get install -y libssl-dev
+
+# Copy EMON with built driver in image
+COPY $SEP_DIR /opt/intel/$SEP_DIR
+RUN apt-get install kmod && ln -sr /opt/intel/${SEP_DIR} /opt/intel/sep
 
 RUN groupadd -g $LOCAL_GID runner 
 # Create /tmp/groups to store the group names to add to runner
@@ -41,4 +46,6 @@ RUN chown -R runner /share/* && chgrp -R runner /share/*
 
 USER runner
 WORKDIR /home/runner
-ENV USER=runner
+#ENV USER=runner
+USER root
+ENTRYPOINT /opt/intel/sep/sepdk/src/insmod-sep -g docker && su runner && /opt/intel/sep/sepdk/src/rmmod-sep
