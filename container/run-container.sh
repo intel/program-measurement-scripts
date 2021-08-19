@@ -14,6 +14,7 @@
 # Build arguments to mount host directories
 mount_args=()
 mount_dirs=(/opt /localdisk /nfs)
+mount_dirs=(/localdisk /nfs)
 for dir in ${mount_dirs[*]}; do
     mount_args+=( "-v $dir:$dir" )
 done
@@ -27,4 +28,10 @@ for var in ${vars[*]}; do
   fi
 done
 
-docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -it --privileged local_image:latest
+docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -it --privileged local_image:latest 
+#container_id=$(docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -d -it --privileged local_image:latest )
+# Run as root to start EMON driver.  Simply give access to docker group
+#docker exec -u 0 ${container_id} sh -c "/opt/intel/sep_eng/sepdk/src/insmod-sep -g docker"
+
+#docker attach ${container_id}
+#docker exec -u 0 ${container_id} sh -c "/opt/intel/sep_eng/sepdk/src/rmmod-sep"
