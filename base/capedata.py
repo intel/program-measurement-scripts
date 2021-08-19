@@ -159,7 +159,10 @@ class CapeData(ABC):
         for col in outputs:
             if col in self.df.columns and self.df[col].equals(merged[col]):
                 continue # Update not needed
-            self.df[col] = merged[col]
+            try: 
+                self.df[col] = merged[col]
+            except:
+                self.df[col] = None 
             updatedCols.add(col)
         self.record_dependency()
         # Invalidate item if they work on the same df using updatedCols metrics
