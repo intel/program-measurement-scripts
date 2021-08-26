@@ -22,6 +22,7 @@ mount_dirs=(/localdisk /nfs)
 for dir in ${mount_dirs[*]}; do
     mount_args+=( "-v $dir:$dir" )
 done
+mount_args+=( "-v $HOME:/home/runner" )
 
 # Build arguments to pass environmental variables
 env_args=()
@@ -32,7 +33,14 @@ for var in ${vars[*]}; do
   fi
 done
 
+
+# Start driver
+docker run -u root -v /dev:/dev --pid=host --ipc=host --privileged local_image:latest /bin/bash -c "pushd /opt/intel/sep/sepdk/src; ./insmod-sep -g docker"
+
 docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -it --privileged local_image:latest 
+
+# Stop driver
+docker run -u root -v /dev:/dev --pid=host --ipc=host --privileged local_image:latest /bin/bash -c "pushd /opt/intel/sep/sepdk/src; ./rmmod-sep" 
 #container_id=$(docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -d -it --privileged local_image:latest )
 # Run as root to start EMON driver.  Simply give access to docker group
 #docker exec -u 0 ${container_id} sh -c "/opt/intel/sep_eng/sepdk/src/insmod-sep -g docker"
