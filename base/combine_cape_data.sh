@@ -7,7 +7,7 @@ run_dir=$1
 #START_VRUN_SH=$1
 START_VRUN_SH=$(basename $run_dir)
 
-ofiles=($( find -L ${run_dir} -name *.cape.csv| sort ))
+ofiles=($( find -L ${run_dir}/cls* -name *.cape.csv| sort ))
 combined_raw_json=${run_dir}/cape_${START_VRUN_SH}.json
 combined_raw_ofile=${run_dir}/cape_${START_VRUN_SH}.csv
 combined_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.csv
@@ -36,7 +36,6 @@ for f in ${ofiles[@]}; do
 done
 #in2csv -I --format ndjson $combined_raw_json
 in2csv -I --format ndjson $combined_raw_json > ${combined_raw_ofile}
-
 
 echo "Running post-processing script to summarize raw data..."
 $CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_summary_ofile}

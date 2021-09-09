@@ -57,12 +57,14 @@ field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPE
                 ARRAY_EFFICIENCY_PCT ]
 
 
-L2R_TrafficDict={'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
-L2W_TrafficDict={'SKL': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
-L3R_TrafficDict={'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FILL_DROPPED'], 'IVB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'], 'SNB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'] }
-L3W_TrafficDict={'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
+L2R_TrafficDict={'CSL': ['L1D_REPLACEMENT'], 'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
+L2W_TrafficDict={'CSL': ['L2_TRANS_L1D_WB'], 'SKL': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
+L3R_TrafficDict={'CSL': ['L2_RQSTS_MISS'], 'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FILL_DROPPED'], 'IVB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'], 'SNB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'] }
+L3W_TrafficDict={'CSL': ['L2_TRANS_L2_WB'], 'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
 
-StallDict={'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
+StallDict={'CSL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
+                    'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
+           'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'HSW': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
                     'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
@@ -123,6 +125,8 @@ def arch_helper(row):
     arch = row['cpu.generation'].lower()
     if 'skylake' in arch:
         return 'SKL'
+    elif 'cascade' in arch:
+        return 'CSL'
     elif 'haswell' in arch:
         return 'HSW'
     elif 'ivy' in arch:
@@ -578,7 +582,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
     #metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
     metric_to_memlevel = lambda v: v.extractComponent()
-    add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
+    if set(node_list).issubset(set(output_rows.columns)):
+        add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
     calculate_analytics(output_rows, df)

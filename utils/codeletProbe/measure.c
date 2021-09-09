@@ -156,7 +156,9 @@ void measure_init_()
 	evaluation_init();
 	// Create a set of co-running copies of the codelet
 	create_clones();
-measure_sec_spin_(6);
+        // Following spin waiting for energy measurement
+        // TODO: enable/disalbe spining dynamically
+//measure_sec_spin_(6);
 
 	return ;
 }
