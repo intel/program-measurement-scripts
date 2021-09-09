@@ -37,7 +37,8 @@ done
 # Start driver
 docker run -u root -v /dev:/dev --pid=host --ipc=host --privileged local_image:latest /bin/bash -c "pushd /opt/intel/sep/sepdk/src; ./insmod-sep -g docker"
 
-docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -w /host/$(pwd) -it --privileged local_image:latest 
+#docker run --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /usr/src/linux-headers-$(uname -r):/usr/src/linux-headers-$(uname -r) -v /lib/modules:/lib/modules -v /usr/src/linux-headers-4.4.0-62:/usr/src/linux-headers-4.4.0-62 -v /tmp/tmp:/tmp/tmp -v /dev:/dev -v /usr/include:/usr/include --pid=host --ipc=host -w /host/$(pwd) -it --privileged local_image:latest 
+docker run --hostname $(hostname) --rm  ${mount_args[*]} ${env_args[*]} -v /:/host -v /lib/modules:/lib/modules -v /tmp/tmp:/tmp/tmp -v /dev:/dev --pid=host --ipc=host -w /host/$(pwd) -it --privileged local_image:latest 
 
 # Stop driver
 docker run -u root -v /dev:/dev --pid=host --ipc=host --privileged local_image:latest /bin/bash -c "pushd /opt/intel/sep/sepdk/src; ./rmmod-sep" 
