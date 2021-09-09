@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    git g++ wget \
 # More basic utilities
    vim \
+   less \
    sudo \
  # Need pkg-config to csvkit
    pkg-config \
@@ -42,7 +43,11 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    subversion python-is-python3 \
    indent swig \
    # for pocc, need to install gcc-4.9 
-   gcc-4.9 g++-4.9 uuid-dev libswitch-perl
+   gcc-4.9 g++-4.9 uuid-dev libswitch-perl \
+   # for hugeadm
+   libhugetlbfs-bin \
+   # for new build of cmake
+   libssl-dev
  #tex4ht
  #texlive-latex-base texlive-latex-extra 
 
@@ -57,6 +62,8 @@ RUN python3 -m pip install sympy \
   && python3 -m pip install csvkit \
   && python3 -m pip install openpyxl \
   && python3 -m pip install et_xmlfile \
+  && python3 -m pip install Cheetah3 \
+  && python3 -m pip install parse \
   && python3 -m pip install pandas
 
 
@@ -68,6 +75,16 @@ RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
 
 # expose port 22 
 EXPOSE 22
+
+# Build cmake
+RUN cd /root \
+  && wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz \
+  && tar xvf cmake-3.21.1.tar.gz \
+  && cd cmake-3.21.1 \
+  && ./bootstrap \
+  && make \
+  && make install
+
 
 ENV ROSE_HOME=/usr/rose
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
