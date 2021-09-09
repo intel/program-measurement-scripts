@@ -582,7 +582,8 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     node_list = [RATE_L1_GB_P_S, RATE_L2_GB_P_S, RATE_L3_GB_P_S, RATE_RAM_GB_P_S]
     #metric_to_memlevel = lambda v: re.sub(r" Rate \(.*\)", "", v)
     metric_to_memlevel = lambda v: v.extractComponent()
-    add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
+    if set(node_list).issubset(set(output_rows.columns)):
+        add_mem_max_level_columns(output_rows, node_list, RATE_MAXMEM_GB_P_S, metric_to_memlevel)
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
     calculate_analytics(output_rows, df)
