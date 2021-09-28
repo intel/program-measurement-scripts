@@ -415,6 +415,8 @@ def calculate_array_efficiency(out_rows, in_rows):
 def calculate_analytics(out_rows, in_rows):
     for metric in sorted(set(in_rows.columns) & set(SRC_METRICS)):
         out_rows[metric] = in_rows[metric]
+    for metric in sorted(set(SRC_METRICS) - set(in_rows.columns)):
+        out_rows[metric] = None
 
 def calculate_app_time_coverage(out_rows, in_rows):
     in_cols = in_rows.columns
