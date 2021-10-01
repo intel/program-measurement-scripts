@@ -61,8 +61,45 @@ LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 #if [[ "$USE_OLD_DECAN" == "0" ]]; then
 	# Filling new MAQAO implementation
 	# Get a list of loop id for the codelet
-	loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )
-	echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )" 1>&2
+
+
+	# Python script embedded in BASH script following idea from https://stackoverflow.com/questions/2189098/embedding-short-python-scripts-inside-a-bash-script
+	$MAQAO ${MAQAO_FOLDER}/list_loops.lua $binary_path "^${function_name}$" 1>&2
+
+	loop_file=${binary_path}.csv
+	loop_ids=$(python <(
+	cat <<- END
+	import pandas as pd
+
+	df = pd.read_csv("$loop_file")
+	match_mask=(df['function_name'] == "$function_name") | (df['orig_function_name'] == "$function_name")
+	print(df[match_mask]['loop_ID'].to_string(index=False))
+	END
+	) | tr '\n' ' ')
+
+#	echo "LOOP IDS ARE : $loop_ids" 1>&2
+#	for loop_id in $loop_ids; do
+#		echo "ID: $loop_id" 1>&2
+#	done
+
+
+#	loop_ids=$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- "----" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )
+	#echo CMD loop_ids="\$( $MAQAO analyze -ll $binary_path "${command_line_args}" fct=$function_name loop-depth=innermost | sed '/ '${function_name}'/,/^ [^ ]/!d;//d' | grep -v -- \"----\" | sed 's/.*|[ ]\+\([^ ]*\) .*/\1/' )" 1>&2
+
+
+	echo CMD $MAQAO ${MAQAO_FOLDER}/list_loops.lua $binary_path "^${function_name}$" 1>&2
+
+	echo CMD "loop_ids=\$(python <(" 1>&2
+	cat <<- END 1>&2
+	import pandas as pd
+
+	df = pd.read_csv("$loop_file")
+	match_mask=(df['function_name'] == "$function_name") | (df['orig_function_name'] == "$function_name")
+	print(df[match_mask]['loop_ID'].to_string(index=False))
+	END
+	echo ") | tr '\n' ' ')" 1>&2
+
+
 	#echo ${loop_ids[*]}
 #else
 #	$DECAN_CONFIGURATOR "$DECAN_FOLDER/" "$binary_path" "${command_line_args}" "$function_name" "splitncount" "$UARCH" &>/dev/null
