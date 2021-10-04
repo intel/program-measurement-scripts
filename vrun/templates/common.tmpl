@@ -1,0 +1,105 @@
+#!/bin/bash -l
+
+source ../base/const.sh
+source ../base/vrun_launcher.sh
+
+#PUT compiler source stuff here
+source \${COMPILER_ROOT}/compilers/intel/16.0/Linux/intel64/load0.sh
+
+parameter_set_decoding () {
+	codelet=\$1
+	datasize=\$2
+	repetition=\$3
+	rundir=\$4
+
+	# Create the datasize file for codelet run
+	echo "\${repetition} \${datasize}" > ./codelet.data
+
+	# : => ' ' using sed
+        cmdlineargs=(\$(echo \$datasize | sed 's/:/ /g'))
+	#for $i, $var in enumerate($vars)
+	$var=\${cmdlineargs[$i]}
+	#end for
+
+        # output csv of command line arguments
+	#set $params = ','.join($vars)
+	echo $params > ./arguments.csv
+        echo \$datasize | sed 's/:/,/g' >> ./arguments.csv
+
+        echo "$run_cmd"
+}
+
+#def generate_build_codelet_fns()
+#end def
+
+$generate_build_codelet_fns()
+
+export -f parameter_set_decoding
+export -f build_codelet
+
+run() {
+	runId=\$@
+
+	variants="REF LS FP DL1 FES"
+	variants="ORG"
+
+	memory_loads="0"
+	num_cores="1"
+	#num_cores="2 4"
+	prefetchers="0"
+	#prefetchers="0 15"
+	#frequencies="1200000 2800000"
+	#frequencies="2800000"
+	frequencies="$cpu_freq"
+	#frequencies="1200000 2000000 2800000"
+
+	declare -gA name2path
+	declare -gA name2sizes
+	declare -ga run_codelets
+
+	make_codelet_folder
+
+#def generate_run_codelet_assignment()
+#end def
+	$generate_run_codelet_assignment()
+
+#def generate_name2sizes_assignment($encoded_vars, $indent)
+#end def
+
+#def generate_name2sizes_loop($for_vars, $outer_vars, $indent)
+#if $for_vars
+  #set first=$for_vars[0]
+  #set rest=$for_vars[1:]
+  #set $value_str = ' '.join($var_values[$first])
+  ${indent}for $first in $value_str ; do
+  $generate_name2sizes_loop($rest, $outer_vars+[$first], $indent+'  ')
+  ${indent}done
+#else
+  #set encoded_vars=":".join([f'${v}' for v in $outer_vars]) 
+$generate_name2sizes_assignment($encoded_vars, $indent)
+#end if
+#end def
+
+$generate_name2sizes_loop($vars, [], '')
+
+
+
+	#set resource=int('resource' in $counters)
+	#set sq=int('sq' in $counters)
+	#set sq_histogram=int('sq_histogram' in $counters)
+	#set lfb_histogram=int('lfb_histogram' in $counters)
+	#set topdown=int('topdown' in $counters)
+	#set lfb=int('lfb' in $counters)
+	#set mem_rowbuff=int('mem_rowbuff' in $counters)
+	#set mem_traffic=int('mem_traffic' in $counters)
+	#set mem_hit=int('mem_hit' in $counters)
+	#set tlb=int('tlb' in $counters)
+	#set lsd=int('lsd' in $counters)
+	runId="\${runId}" variants="\$variants" memory_loads="\$memory_loads" frequencies="\$frequencies"  num_cores="\$num_cores" prefetchers="\$prefetchers" counter_list_override="RESOURCE=$resource,SQ=$sq,SQ_HISTOGRAM=$sq_histogram,LFB_HISTOGRAM=$lfb_histogram,TOPDOWN=$topdown,LFB=$lfb,MEM_ROWBUFF=$mem_rowbuff,MEM_TRAFFIC=$mem_traffic,MEM_HIT=$mem_hit,TLB=$tlb,LSD=$lsd" runLoop
+
+
+
+	return
+}
+
+launchIt \$0 run "\$@"

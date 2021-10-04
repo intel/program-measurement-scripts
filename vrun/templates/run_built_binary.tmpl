@@ -1,0 +1,54 @@
+#def generate_run_codelet_assignment()
+run_codelets=(
+		$binary
+)
+#end def
+
+#def generate_name2sizes_assignment($encoded_vars, $indent)
+  ${indent}name2sizes[$binary]+="$encoded_vars "
+#end def
+
+#def generate_build_codelet_fns()
+build_codelet () {
+	codelet_folder="\$1"
+	codelet_name="\$2"
+	build_folder="\$3"
+
+        build_files=\$(find \${codelet_folder} -maxdepth 1 -type f -o -type l)
+        mkdir -p \$build_folder
+        cp \$build_files \$build_folder
+}
+
+make_codelet_folder() {
+    app_name=$app_name
+    batch_name=$batch_name
+    binary=$binary_path
+    binary_name=$binary
+    fn_name=$kernel_function
+    codelet_folder=\$run_dir/codelets/\$binary_name
+
+
+    mkdir -p \$codelet_folder
+    cp \$binary \$codelet_folder
+
+cat <<- EOFEND > \$codelet_folder/codelet.conf
+<?xml version="1.0" ?>
+<codelet>
+  <language value="C"/>
+  <label name="\${binary_name}"/>
+  <function name="\${fn_name}"/>
+  <binary name="\${binary_name}"/>
+</codelet>
+EOFEND
+cat <<- EOFEND > \$codelet_folder/codelet.meta
+application name=\${app_name}
+batch name=\${batch_name}
+code name=\${binary_name}
+codelet name=\${binary_name}
+EOFEND
+    name2path[\$binary_name]=\$codelet_folder
+}
+#end def
+
+#implements respond
+#super.respond()
