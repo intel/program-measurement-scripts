@@ -335,7 +335,8 @@ def calculate_stall_percentages(res, row, skip_stalls):
         for buf in ['RS', 'LB', 'SB', 'ROB', 'PRF', 'LM', 'ANY']:
             res[MN.stallPct(buf)] = 100 * getter(row, StallDict[arch][buf]) / unhlt
         try:
-            res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FE']) / unhlt
+            num_cores = getter(row, 'decan_experimental_configuration.num_core')
+            res[STALL_FE_PCT] = 100 * getter(row, StallDict[arch]['FE']) * num_cores/ unhlt
         except:
             warnings.warn("No CQA FrontEnd metrics, use unhlt - ANY instead.")
             res[STALL_FE_PCT] = 100 * (unhlt - getter(row, StallDict[arch]['ANY'])) / unhlt
