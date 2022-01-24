@@ -3,7 +3,19 @@
   B.  Add user to docker group (e.g. usermod -a -G docker <username>)
   C.  Update container/LocalDockerfile to install extra package for local container
     • Make sure http_proxy and https_proxy variables are set correctly if behind VPN
+   D.  If behind a proxy, need to do the following steps: (from https://stackoverflow.com/questions/69048671/how-to-use-docker-login-with-a-proxy)
+       1) Create a systemd directory for the docker service
+             - sudo mkdir -p /etc/systemd/system/docker.service.d
+       2) Create configuration file for proxy (/etc/systemd/system/docker.service.d/http-proxy.conf).  An example below:
 
+# File: /etc/systemd/system/docker.service.d/http-proxy.conf
+# File: /etc/systemd/docker.service.d/http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=proxy-chain.intel.com:911"
+Environment="NO_PROXY=localhost,127.0.0.1"
+       3) Restart daemons
+          - sudo systemctl daemon-reload
+          - sudo systemctl restart docker
 
 1 Some pre-steps to take before checking out the packages:
   A.  Ensure OS can fix CPU frequencies via userspace power governor (see below)
