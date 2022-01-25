@@ -11,6 +11,7 @@ ofiles=($( find -L ${run_dir}/cls* -name *.cape.csv| sort ))
 combined_raw_json=${run_dir}/cape_${START_VRUN_SH}.json
 combined_raw_ofile=${run_dir}/cape_${START_VRUN_SH}.csv
 combined_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.csv
+combined_formatted_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.xlsx
 combined_qplot_ofile=${run_dir}/cape_qplot_${START_VRUN_SH}.xlsx
 combined_qplot_html=${run_dir}/cape_qplot_${START_VRUN_SH}_html
 
@@ -39,9 +40,11 @@ in2csv -I --format ndjson $combined_raw_json > ${combined_raw_ofile}
 
 echo "Running post-processing script to summarize raw data..."
 $CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_summary_ofile}
+$CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_formatted_summary_ofile}
 # Don't generate QPLOT HTML now with new tool
 #echo "Running Qplot generator to generate QPlot HTML ..."
 #$CLS_FOLDER/qplot_data_generation.py -i ${combined_raw_ofile} -o ${combined_qplot_ofile} -q ${combined_qplot_html}
 ${LOGGER_SH} ${START_VRUN_SH} "Cape raw data saved in: ${combined_raw_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape summary data saved in : ${combined_summary_ofile}"
+${LOGGER_SH} ${START_VRUN_SH} "Cape formatted summary data saved in : ${combined_formatted_summary_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape QPLOT HTML data saved in : ${combined_qplot_html}"
