@@ -18,9 +18,13 @@ fi
 # Build arguments to mount host directories
 mount_args=()
 mount_dirs=(/opt /localdisk /nfs)
-mount_dirs=(/localdisk /nfs)
+mount_dirs=(/localdisk )
+nfs_mount_dirs=(/nfs)
 for dir in ${mount_dirs[*]}; do
     mount_args+=( "-v $dir:$dir" )
+done
+for dir in ${nfs_mount_dirs[*]}; do
+    mount_args+=( "-v $dir:$dir:shared" )
 done
 #mount_args+=( "-v $HOME:/home/runner" )
 
