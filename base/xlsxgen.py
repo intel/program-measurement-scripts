@@ -95,7 +95,9 @@ def _find_tiers(df, field, thresholds):
         members = [ idx for idx, value in df[field].iteritems() if ((_pct_diff(value, lastmax) <= threshold) and value <= lastmax) ]
         tiers.append(members)
         flattened = list(itertools.chain(*tiers))
-        lastmax = max(value for idx, value in df[field].iteritems() if (idx not in flattened))
+        seq = [ value for idx, value in df[field].iteritems() if (idx not in flattened) ]
+        if len(seq) > 0:
+            lastmax = max(seq)
     return tiers
 
 def _get_tier(tiers, loop):
@@ -175,7 +177,7 @@ def _process(xlsxgen, title, df, outfile):
             if loop[metric] == value:
                 _color_cell(ws, _column_for_metric(data_header, metric), curr_row, _highlight)
         for metric, cutoff in xlsxgen.cutoffs.items():
-            if _try_cast(loop[metric]) >= cutoff:
+            if metric in loop and _try_cast(loop[metric]) >= cutoff:
                 _color_cell(ws, _column_for_metric(data_header, metric), curr_row, _color_for_tier(0))
         for metric, tiers in tiered.items():
             found = _get_tier(tiers, idx)
