@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    rose-tools \
 # More utilities specified at https://gitlab.com/Wingpad/rose-utils
    default-jdk \
-   git g++ wget \
+   git git-lfs g++ wget \
 # More basic utilities
    vim \
    less \
@@ -47,7 +47,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    # for hugeadm
    libhugetlbfs-bin \
    # for new build of cmake
-   libssl-dev
+   libssl-dev \
+   # for UIUC Compiler Optimizations
+   libgmp-dev
  #tex4ht
  #texlive-latex-base texlive-latex-extra 
 
@@ -103,6 +105,7 @@ ENV USER=builder
 COPY --chown=builder rose-utils/ /share/rose-utils
 COPY --chown=builder ice-locus-dev/ /share/ice-locus-dev
 COPY --chown=builder pocc-1.1/ /share/pocc-1.1
+COPY --chown=builder uiuc-compiler-opts/ /share/uiuc-compiler-opts/src-git
 
 WORKDIR /share/rose-utils
 RUN ./build.sh
@@ -132,3 +135,14 @@ ENV CC=gcc-4.9
 ENV CXX=g++-4.9
 WORKDIR /share/pocc-1.1
 RUN ./install.sh && cd analyzers/candl && patch -p1 -i ../../pocc-1.1-candl-0.6.2.patch && make install
+
+# Build UIUC Compiler Optimizations
+# Ensure using new version of GCC/G++ (should be 9.3.0 for this container)
+ENV CC=gcc
+ENV CXX=g++
+WORKDIR /share/uiuc-compiler-opts
+# Comment out a line in CMakeLists.txt to use system boost
+RUN mkdir build && mkdir install && cd build && sed -i '/^set(Boost_NO_SYSTEM_PATHS ON)/ s/^/#/' ../src-git/CMakeLists.txt \
+   && cmake -DROSE_PATH=/usr/rose -DCMAKE_CXX_FLAGS=-std=c++11 -DCMAKE_INSTALL_PREFIX=/share/uiuc-compiler-opts/install ../src-git \
+   && make install
+   
