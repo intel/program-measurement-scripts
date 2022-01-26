@@ -11,7 +11,7 @@
 #   a) run the program on one core
 #   b) determine the number of iterations executed by individual loop
 #   So essentially the same as 1)
-# 3) For true prallel runs (IF_PARALLEL=1), we have to run the program in parallel mode.  The data collection (MAQAO/SEP/VTUNE)
+# 3) For true prallel runs (IF_PARALLEL!=1), we have to run the program in parallel mode.  The data collection (MAQAO/SEP/VTUNE)
 #   is expected to collect all iterations from all cores, so
 #   a) we run the program in parallel mode.
 #   b) determine the number of iterations executed by individual all cores
@@ -129,15 +129,25 @@ LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH}
 #	#done
 #fi
 
+
 if [[ "$LOOP_ITER_COUNTER" == "MAQAO" ]]; then
 	# Get the count for each loop id
 #	if [[ "$USE_OLD_DECAN" == "0" ]]; then
 		for loop_id in $loop_ids; do
 			#$MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" >/tmp/out.$loop_id
 			#count_values[$loop_id]=$( grep Total /tmp/out.$loop_id |cut -f3 -d'|' |tr -d [:blank:] )
-			echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id -- $binary_path "${command_line_args}" |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
-			# TODO: DO true parallel run
-			count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path ${command_line_args} |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] ) 
+			if [[ "$IF_PARALLEL" != "0" ]]; then
+				# True parallel run, use enable-mt featue and add up all counts
+				# The count will be normalized to be per core later (see below code below) because SEP/VTune runs will collect all core counts.
+				# Also assuming caller already take care of setting up parallel runs (e.g. OMP_NUM_THREADS for OMP program before calling this script)
+				echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id i=iterations --report-tid='' -- $binary_path "${command_line_args}" |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] | awk '{s+=$1} END {printf "%.0f\n", s}' )" 1>&2
+				echo "Count Loop Iteration env: OMP_NUM_THREADS=${OMP_NUM_THREADS}" 1>&2
+				count_values[$loop_id]=$( $MAQAO vprof --enable-mt lid=$loop_id i=iterations --report-tid='' -- $binary_path ${command_line_args} |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] | awk '{s+=$1} END {printf "%.0f\n", s}' ) 
+			else
+				# Both sequential and throughput run will run this path
+				echo count_values[$loop_id]="\$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path "${command_line_args}" |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] )" 1>&2
+				count_values[$loop_id]=$( $MAQAO vprof lid=$loop_id i=iterations -- $binary_path ${command_line_args} |grep Total | grep '|' | cut -f3 -d'|' |tr -d [:blank:] ) 
+			fi
 			[ -z "${count_values[$loop_id]}" ] && count_values[$loop_id]=0
 			echo "COUNT: " ${count_values[$loop_id]} 1>&2
 		done
@@ -237,9 +247,10 @@ for loop_id in $loop_ids; do
 	# Grab the corresponding iteration count
 	tmp_iter=$( echo "${count_values[$loop_id]}" )
 	# Divide the number of iterations by the number of cores for true parallel runs
-	if [[ "$IF_PARALLEL" == "1" ]]; then
+	if [[ "$IF_PARALLEL" != "0" ]]; then
 		tmp_iter=$(($tmp_iter / $num_cores))
 	fi
+	# Now for all cases, seq, true parallel and throughtput, the count refers to count of one core
 	# If the iterations count is non-empty, append it to final_res
 	if [[ "$tmp_iter" != "" ]]; then
 		final_res=$( echo -e "$loop_id"${DELIM}"$tmp_iter"${DELIM}"\n$final_res" )

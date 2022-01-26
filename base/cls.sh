@@ -69,6 +69,7 @@ find_num_repetitions_and_iterations () {
 	if [[ ${DISABLE_CQA} == 0 ]]; then
 	    echo "Re-counting loop iterations for ($codelet_folder/$codelet_name", "$function_name, "${data_size}")..." 1>&2
 	    #loop_info=$( env -i ./count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" | grep ${DELIM})
+	    set_parallel_env ${num_core}
 	    echo CMD:     $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" "|" grep ${DELIM} 1>&2
 	    loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_folder/$codelet_name" "$function_name" "${data_size}" "${repetitions}" "${num_core}" | grep ${DELIM})
 	    res=$?
@@ -281,6 +282,7 @@ if [[ ${DISABLE_CQA} == 0 ]]; then
 	try_repetitions=2
     fi
     try_num_core=1
+    set_parallel_env ${try_num_core}
     echo CMD: $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core}
     all_loop_info=$( $CLS_FOLDER/count_loop_iterations.sh "$codelet_exe" "$function_name" "${first_data_size}" ${try_repetitions} ${try_num_core} )
     res=$?
