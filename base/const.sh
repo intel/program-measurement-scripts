@@ -513,3 +513,15 @@ set_thp() {
 		echo "Current THP setting is already ${cur_thp_setting}."
 	fi
 }
+
+# TODO: Generalize for all parallel library/environments (e.g. generate in vrun scripts)
+# Should use this routine to setup parallel runs for consistency purpose.
+set_parallel_env() { 
+	local num_cores="$1"
+	if [[ "$IF_PARALLEL" != "0" ]]; then
+		export OMP_NUM_THREADS=${num_cores}
+		export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
+		export KMP_AFFINITY=scatter
+		# echo "OMP_NUM_THREADS is NOW : ${OMP_NUM_THREADS}" 1>&2
+	fi
+}
