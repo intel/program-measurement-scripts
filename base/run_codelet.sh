@@ -116,9 +116,10 @@ for i in $( seq $META_REPETITIONS ); do
 	else
 
 		if [[ "$IF_PARALLEL" != "0" ]]; then
-			export OMP_NUM_THREADS=${num_cores}
-			export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
-			export KMP_AFFINITY=scatter
+			#export OMP_NUM_THREADS=${num_cores}
+			#export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
+			#export KMP_AFFINITY=scatter
+	    		set_parallel_env ${num_cores}
 			cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
 			#cmd="${run_prog}"
 			echo -n $cmd
@@ -339,9 +340,10 @@ then
 						#echo $NUMACTL -m $XP_NODE -C $XP_CORE  ${run_prog_emon_api} &>> "$res_path/emon_execution_log"
 
 						if [[ "$IF_PARALLEL" != "0" ]]; then
-							export OMP_NUM_THREADS=${num_cores}
-							export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
-							export KMP_AFFINITY=scatter
+							#export OMP_NUM_THREADS=${num_cores}
+							#export KMP_HW_SUBSET=${XP_NUM_CORES}c,1t
+							#export KMP_AFFINITY=scatter
+	    						set_parallel_env ${num_cores}
 							cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog_emon_api}"
 							LD_LIBRARY_PATH=${EMON_API_PROBE_FOLDER}:${LD_LIBRARY_PATH} ${cmd} &>>"$res_path/emon_execution_log"
 							prog_emon_api_ret_code=$?
