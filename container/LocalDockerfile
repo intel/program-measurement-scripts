@@ -47,5 +47,6 @@ RUN chown -R runner /share/* && chgrp -R runner /share/*
 USER runner
 WORKDIR /home/runner
 ENV USER=runner
+ENV ICE_CMPOPTS_PATH=/share/uiuc-compiler-opts/install
 #USER root
 #ENTRYPOINT /opt/intel/sep/sepdk/src/insmod-sep -g docker && su runner && /opt/intel/sep/sepdk/src/rmmod-sep
