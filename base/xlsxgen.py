@@ -128,6 +128,13 @@ def _process(xlsxgen, title, df, outfile):
         nonlocal curr_row
         ws.append(row)
         curr_row = curr_row + 1
+    # a metric is usable when all its
+    # inputs are present in the dataframe
+    def is_usable(x):
+        if isinstance(x, DerivedMetric):
+            return all(i in df.columns for i in x.inputs)
+        else:
+            return False
     group_header, data_header, units_header = [], [], []
     grouping = xlsxgen.grouping.copy()
     for group in xlsxgen.grouping:
@@ -139,7 +146,7 @@ def _process(xlsxgen, title, df, outfile):
         for _ in range(len(group[1]) - 1):
             group_header.append('')
         data_header.extend(group[1])
-        for metric in filter(lambda x: isinstance(x, DerivedMetric), group[1]):
+        for metric in filter(is_usable, group[1]):
             df[metric.value] = metric.apply(df).values
     hidden_cols = [
         get_column_letter(i + 1)
