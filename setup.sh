@@ -17,5 +17,12 @@ docker run -v /:/host local_image:latest /bin/bash -c \
 #make
 #popd
 
+# Build PrOMPT if ICC is available
+icc_path=$(which icc)
+if [[ ${icc_path} != "" ]]; then
+  echo "Building PrOMPT using ${icc_path}"
+  icc_folder=$(dirname ${icc_path})
+  docker run -v /:/host local_image:latest /bin/bash -c \
+	"export PATH=/host/${icc_folder}:${PATH}; pushd /host/"$(pwd)"/utils/PrOMPT; make clean; make"
 
-
+fi
