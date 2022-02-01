@@ -53,7 +53,9 @@ fi
 # login only need to be done once for password entering
 docker login registry.gitlab.com
 # Also build the image to Gitlab
-docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --pull --rm -f ".\Dockerfile" -t registry.gitlab.com/davidwong/cape-experiment-scripts  "."
+[[ $http_proxy != http://* ]] && http_proxy=http://$http_proxy
+[[ $https_proxy != http://* ]] && https_proxy=http://$https_proxy
+docker build --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --pull --rm -f "./Dockerfile" -t registry.gitlab.com/davidwong/cape-experiment-scripts  "."
 
 if [[ $push_image = true ]]; then
   docker push registry.gitlab.com/davidwong/cape-experiment-scripts
