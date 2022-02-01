@@ -49,7 +49,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    # for new build of cmake
    libssl-dev \
    # for UIUC Compiler Optimizations
-   libgmp-dev
+   libgmp-dev \
+   # for PROMPT
+   binutils-dev libiberty-dev
+
  #tex4ht
  #texlive-latex-base texlive-latex-extra 
 
@@ -105,6 +108,7 @@ ENV USER=builder
 COPY --chown=builder rose-utils/ /share/rose-utils
 COPY --chown=builder ice-locus-dev/ /share/ice-locus-dev
 COPY --chown=builder pocc-1.1/ /share/pocc-1.1
+RUN mkdir /share/uiuc-compiler-opts
 COPY --chown=builder uiuc-compiler-opts/ /share/uiuc-compiler-opts/src-git
 
 WORKDIR /share/rose-utils
@@ -145,4 +149,3 @@ WORKDIR /share/uiuc-compiler-opts
 RUN mkdir build && mkdir install && cd build && sed -i '/^set(Boost_NO_SYSTEM_PATHS ON)/ s/^/#/' ../src-git/CMakeLists.txt \
    && cmake -DROSE_PATH=/usr/rose -DCMAKE_CXX_FLAGS=-std=c++11 -DCMAKE_INSTALL_PREFIX=/share/uiuc-compiler-opts/install ../src-git \
    && make install
-   
