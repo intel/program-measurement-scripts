@@ -1,6 +1,25 @@
+/*
+   Copyright (C) 2004 - 2022 Université de Versailles Saint-Quentin-en-Yvelines (UVSQ)
+
+   This file is part of MAQAO.
+
+  MAQAO is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public License
+   as published by the Free Software Foundation; either version 3
+   of the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
 #include <stdio.h>
-#include <stdlib.h>    // qsort
-#include <string.h>    // memset, memcpy
+#include <stdlib.h>    // qsort, strtol
+#include <string.h>    // memset, memcpy, strtok
 #include <assert.h>    // assert
 #include <time.h>      // clock_gettime, struct timespec
 #include <pthread.h>   // pthread_rwlock_{init/rdlock/wrlock/unlock/destroy}
@@ -122,16 +141,17 @@ typedef struct {
 parallel_regions_t parallel_regions [MAX_NEST];
 struct timespec start_time_ts; // subtract this to subsequent omp_get_time values improves precision of times saved in double variables
 
-/* getenv ("TARGET_PARALLEL_SECTION")
- *  - ALL: trace all regions
- *  - 0x45: trace only region with codeptr_ra = 0x45 */
-const char *target_parallel_section;
+/* getenv ("PROMPT_PARALLEL_REGIONS") = "0x123,0x456" implies:
+ *  - par_reg_filt = { 0x123, 0x456 }
+ *  - par_reg_filt_len = 2 */
+void    **par_reg_filt;
+unsigned  par_reg_filt_len;
 
 unsigned verbose_level; // atoi (getenv ("PROMPT_VERBOSE"))
 
 unsigned sampling_period; // atoi (getenv ("PROMPT_SAMPLING_PERIOD"))
 
-char *output_path; // getenv ("PROMPT_OUTPUT_PATH")
+const char *output_path; // getenv ("PROMPT_OUTPUT_PATH"), "prompt_results" or "prompt_results/<hostname>/<pid>"
 
 #ifdef PROMPT_TASK
 // Unique ID for created tasks (assigned by ompt_callback_task_create)
@@ -333,13 +353,18 @@ void thread_end (ompt_data_t *thread_data)
 
 static inline int is_target_codeptr (const void *codeptr_ra)
 {
-   if (codeptr_ra != NULL && strcmp (target_parallel_section, "ALL") != 0) {
-      char buffer[11];
-      snprintf (buffer, sizeof buffer, "%p", codeptr_ra);
-      return (strcmp (target_parallel_section, buffer) == 0);
+   if (par_reg_filt_len == 0) return 1;
+
+   if (codeptr_ra != NULL) {
+      unsigned i;
+      for (i=0; i<par_reg_filt_len; i++) {
+         if (par_reg_filt[i] == codeptr_ra) {
+            return 1;
+         }
+      }
    }
 
-   return (strcmp (target_parallel_section, "ALL") == 0);
+   return 0;
 }
 
 static inline void update_stats_begin (stats_t *stats, double start_time)
@@ -792,14 +817,15 @@ static void sync_region_common (ompt_sync_region_t kind, ompt_scope_endpoint_t e
    // Get info for the related parallel region
    parallel_info_t *parinfo = parallel_data->ptr;
    if (parinfo == NULL) {
-      printf ("Warning: ignoring a sync-event from a never encountered parallel region. "
-              "That typically corresponds to a \"omp for\" outside any parallel region.\n");
+      if (par_reg_filt_len == 0)
+         printf ("Warning: ignoring a sync-event from a never encountered parallel region. "
+                 "That typically corresponds to a \"omp for\" outside any parallel region.\n");
       return;
    }
    if (codeptr_ra == NULL) codeptr_ra = parinfo->codeptr_ra;
 
-   // Checking that the related parallel region is not filtered out
-   assert (is_target_codeptr (parinfo->codeptr_ra) != 0);
+   // Excluding sync regions from filtered-out parallel regions
+   if (is_target_codeptr (parinfo->codeptr_ra) == 0) return;
 
    // Get related stats (from the current ancestor thread)
    const int ancestor_thread_num = omp_get_ancestor_thread_num (level-1);
@@ -916,14 +942,15 @@ void work (ompt_work_t wstype, ompt_scope_endpoint_t endpoint,
    // Get info for the related parallel region
    parallel_info_t *parinfo = parallel_data->ptr;
    if (parinfo == NULL) {
-      printf ("Warning: ignoring a work-event from a never encountered parallel region. "
-              "That typically corresponds to a \"omp for\" outside any parallel region.\n");
+      if (par_reg_filt_len == 0)
+         printf ("Warning: ignoring a work-event from a never encountered parallel region. "
+                 "That typically corresponds to a \"omp for\" outside any parallel region.\n");
       return;
    }
    if (codeptr_ra == NULL) codeptr_ra = parinfo->codeptr_ra;
 
-   // Checking that the related parallel region is not filtered out
-   assert (is_target_codeptr (parinfo->codeptr_ra) != 0);
+   // Excluding sync regions from filtered-out parallel regions
+   if (is_target_codeptr (parinfo->codeptr_ra) == 0) return;
 
    // Get related stats (from the current ancestor thread)
    const int ancestor_thread_num = omp_get_ancestor_thread_num (level-1);
@@ -1116,6 +1143,46 @@ void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_d
     *       ici, dans la fonction d'initialization de l'outil.
     */
 
+   // Set/check parallel regions filtering
+   const char *par_reg_str = getenv ("PROMPT_PARALLEL_REGIONS");
+   if (par_reg_str == NULL) {
+      printf ("[PROMPT] By default all parallel regions are profiled. Set the PROMPT_PARALLEL_REGIONS environment variable to 0x123,0x456 to profile only some regions (from addresses in the executable)\n");
+
+      par_reg_filt = NULL;
+      par_reg_filt_len = 0;
+   }
+   else {
+      unsigned par_reg_filt_max_len = 10;
+      par_reg_filt = malloc (par_reg_filt_max_len * sizeof par_reg_filt[0]);
+      par_reg_filt_len = 0;
+
+      // Parse (strtok) addresses (comma-separated) in <par_reg_str>
+      char *str = strdup (par_reg_str);
+      const char *sep = ",";
+      const char *tok = strtok (str, sep);
+      while (tok != NULL) {
+         errno = 0;
+         const long addr = strtol (tok, NULL, 16);
+         if (errno == 0 && addr != 0) {
+            // Resize if necessary
+            if (par_reg_filt_len == par_reg_filt_max_len) {
+               par_reg_filt_max_len *= 2;
+               par_reg_filt = realloc (par_reg_filt, par_reg_filt_max_len * sizeof par_reg_filt[0]);
+            }
+
+            par_reg_filt [par_reg_filt_len++] = (void *)(unsigned long) addr;
+         }
+         tok = strtok (NULL, sep);
+      }
+      free (str);
+
+      if (par_reg_filt_len == 0) {
+         printf ("[PROMPT] Invalid PROMPT_PARALLEL_REGIONS value (%s): expecting 0x123[,0x456...]\n",
+                 par_reg_filt);
+         return;
+      }
+   }
+
    /* Lookup for callback setter entry point */
    ompt_set_callback_t g_set_cb = (ompt_set_callback_t) ompt_lookup_fn ("ompt_set_callback");
    assert (g_set_cb );
@@ -1124,58 +1191,58 @@ void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_d
    g_set_cb (ompt_callback_thread_begin, (ompt_callback_t) thread_begin );
    g_set_cb (ompt_callback_thread_end,   (ompt_callback_t) thread_end );
 
-   target_parallel_section = getenv ("TARGET_PARALLEL_SECTION");
-   if (target_parallel_section != NULL) {
-      g_set_cb (ompt_callback_parallel_begin, (ompt_callback_t) parallel_begin );
-      g_set_cb (ompt_callback_parallel_end,   (ompt_callback_t) parallel_end );
+   g_set_cb (ompt_callback_parallel_begin, (ompt_callback_t) parallel_begin );
+   g_set_cb (ompt_callback_parallel_end,   (ompt_callback_t) parallel_end );
 
-      ompt_set_result_t res_sync;
+   ompt_set_result_t res_sync;
 #ifdef PROMPT_SYNC
-      res_sync = g_set_cb (ompt_callback_sync_region, (ompt_callback_t) sync_region );
-      check_set_cb_result (res_sync, "sync_region");
-      res_sync = g_set_cb (ompt_callback_reduction,   (ompt_callback_t) sync_region ); // seems not used
-      check_set_cb_result (res_sync, "reduction");
-      res_sync = g_set_cb (ompt_callback_sync_region_wait, (ompt_callback_t) sync_region_wait );
-      check_set_cb_result (res_sync, "sync_region_wait");
+   res_sync = g_set_cb (ompt_callback_sync_region, (ompt_callback_t) sync_region );
+   check_set_cb_result (res_sync, "sync_region");
+   res_sync = g_set_cb (ompt_callback_reduction,   (ompt_callback_t) sync_region ); // seems not used
+   check_set_cb_result (res_sync, "reduction");
+   res_sync = g_set_cb (ompt_callback_sync_region_wait, (ompt_callback_t) sync_region_wait );
+   check_set_cb_result (res_sync, "sync_region_wait");
 #endif
 
 #ifdef PROMPT_WORK // worksharing: ompt_callback_work
-      res_sync = g_set_cb (ompt_callback_work, (ompt_callback_t) work);
-      check_set_cb_result (res_sync, "work");
+   res_sync = g_set_cb (ompt_callback_work, (ompt_callback_t) work);
+   check_set_cb_result (res_sync, "work");
 #endif
 
 #ifdef PROMPT_TASK
-      g_set_cb (ompt_callback_implicit_task, (ompt_callback_t) implicit_task );
-      g_set_cb (ompt_callback_task_create  , (ompt_callback_t) task_create   );
-      g_set_cb (ompt_callback_task_schedule, (ompt_callback_t) task_schedule );
+   g_set_cb (ompt_callback_implicit_task, (ompt_callback_t) implicit_task );
+   g_set_cb (ompt_callback_task_create  , (ompt_callback_t) task_create   );
+   g_set_cb (ompt_callback_task_schedule, (ompt_callback_t) task_schedule );
 #endif
-   } else {
-      printf ("[PROMPT] Set the TARGET_PARALLEL_SECTION environment variable to ALL to profile all parallel regions or to 0x... to profile a single one (at a given address in the executable)\n");
-   }
 
    verbose_level = getenv ("PROMPT_VERBOSE") != NULL ? atoi (getenv ("PROMPT_VERBOSE")) : 0;
 
-   output_path = getenv ("PROMPT_OUTPUT_PATH");
-
    // Create the PrOMPT output directory
-   if (output_path == NULL) {
-      // Top-level directory: prompt_results
-      if (mkdir ("prompt_results", 0755) != 0 && errno != EEXIST) {
-         perror ("[PROMPT] Failed to create output directory\n");
-         return;
-      }
 
-      // Node-level directory: prompt_results/<node name>
+   // Top-level directory: PROMPT_OUTPUT_PATH or "prompt_results"
+   const char *const prompt_output_path = getenv ("PROMPT_OUTPUT_PATH");
+   const char *top_path = prompt_output_path != NULL ? prompt_output_path : "prompt_results";
+   if (mkdir (top_path, 0755) != 0 && errno != EEXIST) {
+      perror ("[PROMPT] Failed to create output directory\n");
+      return;
+   }
+
+   // Create a node/process hierarchy if PROMPT_SINGLE_PROCESS is not set to "true" or "yes"
+   const char *const single_process = getenv ("PROMPT_SINGLE_PROCESS");
+   if (single_process == NULL ||
+       (strstr (single_process, "yes") == NULL &&
+        strstr (single_process, "true") == NULL)) {
+      // Node-level directory: top_path/<node name>
       char hostname [128+1];
       const int hostname_ret = gethostname (hostname, sizeof hostname);
-      char node_path [strlen ("prompt_results/") + strlen (hostname) + 1];
-      sprintf (node_path, "prompt_results/%s", hostname);
+      char node_path [strlen (top_path) + strlen (hostname) + 2];
+      sprintf (node_path, "%s/%s", top_path, hostname);
       if (hostname_ret != 0 || (mkdir (node_path, 0755) != 0 && errno != EEXIST)) {
          perror ("[PROMPT] Failed to create node-level output directory\n");
          return;
       }
 
-      // Process-level directory: prompt_results/<process ID>
+      // Process-level directory: node_path/<process ID>
       char process_path [strlen (node_path) + strlen ("/999999") + 2];
       sprintf (process_path, "%s/%d", node_path, getpid());
       if (mkdir (process_path, 0755) != 0 && errno != EEXIST) {
@@ -1185,21 +1252,21 @@ void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_d
 
       output_path = strdup (process_path);
    }
+   else // single-process output
+      output_path = top_path;
 
    sampling_period = (getenv ("PROMPT_SAMPLING_PERIOD") != NULL)
       ? atoi (getenv ("PROMPT_SAMPLING_PERIOD")) : 0;
 
    // Initialize parallel_regions[]
-   if (target_parallel_section != NULL) {
-      unsigned lvl;
-      for (lvl=0; lvl<MAX_NEST; lvl++) {
-         parallel_regions_t *pr = &(parallel_regions [lvl]);
-         pthread_rwlock_init (&(pr->rwlock), NULL);
-         memset (pr->parallel_info_array, 0, sizeof pr->parallel_info_array);
-         memset (pr->dic, 0, sizeof pr->dic);
-         pr->nb_parallel_info = 0;
-         pr->last_parinfo = NULL;
-      }
+   unsigned lvl;
+   for (lvl=0; lvl<MAX_NEST; lvl++) {
+      parallel_regions_t *pr = &(parallel_regions [lvl]);
+      pthread_rwlock_init (&(pr->rwlock), NULL);
+      memset (pr->parallel_info_array, 0, sizeof pr->parallel_info_array);
+      memset (pr->dic, 0, sizeof pr->dic);
+      pr->nb_parallel_info = 0;
+      pr->last_parinfo = NULL;
    }
 
 #ifdef PROMPT_TASK
@@ -1732,7 +1799,10 @@ void ompt_tool_fina (ompt_data_t* tool_data)
     *       des données collectées pendant l'exécution est généralement fait.
     */
 
-   if (target_parallel_section == NULL) return;
+   // Free parallel regions filter
+   free (par_reg_filt);
+   par_reg_filt = NULL;
+   par_reg_filt_len = 0;
 
    char par_regions_filename [strlen (output_path) + strlen ("/par_regions.csv") + 1];
    sprintf (par_regions_filename, "%s/par_regions.csv", output_path);
