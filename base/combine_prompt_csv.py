@@ -40,6 +40,7 @@ def combine_prompt_data(in_file, out_file, fn_name):
                                               'time_sum': 'sum', 'time_min': 'min', 'time_max': 'max',
                                               'requested_parallelism': 'min', 'nb_instances': 'min'})
     agg_prompt_values['parallelism_overhead'] = (100 * agg_prompt_values['sync_time_sum']) / (agg_prompt_values['time_sum'] * agg_prompt_values['requested_parallelism'])
+    agg_prompt_values['wall_time_sum'] = wall_time
     agg_prompt_df = pd.DataFrame([agg_prompt_values.drop(['nb_instances', 'requested_parallelism'])])
     agg_prompt_df.to_csv(out_file, index=False)
 
