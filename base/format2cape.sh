@@ -136,6 +136,9 @@ combine_csv "$compiler_files" $tmprep/compiler.csv
 pgm_metrics_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/pgm_metrics/g')
 combine_csv "$pgm_metrics_files" $tmprep/pgm.csv
 
+prompt_nv_files=$(echo "$counter_nv_files" |sed 's/'${COUNTER_FNAME}'/prompt_nv/g')
+combine_csv "$prompt_nv_files" $tmprep/prompt.csv
+
 # <same repeated machine/filler info> below
 num_rows=$(echo "$counter_nv_files" | wc -l)
 gen_codelet_mach_info $num_rows $tmprep/codelet_mach_info.csv
@@ -162,10 +165,13 @@ echo "$runinfo_values" >> $tmprep/runinfo.csv
 
 #Finally, get the stan report (if any)
 # Pickup the variant_... from runinfo and use that to construct the path to stan report
+# Note that this way getting stan file may intentionally duplciate stan data for multiple runs.
+echo stan_infile cmd: "echo \"$runinfo\" | sed 's|.*/variant_\([^/]*\)/.*|'$cls_res_folder/binaries/${codelet_name}'_\1.stan_full.csv|g'"
 stan_infiles=$(echo "$runinfo" | sed 's|.*/variant_\([^/]*\)/.*|'$cls_res_folder/binaries/${codelet_name}'_\1.stan_full.csv|g')
 combine_csv "$stan_infiles" $tmprep/stan.csv
 
-analytics_infiles=$cls_res_folder/${codelet_name}_analytics.csv
+#analytics_infiles=$cls_res_folder/${codelet_name}_analytics.csv
+analytics_infiles=$(echo "$runinfo" | sed 's|.*/variant_\([^/]*\)/.*|'$cls_res_folder/${codelet_name}'_analytics.csv|g')
 combine_csv "$analytics_infiles" $tmprep/analytics.csv
 
 if [ -f $tmprep/stan.csv ]; then
@@ -212,7 +218,9 @@ fi
 #   <same repeated machine/filler info> <per run setting obtained from run_info> <counters> <stan data>
 # Collect all csv files skipping non-existing files
 #all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv ${analytics_file} 2>/dev/null)
-all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv $tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv $tmprep/counters.csv $tmprep/stan_trimmed.csv $tmprep/analytics.csv 2>/dev/null)
+all_csv_files=$(ls -f $tmprep/codelet_mach_info.csv $tmprep/filler_info.csv $tmprep/runinfo.csv \
+	$tmprep/arguments.csv $tmprep/compiler.csv $tmprep/pgm.csv $tmprep/cpi_iteration_rep.csv \
+	$tmprep/counters.csv $tmprep/stan_trimmed.csv $tmprep/analytics.csv $tmprep/prompt.csv 2>/dev/null)
 paste -d${DELIM} $all_csv_files > $cape_file
 
 echo Deleting TMPDIR $tmprep
