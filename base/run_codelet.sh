@@ -123,6 +123,10 @@ for i in $( seq $META_REPETITIONS ); do
 			cmd="$NUMACTL --localalloc -C ${cores_to_use} ${run_prog}"
 			#cmd="${run_prog}"
 			echo -n $cmd
+			if [[ "$ENABLE_PROMPT" != "0" ]]; then
+				bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} \
+				OMP_TOOL_LIBRARIES=${PROMPT_LIB} PROMPT_SINGLE_PROCESS=yes PROMPT_OUTPUT_PATH=${res_path} $cmd" 
+			fi
 			bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
 		else
 			if [[ "$MC_RUN" != "0" ]]; then
