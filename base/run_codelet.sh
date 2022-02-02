@@ -40,6 +40,9 @@ nc_all_cores=${nc_all_cores[@]}
 echo $nc_all_cores >> /tmp/ncall.txt
 XP_CORE=${picked_cores[0]}
 
+# NOTE: this codelet_folder is actually the build folder but it does contain codelet.conf file
+function_name=$( grep "function name" "$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+
 sec_to_ddhhmmss() {
 	secs="$1"
 	echo $((${secs}/86400))"d "$(date -d "1970-01-01 + ${secs}sec" "+%H:%M:%S")
@@ -126,6 +129,8 @@ for i in $( seq $META_REPETITIONS ); do
 			if [[ "$ENABLE_PROMPT" != "0" ]]; then
 				bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} \
 				OMP_TOOL_LIBRARIES=${PROMPT_LIB} PROMPT_SINGLE_PROCESS=yes PROMPT_OUTPUT_PATH=${res_path} $cmd" 
+				echo Combining PrOMPT result cmd: ${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
+				${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
 			fi
 			bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
 		else
