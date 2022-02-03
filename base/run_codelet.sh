@@ -129,8 +129,10 @@ for i in $( seq $META_REPETITIONS ); do
 			if [[ "$ENABLE_PROMPT" != "0" ]]; then
 				bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} \
 				OMP_TOOL_LIBRARIES=${PROMPT_LIB} PROMPT_SINGLE_PROCESS=yes PROMPT_OUTPUT_PATH=${res_path} $cmd" 
-				echo Combining PrOMPT result cmd: ${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
-				${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
+				if [[ -f ${res_path}/par_regions.csv ]]; then
+					echo Combining PrOMPT result cmd: ${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
+					${CLS_FOLDER}/combine_prompt_csv.py -i ${res_path}/par_regions.csv -o ${res_path}/prompt_nv.csv -n ${function_name}
+				fi
 			fi
 			bash -c "LD_LIBRARY_PATH=${BASE_PROBE_FOLDER}:${LD_LIBRARY_PATH} $cmd" >&/dev/null
 		else
