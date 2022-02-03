@@ -212,6 +212,12 @@ class MetricName(CapeEnum):
 
     INTENSITY = "Intensity"
     SATURATION = "Saturation"
+
+    PROMPT_PARALLEL_OVERHEAD_PCT = "Prompt[Overhead[Sync]]_%"
+    PROMPT_SYNC_TIME_SUM_S = "Prompt[Sum[Time[Sync]]]_s"
+    PROMPT_WAIT_TIME_SUM_S = "Prompt[Sum[Time[Wait]]]_s"
+    PROMPT_ACTIVE_TIME_SUM_S = "Prompt[Sum[Time[Active]]]_s"
+    PROMPT_WALL_TIME_SUM_S = "Prompt[Sum[Time[Wall]]]_s"
     
 
     @classmethod

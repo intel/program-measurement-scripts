@@ -413,6 +413,20 @@ def calculate_array_efficiency(out_rows, in_rows):
     except:
         pass
 
+def calculate_prompt(out_rows, in_rows):
+    try: 
+        out_rows[PROMPT_PARALLEL_OVERHEAD_PCT] = in_rows['parallelism_overhead'].values
+        out_rows[PROMPT_SYNC_TIME_SUM_S] = in_rows['sync_time_sum'].values
+        out_rows[PROMPT_WAIT_TIME_SUM_S] = in_rows['wait_time_sum'].values
+        out_rows[PROMPT_ACTIVE_TIME_SUM_S] = in_rows['time_sum'].values 
+        out_rows[PROMPT_WALL_TIME_SUM_S] = in_rows['wall_time_sum'].values
+    except:
+        out_rows[PROMPT_PARALLEL_OVERHEAD_PCT] = np.nan
+        out_rows[PROMPT_SYNC_TIME_SUM_S] = np.nan
+        out_rows[PROMPT_WAIT_TIME_SUM_S] = np.nan
+        out_rows[PROMPT_ACTIVE_TIME_SUM_S] = np.nan
+        out_rows[PROMPT_WALL_TIME_SUM_S] = np.nan
+
 def calculate_analytics(out_rows, in_rows):
     for metric in sorted(set(in_rows.columns) & set(SRC_METRICS)):
         out_rows[metric] = in_rows[metric]
@@ -590,6 +604,7 @@ def summary_report_df(inputfiles, input_format, user_op_file, no_cqa, use_cpi, s
     calculate_app_time_coverage(output_rows, df)
     calculate_array_efficiency(output_rows, df)
     calculate_analytics(output_rows, df)
+    calculate_prompt(output_rows, df)
     # Add y-value data for TRAWL Plot
     add_trawl_data(output_rows, df)
     # Retain rows with non-empty performance measurments (provided by TIME_LOOP_S")
