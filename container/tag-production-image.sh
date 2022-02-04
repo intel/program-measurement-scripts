@@ -6,7 +6,7 @@
 IMG_URL="registry.gitlab.com/davidwong/cape-experiment-scripts"
 tag_img="${IMG_URL}:development"
 prod_img="${IMG_URL}:production"
-if [[ $# != 1 ]]; then
+if [[ $# == 1 ]]; then
 	tag_img="${IMG_URL}:${1}"
 fi
 
@@ -18,5 +18,6 @@ if [[ -z $( docker images -q ${tag_img}) ]]; then
 	echo "Image: ${tag_img} not found.  Aborting..."
 	exit 1
 fi
+echo tagging ${tag_img} to ${prod_img}
 docker tag ${tag_img} ${prod_img}
 docker push ${prod_img}
