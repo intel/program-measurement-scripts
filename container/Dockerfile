@@ -50,6 +50,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    libssl-dev \
    # for UIUC Compiler Optimizations
    libgmp-dev \
+   # for LORE mutator in UIUC Compiler Optimizations
+   gcc-8 \
    # for PROMPT
    binutils-dev libiberty-dev
 

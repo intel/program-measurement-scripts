@@ -1,4 +1,5 @@
-FROM registry.gitlab.com/davidwong/cape-experiment-scripts:latest
+ARG IMG_NAME
+FROM ${IMG_NAME}
 
 LABEL description="Local CapeScripts" 
 
