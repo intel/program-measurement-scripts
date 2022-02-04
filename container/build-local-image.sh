@@ -3,10 +3,11 @@
 # By default production image will be used but can specify other tags.
 
 tag_img=production
-if [[ $# != 1 ]]; then
+if [[ $# == 1 ]]; then
 	tag_img="${1}"
 fi
 img_name=registry.gitlab.com/davidwong/cape-experiment-scripts:${tag_img}
+echo Base image name is: ${img_name}
 
 # Ensure user logged in
 local_gids=$(id -G)
