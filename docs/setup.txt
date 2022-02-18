@@ -62,7 +62,7 @@ containing both the experiment script and codelets as follows:
 • cape-experiment-scripts
 • nr-codelets
 
-2 Checkout/initialization steps
+2. Checkout/initialization steps
   A.  Checkout Cape-Experiment-Script
     • cd <home>
     • git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
@@ -75,7 +75,7 @@ containing both the experiment script and codelets as follows:
     • cd <home>/cape-experiment-scripts
     • ./setup.sh
 
-3 Test steps
+3. Test steps
 Now you should be ready to start running the experiments.  There are many 
 examples under cape-experiment-scripts/vrun. (Some are outdated.) 
 To try the experiment script on your system, you can run the following command:
@@ -100,3 +100,7 @@ doesn't necessarily mean the run was good).
 Here the data file 
 /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv 
 contains the experimental data.
+
+4. Some advice of container usage
+Since the container starts and stops SEP driver automatically to ensure a clean driver usage, exiting container improperly (e.g. by disconnecting from an SSH session) will cause imcomplete shutdown of SEP driver.   To avoid that, it is suggested user to use tools like VNC (GUI) or screen (textual) to provide resumable sessioning of connection.
+
