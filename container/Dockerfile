@@ -144,10 +144,12 @@ RUN ./install.sh && cd analyzers/candl && patch -p1 -i ../../pocc-1.1-candl-0.6.
 
 # Build UIUC Compiler Optimizations
 # Ensure using new version of GCC/G++ (should be 9.3.0 for this container)
-ENV CC=gcc
-ENV CXX=g++
+# Updated: use GCC/G++ (version 8.4.0) to ensure all tools build (incl Locus-Lore)
+ENV CC=gcc-8
+ENV CXX=g++-8
 WORKDIR /share/uiuc-compiler-opts
 # Comment out a line in CMakeLists.txt to use system boost
 RUN mkdir build && mkdir install && cd build && sed -i '/^set(Boost_NO_SYSTEM_PATHS ON)/ s/^/#/' ../src-git/CMakeLists.txt \
+   && sed -i 's|#set(POCC_ROOT "/shared/pocc/pocc-1.1")|set(POCC_ROOT "/share/pocc-1.1")|g' ../src-git/CMakeLists.txt \
    && cmake -DROSE_PATH=/usr/rose -DCMAKE_CXX_FLAGS=-std=c++11 -DCMAKE_INSTALL_PREFIX=/share/uiuc-compiler-opts/install ../src-git \
    && make install

@@ -18,6 +18,11 @@ if [[ -z $( docker images -q ${dev_img}) ]]; then
 fi
 
 docker tag ${dev_img} ${tag_img}
+if [[ $? != 0 ]]; then
+        echo "Error in tagging development image as ${tag_img}.  Aborting..."
+	exit 1
+fi
+
 # login only need to be done once for password entering
 docker login registry.gitlab.com
 docker push ${dev_img}
