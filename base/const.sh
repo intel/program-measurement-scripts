@@ -259,6 +259,8 @@ then
 	PRETTY_UARCH="Ivy Bridge"
 fi
 
+CQA_PROC_TYPE=$($MAQAO --detect-proc|head -1 |awk '{print $3}')
+
 
 # For generate_variants.sh
 declare -A transforms

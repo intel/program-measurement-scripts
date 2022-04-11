@@ -45,6 +45,7 @@ def main(argv):
 
   vars=[]
   values=dict()
+  print(args.params)
   for param in args.params:
     parsed = parse.parse('{PARAM}={VALUE}', param)
     vars += parsed['PARAM']

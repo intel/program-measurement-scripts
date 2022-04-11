@@ -30,7 +30,7 @@ function generate_stan_full_csv() {
 	lid="$2"
 	out_file="$3"
 	#"$MAQAO" module=cqa uarch="$local_uarch" bin="$variant_path" loop=$lid of=csv -ext
-	${GENERATE_CQA_CSV_SH} "$local_uarch" "$bin_path" $lid
+	${GENERATE_CQA_CSV_SH} "$CQA_PROC_TYPE" "$bin_path" $lid
 
 	cat loops.csv | sed 's/'${DELIM}'$//g' > "$out_file"
 	rm loops.csv
@@ -70,7 +70,7 @@ function extract_for () {
 
 	generate_stan_full_csv "$bin_file" $loop_id "$stan_file"
 
-	# ${GENERATE_CQA_CSV_SH} "$local_uarch" "$bin_folder/$codelet_name" $loop_id
+	# ${GENERATE_CQA_CSV_SH} "$CQA_PROC_TYPE" "$bin_folder/$codelet_name" $loop_id
 	# cat loops.csv | sed 's/'${DELIM}'$//g' > "$bin_folder/${codelet_name}.stan_full.csv"
 
 	# rm loops.csv
