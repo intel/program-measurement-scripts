@@ -49,5 +49,6 @@ USER runner
 WORKDIR /home/runner
 ENV USER=runner
 ENV ICE_CMPOPTS_PATH=/share/uiuc-compiler-opts/install
+RUN echo "source /opt/intel/sep/sep_vars.sh emon_api" >> ~/.bashrc
 #USER root
 #ENTRYPOINT /opt/intel/sep/sepdk/src/insmod-sep -g docker && su runner && /opt/intel/sep/sepdk/src/rmmod-sep
