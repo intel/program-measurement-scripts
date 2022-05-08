@@ -54,3 +54,4 @@ ${LOGGER_SH} ${START_VRUN_SH} "Cape QPLOT HTML data saved in : ${combined_qplot_
 echo "Running SI Analysis script..."
 $CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${si_summary_ifile} --enable-meta
 $CLS_FOLDER/sat_analysis.py -m ${si_training_set_ifile} -t ${si_summary_ifile} -o ${si_summary_ofile}
+
