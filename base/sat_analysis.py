@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from capedata import MergeShortNameData
 from openpyxl.utils.dataframe import dataframe_to_rows
 import sys
@@ -258,6 +259,7 @@ def compute_stats(settings, all_test_codelets):
 
   result_df[MetricName.SHORT_NAME] = all_test_codelets[MetricName.SHORT_NAME] if MetricName.SHORT_NAME in all_test_codelets.columns else all_test_codelets[MetricName.NAME]
   result_df['Variant'] = all_test_codelets['Variant'] if 'Variant' in all_test_codelets.columns else ''
+  result_df['DataSet'] = all_test_codelets['DataSet']
 
   noSatMask = all_test_codelets['Saturation'].isna()
   all_test_codelets.loc[noSatMask,'SI_Result'] = 'No Cluster'
@@ -746,6 +748,7 @@ def full_analysis(args):
     # csv to read should be first argument
     csvToRead = args.training_csv_file
     csvTestSet = args.test_csv_file
+    csvOutSet = args.out_file
     #inputfile = []
     #sys.setrecursionlimit(10**9) 
   # if 3 arg specified, assumes 3rd is threshold replacement
@@ -759,13 +762,14 @@ def full_analysis(args):
     mainDataFrame = pd.read_csv(csvToRead)
     TestSetDF = pd.read_csv(csvTestSet)
     grouped = TestSetDF.groupby(MetricName.VARIANT)
-    mask = (TestSetDF['Set'] == 'BENEFITTING') & (TestSetDF['Variant'] == 'ORIG')
+    #mask = (TestSetDF['Set'] == 'BENEFITTING') & (TestSetDF['Variant'] == 'ORIG')
     #mask = (TestSetDF['Set'] == 'BENEFITTING')
 
     print("Read successful!")
 
     # save original dataframe
     originalDataFrame = mainDataFrame
+    originalTestDf = TestSetDF.copy(deep=True)
 
     # SIMD_RATE divided by max traffic column for memory
     addAfterColumn = mainDataFrame.columns.get_loc(MetricName.RATE_RAM_GB_P_S) + 1
@@ -781,6 +785,9 @@ def full_analysis(args):
       nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
       CapacityData(TestSetDF).set_chosen_node_set(nodes_without_units).compute()
       results = do_sat_analysis(mainDataFrame, TestSetDF, settings)
+      originalTestDf = pd.merge(originalTestDf,results[1][['Timestamp#','SiClusterName']],on='Timestamp#', how='left')
+      originalTestDf.to_csv(csvOutSet, index = False, header=True);
+
     # if PRINT_ALL_CLUSTERS:
     #   find_all_clusters(mainDataFrame)
 
@@ -789,6 +796,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Sat Analysis: compute cluster, S and I for test codelets.')
     parser.add_argument('-m', nargs='?', help='the training (modeling) set csv file', required=True, dest='training_csv_file')
     parser.add_argument('-t', nargs='?', help='the test set csv file(s)', required=False, dest='test_csv_file')
+    parser.add_argument('-o', nargs='?', default='SI_out.csv', help='the output csv file (default SI_out.csv)', dest='out_file')
     parser.add_argument('--tiering-only', action='store_true', help='Only perform tiering', dest='tiering_only')
     parser.add_argument('--cu-sat-threshold', nargs='?', help='CU saturation threshold (0-1)', dest='cu_sat_threshold', default=SatAnalysisSettings.CU_SAT_THRESHOLD_DEFAULT)
     parser.add_argument('--sat-threshold', nargs='?', help='non-CU saturation threshold (0-1)', dest='sat_threshold', default=SatAnalysisSettings.SAT_THRESHOLD_DEFAULT)

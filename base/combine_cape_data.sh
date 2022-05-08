@@ -14,6 +14,9 @@ combined_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.csv
 combined_formatted_summary_ofile=${run_dir}/cape_summary_${START_VRUN_SH}.xlsx
 combined_qplot_ofile=${run_dir}/cape_qplot_${START_VRUN_SH}.xlsx
 combined_qplot_html=${run_dir}/cape_qplot_${START_VRUN_SH}_html
+si_training_set_ifile=${CLS_FOLDER}/../analyzer/clusters/LORE-Optimal.csv
+si_summary_ifile=${run_dir}/si_summary_ip_${START_VRUN_SH}.csv
+si_summary_ofile=${run_dir}/si_summary_op_${START_VRUN_SH}.csv
 
 # Use csvkit instead
 #head -1 ${ofiles[0]} > ${combined_raw_ofile}
@@ -48,3 +51,6 @@ ${LOGGER_SH} ${START_VRUN_SH} "Cape raw data saved in: ${combined_raw_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape summary data saved in : ${combined_summary_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape formatted summary data saved in : ${combined_formatted_summary_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape QPLOT HTML data saved in : ${combined_qplot_html}"
+echo "Running SI Analysis script..."
+$CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${si_summary_ifile} --enable-meta
+$CLS_FOLDER/sat_analysis.py -m ${si_training_set_ifile} -t ${si_summary_ifile} -o ${si_summary_ofile}
