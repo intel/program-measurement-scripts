@@ -748,7 +748,7 @@ def full_analysis(args):
     # csv to read should be first argument
     csvToRead = args.training_csv_file
     csvTestSet = args.test_csv_file
-    csvOutSet = args.out_file
+	csvOutSet = args.out_file
     #inputfile = []
     #sys.setrecursionlimit(10**9) 
   # if 3 arg specified, assumes 3rd is threshold replacement
