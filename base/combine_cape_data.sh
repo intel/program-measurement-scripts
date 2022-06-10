@@ -43,6 +43,7 @@ in2csv -I --format ndjson $combined_raw_json > ${combined_raw_ofile}
 echo "Running post-processing script to summarize raw data..."
 $CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_summary_ofile} --enable-meta
 $CLS_FOLDER/summarize.py -i ${combined_raw_ofile} -o ${combined_formatted_summary_ofile}
+python $CLS_FOLDER/sat_analysis.py -m ${si_training_set_ifile} -t ${combined_summary_ofile} -o ${si_summary_ofile}
 # Don't generate QPLOT HTML now with new tool
 #echo "Running Qplot generator to generate QPlot HTML ..."
 #$CLS_FOLDER/qplot_data_generation.py -i ${combined_raw_ofile} -o ${combined_qplot_ofile} -q ${combined_qplot_html}
@@ -50,5 +51,4 @@ ${LOGGER_SH} ${START_VRUN_SH} "Cape raw data saved in: ${combined_raw_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape summary data saved in : ${combined_summary_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape formatted summary data saved in : ${combined_formatted_summary_ofile}"
 ${LOGGER_SH} ${START_VRUN_SH} "Cape QPLOT HTML data saved in : ${combined_qplot_html}"
-echo "Running SI Analysis script..."
-python $CLS_FOLDER/sat_analysis.py -m ${si_training_set_ifile} -t ${combined_summary_ofile} -o ${si_summary_ofile}
+${LOGGER_SH} ${START_VRUN_SH} "Cape SI data saved in : ${si_summary_ofile}"
