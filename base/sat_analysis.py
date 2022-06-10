@@ -195,7 +195,7 @@ def do_sat_analysis(optimal_data_df, testSetDF, settings=SatAnalysisSettings()):
     # This step is optional and can be skipped by setting settings.compute_stats to False
     result_df = compute_stats(settings, all_test_codelets)
 
-    return all_clusters, all_test_codelets, result_df
+    return all_clusters, all_test_codelets, result_df, tiering_table
 
 def get_chosen_node_set(settings):
   return (set(settings.BASIC_NODE_LIST) |  {settings.CU_NODE_DICT[n] for n in settings.CU_NODE_SET}) & settings.chosen_node_set
@@ -780,7 +780,11 @@ def full_analysis(args):
       #do_sat_analysis(mainDataFrame, TestSetDF[mask])
       nodes_without_units = {n.split(" ")[0] for n in chosen_node_set} 
       CapacityData(TestSetDF).set_chosen_node_set(nodes_without_units).compute()
-      all_clusters, all_test_codelets, stats_df = do_sat_analysis(mainDataFrame, TestSetDF, settings)
+      all_clusters, all_test_codelets, stats_df, tiering_table = do_sat_analysis(mainDataFrame, TestSetDF, settings)
+      tiering_table = tiering_table[settings.tiering_metrics+[NonMetricName.SI_SAT_TIER]]
+      # Rename tiering metric columns before joining to avoid conflicts
+      tiering_table = tiering_table.rename(columns={f:f'Tiering_{f}' for f in settings.tiering_metrics})
+      all_test_codelets = pd.merge(left=all_test_codelets, right=tiering_table, on=[NonMetricName.SI_SAT_TIER], how='inner')
       all_test_codelets.to_csv(args.out_file, index = False, header=True);
     # if PRINT_ALL_CLUSTERS:
     #   find_all_clusters(mainDataFrame)
