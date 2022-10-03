@@ -24,9 +24,12 @@ done
 #docker run --rm  -v /nfs:/nfs -v /opt:/opt -v /localdisk:/localdisk -v /:/host -it local_image:latest
 #docker run --rm  -v /nfs:/nfs -v /opt:/opt -v /localdisk:/localdisk -v /:/host -it --privileged local_image:latest
 #docker run --rm  -v /opt:/opt -v /localdisk:/localdisk -v /:/host -it --privileged local_image:latest
-if lsmod |grep pax &> /dev/null; then
-    echo "Driver loaded in host.  Please stop the driver before running this container."
-    exit -1
+if $use_sep; then
+  # Only check if using sep
+  if lsmod |grep pax &> /dev/null; then
+      echo "Driver loaded in host.  Please stop the driver before running this container."
+      exit -1
+  fi
 fi
 
 # Build arguments to mount host directories
