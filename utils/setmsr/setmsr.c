@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <sys/sysinfo.h>
 
-int64_t read_msr(char * msrDevPName, off_t msrNum, int64_t msrValue);
-int64_t write_msr(char * msrDevPName, off_t msrNum, int64_t msrValue);
+int64_t read_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue);
+int64_t write_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue);
 
 int main(int argc, const char *argv[], const char *envv[])
 {
@@ -113,7 +113,7 @@ int main(int argc, const char *argv[], const char *envv[])
 }
 
 
-int64_t read_msr(char * msrDevPName, off_t msrNum, int64_t msrValue) {
+int64_t read_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue) {
 
         int fh;
         off_t fpos;
@@ -142,7 +142,7 @@ int64_t read_msr(char * msrDevPName, off_t msrNum, int64_t msrValue) {
 }
 
 
-int64_t write_msr(char * msrDevPName, off_t msrNum, int64_t msrValue) {
+int64_t write_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue) {
 
         int fh;
         off_t fpos;
