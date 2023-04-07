@@ -27,7 +27,7 @@
 int64_t read_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue);
 int64_t write_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue);
 
-int main(int argc, const char *argv[], const char *envv[])
+int main(int argc, const char * const argv[], const char * const envv[])
 {
         int cpuNum;  /* Do it for all CPUs */
         int i;
