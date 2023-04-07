@@ -19,7 +19,7 @@ static EMON_HANDLE emon_handle;
 static EMON_DATA   emon_data_before, emon_data_after, emon_data_result, emon_data_sum;
 #endif
 
-void init_hook() {
+void init_hook(void) {
 #ifdef HAS_OLD_EMON_API
            EMONConfig ("emon_api_config_file", &emon_handle);
 
@@ -38,7 +38,7 @@ void init_hook() {
 #endif
 }
 
-void measure_start_hook() {
+void measure_start_hook(void) {
 #ifdef HAS_OLD_EMON_API
 		EMONRead (emon_handle, &emon_data_before);
 #elif defined(HAS_NEW_EMON_API)
@@ -46,7 +46,7 @@ void measure_start_hook() {
 #endif
 }
 
-void measure_pause_hook() {
+void measure_pause_hook(void) {
 #ifdef HAS_OLD_EMON_API
 		EMONRead (emon_handle, &emon_data_after);
 		EMONDataCalculate (emon_handle, emon_data_before, emon_data_after, &emon_data_result, "SUBTRACTION");
@@ -58,7 +58,7 @@ void measure_pause_hook() {
 #endif
 }
 
-void measure_print_data_hook() {
+void measure_print_data_hook(void) {
 #ifdef HAS_OLD_EMON_API
 	// open file to redirect to
 //	int emon_api_fd = open (emon_api_stream, O_WRONLY | O_CREAT| O_APPEND, S_IRUSR|S_IWUSR);
@@ -91,7 +91,7 @@ void measure_print_data_hook() {
 
 }
 
-void measure_stop_hook() {
+void measure_stop_hook(void) {
 #ifdef HAS_OLD_EMON_API
 	EMONStop(&emon_handle);
 #elif defined(HAS_NEW_EMON_API)

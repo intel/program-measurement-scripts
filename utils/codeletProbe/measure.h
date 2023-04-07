@@ -5,10 +5,10 @@
 extern "C" {
 #endif
   
-void measure_init_();
-void measure_start_();
-void measure_pause_();
-void measure_stop_();
+void measure_init_(void);
+void measure_start_(void);
+void measure_pause_(void);
+void measure_stop_(void);
 void measure_sec_spin_(unsigned long sec);  
 
 #if defined(__cplusplus)

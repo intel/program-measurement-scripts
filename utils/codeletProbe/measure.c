@@ -56,13 +56,13 @@ static __inline__ unsigned long long getticks(void)
    return ret;
 }
 
-void evaluation_init()
+void evaluation_init(void)
 {
 	timer_data = (TimerData*)malloc(sizeof(TimerData));
 	timer_data->ticks = 0;
 }
 
-void evaluation_start()
+void evaluation_start(void)
 {
 	//evaluationFct start;
 	timer_data->start = getticks();
@@ -70,18 +70,18 @@ void evaluation_start()
 //	VTResumeSampling();
 }
 
-void evaluation_stop()
+void evaluation_stop(void)
 {
 	//evaluationFct stop;
   if (paused) return;
   long long ticks=getticks();
-  timer_data->ticks += (ticks-timer_data->start);
+  timer_data->ticks += (((double)ticks) - timer_data->start);
   // pause is set from caller (measure_pause_())
 //	// Stop SEP measurement	
 //	VTPauseSampling();
 }
 
-void evaluation_close()
+void evaluation_close(void)
 {
 	if( timer_data != NULL )
 		free(timer_data);
@@ -89,9 +89,13 @@ void evaluation_close()
 		free(pids);
 }
 
-void print_results()
+void print_results(void)
 {
 	output = fopen(stream, "a");
+        if (output == NULL) {
+            fprintf(stderr, "Error printing results\n");
+            return;
+        }
 	//	fprintf(output, "%0.6f\n", (double) (timer_data->stop - timer_data->start));
 	fprintf(output, "%0.6f\n", (double) (timer_data->ticks));
 	fclose(output);
@@ -101,10 +105,12 @@ void print_results()
 void pin_process(int core)
 {
 	// Set thread affinity
+    int ret;
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
-    sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+    ret = sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+    assert(ret == 0);
 }
 
 void termination_handler(int signum)
@@ -112,10 +118,11 @@ void termination_handler(int signum)
     exit(0);
 }
 
-void create_clones()
+void create_clones(void)
 {
 	int i;
 	struct sigaction new_action;
+        int ret;
 
 	// read the number of copies
 	input = fopen(copies, "r");
@@ -137,15 +144,17 @@ void create_clones()
 			pin_process(i);
 			// Install signal handler
 			new_action.sa_handler = termination_handler;
-			sigemptyset (&new_action.sa_mask);
+			ret = sigemptyset (&new_action.sa_mask);
+                        assert (ret == 0);
 		    new_action.sa_flags = 0;
-    		sigaction(SIGINT, &new_action, NULL);
+    		    ret = sigaction(SIGINT, &new_action, NULL);
+                    assert (ret == 0);
 			break;
 		}
 	}
 }
 
-void measure_init_()
+void measure_init_(void)
 {
   init_hook();
 	// Pin the main process
@@ -163,13 +172,17 @@ void measure_init_()
 	return ;
 }
 
-void measure_start_()
+void measure_start_(void)
 {
 	// Main process starts measurement
 	if( pid != 0) {
 		// Ensure that co-running processes are started by the kernel
-		usleep(500);
-		sched_yield();
+                //int reg;
+		int ret;
+                ret = usleep(500);
+                assert (ret == 0);
+		ret = sched_yield();
+                assert (ret == 0);
 		paused = 0;
 		evaluation_start();
 		measure_start_hook();
@@ -178,12 +191,12 @@ void measure_start_()
 }
 
 // pause only if not paused yet
-void measure_may_pause_hook () {
+void measure_may_pause_hook (void) {
   if (paused) return;
   measure_pause_hook();
 }
 
-void measure_pause_()
+void measure_pause_(void)
 {
   if (paused) return;
 	if( pid != 0) {
@@ -194,7 +207,7 @@ void measure_pause_()
 	return ;
 }
 
-void measure_stop_()
+void measure_stop_(void)
 {
 	int i;
 
@@ -207,7 +220,9 @@ void measure_stop_()
 
 	// Stop childs
 	for (i=1; i<nbClones; i++) {
-		kill(pids[i], SIGINT);
+            int ret;
+		ret = kill(pids[i], SIGINT);
+                assert (ret == 0);
 	}
 
 
