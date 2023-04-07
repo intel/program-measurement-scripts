@@ -12,15 +12,15 @@
 #define IDLE_FILE_PATTERN "/sys/devices/system/cpu/cpu%s/cpuidle/state[0-5]/disable"
 
 // Print usage and quit
-void usage(char* me) {
+void usage(const char * const me) {
   fprintf(stderr, "Usage: %s (<cpu#|all>) (ON|OFF) \n", me);
   exit(-1);
 }
 
-int main(int argc, char** argv) { 
-   char* command; 
-   char* command_value;
-   char* cpu_glob;
+int main(int argc, const char** const argv) { 
+   const char* command; 
+   const char* command_value;
+   const char* cpu_glob;
    glob_t results;
    int flags;
    unsigned int i;
