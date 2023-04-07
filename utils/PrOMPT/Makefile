@@ -1,7 +1,7 @@
 CC=icc
 # According to https://github.com/mlpack/mlpack/issues/574, libbfd is an "internal only" library:
 # checking PACKAGE and PACKAGE_VERSION is supposed to prevent to use it from other projects
-CFLAGS=-O2 -DNDEBUG -fPIC -qopenmp -DPACKAGE -DPACKAGE_VERSION
+CFLAGS=-O2 -DNDEBUG -fPIC -qopenmp -DPACKAGE -DPACKAGE_VERSION -diag-disable=10441
 LDFLAGS=-shared -qopenmp -lbfd -lpthread
 
 OBJS=ompt_start_tool.o ompt_tool_addr2line.o ompt_tool.o

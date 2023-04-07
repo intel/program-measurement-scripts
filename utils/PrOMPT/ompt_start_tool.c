@@ -4,8 +4,8 @@
 
 #include "omp-tools.h" // OMPT
 
-void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_data );
-void ompt_tool_fina ( ompt_data_t* tool_data );
+void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, const ompt_data_t* const tool_data );
+void ompt_tool_fina ( const ompt_data_t* const tool_data );
 
 /* ompt_initialize: Tool initialize routine.
  * [In]  ompt_lookup_fn: Query function to lookup for ompt entry points.
@@ -15,7 +15,7 @@ void ompt_tool_fina ( ompt_data_t* tool_data );
  */
 static int ompt_initialize ( ompt_function_lookup_t ompt_lookup_fn,
                              int initial_device_num,
-                             ompt_data_t* tool_data ) {
+                             ompt_data_t* const tool_data ) {
 
    int ret = 0;
 
@@ -31,7 +31,7 @@ static int ompt_initialize ( ompt_function_lookup_t ompt_lookup_fn,
 /* ompt_finalize: Tool finalize routine.
  * [In]  tool_data: global storage of the tool.
  */
-static void ompt_finalize ( ompt_data_t* tool_data ) {
+static void ompt_finalize ( ompt_data_t* const tool_data ) {
 
    /* Call finalization sub-routine */
    ompt_tool_fina( tool_data );
@@ -60,7 +60,7 @@ static char *omp_version_string (unsigned ver)
  */
 ompt_start_tool_result_t*
 ompt_start_tool ( unsigned int omp_version,
-                  const char *runtime_version ) {
+                  const char * const runtime_version ) {
    printf ("[PROMPT] Tool compiled with _OPENMP=%d (%s)\n",
            _OPENMP, omp_version_string ((unsigned) _OPENMP));
    printf ("[PROMPT] OpenMP runtime is [%s] with API %d (%s) support\n",

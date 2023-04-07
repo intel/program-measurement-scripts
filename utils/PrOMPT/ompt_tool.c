@@ -160,7 +160,7 @@ pthread_mutex_t task_UID_mutex;
 #endif
 
 // Compares two parallel_info from codeptr_ra value, used for bsearch
-static int comp_parinfo (const void *key, const void *dat)
+static int comp_parinfo (const void * const key, const void * const dat)
 {
    const parallel_info_t *key_pi = *((const parallel_info_t **) key);
    const parallel_info_t *dat_pi = *((const parallel_info_t **) dat);
@@ -177,7 +177,7 @@ static int comp_parinfo (const void *key, const void *dat)
 
 /* Lookup by codeptr_ra a parallel region at a given level
  * Binary search (log N) should be sufficient for most applications */
-static parallel_info_t *lookup_parallel_info (const void *codeptr_ra, int level)
+static parallel_info_t *lookup_parallel_info (const void * const codeptr_ra, int level)
 {
    assert (level < MAX_NEST);
 
@@ -191,7 +191,8 @@ static parallel_info_t *lookup_parallel_info (const void *codeptr_ra, int level)
 #ifndef NDEBUG
    // Check that pr->dic is already sorted
    parallel_info_t *dic_sorted [MAX_NB_PARALLEL_INFO];
-   memcpy (dic_sorted, pr->dic, sizeof pr->dic);
+   //memcpy (dic_sorted, pr->dic, sizeof pr->dic);
+   memcpy_s (dic_sorted, sizeof(dic_sorted), pr->dic, sizeof pr->dic);
    qsort (dic_sorted, pr->nb_parallel_info, sizeof dic_sorted[0], comp_parinfo);
    unsigned i;
    for (i=0; i < pr->nb_parallel_info; i++)
@@ -219,7 +220,7 @@ static parallel_info_t *lookup_parallel_info (const void *codeptr_ra, int level)
 }
 
 /* Insert info for a new parallel region, at a given level */
-static parallel_info_t *insert_parallel_info (const void *codeptr_ra, int level)
+static parallel_info_t *insert_parallel_info (const void * const codeptr_ra, int level)
 {
    // This function must be called only for a new couple (codeptr_ra, level)
    assert (lookup_parallel_info (codeptr_ra, level) == NULL);
@@ -255,8 +256,9 @@ static parallel_info_t *insert_parallel_info (const void *codeptr_ra, int level)
    return parinfo;
 }
 
-static inline void _timespec_sub (const struct timespec *a, const struct timespec *b,
-                                  struct timespec *res)
+static inline void _timespec_sub (const struct timespec * const a, 
+                                  const struct timespec * const b,
+                                  struct timespec * const res)
 {
    res->tv_sec  = a->tv_sec  - b->tv_sec;
    res->tv_nsec = a->tv_nsec - b->tv_nsec;
@@ -267,7 +269,7 @@ static inline void _timespec_sub (const struct timespec *a, const struct timespe
 }
 
 // TODO: think about using ts instead of double (integer computations)
-static inline double __ompt_get_time()
+static inline double __ompt_get_time(void)
 {
    struct timespec ts;
 
@@ -287,7 +289,7 @@ static inline double __ompt_get_time()
  * [In]  thread_type: Type of native thread
  * [In]  thread_data: Ompt memory record of thread data
  */
-void thread_begin (ompt_thread_t type, ompt_data_t *thread_data)
+void thread_begin (ompt_thread_t type, ompt_data_t * const thread_data)
 {
    assert( thread_data );
 
@@ -323,7 +325,7 @@ void thread_begin (ompt_thread_t type, ompt_data_t *thread_data)
  * thread.
  * [In]  thread_data: Ompt memory record of thread data
  */
-void thread_end (ompt_data_t *thread_data)
+void thread_end (ompt_data_t *const thread_data)
 {
 
    thread_info_t* thread_infos = (thread_info_t*) thread_data->ptr;
@@ -351,7 +353,7 @@ void thread_end (ompt_data_t *thread_data)
 }
 /*MPC team code end */
 
-static inline int is_target_codeptr (const void *codeptr_ra)
+static inline int is_target_codeptr (const void *const codeptr_ra)
 {
    if (par_reg_filt_len == 0) return 1;
 
@@ -367,7 +369,7 @@ static inline int is_target_codeptr (const void *codeptr_ra)
    return 0;
 }
 
-static inline void update_stats_begin (stats_t *stats, double start_time)
+static inline void update_stats_begin (stats_t *const stats, double start_time)
 {
    // Ensure that events are paired (begin and then end)
    assert (stats->start == 0.0); // stats->start is set to 0 by update_stats_end
@@ -381,7 +383,7 @@ static inline int is_pow2 (unsigned x)
    return (x & (x - 1)) == 0;
 }
 
-static inline void update_stats_end (stats_t *stats, double end_time)
+static inline void update_stats_end (stats_t *const stats, double end_time)
 {
    // Ensure that events are paired (begin and then end)
    assert (stats->start > 0.0); // stats->start is set to 0 by self
@@ -422,7 +424,7 @@ static inline void update_stats_end (stats_t *stats, double end_time)
 
 #ifdef PROMPT_SYNC
 // Allocate sync regions
-static void allocate_sync_regions (thread_parallel_info_t *tpi) {
+static void allocate_sync_regions (thread_parallel_info_t *const tpi) {
    const size_t sync_regions_size = tpi->requested_parallelism * sizeof tpi->sync_regions[0];
    tpi->sync_regions = malloc (sync_regions_size);
    unsigned thread_rank;
@@ -437,7 +439,7 @@ static void allocate_sync_regions (thread_parallel_info_t *tpi) {
 }
 
 // Reallocate sync regions to support more threads (increased requested_parallelism)
-static void reallocate_sync_regions (thread_parallel_info_t *tpi, unsigned new_requested_parallelism) {
+static void reallocate_sync_regions (thread_parallel_info_t *const tpi, unsigned new_requested_parallelism) {
    const size_t sync_region_new_size = new_requested_parallelism * sizeof tpi->sync_regions[0];
    tpi->sync_regions = realloc (tpi->sync_regions, sync_region_new_size);
    unsigned thread_rank;
@@ -454,7 +456,7 @@ static void reallocate_sync_regions (thread_parallel_info_t *tpi, unsigned new_r
 
 #ifdef PROMPT_WORK
 // Allocate work regions
-static void allocate_work_regions (thread_parallel_info_t *tpi) {
+static void allocate_work_regions (const thread_parallel_info_t *const tpi) {
    const size_t work_regions_size = tpi->requested_parallelism * sizeof tpi->work_regions[0];
    tpi->work_regions = malloc (work_regions_size);
    unsigned thread_rank;
@@ -469,7 +471,7 @@ static void allocate_work_regions (thread_parallel_info_t *tpi) {
 }
 
 // Reallocate work regions to support more threads (increased requested_parallelism)
-static void reallocate_work_regions (thread_parallel_info_t *tpi, unsigned new_requested_parallelism) {
+static void reallocate_work_regions (const thread_parallel_info_t *const tpi, unsigned new_requested_parallelism) {
    const size_t work_region_new_size = new_requested_parallelism * sizeof tpi->work_regions[0];
    tpi->work_regions = realloc (tpi->work_regions, work_region_new_size);
    unsigned thread_rank;
@@ -484,7 +486,7 @@ static void reallocate_work_regions (thread_parallel_info_t *tpi, unsigned new_r
 }
 #endif
 
-static void init_stats (stats_t *stats)
+static void init_stats (stats_t *const stats)
 {
    memset (stats, 0, sizeof *stats);
    stats->samples_len = SAMPLES_LEN_INIT;
@@ -494,7 +496,7 @@ static void init_stats (stats_t *stats)
 #endif
 }
 
-static void init_tpi (thread_parallel_info_t *tpi, unsigned requested_parallelism)
+static void init_tpi (thread_parallel_info_t *const tpi, unsigned requested_parallelism)
 {
    tpi->requested_parallelism = requested_parallelism;
    init_stats (&(tpi->stats));
@@ -515,10 +517,10 @@ static void init_tpi (thread_parallel_info_t *tpi, unsigned requested_parallelis
  and whether the region is a parallel or teams regions.
  * [In] codeptr_ra: relates the implementation of OpenMP region to its source code.
  */
-void parallel_begin (ompt_data_t *encountering_task_data,
-                     const ompt_frame_t *encountering_task_frame,
-                     ompt_data_t *parallel_data, unsigned int requested_parallelism,
-                     int flags, const void *codeptr_ra)
+void parallel_begin (const ompt_data_t *const encountering_task_data,
+                     const ompt_frame_t *const encountering_task_frame,
+                     ompt_data_t *const parallel_data, unsigned int requested_parallelism,
+                     int flags, const void *const codeptr_ra)
 {
    assert (parallel_data != NULL);
 
@@ -662,9 +664,9 @@ void parallel_begin (ompt_data_t *encountering_task_data,
 }
 
 // Triggered by ompt_callback_parallel_end()
-void parallel_end (ompt_data_t *parallel_data,
-                   ompt_data_t *encountering_task_data,
-                   int flags, const void *codeptr_ra)
+void parallel_end (ompt_data_t *const parallel_data,
+                   const ompt_data_t *const encountering_task_data,
+                   int flags, const void *const codeptr_ra)
 {
    const double dispatch_time = __ompt_get_time(); // get as soon as possible (to exclude tool)
 
@@ -765,7 +767,7 @@ void parallel_end (ompt_data_t *parallel_data,
 #ifdef PROMPT_SYNC
 // Triggered by ompt_callback_{sync_region,sync_region_wait,reduction}()
 static void sync_region_common (ompt_sync_region_t kind, ompt_scope_endpoint_t endpoint,
-                                ompt_data_t *parallel_data, ompt_data_t *task_data,
+                                const ompt_data_t *const parallel_data, const ompt_data_t *const task_data,
                                 const void *codeptr_ra, int wait)
 {
    // Check kind value
@@ -894,16 +896,16 @@ static void sync_region_common (ompt_sync_region_t kind, ompt_scope_endpoint_t e
  * [In] codeptr_ra: relates the implementation of OpenMP region to its source code.
  */
 void sync_region (ompt_sync_region_t kind, ompt_scope_endpoint_t endpoint,
-                  ompt_data_t *parallel_data, ompt_data_t *task_data,
-                  const void *codeptr_ra)
+                  const ompt_data_t *const parallel_data, const ompt_data_t *const task_data,
+                  const void *const codeptr_ra)
 {
    sync_region_common (kind, endpoint, parallel_data, task_data, codeptr_ra, 0);
 }
 
 // CF sync_region
 void sync_region_wait (ompt_sync_region_t kind, ompt_scope_endpoint_t endpoint,
-                       ompt_data_t *parallel_data, ompt_data_t *task_data,
-                       const void *codeptr_ra)
+                       const ompt_data_t *const parallel_data, const ompt_data_t *const task_data,
+                       const void *const codeptr_ra)
 {
    sync_region_common (kind, endpoint, parallel_data, task_data, codeptr_ra, 1);
 }
@@ -912,8 +914,8 @@ void sync_region_wait (ompt_sync_region_t kind, ompt_scope_endpoint_t endpoint,
 #ifdef PROMPT_WORK
 // very similar to sync_common: try to factor code
 void work (ompt_work_t wstype, ompt_scope_endpoint_t endpoint,
-           ompt_data_t *parallel_data, ompt_data_t *task_data,
-           uint64_t count, const void *codeptr_ra)
+           const ompt_data_t *const parallel_data, const ompt_data_t *const task_data,
+           uint64_t count, const void *const codeptr_ra)
 {
    // Check wstype value
    assert (wstype >= 1 && wstype <= OMPT_WORK_ENUM_LENGTH);
@@ -1014,8 +1016,8 @@ void work (ompt_work_t wstype, ompt_scope_endpoint_t endpoint,
 
 #ifdef PROMPT_TASK
 void implicit_task (ompt_scope_endpoint_t endpoint,
-                    ompt_data_t *parallel_data,
-                    ompt_data_t *task_data,
+                    const ompt_data_t *const parallel_data,
+                    const ompt_data_t *const task_data,
                     unsigned int actual_parallelism,
                     unsigned int index,
                     int flags)
@@ -1057,9 +1059,10 @@ void implicit_task (ompt_scope_endpoint_t endpoint,
  * [In]  codeptr_ra: relates the implementation of OpenMP region to its source code.
  */
 
-void task_create (ompt_data_t *encountering_task_data, const ompt_frame_t *encountering_task_frame,
-                  ompt_data_t *new_task_data, int flags, int has_dependences,
-                  const void *codeptr_ra)
+void task_create (const ompt_data_t *const encountering_task_data, 
+                  const ompt_frame_t *const encountering_task_frame,
+                  const ompt_data_t *const new_task_data, int flags, int has_dependences,
+                  const void *const codeptr_ra)
 {
    assert (new_task_data);
    assert ((flags && ompt_task_initial ) || // deprecated (no more dispatched via task_create)
@@ -1082,9 +1085,9 @@ void task_create (ompt_data_t *encountering_task_data, const ompt_frame_t *encou
    }
 }
 
-void task_schedule (ompt_data_t *prior_task_data,
+void task_schedule (const ompt_data_t *const prior_task_data,
                     ompt_task_status_t prior_task_status,
-                    ompt_data_t *next_task_data)
+                    const ompt_data_t *const next_task_data)
 {
    if (verbose_level >= 1) {
       static const char *task_status_name[] = { NULL, "complete", "yield", "cancel", "detach",
@@ -1098,7 +1101,7 @@ void task_schedule (ompt_data_t *prior_task_data,
 }
 #endif // PROMPT_TASK
 
-static void check_set_cb_result (ompt_set_result_t res, const char *cb_name)
+static void check_set_cb_result (ompt_set_result_t res, const char *const cb_name)
 {
 #ifndef NDEBUG
    char *str = NULL;
@@ -1120,7 +1123,7 @@ static void check_set_cb_result (ompt_set_result_t res, const char *cb_name)
 
 /* ompt_tool_init: Init tool function.
  */
-void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_data )
+void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, const ompt_data_t* const tool_data )
 {
    assert(ompt_lookup_fn);
 
@@ -1285,8 +1288,8 @@ void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, ompt_data_t* tool_d
 }
 
 // Print parallel regions info to par_regions.csv
-static void print_parallel_region (const parallel_info_t *parinfo, unsigned ancestor_thread_num,
-                                   FILE *fp, FILE *samples_fp, ompt_tool_addr2line_context_t *a2l_ctxt)
+static void print_parallel_region (const parallel_info_t *const parinfo, unsigned ancestor_thread_num,
+                                   FILE *const fp, FILE *const samples_fp, const ompt_tool_addr2line_context_t *const a2l_ctxt)
 {
    // Get source line info for the parallel region
    resolved_codeptr_t rc;
@@ -1431,7 +1434,7 @@ typedef struct {
    ptr_kind_pair_t *pairs;
 } ptr_kind_pairs_t;
 
-static void ptr_kind_pairs_init (ptr_kind_pairs_t *dic)
+static void ptr_kind_pairs_init (ptr_kind_pairs_t *const dic)
 {
    dic->len = 10;
    dic->nb  = 0;
@@ -1439,7 +1442,7 @@ static void ptr_kind_pairs_init (ptr_kind_pairs_t *dic)
 }
 
 // use bsearch/qsort if too slow
-static int ptr_kind_pairs_lookup (const ptr_kind_pairs_t *dic, const void *codeptr_ra, int kind)
+static int ptr_kind_pairs_lookup (const ptr_kind_pairs_t *const dic, const void *const codeptr_ra, int kind)
 {
    unsigned i;
    for (i=0; i<dic->nb; i++) {
@@ -1452,7 +1455,7 @@ static int ptr_kind_pairs_lookup (const ptr_kind_pairs_t *dic, const void *codep
 }
 
 // use bsearch/qsort if too slow
-static void ptr_kind_pairs_insert (ptr_kind_pairs_t *dic, const void *codeptr_ra, int kind)
+static void ptr_kind_pairs_insert (ptr_kind_pairs_t *const dic, const void *const codeptr_ra, int kind)
 {
    assert (ptr_kind_pairs_lookup (dic, codeptr_ra, kind) == 0);
    if (dic->nb == dic->len) {
@@ -1466,7 +1469,7 @@ static void ptr_kind_pairs_insert (ptr_kind_pairs_t *dic, const void *codeptr_ra
    dic->nb = dic->nb + 1;
 }
 
-static void ptr_kind_pairs_destroy (ptr_kind_pairs_t *dic)
+static void ptr_kind_pairs_destroy (const ptr_kind_pairs_t *const dic)
 {
    free (dic->pairs);
 }
@@ -1474,9 +1477,9 @@ static void ptr_kind_pairs_destroy (ptr_kind_pairs_t *dic)
 
 #ifdef PROMPT_SYNC
 // Print sync region info to sync_regions.csv
-static void print_sync_region (const parallel_info_t *parinfo, unsigned ancestor_thread_num,
-                               const void *codeptr_ra, ompt_sync_region_t kind,
-                               FILE *fp, FILE *samples_fp, ompt_tool_addr2line_context_t *a2l_ctxt)
+static void print_sync_region (const parallel_info_t *const parinfo, unsigned ancestor_thread_num,
+                               const void *const codeptr_ra, ompt_sync_region_t kind,
+                               FILE *const fp, FILE *const samples_fp, const ompt_tool_addr2line_context_t *const a2l_ctxt)
 {
    const char *ompt_sync_region_name[] = { NULL, "barrier", "barrier_implicit", "barrier_explicit",
                                            "barrier_implem", "taskwait", "taskgroup", "reduction",
@@ -1636,9 +1639,9 @@ static void print_sync_region (const parallel_info_t *parinfo, unsigned ancestor
 
 #ifdef PROMPT_WORK
 // Print sync region info to sync_regions.csv
-static void print_work_region (const parallel_info_t *parinfo, unsigned ancestor_thread_num,
-                               const void *codeptr_ra, ompt_work_t wstype,
-                               FILE *fp, FILE *samples_fp, ompt_tool_addr2line_context_t *a2l_ctxt)
+static void print_work_region (const parallel_info_t *const parinfo, unsigned ancestor_thread_num,
+                               const void *const codeptr_ra, ompt_work_t wstype,
+                               const FILE *fp, const FILE *samples_fp, const ompt_tool_addr2line_context_t *const a2l_ctxt)
 {
    const char *ompt_work_name[] = { NULL, "loop", "sections", "single_executor", "single_other",
                                     "workshare", "distribute", "taskloop", "scope" };
@@ -1757,7 +1760,7 @@ static void print_work_region (const parallel_info_t *parinfo, unsigned ancestor
 }
 #endif // PROMPT_WORK
 
-static void free_parallel_regions ()
+static void free_parallel_regions (void)
 {
    unsigned lvl, i, anc_thr_rank;
 
@@ -1787,7 +1790,7 @@ static void free_parallel_regions ()
 
 /* ompt_tool_fina: Finalize tool function.
  */
-void ompt_tool_fina (ompt_data_t* tool_data)
+void ompt_tool_fina (const ompt_data_t* const tool_data)
 {
    // Get end time (to subtract with start_time_ts and then get global walltime)
    struct timespec end_time_ts;
