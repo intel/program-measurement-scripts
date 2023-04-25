@@ -655,7 +655,6 @@ class GuideTab(tk.Frame):
         def notify(self, observable):
             # not to reset state (for demo or is right behavior in general - to explore)
             return
-            self.fsm.reset_state()
             
             
     def setLoadedData(self, loadedData):

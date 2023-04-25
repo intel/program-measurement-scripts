@@ -410,15 +410,6 @@ def test_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, 
         return False
     else :
         return True
-    #ax.legend(loc="lower left",title="(name,flops)")
-# Create the second legend and add the artist manually.
-    ax.legend(loc="lower left",title="I$_C$$_G$ = 2.42" + "\nS$_C$$_G$ = 2.84" + "\nk$_C$$_G$ = 6.81")
-    #ax.add_artist(leg);
-
-    if filename:
-        plt.savefig(filename)
-    else:
-        plt.show()
 
 # Set filename to [] for GUI output    
 def plot_data_point(title, filename, orig_df, orig_name, xs, ys, Ns, target_df, k_average):

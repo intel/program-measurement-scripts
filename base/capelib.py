@@ -248,13 +248,13 @@ def calculate_ops_counts_per_iter(in_row, opc_table, op_type):
     opcount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
     icount = { 'SUM': 0, 'SC': 0, 'XMM': 0, 'YMM' : 0, 'ZMM': 0 }
     for cvt_col_name in cvt_col_names:
-        matchobj = re.search(r'Nb_insn_(.+?)_(.MM)$', cvt_col_name)
+        matchobj = re.search(r'^Nb_insn_(.+?)_(.MM)$', cvt_col_name)
         if matchobj:
             inst = matchobj.group(1)
             regtype = matchobj.group(2)
         else:
             # match again to get rid of Nb_insn_
-            matchobj = re.search(r'Nb_insn_(.+?)$', cvt_col_name)
+            matchobj = re.search(r'^Nb_insn_(.+?)$', cvt_col_name)
             inst = matchobj.group(1)
             regtype = 'SC'
         insts = in_row[cvt_col_name]
