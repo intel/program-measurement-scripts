@@ -1180,7 +1180,7 @@ void ompt_tool_init ( ompt_function_lookup_t ompt_lookup_fn, const ompt_data_t* 
       free (str);
 
       if (par_reg_filt_len == 0) {
-         printf ("[PROMPT] Invalid PROMPT_PARALLEL_REGIONS value (%s): expecting 0x123[,0x456...]\n",
+         printf ("[PROMPT] Invalid PROMPT_PARALLEL_REGIONS value (%p): expecting 0x123[,0x456...]\n",
                  par_reg_filt);
          return;
       }
@@ -1299,14 +1299,14 @@ static void print_parallel_region (const parallel_info_t *const parinfo, unsigne
    const thread_parallel_info_t *tpi = &(parinfo->per_thread [ancestor_thread_num]);
 
    // print module_name_offset
-   fprintf (fp, "%s:%p,", rc.module_name, rc.module_offset);
+   fprintf (fp, "%s:%llu,", rc.module_name, rc.module_offset);
 
    // print parent_reg_module_name_offset
    if (parinfo->parent != NULL) {
       // Get module name and offset for the parent parallel region
       resolved_codeptr_t parent_rc;
       ompt_tool_addr2line_get (a2l_ctxt, parinfo->parent->codeptr_ra, &parent_rc);
-      fprintf (fp, "%s:%p,", parent_rc.module_name, parent_rc.module_offset);
+      fprintf (fp, "%s:%llu,", parent_rc.module_name, parent_rc.module_offset);
    }
    else
       fprintf (fp, "NA,");
@@ -1409,7 +1409,7 @@ static void print_parallel_region (const parallel_info_t *const parinfo, unsigne
    unsigned instance_rank = 1;
    for (sample_rank = 0; sample_rank < tpi->stats.nb_samples; sample_rank++) {
       // print module_name_offset
-      fprintf (samples_fp, "%s:%p,", rc.module_name, rc.module_offset);
+      fprintf (samples_fp, "%s:%llu,", rc.module_name, rc.module_offset);
 
       // print level, ancestor_thread_num
       fprintf (samples_fp, "%d,%d,", parinfo->level, ancestor_thread_num);
@@ -1540,7 +1540,7 @@ static void print_sync_region (const parallel_info_t *const parinfo, unsigned an
       const stats_t *wait_stats = &(sync_region->wait_stats);
 
       // print module_name_offset,par_reg_module_name_offset,par_reg_thread_num,thread_num,kind
-      fprintf (fp, "%s:%p,%s:%p,%d,%d,%s,",
+      fprintf (fp, "%s:%llu,%s:%llu,%d,%d,%s,",
                rc.module_name, rc.module_offset,
                par_rc.module_name, par_rc.module_offset, ancestor_thread_num,
                regs [thread_rank].rank, ompt_sync_region_name [sync_region->kind]);
@@ -1593,7 +1593,7 @@ static void print_sync_region (const parallel_info_t *const parinfo, unsigned an
       unsigned instance_rank = (sampling_period == 0) ? 1 : sampling_period;
       for (sample_rank = 0; sample_rank < sync_stats->nb_samples; sample_rank++) {
          // print module_name_offset
-         fprintf (samples_fp, "%s:%p,", rc.module_name, rc.module_offset);
+         fprintf (samples_fp, "%s:%llu,", rc.module_name, rc.module_offset);
 
          // print par_reg_thread_num,thread_num,kind
          fprintf (samples_fp, "%d,%d,%s,", ancestor_thread_num, regs [thread_rank].rank,
@@ -1619,7 +1619,7 @@ static void print_sync_region (const parallel_info_t *const parinfo, unsigned an
 
    // Across-threads summary
    // print module_name_offset,par_reg_module_name_offset,par_reg_thread_num,thread_num,kind
-   fprintf (fp, "%s:%p,%s:%p,%d,ALL,%s,",
+   fprintf (fp, "%s:%llu,%s:%llu,%d,ALL,%s,",
             rc.module_name, rc.module_offset,
             par_rc.module_name, par_rc.module_offset, ancestor_thread_num,
             ompt_sync_region_name [regs[0].reg->kind]);
@@ -1835,6 +1835,7 @@ void ompt_tool_fina (const ompt_data_t* const tool_data)
    // Parallel regions samples: open file + print headers
    FILE *par_regions_samples_fp = fopen (par_reg_smp_filename, "w");
    if (par_regions_samples_fp == NULL) {
+      fclose (par_regions_fp);
       free_parallel_regions ();
       return;
    }
@@ -1853,6 +1854,8 @@ void ompt_tool_fina (const ompt_data_t* const tool_data)
    // Syncronization regions (per-thread walltime): open file + print headers
    FILE *sync_regions_fp = fopen (sync_regions_filename, "w");
    if (sync_regions_fp == NULL) {
+      fclose (par_regions_fp);
+      fclose (par_regions_samples_fp);
       free_parallel_regions ();
       return;
    }
@@ -1866,6 +1869,11 @@ void ompt_tool_fina (const ompt_data_t* const tool_data)
    // Syncronization regions samples: open file + print headers
    FILE *sync_regions_samples_fp = fopen (sync_reg_smp_filename, "w");
    if (sync_regions_samples_fp == NULL) {
+      fclose (par_regions_fp);
+      fclose (par_regions_samples_fp);
+#ifdef PROMPT_SYNC
+      fclose (sync_regions_fp);
+#endif
       free_parallel_regions ();
       return;
    }

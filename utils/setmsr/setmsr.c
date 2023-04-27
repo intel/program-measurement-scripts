@@ -92,13 +92,13 @@ int main(int argc, const char * const argv[], const char * const envv[])
 			msrValue = read_msr(msrDevPName, msrNum, msrValue);
 			if (bitValue == 1) {
 		                /* change bit to 1 */
-		                msrValue |= (1<<bit);
+		                msrValue |= (((int64_t)1)<<bit);
 				msrValue = write_msr(msrDevPName, msrNum, msrValue);
 
 			}
 			else if (bitValue == 0) {
                                 /* change bit to 0 */
-                                msrValue &= ~(1<<bit);
+                                msrValue &= ~(((int64_t)1)<<bit);
 				msrValue = write_msr(msrDevPName, msrNum, msrValue);
 			}
 			else {
@@ -138,6 +138,7 @@ int64_t read_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue)
                 fprintf(stderr,"attempt to read(8-bytes) got %zd bytes\n",countBy);
                 exit(__LINE__);
         }
+        close(fh);
 	return msrValue;
 }
 
@@ -171,6 +172,7 @@ int64_t write_msr(const char * const msrDevPName, off_t msrNum, int64_t msrValue
                 fprintf(stderr,"attempt to read(8-bytes) got %zd bytes\n",countBy);
                 exit(__LINE__);
         }
+        close(fh);
 	return msrValue;
 }
 

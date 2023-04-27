@@ -93,6 +93,8 @@ static void load_maps (ompt_tool_addr2line_context_t *a2l_ctxt)
       strtok (NULL, delim); strtok (NULL, delim); // skip dev, inode
       char *const name = strtok (NULL, delim);
 
+      if (!name || strlen (name) == 0) continue;
+
       // Space char in path: strtok has replaced the first one with '\0'
       if (name [strlen (name) - 1] != '\n')
          name [strlen (name)] = ' '; // repair (replace '\0' with a space character)
@@ -100,8 +102,6 @@ static void load_maps (ompt_tool_addr2line_context_t *a2l_ctxt)
       // Remove final newline character (replace it with '\0')
       assert (name [strlen (name) - 1] == '\n');
       name [strlen (name) - 1] = '\0';
-
-      if (!name || strlen (name) == 0) continue;
 
       // Parse start-end addresses
       char *addr_dup = strdup (addr);
