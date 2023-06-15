@@ -23,6 +23,6 @@ if [[ ${icc_path} != "" ]]; then
   echo "Building PrOMPT using ${icc_path}"
   icc_folder=$(dirname ${icc_path})
   docker run -v /:/host local_image:latest /bin/bash -c \
-	"export PATH=/host/${icc_folder}:${PATH}; pushd /host/"$(pwd)"/utils/PrOMPT; make clean; make"
+	"export PATH=/host/${icc_folder}:${PATH}; if [[ -d /host/"$(pwd)"/utils/PrOMPT ]]; then  pushd /host/"$(pwd)"/utils/PrOMPT; make clean; make; fi"
 
 fi
