@@ -58,20 +58,20 @@ field_names = [  NAME, SHORT_NAME, VARIANT, NUM_CORES,DATA_SET,PREFETCHERS, REPE
 
 
 L2R_TrafficDict={'CSL': ['L1D_REPLACEMENT'], 'SKL': ['L1D_REPLACEMENT'], 'HSW': ['L1D_REPLACEMENT'], 'IVB': ['L1D_REPLACEMENT'], 'SNB': ['L1D_REPLACEMENT'] }
-L2W_TrafficDict={'CSL': ['L2_TRANS_L1D_WB'], 'SKL': ['L2_TRANS_L1D_WB'], 'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
-L3R_TrafficDict={'CSL': ['L2_RQSTS_MISS'], 'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS', 'SQ_MISC_FILL_DROPPED'], 'IVB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'], 'SNB': ['L2_LINES_ALL', 'SQ_MISC_FILL_DROPPED'] }
-L3W_TrafficDict={'CSL': ['L2_TRANS_L2_WB'], 'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
+L2W_TrafficDict={'HSW': ['L2_TRANS_L1D_WB', 'L2_DEMAND_RQSTS_WB_MISS'], 'IVB': ['L1D_WB_RQST_ALL'], 'SNB': ['L1D_WB_RQST_ALL'] }
+L3R_TrafficDict={'CSL': ['L2_RQSTS_MISS'], 'SKL': ['L2_RQSTS_MISS'], 'HSW': ['L2_RQSTS_MISS'], 'IVB': ['L2_LINES_ALL'], 'SNB': ['L2_LINES_ALL'] }
+L3W_TrafficDict={'CSL': ['L2_TRANS_L2_WB'], 'SKL': ['L2_TRANS_L2_WB'], 'HSW': ['L2_TRANS_L2_WB'], 'IVB': ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS'], 'SNB':  ['L2_TRANS_L2_WB', 'L2_L1D_WB_RQSTS_MISS']}
 
-StallDict={'CSL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
-           'SKL': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_PHT_FULL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
-           'HSW': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
+StallDict={'CSL': { 'SB': 'RESOURCE_STALLS_SB',
+                    'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
+           'SKL': { 'SB': 'RESOURCE_STALLS_SB',
+                    'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
+           'HSW': { 'RS': 'RESOURCE_STALLS_RS', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
+                    'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'IVB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
+                    'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' },
            'SNB': { 'RS': 'RESOURCE_STALLS_RS', 'LB': 'RESOURCE_STALLS_LB', 'SB': 'RESOURCE_STALLS_SB', 'ROB': 'RESOURCE_STALLS_ROB', 
-                    'PRF': 'RESOURCE_STALLS2_ALL_PRF_CONTROL', 'LM':'RESOURCE_STALLS2_LOAD_MATRIX', 'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' }}
+                    'ANY': 'RESOURCE_STALLS_ANY', 'FE':'Front_end_(cycles)' }}
 
 LFBFields = [MN.busyLfbPct(i) for i in range(0,11)]
 field_names = field_names + LFBFields
