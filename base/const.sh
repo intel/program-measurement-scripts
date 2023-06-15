@@ -425,7 +425,7 @@ ENABLE_SEP=0
 MC_RUN=0
 IF_PARALLEL=1
 
-ENABLE_PROMPT=1
+ENABLE_PROMPT=0
 PROMPT_LIB="$UTILS_FOLDER/PrOMPT/libprompt_icc.so"
 
 # Set the path for the probe library
