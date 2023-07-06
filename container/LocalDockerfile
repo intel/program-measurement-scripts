@@ -19,7 +19,7 @@ USER root
 
 # Copy EMON with built driver in image
 COPY $SEP_DIR /opt/intel/$SEP_DIR
-RUN apt-get install kmod && ln -sr /opt/intel/${SEP_DIR} /opt/intel/sep
+RUN apt-get install -y --no-install-recommends kmod && ln -sr /opt/intel/${SEP_DIR} /opt/intel/sep
 
 RUN groupadd -g $LOCAL_GID runner 
 # Create /tmp/groups to store the group names to add to runner
@@ -41,6 +41,7 @@ RUN LOCAL_GNAME_ARRAY=($LOCAL_GNAMES) \
 # The tr command will output a trailing ',' being used to be a delimiter just before sudo
 RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G $(tr '\n' ',' < /tmp/groups)sudo runner 
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo "runner:runner" | chpasswd
 
 RUN chown -R runner /share/* && chgrp -R runner /share/*

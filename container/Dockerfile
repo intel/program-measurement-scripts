@@ -53,7 +53,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y make \
    # for LORE mutator in UIUC Compiler Optimizations
    gcc-8 g++-8 \
    # for PROMPT
-   binutils-dev libiberty-dev
+   binutils-dev libiberty-dev \
+   && apt-get clean \
+   && rm -rf /var/lib/apt/lists/*
 
  #tex4ht
  #texlive-latex-base texlive-latex-extra 
@@ -65,13 +67,13 @@ RUN chmod u+s /usr/bin/cpufreq-set
  # Used in const.sh
 RUN locale-gen en_US.utf8 && update-locale
 
-RUN python3 -m pip install sympy \
-  && python3 -m pip install csvkit \
-  && python3 -m pip install openpyxl \
-  && python3 -m pip install et_xmlfile \
-  && python3 -m pip install Cheetah3 \
-  && python3 -m pip install parse \
-  && python3 -m pip install pandas
+RUN python3 -m pip install --no-cache-dir sympy \
+  && python3 -m pip install --no-cache-dir csvkit \
+  && python3 -m pip install --no-cache-dir openpyxl \
+  && python3 -m pip install --no-cache-dir et_xmlfile \
+  && python3 -m pip install --no-cache-dir Cheetah3 \
+  && python3 -m pip install --no-cache-dir parse \
+  && python3 -m pip install --no-cache-dir pandas
 
 
 # configure SSH for communication with Visual Studio 
@@ -84,11 +86,11 @@ RUN echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config && \
 EXPOSE 22
 
 # Build cmake
-RUN cd /root \
-  && wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz \
-  && tar xvf cmake-3.21.1.tar.gz \
-  && cd cmake-3.21.1 \
-  && ./bootstrap \
+WORKDIR /root
+RUN wget -q https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz \
+  && tar xvf cmake-3.21.1.tar.gz
+WORKDIR /root/cmake-3.21.1
+RUN ./bootstrap \
   && make \
   && make install
 
@@ -99,6 +101,7 @@ ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 RUN groupadd -g 8088 builder && \
    useradd -m -d /home/builder -s /bin/bash -u 8088 -g builder -G sudo builder
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo "builder:builder" | chpasswd
 
 RUN mkdir /share && chmod a+rwx /share && chmod +t /share
@@ -128,7 +131,7 @@ RUN mkdir /share/pips
 COPY --chown=builder gen_svn_servers.sh /share/pips
 WORKDIR /share/pips
 RUN alias g77=gfortran
-RUN wget https://scm.cri.ensmp.fr/svn/nlpmake/trunk/makes/setup_pips.sh \
+RUN wget -q https://scm.cri.ensmp.fr/svn/nlpmake/trunk/makes/setup_pips.sh \
    && chmod +x setup_pips.sh \
    && ./gen_svn_servers.sh \
    && ./setup_pips.sh --dynamic --light --pyconf=python3-config
@@ -140,7 +143,9 @@ USER builder
 ENV CC=gcc-4.9
 ENV CXX=g++-4.9
 WORKDIR /share/pocc-1.1
-RUN ./install.sh && cd analyzers/candl && patch -p1 -i ../../pocc-1.1-candl-0.6.2.patch && make install
+RUN ./install.sh 
+WORKDIR /share/pocc-1.1/analyzers/candl
+RUN patch -p1 -i ../../pocc-1.1-candl-0.6.2.patch && make install
 
 # Build UIUC Compiler Optimizations
 # Ensure using new version of GCC/G++ (should be 9.3.0 for this container)
@@ -149,7 +154,9 @@ ENV CC=gcc-8
 ENV CXX=g++-8
 WORKDIR /share/uiuc-compiler-opts
 # Comment out a line in CMakeLists.txt to use system boost
-RUN mkdir build && mkdir install && cd build && sed -i '/^set(Boost_NO_SYSTEM_PATHS ON)/ s/^/#/' ../src-git/CMakeLists.txt \
+RUN mkdir build && mkdir install 
+WORKDIR /share/uiuc-compiler-opts/build
+RUN sed -i '/^set(Boost_NO_SYSTEM_PATHS ON)/ s/^/#/' ../src-git/CMakeLists.txt \
    && sed -i 's|#set(POCC_ROOT "/shared/pocc/pocc-1.1")|set(POCC_ROOT "/share/pocc-1.1")|g' ../src-git/CMakeLists.txt \
    && cmake -DROSE_PATH=/usr/rose -DCMAKE_CXX_FLAGS=-std=c++11 -DCMAKE_INSTALL_PREFIX=/share/uiuc-compiler-opts/install ../src-git \
    && make install
