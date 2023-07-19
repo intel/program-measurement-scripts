@@ -19,27 +19,32 @@ USER root
 
 # Copy EMON with built driver in image
 COPY $SEP_DIR /opt/intel/$SEP_DIR
-RUN apt-get install -y --no-install-recommends kmod && ln -sr /opt/intel/${SEP_DIR} /opt/intel/sep
+RUN apt-get update && apt-get install --no-install-recommends -y kmod \
+  && ln -sr /opt/intel/${SEP_DIR} /opt/intel/sep \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
 
 RUN groupadd -g $LOCAL_GID runner 
 # Create /tmp/groups to store the group names to add to runner
-RUN echo -n "" > /tmp/groups
-RUN LOCAL_GNAME_ARRAY=($LOCAL_GNAMES) \
+#RUN echo -n "" > /tmp/groups
+RUN echo -n "" > /tmp/groups \
+    && LOCAL_GNAME_ARRAY=($LOCAL_GNAMES) \
     && LOCAL_GID_ARRAY=($LOCAL_GIDS) \
     && for index in ${!LOCAL_GID_ARRAY[@]}; do \
-        if [[ ${LOCAL_GID_ARRAY[$index]} != $LOCAL_GID ]]; then \
-          echo groupadd -g ${LOCAL_GID_ARRAY[$index]} ${LOCAL_GNAME_ARRAY[$index]}; \
-          groupadd -g ${LOCAL_GID_ARRAY[$index]} ${LOCAL_GNAME_ARRAY[$index]}; \
-          echo ${LOCAL_GNAME_ARRAY[$index]} >> /tmp/groups; \
+        if [[ "${LOCAL_GID_ARRAY[$index]}" != "$LOCAL_GID" ]]; then \
+          echo groupadd -g "${LOCAL_GID_ARRAY[$index]}" "${LOCAL_GNAME_ARRAY[$index]}"; \
+          groupadd -g "${LOCAL_GID_ARRAY[$index]}" "${LOCAL_GNAME_ARRAY[$index]}"; \
+          echo "${LOCAL_GNAME_ARRAY[$index]}" >> /tmp/groups; \
         else \
-          echo Skip ${LOCAL_GID_ARRAY[$index]}; \
+          echo Skip "${LOCAL_GID_ARRAY[$index]}"; \
         fi \
     done
 
 #RUN getent group
 #RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g $LOCAL_GID -G sudo $LOCAL_GNAMES
 # The tr command will output a trailing ',' being used to be a delimiter just before sudo
-RUN useradd -l -m -d /home/runner -s /bin/bash -u $LOCAL_UID -g runner -G $(tr '\n' ',' < /tmp/groups)sudo runner 
+RUN useradd -l -m -d /home/runner -s /bin/bash -u "$LOCAL_UID" -g runner -G "$(tr '\n' ',' < /tmp/groups)"sudo runner 
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN echo "runner:runner" | chpasswd
