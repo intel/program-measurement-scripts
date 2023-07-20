@@ -41,4 +41,8 @@ else
   https_proxy_arg=${https_proxy}
 fi
 
-docker build --build-arg IMG_NAME=${img_name} --build-arg SEP_DIR=${sep_dir} --build-arg http_proxy=$http_proxy_arg --build-arg https_proxy=$https_proxy_arg --build-arg LOCAL_UID=$(id -u ${USER}) --build-arg LOCAL_GID=$(id -g ${USER}) --build-arg LOCAL_GIDS="$local_gids" --build-arg LOCAL_GNAMES="$local_gnames" --pull --rm -f ./LocalDockerfile -t local_image .
+echo -n "Enter Runner user password:"
+read -s RUNNER_PASSWORD
+
+
+docker build --build-arg IMG_NAME=${img_name} --build-arg SEP_DIR=${sep_dir} --build-arg http_proxy=$http_proxy_arg --build-arg https_proxy=$https_proxy_arg --build-arg LOCAL_UID=$(id -u ${USER}) --build-arg LOCAL_GID=$(id -g ${USER}) --build-arg LOCAL_GIDS="$local_gids" --build-arg LOCAL_GNAMES="$local_gnames" --build-arg RUNNER_PASSWORD="$RUNNER_PASSWORD" --pull --rm -f ./LocalDockerfile -t local_image .

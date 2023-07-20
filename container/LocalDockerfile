@@ -8,6 +8,7 @@ ARG LOCAL_GID
 ARG LOCAL_GIDS
 ARG LOCAL_GNAMES
 ARG SEP_DIR
+ARG RUNNER_PASSWORD
 
 # Use bash for more scripting features
 SHELL ["/bin/bash", "-c"]
@@ -47,7 +48,7 @@ RUN echo -n "" > /tmp/groups \
 RUN useradd -l -m -d /home/runner -s /bin/bash -u "$LOCAL_UID" -g runner -G "$(tr '\n' ',' < /tmp/groups)"sudo runner 
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN echo "runner:runner" | chpasswd
+RUN echo "runner:${RUNNER_PASSWORD}" | chpasswd
 
 RUN chown -R runner /share/* && chgrp -R runner /share/*
 
