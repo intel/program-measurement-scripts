@@ -1,0 +1,82 @@
+#def generate_run_codelet_assignment()
+run_codelets=(
+  #for $binary in $binaries
+		$binary
+  #end for
+)
+#end def
+
+#def generate_name2sizes_assignment($encoded_vars, $indent)
+  #for $binary in $binaries
+  ${indent}name2sizes[$binary]+="$encoded_vars "
+  #end for
+#end def
+
+#def generate_build_codelet_fns()
+build_codelet () {
+	codelet_folder="\$1"
+	codelet_name="\$2"
+	build_folder="\$3"
+
+	# Simple codelet compilation
+	binary_name=\$( grep "binary name" "\$codelet_folder/codelet.conf" | sed -e 's/.*"\(.*\)".*/\1/g' )
+	echo -e "Binary name \t'\$binary_name'"
+	# ensured it is at the same level as codelet_folder so that relative paths in Makefile is preserved it will be moved to the build_folder
+	# after generating original
+	build_tmp_folder=\$(mktemp -d --tmpdir=\${codelet_folder}/..)
+
+
+	echo "Generating codelet '\$codelet_folder/\$codelet_name'..."
+
+	echo "Compiler information using -v flags"
+	ifort -v
+	icc -v
+	icpc -v
+
+	build_files=\$(find \${codelet_folder} -maxdepth 1 -type f -o -type l)
+	cp \${build_files} \${build_tmp_folder}
+
+	cd \${build_tmp_folder}
+
+	if [[ "\$ENABLE_SEP" == "1" ]]; then
+		make clean ENABLE_SEP=sep \${emon_api_flags} all
+	else
+		make LIBPATH="\${BASE_PROBE_FOLDER}" clean all
+	fi
+
+	# &> /dev/null
+	res=\$?
+
+	if [[ "\$res" != "0" ]]; then
+		echo "ERROR! Make did not succeed."
+		exit -1
+	fi
+
+	mv "\$binary_name" "\$codelet_name"
+	res=\$?
+
+	if [[ "\$res" != "0" ]]; then
+		echo "ERROR! Move did not succeed."
+		exit -1
+	fi
+
+
+	if [[ -e "codelet.o" ]]; then
+		cp "codelet.o" "\$codelet_folder/\$CLS_RES_FOLDER/"
+	fi
+
+	# Should be safe because \$binary_name was already renamed to \$codelet_name
+	make clean &> /dev/null
+
+	echo "Codelet generation was successful."
+	mv \${build_tmp_folder} "\${build_folder}"
+}
+make_codelet_folder() {
+  #for $binary in $binaries
+    name2path[$binary]=$binary_to_path[$binary]
+  #end for
+}
+#end def
+
+#implements respond
+#super.respond()

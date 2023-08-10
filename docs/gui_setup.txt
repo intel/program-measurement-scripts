@@ -1,0 +1,14 @@
+Following are Python packages needed for the GUI tool
+
+ pip install openpyxl
+ pip install pandas
+ pip install matplotlib==3.2.2
+ pip install pandastable
+ pip install networkx
+ pip install adjustText
+ pip install cefpython3
+ pip install requests
+ pip install lxml
+ pip install pywebcopy
+ pip install pyinstaller
+ pip install transition

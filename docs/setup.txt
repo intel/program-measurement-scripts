@@ -1,0 +1,91 @@
+0. Installation and setup of Docker 
+  A.  Install Docker
+  B.  Add user to docker group (e.g. usermod -a -G docker <username>)
+  C.  Update container/LocalDockerfile to install extra package for local container
+    • Make sure http_proxy and https_proxy variables are set correctly if behind VPN
+   D.  If behind a proxy, need to do the following steps: (from https://stackoverflow.com/questions/69048671/how-to-use-docker-login-with-a-proxy)
+       1) Create a systemd directory for the docker service
+             - sudo mkdir -p /etc/systemd/system/docker.service.d
+       2) Create configuration file for proxy (/etc/systemd/system/docker.service.d/http-proxy.conf).  An example below:
+
+# File: /etc/systemd/system/docker.service.d/http-proxy.conf
+# File: /etc/systemd/docker.service.d/http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=proxy-chain.intel.com:911"
+Environment="NO_PROXY=localhost,127.0.0.1"
+       3) Restart daemons
+          - sudo systemctl daemon-reload
+          - sudo systemctl restart docker
+
+1 Some pre-steps to take before checking out the packages:
+  A.  Ensure OS can fix CPU frequencies via userspace power governor (see below)
+  B.  Install Intel C/C++/Fortran compilers and source the corresponding 
+      variable setting scripts so the compilers are in your PATH.
+
+Note that 
+• For A, there are two ways to enable OS to manage CPU frequencies
+    1) Change the BIOS of the system so that P-States will be managed by OS. 
+       The exact menu choice is machine dependent.
+    2) If 1) does not work, disable the intel_pstate driver by adding 
+       "intel_pstate=disable" to your kernel boot line.
+  To double check whether you are in good shape, look 
+  at /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors and see 
+  whether userspace governor is in the list. g.g.
+  cwong29@fxilab163:codeletProbe> cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+  conservative ondemand userspace powersave performance
+• For many of our previous experiments, we turn off hyperthreading.  
+  If you want to reproduce our previous results, you may want to do that off in 
+  BIOS too.  However, for running experiments in general, you can keep it on.
+• If there are multiple versions of Python installed, please make sure the 
+  default version points to the latest version at least Python 3.6   .
+
+After the above presteps, you should be ready to install the experimental 
+scripts and our NR-codelet set.  Below I assume a common directory <home> 
+containing both the experiment script and codelets as follows:
+
+<home>
+• cape-experiment-scripts
+• nr-codelets
+
+2. Checkout/initialization steps
+  A.  Checkout Cape-Experiment-Script
+    • cd <home>
+    • git clone git@gitlab.com:davidwong/cape-experiment-scripts.git
+
+  B.  Checkout NR-codelets
+    • cd <home>
+    • git clone git@gitlab.com:davidwong/nr-codelets.git
+
+  C.  Initialize scripts.
+    • cd <home>/cape-experiment-scripts
+    • ./setup.sh
+
+3. Test steps
+Now you should be ready to start running the experiments.  There are many 
+examples under cape-experiment-scripts/vrun. (Some are outdated.) 
+To try the experiment script on your system, you can run the following command:
+  • cd <home>/cape-experiment-scripts/vrun
+  • ./vrun_fxilab163_FP.sh "test"
+
+Note that the “Test” argument is the description for the experiment. 
+You can put whatever meaningful to you. 
+It will be saved under cape-experiment-scripts/vrun/log.*.txt file. 
+It is useful to look at that file to look for experimental ID when you want to 
+revisit some old runs in the future. After running the script, if it is 
+successful, you will see something like the following:
+
+------------------------------------------------------------
+Cape data saved in: /localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv
+./vrun_fxilab163_FP.sh finished in 00:34:19 at Tue Jan 16 14:55:39 CST 2018
+
+It may be best to make sure that all steps of the script finished successfully 
+as well by checking the output of the script as it runs (data being saved 
+doesn't necessarily mean the run was good).
+
+Here the data file 
+/localdisk/cwong29/working/tmp/cape-experiment-scripts/vrun/logs/runs/1516134080/cape_1516134080.csv 
+contains the experimental data.
+
+4. Some advice of container usage
+Since the container starts and stops SEP driver automatically to ensure a clean driver usage, exiting container improperly (e.g. by disconnecting from an SSH session) will cause imcomplete shutdown of SEP driver.   To avoid that, it is suggested user to use tools like VNC (GUI) or screen (textual) to provide resumable sessioning of connection.
+
