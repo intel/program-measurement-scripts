@@ -7,7 +7,7 @@
     },
     "main": "index.js",
     "dependencies": {
-        "ag-grid-community": "^20.1.0",
+        "ag-grid-community": ">=32.0.1",
         "core-js": "2.4.1",
         "css-loader": "^0.28.11",
         "d3": "^5.9.1",
