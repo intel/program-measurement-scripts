@@ -34,7 +34,7 @@
         "typedoc": "0.9.0",
         "typedoc-webpack-plugin": "1.1.4",
         "typescript": "^2.9.1",
-        "vue-template-compiler": "^2.5.16",
+        "vue-template-compiler": ">=3.0.0",
         "webpack": "4.11.1",
         "webpack-cli": "^3.0.3",
         "webpack-merge": "4.1.0"
