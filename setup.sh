@@ -13,10 +13,6 @@ popd
 docker run -v /:/host local_image:latest /bin/bash -c \
 	"source /opt/intel/sep/sep_vars.sh emon_api; pushd /host/"$(pwd)"/utils/codeletProbe; make clean; make"
 
-#pushd utils/codeletProbe/
-#make
-#popd
-
 # Build PrOMPT if ICC is available
 icc_path=$(which icc)
 if [[ ${icc_path} != "" ]]; then
